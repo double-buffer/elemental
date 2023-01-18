@@ -10,6 +10,9 @@
     <RootNamespace>Elemental.Samples.HelloWorld</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- To Improve and simplify -->
+    <OutputPath Condition="$([MSBuild]::IsOSPlatform('OSX'))">./bin/$(Configuration)/MacOS/HelloWorld.app/Contents/MacOS</OutputPath>
   </PropertyGroup>
 
 </Project>

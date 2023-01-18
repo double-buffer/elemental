@@ -1,0 +1,4 @@
+module NativeUIServiceModule {
+     header "../Common/Elemental.h"
+     export *
+ }

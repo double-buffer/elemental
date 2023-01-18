@@ -12,7 +12,7 @@ applicationService.RunApplication(application, (status) =>
         return false;
     }
 
-    Console.WriteLine("Hello World {0}!");
+    Console.WriteLine($"Hello World {counter}!");
     counter++;
     return true;
 });

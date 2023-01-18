@@ -6,5 +6,5 @@ public static partial class NativeApplicationServiceInterop
     internal static partial nint Native_CreateApplication(string applicationName);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void Native_RunApplication(nint application, Func<NativeApplicationStatus, bool> runHandler);
+    internal static partial void Native_RunApplication(nint application, RunHandlerDelegate runHandler);
 }
