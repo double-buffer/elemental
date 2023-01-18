@@ -6,12 +6,11 @@
     <Nullable>enable</Nullable>
     <AnalysisLevel>latest-All</AnalysisLevel>
 
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
 </Project>

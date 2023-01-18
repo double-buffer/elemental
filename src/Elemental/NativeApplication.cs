@@ -1,5 +1,6 @@
 ﻿namespace Elemental;
 
-public readonly record struct NativeApplication
+[PlatformNativePointer]
+public readonly partial record struct NativeApplication
 {
 }

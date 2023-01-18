@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{A940
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "01-HelloWorld", "samples\01-HelloWorld\01-HelloWorld.csproj", "{C13F1C92-F6A7-455A-90EC-C8C520779BFD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elemental.SourceGenerators", "src\Elemental.SourceGenerators\Elemental.SourceGenerators.csproj", "{B3F169CA-07A6-40CE-9C66-24433C92941C}"
+EndProject
 Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,9 +50,22 @@ Global
 		{C13F1C92-F6A7-455A-90EC-C8C520779BFD}.Release|x64.Build.0 = Release|Any CPU
 		{C13F1C92-F6A7-455A-90EC-C8C520779BFD}.Release|x86.ActiveCfg = Release|Any CPU
 		{C13F1C92-F6A7-455A-90EC-C8C520779BFD}.Release|x86.Build.0 = Release|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Debug|x64.Build.0 = Debug|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Debug|x86.Build.0 = Debug|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Release|x64.ActiveCfg = Release|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Release|x64.Build.0 = Release|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Release|x86.ActiveCfg = Release|Any CPU
+		{B3F169CA-07A6-40CE-9C66-24433C92941C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{23D35952-D076-4616-8F97-ABE92E92C0B1} = {F70898CB-43F5-470A-B947-1D7610B2B748}
 		{C13F1C92-F6A7-455A-90EC-C8C520779BFD} = {A940266B-FD7F-459E-9265-610DA0CD6B1D}
+		{B3F169CA-07A6-40CE-9C66-24433C92941C} = {F70898CB-43F5-470A-B947-1D7610B2B748}
 	EndGlobalSection
 EndGlobal
