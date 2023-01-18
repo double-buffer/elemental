@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Elemental\Elemental.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>Elemental.Samples.HelloWorld</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
