@@ -19,7 +19,7 @@ public readonly record struct NativeApplicationStatus
 }
 
 [Flags]
-public enum NativeApplicationStatusFlags : uint
+internal enum NativeApplicationStatusFlags : uint
 {
     None = 0,
     Active = 1
