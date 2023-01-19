@@ -42,10 +42,14 @@
       <TargetPath>Elemental.Native.dylib</TargetPath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <!--<Content Include="$(OutputPath)/Elemetnal.Native.dylib.dSYM">
-      <TargetPath>Elemental.Native.dylib.dSYM</TargetPath>
+    <Content Include="$(OutputPath)/Elemental.Native.dylib.dSYM/Contents/Info.plist">
+      <TargetPath>Elemental.Native.dylib.dSYM/Contents/Info.plist</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>-->
+    </Content>
+    <Content Include="$(OutputPath)/Elemental.Native.dylib.dSYM/Contents/Resources/DWARF/Elemental.Native.dylib">
+      <TargetPath>Elemental.Native.dylib.dSYM/Contents/Resources/DWARF/Elemental.Native.dylib</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>   
 
 </Project>
