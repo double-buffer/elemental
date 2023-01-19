@@ -5,13 +5,16 @@ import NativeElemental
 public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> UnsafeMutableRawPointer {
     var processSerialNumber = ProcessSerialNumber(highLongOfPSN: 0, lowLongOfPSN: UInt32(kCurrentProcess))
     TransformProcessType(&processSerialNumber, UInt32(kProcessTransformToForegroundApplication))
+ 
+    let application = MacOSApplication()
 
+    let delegate = MacOSAppDelegate(application)
+    NSApplication.shared.delegate = delegate
     NSApplication.shared.activate(ignoringOtherApps: true)
     NSApplication.shared.finishLaunching()
     
     buildMainMenu(applicationName: String(cString: applicationName))
 
-    let application = MacOSApplication()
     return Unmanaged.passRetained(application).toOpaque()
 }
 
@@ -24,11 +27,38 @@ public func runApplication(applicationPointer: UnsafeRawPointer, runHandler: Run
         while (canRun) {
             processEvents(application)
             canRun = runHandler(application.getStatus())
+
+            if (application.isStatusActive(Closing)) {
+                canRun = false
+            }
         }
     }
 }
 
-public func processEvents(_ application: MacOSApplication) {
+@_cdecl("Native_CreateWindow")
+public func createWindow(application: UnsafeRawPointer, description: NativeWindowDescription) -> UnsafeMutableRawPointer {
+    let width = description.Width
+    let height = description.Height
+    
+    let window = NSWindow(contentRect: NSMakeRect(0, 0, CGFloat(width), CGFloat(height)), 
+                            styleMask: [.resizable, .titled, .miniaturizable, .closable], 
+                            backing: .buffered, 
+                            defer: false)
+
+    window.title = String(cString: description.Title);
+
+    window.center()
+    window.makeKeyAndOrderFront(nil)
+
+    if (description.WindowState == Maximized) {
+        window.setFrame(window.screen!.visibleFrame, display: true, animate: false)
+    }
+
+    let nativeWindow = MacOSWindow(window)
+    return Unmanaged.passRetained(nativeWindow).toOpaque()
+}
+
+private func processEvents(_ application: MacOSApplication) {
     var rawEvent: NSEvent? = nil
 
     repeat {
@@ -37,7 +67,7 @@ public func processEvents(_ application: MacOSApplication) {
         }
         
         guard let event = rawEvent else {
-            application.setStatus(Active)
+            application.setStatus(Active, 1)
             return
         }
 

@@ -3,6 +3,7 @@
 var applicationService = new NativeApplicationService();
 var application = applicationService.CreateApplication("Hello Window");
 
+// TODO: DPI on MacOS
 var window = applicationService.CreateWindow(application, new NativeWindowDescription
 {
     Title = "Hello Window!",

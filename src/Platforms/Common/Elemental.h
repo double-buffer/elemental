@@ -27,5 +27,5 @@ struct NativeWindowDescription
     int Width;
     int Height;
     bool IsDpiAware;
-    NativeWindowState WindowState;
+    enum NativeWindowState WindowState;
 };
