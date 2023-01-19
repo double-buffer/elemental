@@ -1,9 +1,5 @@
 import Cocoa
-import NativeUIServiceModule
-
-class NativeApplication {
-
-}
+import NativeElemental
 
 @_cdecl("Native_CreateApplication")
 public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> UnsafeMutableRawPointer {
@@ -15,39 +11,35 @@ public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> Un
     
     buildMainMenu(applicationName: String(cString: applicationName))
 
-    let application = NativeApplication()
+    let application = MacOSApplication()
     return Unmanaged.passRetained(application).toOpaque()
 }
 
 @_cdecl("Native_RunApplication")
-public func runApplication(applicationPointer: UnsafeMutablePointer<Int8>, runHandler: RunHandlerPtr) {
-    print("Run")
+public func runApplication(applicationPointer: UnsafeRawPointer, runHandler: RunHandlerPtr) {
+    let application = MacOSApplication.fromPointer(applicationPointer)
 
-    var canRun = 1
-    let status = NativeAppStatus()
+    var canRun = true
 
     autoreleasepool {
-        while (canRun != 0) {
-            canRun = Int(runHandler(status))
+        while (canRun) {
+            processEvents(application)
+            canRun = runHandler(application.getStatus())
         }
     }
 }
 
-/*
-public func processEvents(application: UnsafeMutablePointer<Int8>) -> NativeAppStatus {
+public func processEvents(_ application: MacOSApplication) {
     var rawEvent: NSEvent? = nil
-    var isActive = 1 // TODO: To change
 
     repeat {
-        if (isActive == 1) {
+        if (application.isStatusActive(Active)) {
             rawEvent = NSApplication.shared.nextEvent(matching: .any, until: nil, inMode: .default, dequeue: true)
-        } else {
-            //rawEvent = NSApplication.shared.nextEvent(matching: .any, until: nil, inMode: .default, dequeue: true)
         }
-
+        
         guard let event = rawEvent else {
-            isActive = 1
-            return NativeAppStatus(IsRunning: 1, IsActive: 1)
+            application.setStatus(Active)
+            return
         }
 
         switch event.type {
@@ -55,11 +47,9 @@ public func processEvents(application: UnsafeMutablePointer<Int8>) -> NativeAppS
             NSApplication.shared.sendEvent(event)
         }
     } while (rawEvent != nil)
+}
 
-    return NativeAppStatus(IsRunning: 1, IsActive: 1)
-}*/
-
-func buildMainMenu(applicationName: String) {
+private func buildMainMenu(applicationName: String) {
     let mainMenu = NSMenu(title: "MainMenu")
     
     let menuItem = mainMenu.addItem(withTitle: "ApplicationMenu", action: nil, keyEquivalent: "")

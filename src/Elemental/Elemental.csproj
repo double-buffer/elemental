@@ -14,7 +14,7 @@
     <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-    <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" >
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" >
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
       <PowerShellCommand>powershell</PowerShellCommand>
       <BuildScript>$(MSBuildProjectDirectory)/Platforms/Windows/Build.ps1</BuildScript>
@@ -24,9 +24,9 @@
       <BuildScript>$(MSBuildProjectDirectory)/../Platforms/MacOS/Build.ps1</BuildScript>
     </PropertyGroup>
     <Exec Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File $(BuildScript) -outputDirectory $(OutputPath) -configuration $(Configuration)" />
-</Target>
+  </Target>
 
-<ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <Content Include="$(OutputPath)/Elemental.Native.dll">
       <TargetPath>Elemental.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -35,9 +35,9 @@
       <TargetPath>Elemental.Native.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-</ItemGroup>   
+  </ItemGroup>   
 
-<ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
     <Content Include="$(OutputPath)/Elemental.Native.dylib">
       <TargetPath>Elemental.Native.dylib</TargetPath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -46,7 +46,6 @@
       <TargetPath>Elemental.Native.dylib.dSYM</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>-->
-</ItemGroup>   
-
+  </ItemGroup>   
 
 </Project>

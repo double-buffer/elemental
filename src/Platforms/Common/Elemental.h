@@ -1,8 +1,15 @@
 #pragma once
+#include <stdbool.h>
 
-struct NativeAppStatus
+enum NativeApplicationStatusFlags
+{
+    None = 0,
+    Active = 1
+};
+
+struct NativeApplicationStatus
 {
     unsigned int Status;
 };
 
-typedef int (*RunHandlerPtr)(struct NativeAppStatus status);
+typedef bool (*RunHandlerPtr)(struct NativeApplicationStatus status);

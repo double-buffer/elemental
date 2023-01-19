@@ -7,7 +7,7 @@ var application = applicationService.CreateApplication("Hello World");
 
 applicationService.RunApplication(application, (status) =>
 {
-    if (counter > 10)
+    if (counter > 10 || !status.IsActive)
     {
         return false;
     }
