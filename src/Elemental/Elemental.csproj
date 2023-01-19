@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AnalysisLevel>latest-All</AnalysisLevel>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" >
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+      <PowerShellCommand>powershell</PowerShellCommand>
+      <BuildScript>$(MSBuildProjectDirectory)/../Platforms/Windows/Build.ps1</BuildScript>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+      <PowerShellCommand>pwsh</PowerShellCommand>
+      <BuildScript>$(MSBuildProjectDirectory)/../Platforms/MacOS/Build.ps1</BuildScript>
+    </PropertyGroup>
+    <Exec Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File $(BuildScript) -outputDirectory $(OutputPath) -configuration $(Configuration)" />
+  </Target>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <Content Include="$(OutputPath)/Elemental.Native.dll">
+      <TargetPath>Elemental.Native.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(OutputPath)/Elemental.Native.pdb">
+      <TargetPath>Elemental.Native.pdb</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>   
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <Content Include="$(OutputPath)/Elemental.Native.dylib">
+      <TargetPath>Elemental.Native.dylib</TargetPath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(OutputPath)/Elemental.Native.dylib.dSYM/Contents/Info.plist">
+      <TargetPath>Elemental.Native.dylib.dSYM/Contents/Info.plist</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(OutputPath)/Elemental.Native.dylib.dSYM/Contents/Resources/DWARF/Elemental.Native.dylib">
+      <TargetPath>Elemental.Native.dylib.dSYM/Contents/Resources/DWARF/Elemental.Native.dylib</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>   
+
+</Project>
