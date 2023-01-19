@@ -9,12 +9,12 @@ public readonly record struct NativeApplicationStatus
         _status = 0;
     }
 
-    public bool IsActive
+    public bool IsActive => CheckStatus(NativeApplicationStatusFlags.Active);
+    public bool IsClosing => CheckStatus(NativeApplicationStatusFlags.Closing);
+
+    private bool CheckStatus(NativeApplicationStatusFlags flag)
     {
-        get
-        {
-            return (_status & (uint)NativeApplicationStatusFlags.Active) != 0;
-        }
+        return (_status & (uint)flag) != 0;
     }
 }
 
@@ -22,5 +22,6 @@ public readonly record struct NativeApplicationStatus
 internal enum NativeApplicationStatusFlags : uint
 {
     None = 0,
-    Active = 1
+    Active = 1,
+    Closing = 2
 }

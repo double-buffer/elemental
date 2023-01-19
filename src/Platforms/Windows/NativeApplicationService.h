@@ -22,3 +22,14 @@ struct WindowsApplication
         Status.Status |= value << (flag - 1);
     }
 };
+
+struct WindowsWindow
+{
+    HWND WindowHandle;
+    int Width;
+    int Height;
+    float UIScale;
+};
+
+void ProcessMessages(WindowsApplication* application);
+LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
