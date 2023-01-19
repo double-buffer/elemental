@@ -16,8 +16,8 @@ public class MacOSApplication {
         return status
     }
     
-    public func setStatus(_ flag: NativeApplicationStatusFlags) {
-        status.Status = status.Status | 1 << Int(flag.rawValue - 1)
+    public func setStatus(_ flag: NativeApplicationStatusFlags, _ value: Int) {
+        status.Status = status.Status | value << Int(flag.rawValue - 1)
     }
 
     public static func fromPointer(_ pointer: UnsafeRawPointer) -> MacOSApplication {

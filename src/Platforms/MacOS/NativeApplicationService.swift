@@ -18,7 +18,6 @@ public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> Un
 @_cdecl("Native_RunApplication")
 public func runApplication(applicationPointer: UnsafeRawPointer, runHandler: RunHandlerPtr) {
     let application = MacOSApplication.fromPointer(applicationPointer)
-
     var canRun = true
 
     autoreleasepool {

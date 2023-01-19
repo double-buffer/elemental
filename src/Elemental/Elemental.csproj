@@ -17,7 +17,7 @@
   <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" >
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
       <PowerShellCommand>powershell</PowerShellCommand>
-      <BuildScript>$(MSBuildProjectDirectory)/Platforms/Windows/Build.ps1</BuildScript>
+      <BuildScript>$(MSBuildProjectDirectory)/../Platforms/Windows/Build.ps1</BuildScript>
     </PropertyGroup>
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
       <PowerShellCommand>pwsh</PowerShellCommand>
