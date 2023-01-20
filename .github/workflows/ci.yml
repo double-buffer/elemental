@@ -23,7 +23,7 @@ jobs:
 
     - name: Build MacOS Platform
       run: |
-        ./src/Platforms/MacOS/Build.ps1 -outputDirectory ./bin -configuration Release
+        pwsh ./src/Platforms/MacOS/Build.ps1 -outputDirectory ./bin -configuration Release
 
   build_dotnet:
     runs-on: windows-latest

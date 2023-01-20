@@ -3,8 +3,9 @@ param ($outputDirectory, $Configuration)
 function RegisterVisualStudioEnvironment
 {
     $registeredVisualStudioVersion = Get-Content -Path Env:VisualStudioVersion -ErrorAction SilentlyContinue
+    Write-Output $registeredVisualStudioVersion
 
-    if (-not($registeredVisualStudioVersion -eq "16.0") -And -not($registeredVisualStudioVersion -eq "17.0"))
+    if (-not($registeredVisualStudioVersion -eq "17.0") -And -not($registeredVisualStudioVersion -eq "17.5"))
     {
         Write-Output "[93mRegistering Visual Studio Environment...[0m"
 
