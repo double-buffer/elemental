@@ -7,7 +7,6 @@
     <AnalyzerLanguage>cs</AnalyzerLanguage>
     <Nullable>enable</Nullable>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-    <AnalysisLevel>latest-All</AnalysisLevel>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IsRoslynComponent>true</IsRoslynComponent>
   </PropertyGroup>
