@@ -19,7 +19,7 @@ public interface INativeApplicationService
     /// </summary>
     /// <param name="application">Application used to run the main loop.</param>
     /// <param name="runHandler">Handler called at each iterations of the loop.</param>
-    void RunApplication(NativeApplication application, RunHandlerDelegate runHandler);
+    void RunApplication(NativeApplication application, RunHandler runHandler);
 
     /// <summary>
     /// Creates a new native window.
@@ -50,4 +50,4 @@ public interface INativeApplicationService
 /// </summary>
 /// <param name="status">Current status of the application.</param>
 /// <returns>True if the main loop should continue; False otherwise.</returns>
-public delegate bool RunHandlerDelegate(NativeApplicationStatus status);
+public delegate bool RunHandler(NativeApplicationStatus status);
