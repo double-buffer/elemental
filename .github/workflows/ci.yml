@@ -3,7 +3,7 @@ name: CI Build
 on:
   #push:
   #  branches: [ github-actions ]
-  workflow_dispatch:
+  workflow_dispatch
 
 jobs:
   build_windows:
