@@ -58,10 +58,20 @@ function ShowErrorMessage
 
 try
 {
+    Write-Output "[93mCompiling Windows Platform Library...[0m"
+
+    if (-not(Test-Path -Path $outputDirectory)) {
+        mkdir $outputDirectory > $null
+    }
+
     $outputDirectory = Resolve-Path $outputDirectory
 
-    Write-Output "[93mCompiling Windows Platform Library...[0m"
-    Push-Location ./../Platforms/Windows
+    $currentDirectory = (Get-Item -Path .).BaseName
+    Write-Output $currentDirectory
+
+    if (-not($currentDirectory -eq "Windows")) {
+        Push-Location ./../Platforms/Windows
+    }
 
     RegisterVisualStudioEnvironment
     #TODO: Nuget restore

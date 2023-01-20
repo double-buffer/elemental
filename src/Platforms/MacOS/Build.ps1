@@ -2,10 +2,20 @@ param ($outputDirectory, $configuration)
 
 try
 {
-    $outputDirectory = Resolve-Path $outputDirectory
     Write-Output "[93mCompiling MacOS Platform Library ($configuration)...[0m"
 
-    Push-Location ../Platforms/MacOS
+    if (-not(Test-Path -Path $outputDirectory)) {
+        mkdir $outputDirectory > $null
+    }
+
+    $outputDirectory = Resolve-Path $outputDirectory
+
+    $currentDirectory = (Get-Item -Path .).BaseName
+    Write-Output $currentDirectory
+
+    if (-not($currentDirectory -eq "Windows")) {
+        Push-Location ./../Platforms/Windows
+    }
 
     mkdir obj | Out-Null
     mkdir obj/$configuration | Out-Null
