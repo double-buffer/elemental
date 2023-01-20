@@ -1,7 +1,8 @@
 name: CI Build
 
-#on:
-  #push:
+on:
+  push:
+    branches: [ github-actions ]
 
 jobs:
   build_windows:
