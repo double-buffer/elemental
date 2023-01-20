@@ -1,0 +1,102 @@
+name: Build Nuget
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_windows_x64:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        vs-version: '[17.0, 17.5)'
+        msbuild-architecture: x64
+
+    - name: Build Windows Platform
+      working-directory: ./src/Platforms/Windows
+      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+        with:
+          name: WindowsNativex64
+          path: ./bin/
+        
+  build_macos_x64:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build MacOS Platform
+      working-directory: ./src/Platforms/MacOS
+      run: pwsh ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+        with:
+          name: MacOSNativex64
+          path: ./bin/
+
+  build_dotnet:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.100
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        vs-version: '[17.0, 17.5)'
+        msbuild-architecture: x64
+
+    - name: Build Library
+      run: |
+        dotnet build ./src/Elemental -c Release 
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+        with:
+          name: DotnetBinaries
+          path: ./src/Elemental/bin/x64/Release/net7.0
+          
+  build_nuget:
+    runs-on: windows-latest
+    needs: [build_windows_x64, build_macos_x64, build_dotnet]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.100
+
+    - name: Download Windows Native x64
+      uses: actions/download-artifact@master
+        with:
+          name: WindowsNativex64
+          path: ./build/native/windows-x64
+          
+    - name: Download MacOS Native x64
+      uses: actions/download-artifact@master
+        with:
+          name: MacOSNativex64
+          path: ./build/native/macos-x64
+          
+    - name: Download Dotnet Binaries
+      uses: actions/download-artifact@master
+        with:
+          name: DotnetBinaries
+          path: ./build/
+
+

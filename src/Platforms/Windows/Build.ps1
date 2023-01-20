@@ -58,7 +58,7 @@ function ShowErrorMessage
 
 try
 {
-    Write-Output "[93mCompiling Windows Platform Library...[0m"
+    Write-Output "[93mCompiling Windows Platform Library ($configuration)...[0m"
 
     if (-not(Test-Path -Path $outputDirectory)) {
         mkdir $outputDirectory > $null

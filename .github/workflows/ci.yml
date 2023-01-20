@@ -1,8 +1,9 @@
 name: CI Build
 
 on:
-  push:
-    branches: [ github-actions ]
+  #push:
+  #  branches: [ github-actions ]
+  workflow_dispatch:
 
 jobs:
   build_windows:
@@ -50,10 +51,11 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet build ./src/Elemental
+        dotnet build ./src/Elemental -configuration Release 
         
     - name: Build Samples
       run: |
         dotnet build ./samples/01-HelloWorld
+        dotnet build ./samples/02-HelloWindow
 
 
