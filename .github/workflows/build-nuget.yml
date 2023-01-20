@@ -2,8 +2,7 @@ name: Build Nuget
 
 on:
   push:
-  #branches: [ github-actions ]
-    workflow_dispatch:
+    branches: [ github-actions ]
 
 jobs:
   build_windows_x64:
@@ -24,9 +23,10 @@ jobs:
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
+      working-directory: 
       with:
         name: WindowsNativex64
-        path: ./bin/
+        path: ./src/Platforms/Windows/bin/
         
   build_macos_x64:
     runs-on: macos-latest
@@ -42,7 +42,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: MacOSNativex64
-        path: ./bin/
+        path: ./src/Platforms/MacOS/bin/
 
   build_dotnet:
     runs-on: windows-latest
@@ -69,7 +69,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: DotnetBinaries
-        path: ./src/Elemental/bin/x64/Release/net7.0
+        path: ./src/Elemental/bin/Release/net7.0
           
   build_nuget:
     runs-on: windows-latest
