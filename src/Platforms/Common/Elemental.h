@@ -4,7 +4,8 @@
 enum NativeApplicationStatusFlags
 {
     None = 0,
-    Active = 1
+    Active = 1,
+    Closing = 2
 };
 
 struct NativeApplicationStatus
@@ -13,3 +14,24 @@ struct NativeApplicationStatus
 };
 
 typedef bool (*RunHandlerPtr)(struct NativeApplicationStatus status);
+
+enum NativeWindowState
+{
+    Normal,
+    Maximized
+};
+
+struct NativeWindowDescription
+{
+    unsigned char* Title;
+    int Width;
+    int Height;
+    enum NativeWindowState WindowState;
+};
+
+struct NativeWindowSize
+{
+    int Width;
+    int Height;
+    float UIScale;
+};
