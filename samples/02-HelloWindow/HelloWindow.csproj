@@ -7,10 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- To Improve and simplify -->
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>./bin/$(Configuration)/MacOS/HelloWindow.app/Contents/MacOS</OutputPath>
+    <OutputPath>./bin/$(Configuration)/MacOS/$(AssemblyName).app/Contents/MacOS</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>
