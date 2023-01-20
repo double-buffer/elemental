@@ -1,6 +1,10 @@
 <Project>
 
   <PropertyGroup>
+    <NoWarn>CS1668</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <AnalysisLevel>latest</AnalysisLevel>
     <AnalysisModeDesign>All</AnalysisModeDesign>
     <AnalysisModeDocumentation>All</AnalysisModeDocumentation>
