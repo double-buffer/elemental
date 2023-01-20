@@ -111,6 +111,34 @@ DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescri
     return nativeWindow;
 }
 
+DllExport NativeWindowSize Native_GetWindowRenderSize(void* windowPointer)
+{
+    auto nativeWindow = (WindowsWindow*)windowPointer;
+
+    RECT windowRectangle;
+	GetClientRect(nativeWindow->WindowHandle, &windowRectangle);
+
+    auto mainScreenDpi = GetDpiForWindow(nativeWindow->WindowHandle);
+    auto mainScreenScaling = static_cast<float>(mainScreenDpi) / 96.0f;
+
+    nativeWindow->Width = windowRectangle.right - windowRectangle.left;
+    nativeWindow->Height = windowRectangle.bottom - windowRectangle.top;
+    nativeWindow->UIScale = mainScreenScaling;
+
+    auto result = NativeWindowSize();
+    result.Width = nativeWindow->Width;
+    result.Height = nativeWindow->Height;
+    result.UIScale = nativeWindow->UIScale;
+
+    return result;
+}
+
+DllExport void Native_SetWindowTitle(void* windowPointer, unsigned char* title)
+{
+    auto nativeWindow = (WindowsWindow*)windowPointer;
+    SetWindowText(nativeWindow->WindowHandle, ConvertUtf8ToWString(title).c_str());
+}
+
 void ProcessMessages(WindowsApplication* application)
 {
     MSG message;
