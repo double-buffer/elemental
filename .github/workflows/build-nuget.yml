@@ -1,7 +1,9 @@
 name: Build Nuget
 
 on:
-  workflow_dispatch
+  push:
+  #branches: [ github-actions ]
+    workflow_dispatch:
 
 jobs:
   build_windows_x64:
