@@ -61,17 +61,11 @@ DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescri
         nativeApplication->ApplicationInstance,
         0);
    
-    auto mainScreenScaling = 1.0f;
-    auto mainScreenDpi = 96.0f;
-
     HMODULE shcoreLibrary = LoadLibrary(L"shcore.dll");
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-    if (description.IsDpiAware)
-    {
-        mainScreenDpi = GetDpiForWindow(window);
-        mainScreenScaling = static_cast<float>(mainScreenDpi) / 96.0f;
-    }
+    auto mainScreenDpi = GetDpiForWindow(window);
+    auto mainScreenScaling = static_cast<float>(mainScreenDpi) / 96.0f;
 
     RECT clientRectangle;
     clientRectangle.left = 0;

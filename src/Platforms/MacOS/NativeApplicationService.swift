@@ -58,6 +58,26 @@ public func createWindow(application: UnsafeRawPointer, description: NativeWindo
     return Unmanaged.passRetained(nativeWindow).toOpaque()
 }
 
+@_cdecl("Native_GetWindowRenderSize")
+public func getWindowRenderSize(windowPointer: UnsafeRawPointer) -> NativeWindowSize {
+    let window = MacOSWindow.fromPointer(windowPointer)
+
+    let contentView = window.window.contentView! as NSView
+    let mainScreenScaling = window.window.screen!.backingScaleFactor
+
+    var size = contentView.frame.size
+    size.width *= mainScreenScaling;
+    size.height *= mainScreenScaling;
+
+    return NativeWindowSize(Width: Int32(size.width), Height: Int32(size.height), UIScale: Float(mainScreenScaling))
+}
+
+@_cdecl("Native_SetWindowTitle")
+public func setWindowTitle(windowPointer: UnsafeRawPointer, title: UnsafeMutablePointer<Int8>) {
+    let window = MacOSWindow.fromPointer(windowPointer)
+    window.window.title = String(cString: title)
+}
+
 private func processEvents(_ application: MacOSApplication) {
     var rawEvent: NSEvent? = nil
 

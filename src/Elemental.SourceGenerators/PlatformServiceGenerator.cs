@@ -58,6 +58,9 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         var attributeCode = """
                             namespace Elemental;
 
+                            /// <summary>
+                            /// Attribute used by the source generator to generate native service interop code.
+                            /// </summary>
                             [AttributeUsage(AttributeTargets.Interface)]
                             public class PlatformServiceAttribute : Attribute
                             {
@@ -71,6 +74,9 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         var overrideAttributeCode = """
                                     namespace Elemental;
 
+                                    /// <summary>
+                                    /// Attribute used by the source generator to generate a native service method override interop code.
+                                    /// </summary>
                                     [AttributeUsage(AttributeTargets.Method)]
                                     public class PlatformMethodOverrideAttribute : Attribute
                                     {
@@ -148,6 +154,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             sourceCode.AppendLine();
         }
 
+        sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
         sourceCode.AppendLine($"public partial class {platformService.ImplementationClassName} : {platformService.InterfaceName}");
         sourceCode.AppendLine("{");
 
@@ -160,6 +167,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                 methodName += "Implementation";
             }
 
+            sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
             sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(',', method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name))})");
             sourceCode.AppendLine("{");
             

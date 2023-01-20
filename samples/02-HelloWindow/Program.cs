@@ -3,13 +3,11 @@
 var applicationService = new NativeApplicationService();
 var application = applicationService.CreateApplication("Hello Window");
 
-// TODO: DPI on MacOS
 var window = applicationService.CreateWindow(application, new NativeWindowDescription
 {
     Title = "Hello Window!",
     Width = 1280,
-    Height = 720,
-    IsDpiAware = true
+    Height = 720
 });
 
 applicationService.RunApplication(application, (status) =>
@@ -18,6 +16,9 @@ applicationService.RunApplication(application, (status) =>
     {
         Console.WriteLine("Closing Application...");
     }
+
+    var renderSize = applicationService.GetWindowRenderSize(window);
+    applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: {renderSize})");
 
     return true;
 });

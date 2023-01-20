@@ -26,6 +26,12 @@ struct NativeWindowDescription
     unsigned char* Title;
     int Width;
     int Height;
-    bool IsDpiAware;
     enum NativeWindowState WindowState;
+};
+
+struct NativeWindowSize
+{
+    int Width;
+    int Height;
+    float UIScale;
 };

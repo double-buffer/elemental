@@ -37,6 +37,9 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
         var attributeCode = """
                             namespace Elemental;
 
+                            /// <summary>
+                            /// Attribute used by the source generator to generate native pointer interop code.
+                            /// </summary>
                             [AttributeUsage(AttributeTargets.Struct)]
                             public class PlatformNativePointerAttribute : Attribute
                             {
@@ -113,9 +116,22 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
         var implementationCode = """
                                  public partial record struct ##NAME##
                                  {
+                                    /// <summary>
+                                    /// Gets the native pointer used by this handle.
+                                    /// </summary>
+                                    /// <value>Native pointer.</value>
                                     public nint NativePointer { get; init; }
 
+                                    /// <summary>
+                                    /// Converts from a <see langword="nint"/> type.
+                                    /// </summary>
+                                    /// <param name="src">Source value.</param>
                                     public static implicit operator nint(##NAME## src) => src.NativePointer;
+
+                                    /// <summary>
+                                    /// Converts to a <see langword="nint"/> type.
+                                    /// </summary>
+                                    /// <param name="src">Source value.</param>
                                     public static implicit operator ##NAME##(nint src) => new() { NativePointer = src };
                                  }
                                  """;
