@@ -2,7 +2,7 @@
 
 ## 📖 Purpose
 
-Elemental is a portable low-level game platform abstraction library that targets only next-gen features.
+Elemental is a portable low-level game platform abstraction library for .NET 7+ that targets only next-gen features.
 
 ## 🚀 Getting Started
 
