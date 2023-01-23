@@ -26,7 +26,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: WindowsNativex64
-        path: ./src/Platforms/Windows/bin/
+        path: ./src/Platforms/Windows/bin/Elemental.Native.dll
         
   build_macos_x64:
     runs-on: macos-latest
@@ -42,7 +42,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: MacOSNative
-        path: ./src/Platforms/MacOS/bin/
+        path: ./src/Platforms/MacOS/bin/Elemental.Native.dylib
 
   build_dotnet:
     runs-on: windows-latest
@@ -70,7 +70,9 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: DotnetBinaries
-        path: ./src/Elemental/bin/Release/net7.0
+        path: |
+          ./src/Elemental/bin/Release/net7.0/Elemental.dll
+          ./src/Elemental/bin/Release/net7.0/Elemental.xml
           
   build_nuget:
     runs-on: windows-latest
