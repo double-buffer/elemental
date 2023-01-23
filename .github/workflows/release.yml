@@ -1,4 +1,4 @@
-name: Build Nuget
+name: Release
 
 on:
   push:
@@ -21,6 +21,7 @@ jobs:
       working-directory: ./src/Platforms/Windows
       run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
 
+    # TODO: Only upload DLL and PDB
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
@@ -64,6 +65,7 @@ jobs:
       run: |
         dotnet build ./src/Elemental -c Release 
 
+    # TODO: Only upload dotnet binaries
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
@@ -86,18 +88,20 @@ jobs:
       uses: actions/download-artifact@master
       with:
         name: WindowsNativex64
-        path: ./build/native/windows-x64
+        path: ./publish/runtimes/win-x64
           
     - name: Download MacOS Native x64
       uses: actions/download-artifact@master
       with:
         name: MacOSNativex64
-        path: ./build/native/macos-x64
+        path: ./publish/runtimes/osx
           
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
       with:
         name: DotnetBinaries
-        path: ./build/
+        path: ./publish/lib/net7.0
 
-
+    - name: Nuget pack
+      working-directory: ./publish
+      run: nuget.exe pack .\package\

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>Elemental</id>
+        <version>1.0</version>
+        <description>Elemental is a portable low-level game platform abstraction library for .NET 7+ that targets only next-gen features.</description>
+        <authors>Double Buffer</authors>
+    </metadata>
+    <!-- 
+  <PropertyGroup>
+      <PackageVersion>$(Version)</PackageVersion>
+      <Company>Double Buffer</Company>
+      <Authors>Double Buffer</Authors>
+      <Copyright>© Double Buffer SRL</Copyright>
+      <PackageProjectUrl>https://github.com/double-buffer/elemental</PackageProjectUrl>
+      <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+      <RepositoryType>git</RepositoryType>
+      <PackageLicenseExpression>MIT</PackageLicenseExpression>
+      <PackageId>Elemental</PackageId>
+      <PackageTags>gamedev;graphics;windows;macos;</PackageTags>
+      <Description>Elemental is a portable low-level game platform abstraction library for .NET 7+ that targets only next-gen features.</Description>
+  </PropertyGroup>-->
+</package>
