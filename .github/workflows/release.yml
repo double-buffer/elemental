@@ -104,13 +104,13 @@ jobs:
 
     - name: Nuget pack
       working-directory: ./publish
-      run: nuget.exe pack .\package\ -OutputDirectory build
+      run: nuget.exe pack -OutputDirectory build
           
     - name: Upload Nuget package
       uses: actions/upload-artifact@v3
       with:
         name: nuget
-        path: ./build
+        path: ./publish/build
 
     - name: Delete Windows Native x64
       uses: geekyeggo/delete-artifact@v2
