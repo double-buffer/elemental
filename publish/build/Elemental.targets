@@ -15,10 +15,4 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
-
-    <!--<PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))" BeforeTargets="CoreCompile">-->
-    <PropertyGroup BeforeTargets="CoreCompile">
-        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-        <OutputPath>./bin/$(Configuration)/MacOS/$(AssemblyName).app/Contents/MacOS</OutputPath>
-    </PropertyGroup>
 </Project>
