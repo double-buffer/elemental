@@ -110,7 +110,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: nuget
-        path: ./publish/build
+        path: ./publish/build/*.nupkg
 
     - name: Delete Windows Native x64
       uses: geekyeggo/delete-artifact@v2
