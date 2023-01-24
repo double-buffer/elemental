@@ -21,7 +21,6 @@ jobs:
       working-directory: ./src/Platforms/Windows
       run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
 
-    # TODO: Only upload DLL and PDB
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
@@ -65,7 +64,6 @@ jobs:
       run: |
         dotnet build ./src/Elemental -c Release 
 
-    # TODO: Only upload dotnet binaries
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
