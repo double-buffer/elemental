@@ -102,6 +102,20 @@ jobs:
         name: DotnetBinaries
         path: ./publish/lib/net7.0
 
+    - name: Replace version in nuspec
+      uses: jacobtomlinson/gha-find-replace@v2
+      with:
+        find: "#VERSION#"
+        replace: "1.0.0-dev.1"
+        include: "./publish/Elemental.nuspec"
+    
+    - name: Replace commit in nuspec
+      uses: jacobtomlinson/gha-find-replace@v2
+      with:
+        find: "#COMMIT#"
+        replace: "e1c65e4524cd70ee6e22abe33e6cb6ec73938cb3"
+        include: "./publish/Elemental.nuspec"
+
     - name: Nuget pack
       working-directory: ./publish
       run: nuget.exe pack -OutputDirectory build
