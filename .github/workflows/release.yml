@@ -1,8 +1,16 @@
 name: Release
 
 on:
-  push:
-    branches: [ github-actions ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "tag: git tag you want create. (sample 1.0.0)"
+        required: true
+      publish-nuget:
+        description: "publish-nuget: true = publish nuget package. false = create the nuget puackage but don't publish it."
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   build_windows_x64:
@@ -62,7 +70,7 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet build ./src/Elemental -c Release 
+        dotnet build ./src/Elemental -c Release -p:Version=${{ inputs.tag }} 
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
@@ -106,7 +114,7 @@ jobs:
       uses: datamonsters/replace-action@master
       with:
         files: "./publish/Elemental.nuspec"
-        replacements: '#VERSION#=1.0.0-dev1,#COMMIT#=e1c65e4524cd70ee6e22abe33e6cb6ec73938cb3'
+        replacements: '#VERSION#=${{ inputs.tag }},#COMMIT#=e1c65e4524cd70ee6e22abe33e6cb6ec73938cb3'
 
     - name: Nuget pack
       working-directory: ./publish
