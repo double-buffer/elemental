@@ -170,14 +170,30 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
             sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name))})");
             sourceCode.AppendLine("{");
-            
-            if (method.ReturnType.Name.ToLower() != "void")
+
+            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "Elemental.PlatformNativePointerAttribute");
+
+            if (isReturnTypeNativePointer)
+            {
+                sourceCode.Append("var result = ");
+            }
+
+            else if (method.ReturnType.Name.ToLower() != "void")
             {
                 sourceCode.Append("return ");
             }
 
             sourceCode.AppendLine($"{platformService.InteropClassName}.Native_{method.Name}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + item.Name))});");
-            
+
+            if (isReturnTypeNativePointer)
+            {
+                sourceCode.AppendLine("if (result == nint.Zero)");
+                sourceCode.AppendLine("{");
+                sourceCode.AppendLine($"throw new InvalidOperationException(\"There was an error when executing '{methodName}'.\")");
+                sourceCode.AppendLine("}");
+                sourceCode.AppendLine("return result;");
+            }
+
             sourceCode.AppendLine("}");
         }
 
@@ -211,7 +227,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         foreach (var method in platformService.MethodList)
         {
             sourceCode.AppendLine("[LibraryImport(\"Elemental.Native\", StringMarshalling = StringMarshalling.Utf8)]");
-            sourceCode.AppendLine($"internal static partial {((INamedTypeSymbol)method.ReturnType).ToString()} Native_{method.Name}({string.Join(",", method.Parameters.Select(item => ((INamedTypeSymbol) item.Type).ToString() + " " + item.Name))});");
+            sourceCode.AppendLine($"internal static partial {((INamedTypeSymbol)method.ReturnType).ToString()} Native_{method.Name}({string.Join(",", method.Parameters.Select(item => ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name))});");
             sourceCode.AppendLine();
         }
 
@@ -221,7 +237,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
     static List<PlatformServiceToGenerate> GetTypesToGenerate(Compilation compilation, IEnumerable<InterfaceDeclarationSyntax> interfaces, CancellationToken cancellationToken)
     {
         var result = new List<PlatformServiceToGenerate>();
-        
+
         var platformServiceAttribute = compilation.GetTypeByMetadataName("Elemental.PlatformServiceAttribute");
 
         if (platformServiceAttribute == null)
@@ -239,7 +255,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             {
                 continue;
             }
-            
+
             var interfaceName = interfaceSymbol.Name;
             var namespaceName = interfaceSymbol.ContainingNamespace;
 
@@ -247,7 +263,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             {
                 continue;
             }
-            
+
             var platformService = new PlatformServiceToGenerate
             {
                 InterfaceName = interfaceName,

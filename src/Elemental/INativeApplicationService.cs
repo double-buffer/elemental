@@ -27,7 +27,7 @@ public interface INativeApplicationService
     /// <param name="application">Application that owns the window.</param>
     /// <param name="description">Description of the window to create.</param>
     /// <returns>Window handle.</returns>
-    NativeWindow CreateWindow(NativeApplication application, NativeWindowDescription description);
+    NativeWindow CreateWindow2(NativeApplication application, NativeWindowDescription description);
 
     /// <summary>
     /// Gets the available render size of the specified window.
