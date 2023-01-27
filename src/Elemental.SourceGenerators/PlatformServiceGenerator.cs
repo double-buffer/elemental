@@ -171,7 +171,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name))})");
             sourceCode.AppendLine("{");
 
-            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "Elemental.PlatformNativePointerAttribute");
+            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformNativePointerAttribute");
 
             if (isReturnTypeNativePointer)
             {
@@ -189,7 +189,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             {
                 sourceCode.AppendLine("if (result == nint.Zero)");
                 sourceCode.AppendLine("{");
-                sourceCode.AppendLine($"throw new InvalidOperationException(\"There was an error when executing '{methodName}'.\")");
+                sourceCode.AppendLine($"throw new InvalidOperationException(\"There was an error when executing '{methodName}'.\");");
                 sourceCode.AppendLine("}");
                 sourceCode.AppendLine("return result;");
             }
