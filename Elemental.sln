@@ -5,20 +5,22 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F70898CB-43F5-470A-B947-1D7610B2B748}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elemental", "src\Elemental\Elemental.csproj", "{23D35952-D076-4616-8F97-ABE92E92C0B1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elemental", "src\Elemental\Elemental.csproj", "{23D35952-D076-4616-8F97-ABE92E92C0B1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{A940266B-FD7F-459E-9265-610DA0CD6B1D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "01-HelloWorld", "samples\01-HelloWorld\HelloWorld.csproj", "{C13F1C92-F6A7-455A-90EC-C8C520779BFD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWorld", "samples\01-HelloWorld\HelloWorld.csproj", "{C13F1C92-F6A7-455A-90EC-C8C520779BFD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elemental.SourceGenerators", "src\Elemental.SourceGenerators\Elemental.SourceGenerators.csproj", "{B3F169CA-07A6-40CE-9C66-24433C92941C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elemental.SourceGenerators", "src\Elemental.SourceGenerators\Elemental.SourceGenerators.csproj", "{B3F169CA-07A6-40CE-9C66-24433C92941C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWindow", "samples\02-HelloWindow\HelloWindow.csproj", "{5EDEB1EC-C781-44ED-BB7C-70F2EE8158DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWindow", "samples\02-HelloWindow\HelloWindow.csproj", "{5EDEB1EC-C781-44ED-BB7C-70F2EE8158DB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C4523529-6B48-448E-9515-F6EB406393BC}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Packages.props = Directory.Packages.props
+	EndProjectSection
 EndProject
 Global
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
@@ -76,6 +78,9 @@ Global
 		{5EDEB1EC-C781-44ED-BB7C-70F2EE8158DB}.Release|x64.Build.0 = Release|Any CPU
 		{5EDEB1EC-C781-44ED-BB7C-70F2EE8158DB}.Release|x86.ActiveCfg = Release|Any CPU
 		{5EDEB1EC-C781-44ED-BB7C-70F2EE8158DB}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{23D35952-D076-4616-8F97-ABE92E92C0B1} = {F70898CB-43F5-470A-B947-1D7610B2B748}

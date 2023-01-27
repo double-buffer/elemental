@@ -4,7 +4,6 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AnalysisLevel>latest-All</AnalysisLevel>
 
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
@@ -15,7 +14,7 @@
     <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" >
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile">
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
       <PowerShellCommand>powershell</PowerShellCommand>
       <BuildScript>$(MSBuildProjectDirectory)/../Platforms/Windows/Build.ps1</BuildScript>

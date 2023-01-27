@@ -1,0 +1,22 @@
+<Project>
+
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <NoWarn>CS1668</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisModeDesign>All</AnalysisModeDesign>
+    <AnalysisModeDocumentation>All</AnalysisModeDocumentation>
+    <AnalysisModeInteroperability>All</AnalysisModeInteroperability>
+    <AnalysisModeMaintainability>All</AnalysisModeMaintainability>
+    <AnalysisModeNaming>All</AnalysisModeNaming>
+    <AnalysisModePerformance>All</AnalysisModePerformance>
+    <AnalysisModeSingleFile>All</AnalysisModeSingleFile>
+    <AnalysisModeReliability>All</AnalysisModeReliability>
+    <AnalysisModeSecurity>All</AnalysisModeSecurity>
+    <AnalysisModeUsage>All</AnalysisModeUsage>
+  </PropertyGroup>
+
+</Project>

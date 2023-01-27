@@ -1,0 +1,151 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "tag: git tag you want create. (sample 1.0.0)"
+        required: true
+      publish-nuget:
+        description: "publish-nuget: true = publish nuget package. false = create the nuget puackage but don't publish it."
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  build_windows_x64:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        vs-version: '[17.0, 17.5)'
+        msbuild-architecture: x64
+
+    - name: Build Windows Platform
+      working-directory: ./src/Platforms/Windows
+      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: WindowsNativex64
+        path: ./src/Platforms/Windows/bin/Elemental.Native.dll
+        
+  build_macos_x64:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build MacOS Platform
+      working-directory: ./src/Platforms/MacOS
+      run: pwsh ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: MacOSNative
+        path: ./src/Platforms/MacOS/bin/Elemental.Native.dylib
+
+  build_dotnet:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.100
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        vs-version: '[17.0, 17.5)'
+        msbuild-architecture: x64
+
+    - name: Build Library
+      run: |
+        dotnet build ./src/Elemental -c Release -p:Version=${{ inputs.tag }} 
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: DotnetBinaries
+        path: |
+          ./src/Elemental/bin/Release/net7.0/Elemental.dll
+          ./src/Elemental/bin/Release/net7.0/Elemental.xml
+          
+  build_nuget:
+    runs-on: windows-latest
+    needs: [build_windows_x64, build_macos_x64, build_dotnet]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.100
+
+    - name: Download Windows Native x64
+      uses: actions/download-artifact@master
+      with:
+        name: WindowsNativex64
+        path: ./publish/runtimes/win-x64
+          
+    - name: Download MacOS Native
+      uses: actions/download-artifact@master
+      with:
+        name: MacOSNative
+        path: ./publish/runtimes/osx
+          
+    - name: Download Dotnet Binaries
+      uses: actions/download-artifact@master
+      with:
+        name: DotnetBinaries
+        path: ./publish/lib/net7.0
+
+    - name: Replace tokens in nuspec file
+      uses: datamonsters/replace-action@master
+      with:
+        files: "./publish/Elemental.nuspec"
+        replacements: '#VERSION#=${{ inputs.tag }},#COMMIT#=e1c65e4524cd70ee6e22abe33e6cb6ec73938cb3'
+
+    - name: Nuget pack
+      working-directory: ./publish
+      run: nuget.exe pack -OutputDirectory build
+
+    # TODO: Create tag
+    # TODO: Create Release
+
+    - name: Push Nuget Package
+      if: ${{ inputs.publish-nuget == true }}
+      run: dotnet nuget push ./publish/Elemental.${{ inputs.tag }}.nupkg --source https://nuget.pkg.github.com/double-buffer/index.json --api-key ${GITHUB_TOKEN}
+      env:
+        GITHUB_TOKEN: ${{ secrets.NUGET_APIKEY }}
+          
+    - name: Upload Nuget package
+      uses: actions/upload-artifact@v3
+      with:
+        name: nuget
+        path: ./publish/build/*.nupkg
+
+    - name: Delete Windows Native x64
+      uses: geekyeggo/delete-artifact@v2
+      with:
+          name: WindowsNativex64
+
+    - name: Delete MacOS Native
+      uses: geekyeggo/delete-artifact@v2
+      with:
+          name: MacOSNative
+          
+    - name: Delete Dotnet Binaries
+      uses: geekyeggo/delete-artifact@v2
+      with:
+          name: DotnetBinaries
