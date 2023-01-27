@@ -64,6 +64,5 @@ internal static unsafe class NativeWindowDescriptionMarshaller
         };
     }
 
-    public static void Free(NativeWindowDescriptionUnmanaged unmanaged)
-        => Utf8StringMarshaller.Free(unmanaged.Title);
+    public static void Free(NativeWindowDescriptionUnmanaged unmanaged) => Utf8StringMarshaller.Free(unmanaged.Title);
 }
