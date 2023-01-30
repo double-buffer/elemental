@@ -2,7 +2,7 @@ import Cocoa
 import NativeElemental
 
 @_cdecl("Native_CreateApplication")
-public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> UnsafeMutableRawPointer {
+public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> UnsafeMutableRawPointer? {
     var processSerialNumber = ProcessSerialNumber(highLongOfPSN: 0, lowLongOfPSN: UInt32(kCurrentProcess))
     TransformProcessType(&processSerialNumber, UInt32(kProcessTransformToForegroundApplication))
  
@@ -36,7 +36,7 @@ public func runApplication(applicationPointer: UnsafeRawPointer, runHandler: Run
 }
 
 @_cdecl("Native_CreateWindow")
-public func createWindow(application: UnsafeRawPointer, description: NativeWindowDescription) -> UnsafeMutableRawPointer {
+public func createWindow(application: UnsafeRawPointer, description: NativeWindowDescription) -> UnsafeMutableRawPointer? {
     let width = description.Width
     let height = description.Height
     
