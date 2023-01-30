@@ -14,6 +14,12 @@ public interface INativeApplicationService
     NativeApplication CreateApplication(string applicationName);
 
     /// <summary>
+    /// Deletes the specified native application.
+    /// </summary>
+    /// <param name="application">Application handle.</param>
+    void DeleteApplication(NativeApplication application);
+
+    /// <summary>
     /// Executes the main loop for the specified application. This method returns
     /// when the application is closed. 
     /// </summary>
@@ -29,6 +35,12 @@ public interface INativeApplicationService
     /// <returns>Window handle.</returns>
     NativeWindow CreateWindow(NativeApplication application, NativeWindowDescription description);
 
+    /// <summary>
+    /// Deletes the specified native window.
+    /// </summary>
+    /// <param name="window">Window handle.</param>
+    void DeleteWindow(NativeWindow window);
+    
     /// <summary>
     /// Gets the available render size of the specified window.
     /// </summary>
