@@ -183,7 +183,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                 sourceCode.Append("return ");
             }
 
-            sourceCode.AppendLine($"{platformService.InteropClassName}.Native_{method.Name}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + item.Name))});");
+            sourceCode.AppendLine($"PlatformServiceInterop.Native_{method.Name}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + item.Name))});");
 
             if (isReturnTypeNativePointer)
             {

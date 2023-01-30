@@ -21,6 +21,10 @@ public class MacOSApplication {
         self.status.Status = status.Status | UInt32(value) << Int(flag.rawValue - 1)
     }
 
+    public static func release(_ pointer: UnsafeRawPointer) {
+        Unmanaged<MacOSApplication>.fromOpaque(pointer).release()
+    }
+
     public static func fromPointer(_ pointer: UnsafeRawPointer) -> MacOSApplication {
         return Unmanaged<MacOSApplication>.fromOpaque(pointer).takeUnretainedValue()
     }
