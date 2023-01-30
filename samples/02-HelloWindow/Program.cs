@@ -3,7 +3,7 @@
 var applicationService = new NativeApplicationService();
 using var application = applicationService.CreateApplication("Hello Window");
 
-using var window = applicationService.CreateWindow(application, new NativeWindowDescription
+using var window = applicationService.CreateWindow(application, new()
 {
     Title = "Hello Window!",
     Width = 1280,
