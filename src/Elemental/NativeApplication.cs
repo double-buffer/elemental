@@ -3,7 +3,7 @@
 /// <summary>
 /// Handler to a native application.
 /// </summary>
-[PlatformNativePointer]
+[PlatformNativePointer(DeleteMethod = nameof(PlatformServiceInterop.Native_DeleteApplication))]
 public readonly partial record struct NativeApplication
 {
 }

@@ -22,6 +22,11 @@ DllExport void* Native_CreateApplication(unsigned char* applicationName)
     return application;
 }
 
+DllExport void Native_DeleteApplication(void* applicationPointer)
+{
+    delete (WindowsApplication*)applicationPointer;
+}
+
 DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr runHandler)
 {
     auto application = (WindowsApplication*)applicationPointer;
@@ -109,6 +114,13 @@ DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescri
     nativeWindow->UIScale = mainScreenScaling;
 
     return nativeWindow;
+}
+
+DllExport void Native_DeleteWindow(void* windowPointer)
+{
+    auto window = (WindowsWindow*)windowPointer;
+    DestroyWindow(window->WindowHandle);
+    delete window;
 }
 
 DllExport NativeWindowSize Native_GetWindowRenderSize(void* windowPointer)

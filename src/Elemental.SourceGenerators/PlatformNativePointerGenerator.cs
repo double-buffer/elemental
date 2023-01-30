@@ -11,6 +11,7 @@ record PlatformNativePointerToGenerate
 {
     public string? Namespace { get; set; }
     public string StructName { get; set; } = "";
+    public string DeleteMethod { get; set; } = "";
 }
 
 [Generator]
@@ -43,6 +44,19 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
                             [AttributeUsage(AttributeTargets.Struct)]
                             public class PlatformNativePointerAttribute : Attribute
                             {
+                                /// <summary>
+                                /// Default constructor.
+                                /// </summary>
+                                public PlatformNativePointerAttribute()
+                                {
+                                    DeleteMethod = null;
+                                }
+
+                                /// <summary>
+                                /// Gets or sets the name of the delete method to use when the Native pointer is disposed.
+                                /// </summary>
+                                /// <value>Name of the delete method.</value>
+                                public string DeleteMethod { get; set; }
                             }
                             """;
 
@@ -114,7 +128,7 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
         }
 
         var implementationCode = """
-                                 public partial record struct ##NAME##
+                                 public partial record struct ##NAME####INHERIT##
                                  {
                                     /// <summary>
                                     /// Gets the native pointer used by this handle.
@@ -133,11 +147,30 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
                                     /// </summary>
                                     /// <param name="src">Source value.</param>
                                     public static implicit operator ##NAME##(nint src) => new() { NativePointer = src };
+
+                                    ##DISPOSE##
                                  }
                                  """;
 
         sourceCode.AppendLine(implementationCode);
+
+        var disposeCode = """
+                            /// <summary>
+                            /// Disposes the resource owned by the platform pointer.
+                            /// </summary>
+                            public void Dispose()
+                            {
+                                if (NativePointer != nint.Zero)
+                                {
+                                    PlatformServiceInterop.##DELETEMETHOD##(NativePointer);
+                                }
+                            }
+                          """;
+
+        sourceCode.Replace("##INHERIT##", platformService.DeleteMethod != "null" ? " : IDisposable" : string.Empty);
+        sourceCode.Replace("##DISPOSE##", platformService.DeleteMethod != "null" ? disposeCode : string.Empty);
         sourceCode.Replace("##NAME##", platformService.StructName);
+        sourceCode.Replace("##DELETEMETHOD##", platformService.DeleteMethod.Replace("\"", string.Empty));
     }
 
     static List<PlatformNativePointerToGenerate> GetTypesToGenerate(Compilation compilation, IEnumerable<RecordDeclarationSyntax> structs, CancellationToken cancellationToken)
@@ -164,6 +197,7 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
             
             var structName = structSymbol.Name;
             var namespaceName = structSymbol.ContainingNamespace;
+            var attribute = structSymbol.GetAttributes().First(item => item.AttributeClass!.Name == "PlatformNativePointerAttribute");
 
             if (structName is null)
             {
@@ -173,7 +207,8 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
             var platformNativePointer = new PlatformNativePointerToGenerate
             {
                 StructName = structName,
-                Namespace = namespaceName?.ToString()
+                Namespace = namespaceName?.ToString(),
+                DeleteMethod = attribute.NamedArguments.FirstOrDefault(item => item.Key == "DeleteMethod").Value.ToCSharpString()
             };
 
             result.Add(platformNativePointer);
