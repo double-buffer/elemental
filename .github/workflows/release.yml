@@ -125,9 +125,7 @@ jobs:
 
     - name: Push Nuget Package
       if: ${{ inputs.publish-nuget == true }}
-      run: dotnet nuget push ./publish/Elemental.${{ inputs.tag }}.nupkg --source https://nuget.pkg.github.com/double-buffer/index.json --api-key ${GITHUB_TOKEN}
-      env:
-        GITHUB_TOKEN: ${{ secrets.NUGET_APIKEY }}
+      run: dotnet nuget push ./publish/build/Elemental.${{ inputs.tag }}.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{ secrets.NUGET_APIKEY }}
           
     - name: Upload Nuget package
       uses: actions/upload-artifact@v3
