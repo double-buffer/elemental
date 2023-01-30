@@ -10,7 +10,7 @@ Open a command line, create a new console project and add the Elemental NuGet pa
 
 ```
 dotnet new console
-dotnet add package Elemental
+dotnet add package Elemental --prerelease
 ```
 
 Copy and paste this sample code to create an empty window and display its current render size in the title bar.
@@ -50,4 +50,4 @@ Run the app using on any supported platform. (Currently Windows and MacOS)
 dotnet run
 ```
 
-You will find more examples in the [samples folder](samples/readme.md).
+You will find more examples in the [samples folder](samples/README.md).

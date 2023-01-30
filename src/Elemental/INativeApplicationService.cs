@@ -27,6 +27,8 @@ public interface INativeApplicationService
     /// <param name="runHandler">Handler called at each iterations of the loop.</param>
     void RunApplication(NativeApplication application, RunHandler runHandler);
 
+    // TODO: Add default implementation
+
     /// <summary>
     /// Creates a new native window.
     /// </summary>
