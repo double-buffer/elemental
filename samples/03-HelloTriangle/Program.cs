@@ -1,6 +1,9 @@
 ﻿using Elemental;
+using Elemental.Graphics;
 
 var applicationService = new NativeApplicationService();
+var graphicsService = new GraphicsService();
+
 using var application = applicationService.CreateApplication("Hello Window");
 
 using var window = applicationService.CreateWindow(application, new NativeWindowDescription
@@ -10,6 +13,11 @@ using var window = applicationService.CreateWindow(application, new NativeWindow
     Height = 720
 });
 
+using var graphicsDevice = graphicsService.CreateGraphicsDevice();
+var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
+
+applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");
+
 applicationService.RunApplication(application, (status) =>
 {
     if (status.IsClosing)
@@ -18,7 +26,6 @@ applicationService.RunApplication(application, (status) =>
     }
 
     var renderSize = applicationService.GetWindowRenderSize(window);
-    applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: {renderSize})");
 
     Thread.Sleep(5);
 

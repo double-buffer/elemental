@@ -35,3 +35,16 @@ struct NativeWindowSize
     int Height;
     float UIScale;
 };
+
+struct GraphicsDeviceInfo
+{
+    unsigned char* DeviceName;
+    unsigned char* GraphicsApiName;
+    unsigned char* DriverVersion;
+};
+
+enum GraphicsDiagnostics
+{
+    GraphicsDiagnostics_None,
+    GraphicsDiagnostics_Debug
+};

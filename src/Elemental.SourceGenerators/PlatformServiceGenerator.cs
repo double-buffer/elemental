@@ -168,7 +168,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             }
 
             sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-            sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name))})");
+            sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name + (item.HasExplicitDefaultValue ? " = " + item.ExplicitDefaultValue : "")))})");
             sourceCode.AppendLine("{");
 
             var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformNativePointerAttribute");
