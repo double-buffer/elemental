@@ -1,5 +1,7 @@
 #pragma once
 #include "WindowsCommon.h"
+#include "Libs/Win32DarkMode/DarkMode.h"
+#include "StringConverters.h"
 
 struct WindowsApplication
 {

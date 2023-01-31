@@ -1,8 +1,6 @@
 #include "WindowsCommon.h"
 #include "../Common/Elemental.h"
-#include "Libs/Win32DarkMode/DarkMode.h"
 #include "NativeApplicationService.h"
-#include "StringConverters.h"
 
 DllExport void* Native_CreateApplication(unsigned char* applicationName)
 {

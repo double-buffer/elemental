@@ -1,29 +1,21 @@
 #include "WindowsCommon.h"
 #include "GraphicsService.h"
+#include "Direct3D12/Direct3D12GraphicsService.h"
+
+// TODO: To change
+BaseGraphicsService *graphicsService = (BaseGraphicsService*)new Direct3D12GraphicsService();
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics)
 {
-    printf("Create Device\n");
-
-    if (graphicsDiagnostics == GraphicsDiagnostics_Debug)
-    {
-        printf("DEBUG ON\n");
-    }
-
-    auto test = new int();
-    return test;
+    return graphicsService->CreateGraphicsDevice(graphicsDiagnostics);
 }
 
 DllExport void Native_DeleteGraphicsDevice(void* graphicsDevicePointer)
 {
+    graphicsService->DeleteGraphicsDevice(graphicsDevicePointer);
 }
 
 DllExport GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(void* graphicsDevicePointer)
 {
-    auto result = GraphicsDeviceInfo();
-    result.DeviceName = ConvertWStringToUtf8(L"Windows Device éééé");
-    result.GraphicsApiName = ConvertWStringToUtf8(L"API");
-    result.DriverVersion = ConvertWStringToUtf8(L"1.0");
-
-    return result;
+    return graphicsService->GetGraphicsDeviceInfo(graphicsDevicePointer);
 }
