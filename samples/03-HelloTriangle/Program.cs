@@ -13,7 +13,7 @@ using var window = applicationService.CreateWindow(application, new NativeWindow
     Height = 720
 });
 
-using var graphicsDevice = graphicsService.CreateGraphicsDevice();
+using var graphicsDevice = graphicsService.CreateGraphicsDevice(GraphicsDiagnostics.Debug);
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
 
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");

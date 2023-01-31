@@ -8,6 +8,7 @@
 *.sln.docstates
 
 xcuserdata/
+packages/
 
 # Build results
 [Dd]ebug/
