@@ -42,18 +42,18 @@ DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr run
     }
 }
 
-DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescription description)
+DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowOptions options)
 {
     InitCommonControls();
     auto nativeApplication = (WindowsApplication*)applicationPointer;
 
-    auto width = description.Width;
-    auto height = description.Height;
+    auto width = options.Width;
+    auto height = options.Height;
 
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
-        ConvertUtf8ToWString(description.Title).c_str(),
+        ConvertUtf8ToWString(options.Title).c_str(),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -100,7 +100,7 @@ DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescri
     SetWindowPos(window, nullptr, x, y, width, height, 0);
     ShowWindow(window, SW_NORMAL);
 
-    if (description.WindowState == NativeWindowState::Maximized)
+    if (options.WindowState == NativeWindowState::Maximized)
     {
         ShowWindow(window, SW_MAXIMIZE);
     }

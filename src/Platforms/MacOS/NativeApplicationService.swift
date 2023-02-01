@@ -41,21 +41,21 @@ public func runApplication(applicationPointer: UnsafeRawPointer, runHandler: Run
 }
 
 @_cdecl("Native_CreateWindow")
-public func createWindow(application: UnsafeRawPointer, description: NativeWindowDescription) -> UnsafeMutableRawPointer? {
-    let width = description.Width
-    let height = description.Height
+public func createWindow(application: UnsafeRawPointer, options: NativeWindowOptions) -> UnsafeMutableRawPointer? {
+    let width = options.Width
+    let height = options.Height
     
     let window = NSWindow(contentRect: NSMakeRect(0, 0, CGFloat(width), CGFloat(height)), 
                             styleMask: [.resizable, .titled, .miniaturizable, .closable], 
                             backing: .buffered, 
                             defer: false)
 
-    window.title = String(cString: description.Title);
+    window.title = String(cString: options.Title);
 
     window.center()
     window.makeKeyAndOrderFront(nil)
 
-    if (description.WindowState == Maximized) {
+    if (options.WindowState == Maximized) {
         window.setFrame(window.screen!.visibleFrame, display: true, animate: false)
     }
 

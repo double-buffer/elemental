@@ -12,7 +12,7 @@ internal static partial class PlatformServiceInterop
     //internal static partial ReadOnlySpan<int> GetAvailableGraphicsDevices();
 
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial nint Native_CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics);
+    internal static partial nint Native_CreateGraphicsDevice(GraphicsDeviceOptions options);
 
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial void Native_DeleteGraphicsDevice(nint graphicsDevice);

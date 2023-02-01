@@ -1,11 +1,11 @@
 #include "WindowsCommon.h"
 #include "Direct3D12GraphicsService.h"
 
-void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics)
+void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
 {
     if (_dxgiFactory == nullptr)
     {
-        InitSdk(graphicsDiagnostics == GraphicsDiagnostics_Debug);
+        InitSdk(options.GraphicsDiagnostics == GraphicsDiagnostics_Debug);
     }
 
     auto test = new int();
@@ -51,6 +51,7 @@ void Direct3D12GraphicsService::InitSdk(bool enableDebugDiagnostics)
 
     if (enableDebugDiagnostics)
     {
+        printf("INIT DEBUG\n");
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
         if (_debugInterface)

@@ -3,13 +3,13 @@ namespace Elemental;
 /// <summary>
 /// Describes a <see cref="NativeWindow" /> to create.
 /// </summary>
-[NativeMarshalling(typeof(NativeWindowDescriptionMarshaller))]
-public readonly record struct NativeWindowDescription
+[NativeMarshalling(typeof(NativeWindowOptionsMarshaller))]
+public readonly record struct NativeWindowOptions
 {
     /// <summary>
     /// Default constructor.
     /// </summary>
-    public NativeWindowDescription()
+    public NativeWindowOptions()
     {
         Title = "Window Title";
         Width = 1280;
@@ -42,10 +42,10 @@ public readonly record struct NativeWindowDescription
     public NativeWindowState WindowState { get; init; }
 }
 
-[CustomMarshaller(typeof(NativeWindowDescription), MarshalMode.ManagedToUnmanagedIn, typeof(NativeWindowDescriptionMarshaller))]
-internal static unsafe class NativeWindowDescriptionMarshaller
+[CustomMarshaller(typeof(NativeWindowOptions), MarshalMode.ManagedToUnmanagedIn, typeof(NativeWindowOptionsMarshaller))]
+internal static unsafe class NativeWindowOptionsMarshaller
 {
-    internal struct NativeWindowDescriptionUnmanaged
+    internal struct NativeWindowOptionsUnmanaged
     {
         public byte* Title;
         public int Width;
@@ -53,9 +53,9 @@ internal static unsafe class NativeWindowDescriptionMarshaller
         public NativeWindowState WindowState;
     }
 
-    public static NativeWindowDescriptionUnmanaged ConvertToUnmanaged(NativeWindowDescription managed)
+    public static NativeWindowOptionsUnmanaged ConvertToUnmanaged(NativeWindowOptions managed)
     {
-        return new NativeWindowDescriptionUnmanaged
+        return new NativeWindowOptionsUnmanaged
         {
             Title = Utf8StringMarshaller.ConvertToUnmanaged(managed.Title),
             Width = managed.Width,
@@ -64,5 +64,5 @@ internal static unsafe class NativeWindowDescriptionMarshaller
         };
     }
 
-    public static void Free(NativeWindowDescriptionUnmanaged unmanaged) => Utf8StringMarshaller.Free(unmanaged.Title);
+    public static void Free(NativeWindowOptionsUnmanaged unmanaged) => Utf8StringMarshaller.Free(unmanaged.Title);
 }

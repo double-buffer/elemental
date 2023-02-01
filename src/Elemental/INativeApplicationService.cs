@@ -31,9 +31,9 @@ public interface INativeApplicationService
     /// Creates a new <see cref="NativeWindow" />.
     /// </summary>
     /// <param name="application">Application that owns the window.</param>
-    /// <param name="description">Description of the window to create.</param>
+    /// <param name="options">Optional parameters used by the graphics device creation.</param>
     /// <returns>Window handle.</returns>
-    NativeWindow CreateWindow(NativeApplication application, NativeWindowDescription description);
+    NativeWindow CreateWindow(NativeApplication application, NativeWindowOptions options);
 
     /// <summary>
     /// Deletes the specified <see cref="NativeWindow" />.

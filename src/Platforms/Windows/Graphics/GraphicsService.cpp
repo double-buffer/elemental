@@ -15,9 +15,9 @@ DllExport void Native_GraphicsServiceDispose()
     printf("Graphics Dispose\n");
 }
 
-DllExport void* Native_CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics)
+DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
 {
-    return graphicsService->CreateGraphicsDevice(graphicsDiagnostics);
+    return graphicsService->CreateGraphicsDevice(options);
 }
 
 DllExport void Native_DeleteGraphicsDevice(void* graphicsDevicePointer)

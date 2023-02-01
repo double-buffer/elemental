@@ -10,7 +10,7 @@ using namespace Microsoft::WRL;
 class Direct3D12GraphicsService : BaseGraphicsService
 {
 public:
-    void* CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics) override;
+    void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
     void DeleteGraphicsDevice(void *graphicsDevicePointer) override;
     GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) override;
 

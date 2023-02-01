@@ -21,7 +21,7 @@ enum NativeWindowState
     Maximized
 };
 
-struct NativeWindowDescription
+struct NativeWindowOptions
 {
     unsigned char* Title;
     int Width;
@@ -47,4 +47,9 @@ enum GraphicsDiagnostics
 {
     GraphicsDiagnostics_None,
     GraphicsDiagnostics_Debug
+};
+
+struct GraphicsDeviceOptions
+{
+    enum GraphicsDiagnostics GraphicsDiagnostics;
 };

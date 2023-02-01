@@ -15,9 +15,9 @@ public interface IGraphicsService
     /// <summary>
     /// Creates a new <see cref="GraphicsDevice" />.
     /// </summary>
+    /// <param name="options">Optional parameters used by the graphics device creation.</param>
     /// <returns>Graphics device handle.</returns>
-    // TODO: Convert the optional parameters to a structure
-    GraphicsDevice CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics = GraphicsDiagnostics.None);
+    GraphicsDevice CreateGraphicsDevice(GraphicsDeviceOptions options);
 
     /// <summary>
     /// Deletes the specified <see cref="GraphicsDevice" />.

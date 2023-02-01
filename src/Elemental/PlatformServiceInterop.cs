@@ -14,7 +14,7 @@ internal static partial class PlatformServiceInterop
     internal static partial void Native_RunApplication(nint application, RunHandler runHandler);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial nint Native_CreateWindow(nint application, NativeWindowDescription description);
+    internal static partial nint Native_CreateWindow(nint application, NativeWindowOptions options);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial void Native_DeleteWindow(nint window);
