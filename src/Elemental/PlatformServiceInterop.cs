@@ -25,15 +25,3 @@ internal static partial class PlatformServiceInterop
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial void Native_SetWindowTitle(NativeWindow window, string title);
 }
-
-internal static partial class PlatformServiceInterop
-{
-    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial nint Native_CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics);
-
-    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void Native_DeleteGraphicsDevice(nint graphicsDevice);
-    
-    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(nint graphicsDevice);
-}

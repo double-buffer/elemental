@@ -11,6 +11,8 @@ record PlatformServiceToGenerate
 {
     public string? Namespace { get; set; }
     public string InterfaceName { get; set; } = "";
+    public string InitMethod { get; set; } = "";
+    public string DisposeMethod { get; set; } = "";
 
     public IList<IMethodSymbol> MethodList { get; } = new List<IMethodSymbol>();
 
@@ -64,6 +66,26 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                             [AttributeUsage(AttributeTargets.Interface)]
                             public class PlatformServiceAttribute : Attribute
                             {
+                                /// <summary>
+                                /// Default constructor.
+                                /// </summary>
+                                public PlatformServiceAttribute()
+                                {
+                                    InitMethod = null;
+                                    DisposeMethod = null;
+                                }
+
+                                /// <summary>
+                                /// Gets or sets the name of the init method to use when the platform service is first created.
+                                /// </summary>
+                                /// <value>Name of the init method.</value>
+                                public string InitMethod { get; set; }
+
+                                /// <summary>
+                                /// Gets or sets the name of the dispose method to use when the platform service is disposed.
+                                /// </summary>
+                                /// <value>Name of the dispose method.</value>
+                                public string DisposeMethod { get; set; }
                             }
                             """;
 
@@ -155,8 +177,26 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         }
 
         sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-        sourceCode.AppendLine($"public partial class {platformService.ImplementationClassName} : {platformService.InterfaceName}");
+        sourceCode.AppendLine($"public partial class {platformService.ImplementationClassName} : {platformService.InterfaceName}{((platformService.DisposeMethod != "null") ? ", IDisposable" : "")}");
         sourceCode.AppendLine("{");
+
+        if (platformService.InitMethod != "null")
+        {
+            sourceCode.AppendLine("/// <summary>Default constructor.</summary>");
+            sourceCode.AppendLine($"public {platformService.ImplementationClassName}()");
+            sourceCode.AppendLine("{");
+            sourceCode.AppendLine($"PlatformServiceInterop.{platformService.InitMethod.Replace("\"", "")}();");
+            sourceCode.AppendLine("}");
+        }
+        
+        if (platformService.DisposeMethod != "null")
+        {
+            sourceCode.AppendLine("/// <summary>Frees any unmanaged resources owned by the service.</summary>");
+            sourceCode.AppendLine($"public void Dispose()");
+            sourceCode.AppendLine("{");
+            sourceCode.AppendLine($"PlatformServiceInterop.{platformService.DisposeMethod.Replace("\"", "")}();");
+            sourceCode.AppendLine("}");
+        }
 
         foreach (var method in platformService.MethodList)
         {
@@ -171,7 +211,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name + (item.HasExplicitDefaultValue ? " = " + item.ExplicitDefaultValue : "")))})");
             sourceCode.AppendLine("{");
 
-            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformNativePointerAttribute");
+            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformServiceAttribute");
 
             if (isReturnTypeNativePointer)
             {
@@ -258,6 +298,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
 
             var interfaceName = interfaceSymbol.Name;
             var namespaceName = interfaceSymbol.ContainingNamespace;
+            var attribute = interfaceSymbol.GetAttributes().First(item => item.AttributeClass!.Name == "PlatformServiceAttribute");
 
             if (interfaceName is null)
             {
@@ -267,7 +308,9 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             var platformService = new PlatformServiceToGenerate
             {
                 InterfaceName = interfaceName,
-                Namespace = namespaceName?.ToString()
+                Namespace = namespaceName?.ToString(),
+                InitMethod = attribute.NamedArguments.FirstOrDefault(item => item.Key == "InitMethod").Value.ToCSharpString(),
+                DisposeMethod = attribute.NamedArguments.FirstOrDefault(item => item.Key == "DisposeMethod").Value.ToCSharpString()
             };
 
             var members = interfaceSymbol.GetMembers();

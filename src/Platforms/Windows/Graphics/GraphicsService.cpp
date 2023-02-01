@@ -5,6 +5,16 @@
 // TODO: To change
 BaseGraphicsService *graphicsService = (BaseGraphicsService*)new Direct3D12GraphicsService();
 
+DllExport void Native_GraphicsServiceInit()
+{
+    printf("Graphics INIT\n");
+}
+
+DllExport void Native_GraphicsServiceDispose()
+{
+    printf("Graphics Dispose\n");
+}
+
 DllExport void* Native_CreateGraphicsDevice(GraphicsDiagnostics graphicsDiagnostics)
 {
     return graphicsService->CreateGraphicsDevice(graphicsDiagnostics);
