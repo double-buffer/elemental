@@ -52,4 +52,5 @@ enum GraphicsDiagnostics
 struct GraphicsDeviceOptions
 {
     enum GraphicsDiagnostics GraphicsDiagnostics;
+    bool UseVulkan;
 };

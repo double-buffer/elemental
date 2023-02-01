@@ -33,7 +33,10 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: WindowsNativex64
-        path: ./src/Platforms/Windows/bin/Elemental.Native.dll
+        path: |
+            ./src/Platforms/Windows/bin/Elemental.Native.dll
+            ./src/Platforms/Windows/bin/D3D12/D3D12Core.dll
+            ./src/Platforms/Windows/bin/D3D12/D3D12SDKLayers.dll
         
   build_macos_x64:
     runs-on: macos-latest

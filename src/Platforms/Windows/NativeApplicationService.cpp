@@ -1,5 +1,4 @@
 #include "WindowsCommon.h"
-#include "../Common/Elemental.h"
 #include "NativeApplicationService.h"
 
 DllExport void* Native_CreateApplication(unsigned char* applicationName)

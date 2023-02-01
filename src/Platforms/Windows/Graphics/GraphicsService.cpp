@@ -1,31 +1,40 @@
 #include "WindowsCommon.h"
-#include "GraphicsService.h"
 #include "Direct3D12/Direct3D12GraphicsService.h"
-
-// TODO: To change
-BaseGraphicsService *graphicsService = (BaseGraphicsService*)new Direct3D12GraphicsService();
+#include "../../Common/BaseGraphicsObject.h"
+#include "../../Common/Vulkan/VulkanGraphicsService.h"
 
 DllExport void Native_GraphicsServiceInit()
 {
-    printf("Graphics INIT\n");
 }
 
 DllExport void Native_GraphicsServiceDispose()
 {
-    printf("Graphics Dispose\n");
 }
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
 {
+    BaseGraphicsService* graphicsService;
+
+    if (options.UseVulkan)
+    {
+        graphicsService = (BaseGraphicsService*)new VulkanGraphicsService();
+    }
+    else
+    {
+        graphicsService = (BaseGraphicsService*)new Direct3D12GraphicsService();
+    }
+
     return graphicsService->CreateGraphicsDevice(options);
 }
 
 DllExport void Native_DeleteGraphicsDevice(void* graphicsDevicePointer)
 {
+    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
     graphicsService->DeleteGraphicsDevice(graphicsDevicePointer);
 }
 
 DllExport GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(void* graphicsDevicePointer)
 {
+    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
     return graphicsService->GetGraphicsDeviceInfo(graphicsDevicePointer);
 }

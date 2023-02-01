@@ -19,7 +19,6 @@ using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDevi
 });
 
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
-
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");
 
 applicationService.RunApplication(application, (status) =>

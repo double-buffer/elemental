@@ -1,6 +1,8 @@
 #pragma once
+#include "WindowsCommon.h"
 #include "../../../Common/BaseGraphicsService.h"
-#include "../StringConverters.h"
+#include "../../../Common/BaseGraphicsObject.h"
+#include "../../../Common/StringConverters.h"
 
 using namespace Microsoft::WRL;
 

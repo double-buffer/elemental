@@ -8,8 +8,8 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
         InitSdk(options.GraphicsDiagnostics == GraphicsDiagnostics_Debug);
     }
 
-    auto test = new int();
-    return test;
+    auto graphicsDevice = new BaseGraphicsObject(this);
+    return graphicsDevice;
 }
 
 void Direct3D12GraphicsService::DeleteGraphicsDevice(void* graphicsDevicePointer)
@@ -51,7 +51,6 @@ void Direct3D12GraphicsService::InitSdk(bool enableDebugDiagnostics)
 
     if (enableDebugDiagnostics)
     {
-        printf("INIT DEBUG\n");
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
         if (_debugInterface)
@@ -62,6 +61,5 @@ void Direct3D12GraphicsService::InitSdk(bool enableDebugDiagnostics)
         createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
     }
 
-	AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf())));
-
+    AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf())));
 }

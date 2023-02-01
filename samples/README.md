@@ -7,12 +7,12 @@ List of available samples:
 
 ## <a name="01HelloWorld"></a>01 - Hello World
 
-[This sample](01-HelloWorld/Program.cs) shows how to create a new native application and do some basic logic at each main loop iteration.
+[This sample](01-Foundations/01-HelloWorld/Program.cs) shows how to create a new native application and do some basic logic at each main loop iteration.
 
-![](screenshots/01-HelloWorld.png)
+![](screenshots/01-Foundations/01-HelloWorld.png)
 
 ## <a name="02HelloWindow"></a>02 - HelloWindow
 
-[This sample](02-HelloWindow/Program.cs) shows how to create a new native window. It also displays the current available render width in the title bar.
+[This sample](01-Foundations/02-HelloWindow/Program.cs) shows how to create a new native window. It also displays the current available render width in the title bar.
 
-![](screenshots/02-HelloWindow.png)
+![](screenshots/01-Foundations/02-HelloWindow.png)
