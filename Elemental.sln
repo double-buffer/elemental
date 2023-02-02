@@ -9,18 +9,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elemental", "src\Elemental\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{A940266B-FD7F-459E-9265-610DA0CD6B1D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWorld", "samples\01-HelloWorld\HelloWorld.csproj", "{C13F1C92-F6A7-455A-90EC-C8C520779BFD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWorld", "samples\01-Foundations\01-HelloWorld\HelloWorld.csproj", "{C13F1C92-F6A7-455A-90EC-C8C520779BFD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elemental.SourceGenerators", "src\Elemental.SourceGenerators\Elemental.SourceGenerators.csproj", "{B3F169CA-07A6-40CE-9C66-24433C92941C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWindow", "samples\02-HelloWindow\HelloWindow.csproj", "{5EDEB1EC-C781-44ED-BB7C-70F2EE8158DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWindow", "samples\01-Foundations\02-HelloWindow\HelloWindow.csproj", "{5EDEB1EC-C781-44ED-BB7C-70F2EE8158DB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C4523529-6B48-448E-9515-F6EB406393BC}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Packages.props = Directory.Packages.props
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloTriangle", "samples\03-HelloTriangle\HelloTriangle.csproj", "{7EDA1426-5476-405D-B319-9B46458CE65E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloTriangle", "samples\02-Graphics\01-HelloTriangle\HelloTriangle.csproj", "{7EDA1426-5476-405D-B319-9B46458CE65E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
