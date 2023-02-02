@@ -1,6 +1,10 @@
-public class MetalGraphicsDevice {
+import Metal
 
-    public init() {
+public class MetalGraphicsDevice {
+    let metalDevice: MTLDevice
+
+    public init(_ metalDevice: MTLDevice) {
+        self.metalDevice = metalDevice
     }
 
     public static func release(_ pointer: UnsafeRawPointer) {
