@@ -3,7 +3,7 @@ namespace Elemental.Graphics;
 /// <summary>
 /// Manages low level GPU graphics resources and commands.
 /// </summary>
-[PlatformService(InitMethod = nameof(PlatformServiceInterop.Native_GraphicsServiceInit), DisposeMethod = nameof(PlatformServiceInterop.Native_GraphicsServiceDispose))] 
+[PlatformService] 
 public interface IGraphicsService
 {
     /// <summary>

@@ -1,14 +1,15 @@
 #include "WindowsCommon.h"
 #include "Direct3D12/Direct3D12GraphicsService.h"
 #include "../../Common/BaseGraphicsObject.h"
+#include "../../Common/BaseGraphicsService.h"
 #include "../../Common/Vulkan/VulkanGraphicsService.h"
 
-DllExport void Native_GraphicsServiceInit()
+DllExport void Native_GetAvailableGraphicsDevices(void* graphicsDevices, int* count)
 {
-}
+    auto direct3D12Service = new Direct3D12GraphicsService();
+    direct3D12Service->GetAvailableGraphicsDevices(graphicsDevices, count);
 
-DllExport void Native_GraphicsServiceDispose()
-{
+    // TODO: Combine vulkan devices
 }
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)

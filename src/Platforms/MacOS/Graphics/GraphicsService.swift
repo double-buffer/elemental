@@ -2,16 +2,6 @@ import Cocoa
 import Metal
 import NativeElemental
 
-@_cdecl("Native_GraphicsServiceInit")
-public func graphicsServiceInit() {
-   
-}
-
-@_cdecl("Native_GraphicsServiceDispose")
-public func graphicsServiceDispose() {
-   
-}
-
 @_cdecl("Native_CreateGraphicsDevice")
 public func createGraphicsDevice(options: GraphicsDeviceOptions) -> UnsafeMutableRawPointer? {
     if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug) {

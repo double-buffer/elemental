@@ -1,6 +1,11 @@
 #include "WindowsCommon.h"
 #include "NativeApplicationService.h"
 
+DllExport void Native_FreeNativePointer(unsigned char* nativePointer)
+{
+    delete nativePointer;
+}
+
 DllExport void* Native_CreateApplication(unsigned char* applicationName)
 {
     auto application = new WindowsApplication();
@@ -41,7 +46,7 @@ DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr run
     }
 }
 
-DllExport void* Native_FreeWindow(void* applicationPointer, NativeWindowOptions options)
+DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowOptions options)
 {
     InitCommonControls();
     auto nativeApplication = (WindowsApplication*)applicationPointer;
@@ -113,7 +118,7 @@ DllExport void* Native_FreeWindow(void* applicationPointer, NativeWindowOptions 
     return nativeWindow;
 }
 
-DllExport void Native_DeleteWindow(void* windowPointer)
+DllExport void Native_FreeWindow(void* windowPointer)
 {
     auto window = (WindowsWindow*)windowPointer;
     DestroyWindow(window->WindowHandle);

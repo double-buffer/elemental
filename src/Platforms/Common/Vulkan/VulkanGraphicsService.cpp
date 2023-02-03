@@ -4,6 +4,11 @@
 
 #include "VulkanGraphicsService.h"
 
+void VulkanGraphicsService::GetAvailableGraphicsDevices(void* graphicsDevices, int* count)
+{
+    count = 0;
+}
+
 void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
 {
     printf("Create Vulkan Device\n");

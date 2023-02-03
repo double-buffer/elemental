@@ -1,6 +1,26 @@
 #include "WindowsCommon.h"
 #include "Direct3D12GraphicsService.h"
 
+void Direct3D12GraphicsService::GetAvailableGraphicsDevices(void* graphicsDevices, int* count)
+{
+    std::vector<GraphicsDeviceInfo> list;
+
+    auto test = GraphicsDeviceInfo();
+    test.DeviceName = ConvertWStringToUtf8(L"Teeeest");
+    test.GraphicsApiName = ConvertWStringToUtf8(L"Teeeest");
+    test.DriverVersion = ConvertWStringToUtf8(L"Teeeest");
+    list.push_back(test);
+
+    auto outputList = (GraphicsDeviceInfo*)graphicsDevices;
+
+    for (int i = 0; i < list.size(); i++)
+    {
+        outputList[i] = list[i];
+    }
+
+    *count = (int)list.size();
+}
+
 void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
 {
     if (_dxgiFactory == nullptr)

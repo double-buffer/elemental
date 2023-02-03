@@ -208,22 +208,35 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             }
 
             sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-            sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name + (item.HasExplicitDefaultValue ? " = " + item.ExplicitDefaultValue : "")))})");
+            sourceCode.AppendLine($"public unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name + (item.HasExplicitDefaultValue ? " = " + item.ExplicitDefaultValue : "")))})");
             sourceCode.AppendLine("{");
 
             var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformServiceAttribute");
+            var isReturnTypeSpan = method.ReturnType.Name == "Span" || method.ReturnType.Name == "ReadOnlySpan";
 
             if (isReturnTypeNativePointer)
             {
                 sourceCode.Append("var result = ");
             }
 
-            else if (method.ReturnType.Name.ToLower() != "void")
+            else if (isReturnTypeSpan)
+            {
+                var structName = ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].Name;
+
+                // TODO: This is really hacky, this is temporary
+                sourceCode.AppendLine($"var result = new {structName}Marshaller.{structName}Unmanaged[50];");
+                sourceCode.AppendLine($"fixed({structName}Marshaller.{structName}Unmanaged* nativeResult = result)");
+                sourceCode.AppendLine("{");
+            }
+
+            else if (method.ReturnType.Name.ToLower() != "void" && !isReturnTypeSpan)
             {
                 sourceCode.Append("return ");
             }
 
-            sourceCode.AppendLine($"PlatformServiceInterop.Native_{method.Name}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + item.Name))});");
+            var parameterList = method.Parameters.Select(item => GenerateReferenceType(item) + item.Name).ToList();
+            parameterList.AddRange(GetSpanParameters(isReturnTypeSpan));
+            sourceCode.AppendLine($"PlatformServiceInterop.Native_{method.Name}({string.Join(",", parameterList)});");
 
             if (isReturnTypeNativePointer)
             {
@@ -234,10 +247,36 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                 sourceCode.AppendLine("return result;");
             }
 
+            else if (isReturnTypeSpan)
+            {
+                var structName = ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].Name;
+
+                sourceCode.AppendLine($"var convertedResult = new {structName}[outputCount];");
+                sourceCode.AppendLine("for (var i = 0; i < outputCount; i++)");
+                sourceCode.AppendLine("{");
+                sourceCode.AppendLine($"convertedResult[i] = {structName}Marshaller.ConvertToManaged(result[i]);");
+                sourceCode.AppendLine("}");
+                sourceCode.AppendLine("return convertedResult;");
+                sourceCode.AppendLine("}");
+
+                sourceCode.AppendLine("throw new InvalidOperationException();");
+                // TODO: Cleanup
+
+            }
+
             sourceCode.AppendLine("}");
         }
 
         sourceCode.AppendLine("}");
+    }
+
+    private static IEnumerable<string> GetSpanParameters(bool generateParameters)
+    {
+        if (generateParameters)
+        {
+            yield return "nativeResult";
+            yield return "out var outputCount";
+        }
     }
 
     private static string GenerateReferenceType(IParameterSymbol item)

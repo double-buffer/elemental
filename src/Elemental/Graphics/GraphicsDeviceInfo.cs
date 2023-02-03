@@ -47,7 +47,7 @@ internal static unsafe class GraphicsDeviceInfoMarshaller
 
     public static GraphicsDeviceInfoUnmanaged ConvertToUnmanaged(GraphicsDeviceInfo managed)
     {
-        throw new NotImplementedException();
+        return new GraphicsDeviceInfoUnmanaged();
     }
 
     public static GraphicsDeviceInfo ConvertToManaged(GraphicsDeviceInfoUnmanaged unmanaged)

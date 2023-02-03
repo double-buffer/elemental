@@ -2,7 +2,7 @@
 using Elemental.Graphics;
 
 var applicationService = new NativeApplicationService();
-using var graphicsService = new GraphicsService();
+var graphicsService = new GraphicsService();
 
 using var application = applicationService.CreateApplication("Hello Window");
 

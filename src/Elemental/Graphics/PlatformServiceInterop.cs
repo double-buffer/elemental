@@ -1,15 +1,12 @@
 namespace Elemental;
 
-internal static partial class PlatformServiceInterop
+internal unsafe static partial class PlatformServiceInterop
 {
+    // TODO: For the moment return a span with internally allocated data doesn't seem to be possible
+    // https://github.com/dotnet/runtime/issues/79413
+    // TODO: Write an attribute to specify the max length of the span? (will fix to 50 elements for now)
     [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_GraphicsServiceInit();
-    
-    [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_GraphicsServiceDispose();
-    
-    [LibraryImport("Elemental.Native")]
-    internal static partial void Native_GetAvailableGraphicsDevices(out int graphicsDeviceCount, [MarshalUsing(CountElementName = nameof(graphicsDeviceCount))]out Span<GraphicsDeviceInfo> graphicsDevices);
+    internal static partial void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfoMarshaller.GraphicsDeviceInfoUnmanaged* graphicsDevices, out int graphicsDeviceCount);
 
     [LibraryImport("Elemental.Native")]
     internal static partial nint Native_CreateGraphicsDevice(GraphicsDeviceOptions options);
