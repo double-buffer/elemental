@@ -29,9 +29,8 @@ DllExport void Native_FreeApplication(void* applicationPointer)
     delete (WindowsApplication*)applicationPointer;
 }
 
-DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr runHandler)
+DllExport void Native_RunApplication(WindowsApplication* application, RunHandlerPtr runHandler)
 {
-    auto application = (WindowsApplication*)applicationPointer;
     auto canRun = true;
 
     while (canRun) 
@@ -46,10 +45,9 @@ DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr run
     }
 }
 
-DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowOptions options)
+DllExport void* Native_CreateWindow(WindowsApplication* nativeApplication, NativeWindowOptions options)
 {
     InitCommonControls();
-    auto nativeApplication = (WindowsApplication*)applicationPointer;
 
     auto width = options.Width;
     auto height = options.Height;
@@ -118,17 +116,14 @@ DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowOption
     return nativeWindow;
 }
 
-DllExport void Native_FreeWindow(void* windowPointer)
+DllExport void Native_FreeWindow(WindowsWindow* window)
 {
-    auto window = (WindowsWindow*)windowPointer;
     DestroyWindow(window->WindowHandle);
     delete window;
 }
 
-DllExport NativeWindowSize Native_GetWindowRenderSize(void* windowPointer)
+DllExport NativeWindowSize Native_GetWindowRenderSize(WindowsWindow* nativeWindow)
 {
-    auto nativeWindow = (WindowsWindow*)windowPointer;
-
     RECT windowRectangle;
 	GetClientRect(nativeWindow->WindowHandle, &windowRectangle);
 
@@ -147,9 +142,8 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(void* windowPointer)
     return result;
 }
 
-DllExport void Native_SetWindowTitle(void* windowPointer, unsigned char* title)
+DllExport void Native_SetWindowTitle(WindowsWindow* nativeWindow, unsigned char* title)
 {
-    auto nativeWindow = (WindowsWindow*)windowPointer;
     SetWindowText(nativeWindow->WindowHandle, ConvertUtf8ToWString(title).c_str());
 }
 

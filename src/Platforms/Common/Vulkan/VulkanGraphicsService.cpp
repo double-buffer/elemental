@@ -4,7 +4,7 @@
 
 #include "VulkanGraphicsService.h"
 
-void VulkanGraphicsService::GetAvailableGraphicsDevices(void* graphicsDevices, int* count)
+void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
     count = 0;
 }
