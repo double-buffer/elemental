@@ -42,8 +42,8 @@ public func createGraphicsDevice(options: GraphicsDeviceOptions) -> UnsafeMutabl
     return Unmanaged.passRetained(graphicsDevice).toOpaque()
 }
 
-@_cdecl("Native_DeleteGraphicsDevice")
-public func deleteGraphicsDevice(graphicsDevicePointer: UnsafeRawPointer) {
+@_cdecl("Native_FreeGraphicsDevice")
+public func freeGraphicsDevice(graphicsDevicePointer: UnsafeRawPointer) {
     MetalGraphicsDevice.release(graphicsDevicePointer)
 }
 

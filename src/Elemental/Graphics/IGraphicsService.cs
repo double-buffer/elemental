@@ -20,10 +20,10 @@ public interface IGraphicsService
     GraphicsDevice CreateGraphicsDevice(GraphicsDeviceOptions options);
 
     /// <summary>
-    /// Deletes the specified <see cref="GraphicsDevice" />.
+    /// Frees the specified <see cref="GraphicsDevice" />.
     /// </summary>
-    /// <param name="graphicsDevice">Graphics device to delete.</param>
-    void DeleteGraphicsDevice(GraphicsDevice graphicsDevice);
+    /// <param name="graphicsDevice">Graphics device to free.</param>
+    void FreeGraphicsDevice(GraphicsDevice graphicsDevice);
 
     /// <summary>
     /// Gets informations about the specified <see cref="GraphicsDevice" />.

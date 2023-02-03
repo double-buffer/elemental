@@ -12,7 +12,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
     return graphicsDevice;
 }
 
-void VulkanGraphicsService::DeleteGraphicsDevice(void* graphicsDevicePointer)
+void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 {
 }
 

@@ -13,7 +13,7 @@ class Direct3D12GraphicsService : BaseGraphicsService
 {
 public:
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
-    void DeleteGraphicsDevice(void *graphicsDevicePointer) override;
+    void FreeGraphicsDevice(void *graphicsDevicePointer) override;
     GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) override;
 
 private:

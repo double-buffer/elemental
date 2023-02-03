@@ -19,7 +19,7 @@ DllExport void* Native_CreateApplication(unsigned char* applicationName)
     return application;
 }
 
-DllExport void Native_DeleteApplication(void* applicationPointer)
+DllExport void Native_FreeApplication(void* applicationPointer)
 {
     delete (WindowsApplication*)applicationPointer;
 }
@@ -41,7 +41,7 @@ DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr run
     }
 }
 
-DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowOptions options)
+DllExport void* Native_FreeWindow(void* applicationPointer, NativeWindowOptions options)
 {
     InitCommonControls();
     auto nativeApplication = (WindowsApplication*)applicationPointer;

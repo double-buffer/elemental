@@ -27,10 +27,10 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
     return graphicsService->CreateGraphicsDevice(options);
 }
 
-DllExport void Native_DeleteGraphicsDevice(void* graphicsDevicePointer)
+DllExport void Native_FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
-    graphicsService->DeleteGraphicsDevice(graphicsDevicePointer);
+    graphicsService->FreeGraphicsDevice(graphicsDevicePointer);
 }
 
 DllExport GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(void* graphicsDevicePointer)

@@ -15,7 +15,7 @@ internal static partial class PlatformServiceInterop
     internal static partial nint Native_CreateGraphicsDevice(GraphicsDeviceOptions options);
 
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_DeleteGraphicsDevice(nint graphicsDevice);
+    internal static partial void Native_FreeGraphicsDevice(nint graphicsDevice);
     
     [LibraryImport("Elemental.Native")]
     internal static partial GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(nint graphicsDevice);

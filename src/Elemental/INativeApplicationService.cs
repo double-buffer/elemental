@@ -14,10 +14,10 @@ public interface INativeApplicationService
     NativeApplication CreateApplication(string applicationName);
 
     /// <summary>
-    /// Deletes the specified <see cref="NativeApplication" />.
+    /// Frees the specified <see cref="NativeApplication" />.
     /// </summary>
     /// <param name="application">Application handle.</param>
-    void DeleteApplication(NativeApplication application);
+    void FreeApplication(NativeApplication application);
 
     /// <summary>
     /// Executes the main loop for the specified <see cref="NativeApplication" />. This method returns
@@ -36,10 +36,10 @@ public interface INativeApplicationService
     NativeWindow CreateWindow(NativeApplication application, NativeWindowOptions options);
 
     /// <summary>
-    /// Deletes the specified <see cref="NativeWindow" />.
+    /// Frees the specified <see cref="NativeWindow" />.
     /// </summary>
     /// <param name="window">Window handle.</param>
-    void DeleteWindow(NativeWindow window);
+    void FreeWindow(NativeWindow window);
     
     /// <summary>
     /// Gets the available render size of the specified <see cref="NativeWindow" />.

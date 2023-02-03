@@ -11,7 +11,7 @@ internal static partial class PlatformServiceInterop
     internal static partial nint Native_CreateApplication(string applicationName);
 
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_DeleteApplication(nint application);
+    internal static partial void Native_FreeApplication(nint application);
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_RunApplication(nint application, RunHandler runHandler);
@@ -20,7 +20,7 @@ internal static partial class PlatformServiceInterop
     internal static partial nint Native_CreateWindow(nint application, NativeWindowOptions options);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_DeleteWindow(nint window);
+    internal static partial void Native_FreeWindow(nint window);
     
     [LibraryImport("Elemental.Native")]
     internal static partial NativeWindowSize Native_GetWindowRenderSize(NativeWindow window);

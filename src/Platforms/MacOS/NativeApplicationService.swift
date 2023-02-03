@@ -23,8 +23,8 @@ public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> Un
     return Unmanaged.passRetained(application).toOpaque()
 }
 
-@_cdecl("Native_DeleteApplication")
-public func deleteApplication(applicationPointer: UnsafeRawPointer) {
+@_cdecl("Native_FreeApplication")
+public func freeApplication(applicationPointer: UnsafeRawPointer) {
     MacOSApplication.release(applicationPointer)
 }
 
@@ -68,8 +68,8 @@ public func createWindow(application: UnsafeRawPointer, options: NativeWindowOpt
     return Unmanaged.passRetained(nativeWindow).toOpaque()
 }
 
-@_cdecl("Native_DeleteWindow")
-public func deleteWindow(windowPointer: UnsafeRawPointer) {
+@_cdecl("Native_FreeWindow")
+public func freeWindow(windowPointer: UnsafeRawPointer) {
     MacOSWindow.release(windowPointer)
 }
 
