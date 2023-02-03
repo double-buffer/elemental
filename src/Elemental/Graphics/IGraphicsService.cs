@@ -10,7 +10,7 @@ public interface IGraphicsService
     /// Gets the list of available graphics devices.
     /// </summary>
     /// <returns>A list of <see cref="GraphicsDeviceInfo" /> objects.</returns>
-    //ReadOnlySpan<GraphicsDeviceInfo> GetAvailableGraphicsDevices();
+    ReadOnlySpan<GraphicsDeviceInfo> GetAvailableGraphicsDevices();
 
     /// <summary>
     /// Creates a new <see cref="GraphicsDevice" />.

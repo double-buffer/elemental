@@ -1,6 +1,11 @@
 import Cocoa
 import NativeElemental
 
+@_cdecl("Native_FreeNativePointer")
+public func freeNativePointer(pointer: UnsafeRawPointer) {
+    pointer.deallocate()
+}
+
 @_cdecl("Native_CreateApplication")
 public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> UnsafeMutableRawPointer? {
     var processSerialNumber = ProcessSerialNumber(highLongOfPSN: 0, lowLongOfPSN: UInt32(kCurrentProcess))

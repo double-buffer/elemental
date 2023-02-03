@@ -13,6 +13,13 @@ using var window = applicationService.CreateWindow(application, new NativeWindow
     Height = 720
 });
 
+var availableGraphicsDevices = graphicsService.GetAvailableGraphicsDevices();
+
+foreach (var availableGraphicsDevice in availableGraphicsDevices)
+{
+    Console.WriteLine($"{availableGraphicsDevice}");
+}
+
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
     GraphicsDiagnostics = GraphicsDiagnostics.Debug

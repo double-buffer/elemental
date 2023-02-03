@@ -59,4 +59,11 @@ internal static unsafe class GraphicsDeviceInfoMarshaller
             DriverVersion = Utf8StringMarshaller.ConvertToManaged(unmanaged.DriverVersion) ?? string.Empty
         };
     }
+    
+    public static void Free(GraphicsDeviceInfoUnmanaged unmanaged)
+    {
+        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.DeviceName);
+        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.GraphicsApiName);
+        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.DriverVersion);
+    }
 }
