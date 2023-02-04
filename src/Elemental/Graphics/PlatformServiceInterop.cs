@@ -4,7 +4,6 @@ internal unsafe static partial class PlatformServiceInterop
 {
     // TODO: For the moment return a span with internally allocated data doesn't seem to be possible
     // https://github.com/dotnet/runtime/issues/79413
-    // TODO: Write an attribute to specify the max length of the span? (will fix to 50 elements for now)
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfoMarshaller.GraphicsDeviceInfoUnmanaged* graphicsDevices, out int graphicsDeviceCount);
 

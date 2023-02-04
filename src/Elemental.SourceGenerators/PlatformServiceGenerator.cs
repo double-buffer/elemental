@@ -224,8 +224,13 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                 var structName = ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].Name;
 
                 // TODO: This is really hacky, this is temporary
-                sourceCode.AppendLine($"var result = new {structName}Marshaller.{structName}Unmanaged[50];");
+                sourceCode.AppendLine("int outputCount = 0;");
+                sourceCode.AppendLine($"var convertedResult = Array.Empty<{structName}>();");
+                sourceCode.AppendLine($"Span<{structName}Marshaller.{structName}Unmanaged> result = stackalloc {structName}Marshaller.{structName}Unmanaged[50];");
                 sourceCode.AppendLine($"fixed({structName}Marshaller.{structName}Unmanaged* nativeResult = result)");
+                sourceCode.AppendLine("{");
+
+                sourceCode.AppendLine("try");
                 sourceCode.AppendLine("{");
             }
 
@@ -251,11 +256,22 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             {
                 var structName = ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].Name;
 
-                sourceCode.AppendLine($"var convertedResult = new {structName}[outputCount];");
+                sourceCode.AppendLine($"convertedResult = new {structName}[outputCount];");
                 sourceCode.AppendLine("for (var i = 0; i < outputCount; i++)");
                 sourceCode.AppendLine("{");
                 sourceCode.AppendLine($"convertedResult[i] = {structName}Marshaller.ConvertToManaged(result[i]);");
                 sourceCode.AppendLine("}");
+
+                sourceCode.AppendLine("}");
+                sourceCode.AppendLine("finally");
+                sourceCode.AppendLine("{");
+                sourceCode.AppendLine("for (var i = 0; i < outputCount; i++)");
+                sourceCode.AppendLine("{");
+                sourceCode.AppendLine($"{structName}Marshaller.Free(result[i]);");
+                sourceCode.AppendLine("}");
+
+                sourceCode.AppendLine("}");
+
                 sourceCode.AppendLine("return convertedResult;");
                 sourceCode.AppendLine("}");
 
@@ -275,7 +291,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         if (generateParameters)
         {
             yield return "nativeResult";
-            yield return "out var outputCount";
+            yield return "out outputCount";
         }
     }
 
