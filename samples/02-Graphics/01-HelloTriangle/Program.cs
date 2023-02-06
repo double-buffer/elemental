@@ -14,15 +14,22 @@ using var window = applicationService.CreateWindow(application, new NativeWindow
 });
 
 var availableGraphicsDevices = graphicsService.GetAvailableGraphicsDevices();
+var selectedGraphicsDevice = availableGraphicsDevices[0];
 
 foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
+    if (availableGraphicsDevice.DeviceName.Contains("Intel"))
+    {
+        selectedGraphicsDevice = availableGraphicsDevice;
+    }
+
     Console.WriteLine($"{availableGraphicsDevice}");
 }
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
-    GraphicsDiagnostics = GraphicsDiagnostics.Debug
+    GraphicsDiagnostics = GraphicsDiagnostics.Debug,
+    //DeviceId = selectedGraphicsDevice.DeviceId
 });
 
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);

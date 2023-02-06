@@ -8,10 +8,7 @@ public func Native_GetAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePoi
     var i = 0
 
     for device in devices {
-        graphicsDevices[i] = GraphicsDeviceInfo(DeviceName: convertString(from: device.name),
-                                GraphicsApiName: convertString(from: device.supportsFamily(.metal3) ? "Metal 3" : "Metal 2"),
-                                DriverVersion: convertString(from: "TEst3"))
-
+        graphicsDevices[i] = constructGraphicsDeviceInfo(device)
         i += 1
     }
     
@@ -21,29 +18,29 @@ public func Native_GetAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePoi
 @_cdecl("Native_CreateGraphicsDevice")
 public func createGraphicsDevice(options: GraphicsDeviceOptions) -> UnsafeMutableRawPointer? {
     if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug) {
+        // TODO
         print("DEBUG")
     }
 
-    let devices = MTLCopyAllDevices()
+    var initMetalDevice: MTLDevice? = nil
 
-    for device in devices {
-        // TODO: Test for metal3 mandatory
-        print(device)
-        if (device.supportsFamily(.metal3)) {
-            print("==> metal 3")
-        }
-
-        if (device.supportsFamily(.mac2)) {
-            print("==> mac 2")
-        }
+    if (options.DeviceId != 0) {
+        let devices = MTLCopyAllDevices()
         
-        if (device.supportsFamily(.apple7)) {
-            print("==> apple 7")
+        for device in devices {
+            if (options.DeviceId == device.registryID) {
+                initMetalDevice = device
+                break
+            }
         }
+    } else {
+        initMetalDevice = MTLCreateSystemDefaultDevice()
     }
 
-    // TODO: Enumerate GPUs
-    let metalDevice = MTLCreateSystemDefaultDevice()!
+    guard let metalDevice = initMetalDevice else {
+        return nil
+    }
+
     let graphicsDevice = MetalGraphicsDevice(metalDevice)
     return Unmanaged.passRetained(graphicsDevice).toOpaque()
 }
@@ -56,10 +53,14 @@ public func freeGraphicsDevice(graphicsDevicePointer: UnsafeRawPointer) {
 @_cdecl("Native_GetGraphicsDeviceInfo")
 public func getGraphicsDeviceInfo(graphicsDevicePointer: UnsafeRawPointer) -> GraphicsDeviceInfo {
     let graphicsDevice = MetalGraphicsDevice.fromPointer(graphicsDevicePointer)
+    return constructGraphicsDeviceInfo(graphicsDevice.metalDevice)
+}
 
-    return GraphicsDeviceInfo(DeviceName: convertString(from: graphicsDevice.metalDevice.name),
-                              GraphicsApiName: convertString(from: graphicsDevice.metalDevice.supportsFamily(.metal3) ? "Metal 3" : "Metal 2"),
-                              DriverVersion: convertString(from: "TEst3"))
+private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDeviceInfo {
+    return GraphicsDeviceInfo(DeviceName: convertString(from: metalDevice.name),
+                                GraphicsApi: GraphicsApi_Metal,
+                                DeviceId: UInt(metalDevice.registryID),
+                                AvailableMemory: UInt(metalDevice.recommendedMaxWorkingSetSize))
 }
 
 func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {

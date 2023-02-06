@@ -11,7 +11,7 @@ public readonly record struct GraphicsDeviceOptions
     public GraphicsDeviceOptions()
     {
         GraphicsDiagnostics = GraphicsDiagnostics.None;
-        UseVulkan = false;
+        DeviceId = 0;
     }
 
     /// <summary>
@@ -20,8 +20,7 @@ public readonly record struct GraphicsDeviceOptions
     public GraphicsDiagnostics GraphicsDiagnostics { get; init; }
 
     /// <summary>
-    /// Gets or sets a boolean value to use Vulkan (if available on the system) instead of the
-    /// prefered native system graphics api.
+    /// Gets or sets a graphics device ID to overwrite the default GPU selection.
     /// </summary>
-    public bool UseVulkan { get; init; }
+    public ulong DeviceId { get; init; }
 }

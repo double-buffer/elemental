@@ -12,8 +12,9 @@ public readonly record struct GraphicsDeviceInfo
     public GraphicsDeviceInfo()
     {
         DeviceName = string.Empty;
-        GraphicsApiName = string.Empty;
-        DriverVersion = string.Empty;
+        GraphicsApi = GraphicsApi.Unknown;
+        DeviceId = 0;
+        AvailableMemory = 0;
     }
 
     /// <summary>
@@ -22,17 +23,11 @@ public readonly record struct GraphicsDeviceInfo
     /// <value>Name of the graphics device.</value>
     public string DeviceName { get; init; }
 
-    /// <summary>
-    /// Gets the name of the graphics api.
-    /// </summary>
-    /// <value>Name of the graphics api.</value>
-    public string GraphicsApiName { get; init; }
+    public GraphicsApi GraphicsApi { get; init; }
 
-    /// <summary>
-    /// Gets the version of the graphics driver.
-    /// </summary>
-    /// <value>Version of the graphics driver.</value>
-    public string DriverVersion { get; init; }
+    public ulong DeviceId { get; init; }
+
+    public ulong AvailableMemory { get; init; }
 }
 
 [CustomMarshaller(typeof(GraphicsDeviceInfo), MarshalMode.Default, typeof(GraphicsDeviceInfoMarshaller))]
@@ -41,11 +36,12 @@ internal static unsafe class GraphicsDeviceInfoMarshaller
     internal readonly struct GraphicsDeviceInfoUnmanaged
     {
         public byte* DeviceName { get; }
-        public byte* GraphicsApiName { get; }
-        public byte* DriverVersion { get; }
+        public GraphicsApi GraphicsApi { get; }
+        public ulong DeviceId { get; }
+        public ulong AvailableMemory { get; }
     }
 
-    public static GraphicsDeviceInfoUnmanaged ConvertToUnmanaged(GraphicsDeviceInfo managed)
+    public static GraphicsDeviceInfoUnmanaged ConvertToUnmanaged(GraphicsDeviceInfo _)
     {
         return new GraphicsDeviceInfoUnmanaged();
     }
@@ -55,15 +51,14 @@ internal static unsafe class GraphicsDeviceInfoMarshaller
         return new GraphicsDeviceInfo
         {
             DeviceName = Utf8StringMarshaller.ConvertToManaged(unmanaged.DeviceName) ?? string.Empty,
-            GraphicsApiName = Utf8StringMarshaller.ConvertToManaged(unmanaged.GraphicsApiName) ?? string.Empty,
-            DriverVersion = Utf8StringMarshaller.ConvertToManaged(unmanaged.DriverVersion) ?? string.Empty
+            GraphicsApi = unmanaged.GraphicsApi,
+            DeviceId = unmanaged.DeviceId,
+            AvailableMemory = unmanaged.AvailableMemory
         };
     }
     
     public static void Free(GraphicsDeviceInfoUnmanaged unmanaged)
     {
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.DeviceName);
-        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.GraphicsApiName);
-        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.DriverVersion);
     }
 }

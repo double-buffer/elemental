@@ -36,11 +36,20 @@ struct NativeWindowSize
     float UIScale;
 };
 
+enum GraphicsApi
+{
+    GraphicsApi_Unknown = 0,
+    GraphicsApi_Direct3D12 = 1,
+    GraphicsApi_Vulkan = 2,
+    GraphicsApi_Metal = 3
+};
+
 struct GraphicsDeviceInfo
 {
     unsigned char* DeviceName;
-    unsigned char* GraphicsApiName;
-    unsigned char* DriverVersion;
+    enum GraphicsApi GraphicsApi;
+    unsigned long DeviceId;
+    unsigned long AvailableMemory;
 };
 
 enum GraphicsDiagnostics
@@ -52,5 +61,5 @@ enum GraphicsDiagnostics
 struct GraphicsDeviceOptions
 {
     enum GraphicsDiagnostics GraphicsDiagnostics;
-    bool UseVulkan;
+    unsigned long DeviceId;
 };
