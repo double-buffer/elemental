@@ -19,8 +19,9 @@ public:
 
 private:
     ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
-    ComPtr<IDXGIFactory4> _dxgiFactory; 
+    ComPtr<IDXGIFactory6> _dxgiFactory; 
     ComPtr<ID3D12Debug5> _debugInterface;
 
     void InitSdk(bool enableDebugDiagnostics);
+    GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);
 };

@@ -6,17 +6,41 @@
 
 DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
-    auto direct3D12Service = new Direct3D12GraphicsService();
-    direct3D12Service->GetAvailableGraphicsDevices(graphicsDevices, count);
+    auto direct3D12Service = Direct3D12GraphicsService();
+    direct3D12Service.GetAvailableGraphicsDevices(graphicsDevices, count);
 
     // TODO: Combine vulkan devices
 }
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
 {
+    GraphicsDeviceInfo availableDevices[50];
+    int availableDeviceCount;
+
+    Native_GetAvailableGraphicsDevices(availableDevices, &availableDeviceCount);
+
+    if (availableDeviceCount == 0)
+    {
+        return nullptr;
+    }
+
+    auto selectedDevice = availableDevices[0];
+
+    if (options.DeviceId != 0)
+    {
+        for (int i = 0; i < availableDeviceCount; i++)
+        {
+            if (availableDevices[i].DeviceId == options.DeviceId)
+            {
+                selectedDevice = availableDevices[i];
+                break;
+            }
+        }
+    }
+
     BaseGraphicsService* graphicsService;
 
-    if (options.UseVulkan)
+    if (selectedDevice.GraphicsApi == GraphicsApi_Vulkan)
     {
         graphicsService = (BaseGraphicsService*)new VulkanGraphicsService();
     }

@@ -3,12 +3,19 @@
 
 void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
-    auto test = GraphicsDeviceInfo();
-    test.DeviceName = ConvertWStringToUtf8(L"DirectX!");
-    test.GraphicsApiName = ConvertWStringToUtf8(L"Teeeest");
-    test.DriverVersion = ConvertWStringToUtf8(L"Teeeest");
+    if (_dxgiFactory == nullptr)
+    {
+        InitSdk(false);
+    }
+	
+    ComPtr<IDXGIAdapter4> graphicsAdapter;
 
-    graphicsDevices[(*count)++] = test;
+    for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
+    {
+        auto test = ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3());
+        test.AvailableMemory = i;
+        graphicsDevices[(*count)++] = test;
+    }
 }
 
 void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
@@ -28,11 +35,7 @@ void Direct3D12GraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 
 GraphicsDeviceInfo Direct3D12GraphicsService::GetGraphicsDeviceInfo(void* graphicsDevicePointer)
 {
-    auto result = GraphicsDeviceInfo();
-    result.DeviceName = ConvertWStringToUtf8(L"Windows Device éééé");
-    result.GraphicsApiName = ConvertWStringToUtf8(L"API");
-    result.DriverVersion = ConvertWStringToUtf8(L"1.0");
-
+    auto result = ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3());
     return result;
 }
 
@@ -72,6 +75,17 @@ void Direct3D12GraphicsService::InitSdk(bool enableDebugDiagnostics)
     }
 
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf())));
+}
+    
+GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
+{
+    auto result = GraphicsDeviceInfo();
+    result.DeviceName = ConvertWStringToUtf8(L"Windows Device éééé");
+    result.GraphicsApi = GraphicsApi_Direct3D12;
+    result.DeviceId = 1;
+    result.AvailableMemory = 2828;
+
+    return result;
 }
 
 /*

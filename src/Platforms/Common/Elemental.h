@@ -48,8 +48,8 @@ struct GraphicsDeviceInfo
 {
     unsigned char* DeviceName;
     enum GraphicsApi GraphicsApi;
-    unsigned long DeviceId;
-    unsigned long AvailableMemory;
+    uint64_t DeviceId;
+    uint64_t AvailableMemory;
 };
 
 enum GraphicsDiagnostics

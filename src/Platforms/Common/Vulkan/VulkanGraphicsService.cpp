@@ -25,8 +25,7 @@ GraphicsDeviceInfo VulkanGraphicsService::GetGraphicsDeviceInfo(void* graphicsDe
 {
     auto result = GraphicsDeviceInfo();
     result.DeviceName = ConvertWStringToUtf8(L"Vulkan Windows Device éééé");
-    result.GraphicsApiName = ConvertWStringToUtf8(L"API");
-    result.DriverVersion = ConvertWStringToUtf8(L"1.0");
+    result.GraphicsApi = GraphicsApi_Vulkan;
 
     return result;
 }
