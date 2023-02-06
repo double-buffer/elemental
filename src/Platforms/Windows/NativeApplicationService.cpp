@@ -1,5 +1,12 @@
 #include "WindowsCommon.h"
-#include "NativeApplicationService.h"
+#include "Libs/Win32DarkMode/DarkMode.h"
+#include "../Common/Elemental.h"
+#include "../Common/StringConverters.h"
+#include "Win32Application.h"
+#include "Win32Window.h"
+
+void ProcessMessages(Win32Application* application);
+LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
 DllExport void Native_FreeNativePointer(unsigned char* nativePointer)
 {
@@ -8,7 +15,7 @@ DllExport void Native_FreeNativePointer(unsigned char* nativePointer)
 
 DllExport void* Native_CreateApplication(unsigned char* applicationName)
 {
-    auto application = new WindowsApplication();
+    auto application = new Win32Application();
     application->ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
 
     WNDCLASS windowClass {};
@@ -26,10 +33,10 @@ DllExport void* Native_CreateApplication(unsigned char* applicationName)
 
 DllExport void Native_FreeApplication(void* applicationPointer)
 {
-    delete (WindowsApplication*)applicationPointer;
+    delete (Win32Application*)applicationPointer;
 }
 
-DllExport void Native_RunApplication(WindowsApplication* application, RunHandlerPtr runHandler)
+DllExport void Native_RunApplication(Win32Application* application, RunHandlerPtr runHandler)
 {
     auto canRun = true;
 
@@ -45,7 +52,7 @@ DllExport void Native_RunApplication(WindowsApplication* application, RunHandler
     }
 }
 
-DllExport void* Native_CreateWindow(WindowsApplication* nativeApplication, NativeWindowOptions options)
+DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions options)
 {
     InitCommonControls();
 
@@ -107,7 +114,7 @@ DllExport void* Native_CreateWindow(WindowsApplication* nativeApplication, Nativ
         ShowWindow(window, SW_MAXIMIZE);
     }
 
-    auto nativeWindow = new WindowsWindow();
+    auto nativeWindow = new Win32Window();
     nativeWindow->WindowHandle = window;
     nativeWindow->Width = width;
     nativeWindow->Height = height;
@@ -116,13 +123,13 @@ DllExport void* Native_CreateWindow(WindowsApplication* nativeApplication, Nativ
     return nativeWindow;
 }
 
-DllExport void Native_FreeWindow(WindowsWindow* window)
+DllExport void Native_FreeWindow(Win32Window* window)
 {
     DestroyWindow(window->WindowHandle);
     delete window;
 }
 
-DllExport NativeWindowSize Native_GetWindowRenderSize(WindowsWindow* nativeWindow)
+DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
 {
     RECT windowRectangle;
 	GetClientRect(nativeWindow->WindowHandle, &windowRectangle);
@@ -142,12 +149,12 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(WindowsWindow* nativeWindo
     return result;
 }
 
-DllExport void Native_SetWindowTitle(WindowsWindow* nativeWindow, unsigned char* title)
+DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, unsigned char* title)
 {
     SetWindowText(nativeWindow->WindowHandle, ConvertUtf8ToWString(title).c_str());
 }
 
-void ProcessMessages(WindowsApplication* application)
+void ProcessMessages(Win32Application* application)
 {
     MSG message;
 

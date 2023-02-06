@@ -15,4 +15,7 @@ public:
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
     void FreeGraphicsDevice(void *graphicsDevicePointer) override;
     GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) override;
+
+private:
+    GraphicsDeviceInfo ConstructGraphicsDeviceInfo(int adapterDescription);
 };

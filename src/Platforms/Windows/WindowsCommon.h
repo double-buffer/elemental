@@ -13,6 +13,9 @@
 
 #define ISOLATION_AWARE_ENABLED 1
 
+#define D3D12SDKVersion 608
+#define D3D12SDKPath u8".\\D3D12\\"
+
 #include <ShellScalingAPI.h>
 #include <Windows.h>
 #include <dwmapi.h>
@@ -41,3 +44,5 @@ struct WindowsEvent
     WPARAM WParam;
     LPARAM LParam;
 };
+
+using namespace Microsoft::WRL;

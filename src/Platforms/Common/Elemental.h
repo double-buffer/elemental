@@ -11,7 +11,7 @@ enum NativeApplicationStatusFlags
 
 struct NativeApplicationStatus
 {
-    unsigned int Status;
+    uint32_t Status;
 };
 
 typedef bool (*RunHandlerPtr)(struct NativeApplicationStatus status);
@@ -24,17 +24,17 @@ enum NativeWindowState
 
 struct NativeWindowOptions
 {
-    unsigned char* Title;
-    int Width;
-    int Height;
+    uint8_t* Title;
+    int32_t Width;
+    int32_t Height;
     enum NativeWindowState WindowState;
 };
 
 struct NativeWindowSize
 {
-    int Width;
-    int Height;
-    float UIScale;
+    int32_t Width;
+    int32_t Height;
+    float_t UIScale;
 };
 
 enum GraphicsApi
@@ -47,7 +47,7 @@ enum GraphicsApi
 
 struct GraphicsDeviceInfo
 {
-    unsigned char* DeviceName;
+    uint8_t* DeviceName;
     enum GraphicsApi GraphicsApi;
     uint64_t DeviceId;
     uint64_t AvailableMemory;
@@ -62,5 +62,5 @@ enum GraphicsDiagnostics
 struct GraphicsDeviceOptions
 {
     enum GraphicsDiagnostics GraphicsDiagnostics;
-    unsigned long DeviceId;
+    uint64_t DeviceId;
 };

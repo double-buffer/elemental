@@ -1,15 +1,13 @@
 #pragma once
 #include "WindowsCommon.h"
-#include "Libs/Win32DarkMode/DarkMode.h"
 #include "../Common/Elemental.h"
-#include "../Common/StringConverters.h"
 
-struct WindowsApplication
+struct Win32Application
 {
     HINSTANCE ApplicationInstance;
     NativeApplicationStatus Status;
 
-    WindowsApplication()
+    Win32Application()
     {
         Status.Status = 0;
         SetStatus(NativeApplicationStatusFlags::Active, 1);
@@ -26,13 +24,3 @@ struct WindowsApplication
     }
 };
 
-struct WindowsWindow
-{
-    HWND WindowHandle;
-    int Width;
-    int Height;
-    float UIScale;
-};
-
-void ProcessMessages(WindowsApplication* application);
-LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);

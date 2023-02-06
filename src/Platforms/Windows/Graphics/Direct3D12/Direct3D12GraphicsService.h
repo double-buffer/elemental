@@ -4,10 +4,7 @@
 #include "../../../Common/BaseGraphicsObject.h"
 #include "../../../Common/StringConverters.h"
 
-using namespace Microsoft::WRL;
-
-#define D3D12SDKVersion 608
-#define D3D12SDKPath u8".\\D3D12\\"
+#include "Direct3D12GraphicsDevice.h"
 
 class Direct3D12GraphicsService : BaseGraphicsService
 {
@@ -20,7 +17,7 @@ public:
 private:
     ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
     ComPtr<IDXGIFactory6> _dxgiFactory; 
-    ComPtr<ID3D12Debug5> _debugInterface;
+    ComPtr<ID3D12Debug6> _debugInterface;
 
     void InitSdk(bool enableDebugDiagnostics);
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);

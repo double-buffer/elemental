@@ -18,7 +18,7 @@ var selectedGraphicsDevice = availableGraphicsDevices[0];
 
 foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
-    if (availableGraphicsDevice.DeviceName.Contains("Intel"))
+    if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
     {
         selectedGraphicsDevice = availableGraphicsDevice;
     }

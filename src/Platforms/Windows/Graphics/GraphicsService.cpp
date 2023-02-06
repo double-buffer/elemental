@@ -6,10 +6,13 @@
 
 DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
+    (*count) = 0;
+
     auto direct3D12Service = Direct3D12GraphicsService();
     direct3D12Service.GetAvailableGraphicsDevices(graphicsDevices, count);
-
-    // TODO: Combine vulkan devices
+    
+    auto vulkanService = VulkanGraphicsService();
+    vulkanService.GetAvailableGraphicsDevices(graphicsDevices, count);
 }
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
@@ -37,6 +40,8 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
             }
         }
     }
+
+    options.DeviceId = selectedDevice.DeviceId;
 
     BaseGraphicsService* graphicsService;
 
