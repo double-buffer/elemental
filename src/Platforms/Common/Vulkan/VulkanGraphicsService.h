@@ -21,5 +21,6 @@ public:
     GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) override;
 
 private:
+    void InitSdk();
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(int adapterDescription);
 };
