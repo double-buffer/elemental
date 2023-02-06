@@ -1,8 +1,3 @@
-module types {
-         header "/usr/include/sys/types.h"
-         export *
-     }
-     
 module NativeElemental {
      header "../Common/Elemental.h"
      export *
