@@ -54,8 +54,6 @@ DllExport void Native_RunApplication(Win32Application* application, RunHandlerPt
 
 DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions options)
 {
-    InitCommonControls();
-
     auto width = options.Width;
     auto height = options.Height;
 

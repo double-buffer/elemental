@@ -32,14 +32,14 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
             AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &deviceOptions7, sizeof(deviceOptions7)));
 
             D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = {};
-            shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_6;
+            shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_7;
 
             AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
 
             if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
                 deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
                 deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
-                shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_6)
+                shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_7)
             {
                 graphicsDevices[(*count)++] = ConstructGraphicsDeviceInfo(adapterDescription);
             }
@@ -77,7 +77,6 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
     auto graphicsDevice = new Direct3D12GraphicsDevice(this);
     graphicsDevice->AdapterDescription = adapterDescription;
 
-    // Created Direct3D Device
 	HRESULT result = D3D12CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(graphicsDevice->Device.ReleaseAndGetAddressOf()));
 
 	if (FAILED(result))
@@ -105,8 +104,6 @@ GraphicsDeviceInfo Direct3D12GraphicsService::GetGraphicsDeviceInfo(void* graphi
 
 void Direct3D12GraphicsService::InitSdk(bool enableDebugDiagnostics)
 {
-    printf("Init SDK\n");
-
     // TODO: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
     // select the SDK version without setting windows developer mode.
     // See: https://github.com/microsoft/DirectX-Specs/blob/master/d3d/IndependentDevices.md

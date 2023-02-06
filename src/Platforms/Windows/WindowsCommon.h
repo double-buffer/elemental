@@ -11,8 +11,6 @@
 #include <stack>
 #include <assert.h>
 
-#define ISOLATION_AWARE_ENABLED 1
-
 #define D3D12SDKVersion 608
 #define D3D12SDKPath u8".\\D3D12\\"
 
