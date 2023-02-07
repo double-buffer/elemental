@@ -2,11 +2,6 @@
 using Elemental.Graphics;
 
 var applicationService = new NativeApplicationService();
-var graphicsService = new GraphicsService(new GraphicsServiceOptions
-{
-    GraphicsDiagnostics = GraphicsDiagnostics.Debug
-});
-
 using var application = applicationService.CreateApplication("Hello Window");
 
 using var window = applicationService.CreateWindow(application, new NativeWindowOptions
@@ -14,6 +9,11 @@ using var window = applicationService.CreateWindow(application, new NativeWindow
     Title = "Hello Window!",
     Width = 1280,
     Height = 720
+});
+
+using var graphicsService = new GraphicsService(new GraphicsServiceOptions
+{
+    GraphicsDiagnostics = GraphicsDiagnostics.Debug
 });
 
 var availableGraphicsDevices = graphicsService.GetAvailableGraphicsDevices();

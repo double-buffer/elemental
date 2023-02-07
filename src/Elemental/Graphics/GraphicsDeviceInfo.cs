@@ -18,15 +18,27 @@ public readonly record struct GraphicsDeviceInfo
     }
 
     /// <summary>
-    /// Gets the name of the graphics device.
+    /// Gets the name of the <see cref="GraphicsDevice" />.
     /// </summary>
-    /// <value>Name of the graphics device.</value>
+    /// <value>Name of the <see cref="GraphicsDevice" />.</value>
     public string DeviceName { get; init; }
 
+    /// <summary>
+    /// Gets the Graphics API used by the <see cref="GraphicsDevice" />.
+    /// </summary>
+    /// <value>Graphics API of the <see cref="GraphicsDevice" />.</value>
     public GraphicsApi GraphicsApi { get; init; }
 
+    /// <summary>
+    /// Gets the internal ID of the <see cref="GraphicsDevice" />.
+    /// </summary>
+    /// <value>Internal ID of the <see cref="GraphicsDevice" /></value>
     public ulong DeviceId { get; init; }
 
+    /// <summary>
+    /// Gets the available GPU memory in bytes of the <see cref="GraphicsDevice" />.
+    /// </summary>
+    /// <value>available GPU memory in bytes of the <see cref="GraphicsDevice" />.</value>
     public ulong AvailableMemory { get; init; }
 }
 
