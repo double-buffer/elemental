@@ -21,6 +21,5 @@ private:
     ComPtr<IDXGIFactory6> _dxgiFactory; 
     ComPtr<ID3D12Debug6> _debugInterface;
 
-    void InitSdk(bool enableDebugDiagnostics);
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);
 };

@@ -29,7 +29,10 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
     Console.WriteLine($"{availableGraphicsDevice}");
 }
 
-using var graphicsDevice = graphicsService.CreateGraphicsDevice();
+using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
+{
+    //DeviceId = selectedGraphicsDevice.DeviceId
+});
 
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");

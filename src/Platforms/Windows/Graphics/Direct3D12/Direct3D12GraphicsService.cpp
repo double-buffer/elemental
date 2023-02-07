@@ -3,7 +3,38 @@
 
 Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServicesOptions options)
 {
-    InitSdk(options.GraphicsDiagnostics == GraphicsDiagnostics_Debug);
+    // TODO: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
+    // select the SDK version without setting windows developer mode.
+    // See: https://github.com/microsoft/DirectX-Specs/blob/master/d3d/IndependentDevices.md
+
+    AssertIfFailed(D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(_sdkConfiguration.GetAddressOf())));
+
+    /*ComPtr<ID3D12SDKConfiguration1> sdkConfiguration1;
+    AssertIfFailed(sdkConfiguration.As(&sdkConfiguration1));
+
+    ComPtr<ID3D12DeviceFactory> deviceFactory;
+    AssertIfFailed(sdkConfiguration1->CreateDeviceFactory(D3D12SDKVersion, D3D12SDKPath, IID_PPV_ARGS(deviceFactory.GetAddressOf())));*/
+
+    AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, D3D12SDKPath));
+
+    UINT createFactoryFlags = 0;
+    ComPtr<ID3D12InfoQueue1> debugInfoQueue;
+    ComPtr<IDXGIDebug> dxgiDebug;
+    ComPtr<ID3D12Device9> graphicsDevice;
+
+    if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    {
+        AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
+
+        if (_debugInterface)
+        {
+            _debugInterface->EnableDebugLayer();
+        }
+
+        createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+    }
+
+    AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf())));
 }
 
 void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
@@ -97,42 +128,6 @@ GraphicsDeviceInfo Direct3D12GraphicsService::GetGraphicsDeviceInfo(void* graphi
     return ConstructGraphicsDeviceInfo(graphicsDevice->AdapterDescription);
 }
 
-void Direct3D12GraphicsService::InitSdk(bool enableDebugDiagnostics)
-{
-    // TODO: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
-    // select the SDK version without setting windows developer mode.
-    // See: https://github.com/microsoft/DirectX-Specs/blob/master/d3d/IndependentDevices.md
-
-    AssertIfFailed(D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(_sdkConfiguration.GetAddressOf())));
-
-    /*ComPtr<ID3D12SDKConfiguration1> sdkConfiguration1;
-    AssertIfFailed(sdkConfiguration.As(&sdkConfiguration1));
-
-    ComPtr<ID3D12DeviceFactory> deviceFactory;
-    AssertIfFailed(sdkConfiguration1->CreateDeviceFactory(D3D12SDKVersion, D3D12SDKPath, IID_PPV_ARGS(deviceFactory.GetAddressOf())));*/
-
-    AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, D3D12SDKPath));
-
-    UINT createFactoryFlags = 0;
-    ComPtr<ID3D12InfoQueue1> debugInfoQueue;
-    ComPtr<IDXGIDebug> dxgiDebug;
-    ComPtr<ID3D12Device9> graphicsDevice;
-
-    if (enableDebugDiagnostics)
-    {
-        AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
-
-        if (_debugInterface)
-        {
-            _debugInterface->EnableDebugLayer();
-        }
-
-        createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-    }
-
-    AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf())));
-}
-    
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
 {
     auto result = GraphicsDeviceInfo();
