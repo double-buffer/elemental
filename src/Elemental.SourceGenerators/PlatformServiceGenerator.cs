@@ -210,7 +210,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             }
 
             sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-            sourceCode.AppendLine($"public unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name + (item.HasExplicitDefaultValue ? " = " + item.ExplicitDefaultValue : "")))})");
+            sourceCode.AppendLine($"public unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))})");
             sourceCode.AppendLine("{");
 
             var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformServiceAttribute");
@@ -241,7 +241,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                 sourceCode.Append("return ");
             }
 
-            var parameterList = method.Parameters.Select(item => GenerateReferenceType(item) + item.Name).ToList();
+            var parameterList = method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: false)).ToList();
             parameterList.AddRange(GetSpanParameters(isReturnTypeSpan));
             sourceCode.AppendLine($"PlatformServiceInterop.Native_{method.Name}({string.Join(",", parameterList)});");
 
@@ -286,6 +286,36 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         }
 
         sourceCode.AppendLine("}");
+    }
+
+    private static string GenerateParameterValue(IParameterSymbol item, bool isMethodDefinition)
+    {
+        var result = GenerateReferenceType(item);
+        var typeName = ((INamedTypeSymbol)item.Type).ToString();
+
+        if (isMethodDefinition)
+        {
+            result += typeName + " ";
+        }
+
+        result += item.Name;
+
+        if (isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue != null)
+        {
+            result += " = " + item.ExplicitDefaultValue;
+        }
+
+        else if (isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue == null)
+        {
+            result += $" = default({typeName})";
+        }
+
+        else if (!isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue == null)
+        {
+            result += $" == default({typeName}) ? new {typeName}() : {item.Name}";
+        }
+
+        return result;
     }
 
     private static IEnumerable<string> GetSpanParameters(bool generateParameters)
@@ -370,14 +400,14 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             }
 
             var initMethodName = attribute.NamedArguments.FirstOrDefault(item => item.Key == "InitMethod").Value.ToCSharpString();
-            var initMethod = (IMethodSymbol)platformInteropClass.GetMembers().FirstOrDefault(member => member.Name == initMethodName.Replace("\"", ""));
+            var initMethod = (IMethodSymbol?)platformInteropClass.GetMembers().FirstOrDefault(member => member.Name == initMethodName.Replace("\"", ""));
             var methodParameters = string.Empty;
             var methodParametersValues = string.Empty;
 
             if (initMethod is not null)
             {
-                methodParameters = $"{string.Join(",", initMethod.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name + (item.HasExplicitDefaultValue ? " = " + item.ExplicitDefaultValue : "")))}";
-                methodParametersValues = $"{string.Join(",", initMethod.Parameters.Select(item => item.Name))}";
+                methodParameters = $"{string.Join(",", initMethod.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))}";
+                methodParametersValues = $"{string.Join(",", initMethod.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: false)))}";
             }
 
             var platformService = new PlatformServiceToGenerate

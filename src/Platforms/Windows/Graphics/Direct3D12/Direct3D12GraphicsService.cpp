@@ -99,8 +99,6 @@ GraphicsDeviceInfo Direct3D12GraphicsService::GetGraphicsDeviceInfo(void* graphi
 
 void Direct3D12GraphicsService::InitSdk(bool enableDebugDiagnostics)
 {
-    printf("Init Direct3D12 SDK\n");
-
     // TODO: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
     // select the SDK version without setting windows developer mode.
     // See: https://github.com/microsoft/DirectX-Specs/blob/master/d3d/IndependentDevices.md

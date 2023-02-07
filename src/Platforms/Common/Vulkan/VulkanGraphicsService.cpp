@@ -51,7 +51,6 @@ GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(int adapte
 
 void VulkanGraphicsService::InitSdk(bool enableDebugDiagnostics)
 {
-    printf("Init Vulkan SDK\n");
     AssertIfFailed(volkInitialize());
 
     VkInstance instance = {};

@@ -2,7 +2,10 @@
 using Elemental.Graphics;
 
 var applicationService = new NativeApplicationService();
-var graphicsService = new GraphicsService();
+var graphicsService = new GraphicsService(new GraphicsServiceOptions
+{
+    GraphicsDiagnostics = GraphicsDiagnostics.Debug
+});
 
 using var application = applicationService.CreateApplication("Hello Window");
 
@@ -26,10 +29,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
     Console.WriteLine($"{availableGraphicsDevice}");
 }
 
-using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
-{
-    //DeviceId = selectedGraphicsDevice.DeviceId
-});
+using var graphicsDevice = graphicsService.CreateGraphicsDevice();
 
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");
