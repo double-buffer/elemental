@@ -17,11 +17,6 @@ public func Native_GetAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePoi
 
 @_cdecl("Native_CreateGraphicsDevice")
 public func createGraphicsDevice(options: GraphicsDeviceOptions) -> UnsafeMutableRawPointer? {
-    if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug) {
-        // TODO
-        print("DEBUG")
-    }
-
     var initMetalDevice: MTLDevice? = nil
 
     if (options.DeviceId != 0) {
@@ -59,8 +54,8 @@ public func getGraphicsDeviceInfo(graphicsDevicePointer: UnsafeRawPointer) -> Gr
 private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDeviceInfo {
     return GraphicsDeviceInfo(DeviceName: convertString(from: metalDevice.name),
                                 GraphicsApi: GraphicsApi_Metal,
-                                DeviceId: UInt(metalDevice.registryID),
-                                AvailableMemory: UInt(metalDevice.recommendedMaxWorkingSetSize))
+                                DeviceId: UInt64(metalDevice.registryID),
+                                AvailableMemory: UInt64(metalDevice.recommendedMaxWorkingSetSize))
 }
 
 func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {
