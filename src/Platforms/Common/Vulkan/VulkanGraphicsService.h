@@ -15,12 +15,14 @@
 class VulkanGraphicsService : BaseGraphicsService
 {
 public:
+    VulkanGraphicsService(GraphicsServicesOptions options);
+
     void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) override;
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
     void FreeGraphicsDevice(void *graphicsDevicePointer) override;
     GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) override;
 
 private:
-    void InitSdk();
+    void InitSdk(bool enableDebugDiagnostics);
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(int adapterDescription);
 };

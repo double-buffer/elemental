@@ -4,10 +4,13 @@
 
 #include "VulkanGraphicsService.h"
 
+VulkanGraphicsService::VulkanGraphicsService(GraphicsServicesOptions options)
+{
+    InitSdk(options.GraphicsDiagnostics == GraphicsDiagnostics_Debug);
+}
+
 void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
-    InitSdk();
-
     graphicsDevices[(*count)++] = ConstructGraphicsDeviceInfo(0);
 }
 
@@ -46,7 +49,7 @@ GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(int adapte
     return result;
 }
 
-void VulkanGraphicsService::InitSdk()
+void VulkanGraphicsService::InitSdk(bool enableDebugDiagnostics)
 {
     printf("Init Vulkan SDK\n");
     AssertIfFailed(volkInitialize());
@@ -60,33 +63,47 @@ void VulkanGraphicsService::InitSdk()
 
     createInfo.pApplicationInfo = &appInfo;
 
-#ifdef DEBUG
-    const char* layers[] =
+    if (enableDebugDiagnostics)
     {
-        "VK_LAYER_KHRONOS_validation"
-    };
+        printf("VULKAN DEBUG!\n");
 
-    createInfo.ppEnabledLayerNames = layers;
-	createInfo.enabledLayerCount = ARRAYSIZE(layers);
-#endif
+        const char* layers[] =
+        {
+            "VK_LAYER_KHRONOS_validation"
+        };
 
-    const char* extensions[] =
+        createInfo.ppEnabledLayerNames = layers;
+        createInfo.enabledLayerCount = ARRAYSIZE(layers);
+        
+        const char* extensions[] =
+        {
+            VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+            VK_KHR_SURFACE_EXTENSION_NAME,
+            VK_KHR_WIN32_SURFACE_EXTENSION_NAME // TODO: Add a preprocessor check here
+        };
+        
+        createInfo.ppEnabledExtensionNames = extensions;
+	    createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+        
+        AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &instance));
+    }
+
+    else
     {
-//#ifdef DEBUG
-		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-//#endif
-        VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME // TODO: Add a preprocessor check here
-    };
-
-    createInfo.ppEnabledExtensionNames = extensions;
-	createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
-
-    AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &instance));
+        const char* extensions[] =
+        {
+            VK_KHR_SURFACE_EXTENSION_NAME,
+            VK_KHR_WIN32_SURFACE_EXTENSION_NAME // TODO: Add a preprocessor check here
+        };
+        
+        createInfo.ppEnabledExtensionNames = extensions;
+	    createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+    
+        AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &instance));
+    }
 
     volkLoadInstance(instance);
-
 
     uint32_t deviceCount = 16;
     VkPhysicalDevice devices[16];

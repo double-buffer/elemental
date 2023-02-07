@@ -12,6 +12,8 @@ record PlatformServiceToGenerate
     public string? Namespace { get; set; }
     public string InterfaceName { get; set; } = "";
     public string InitMethod { get; set; } = "";
+    public string InitMethodParameters { get; set; } = "";
+    public string InitMethodParametersValues { get; set; } = "";
     public string DisposeMethod { get; set; } = "";
 
     public IList<IMethodSymbol> MethodList { get; } = new List<IMethodSymbol>();
@@ -183,12 +185,12 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         if (platformService.InitMethod != "null")
         {
             sourceCode.AppendLine("/// <summary>Default constructor.</summary>");
-            sourceCode.AppendLine($"public {platformService.ImplementationClassName}()");
+            sourceCode.AppendLine($"public {platformService.ImplementationClassName}({platformService.InitMethodParameters})");
             sourceCode.AppendLine("{");
-            sourceCode.AppendLine($"PlatformServiceInterop.{platformService.InitMethod.Replace("\"", "")}();");
+            sourceCode.AppendLine($"PlatformServiceInterop.{platformService.InitMethod.Replace("\"", "")}({platformService.InitMethodParametersValues});");
             sourceCode.AppendLine("}");
         }
-        
+
         if (platformService.DisposeMethod != "null")
         {
             sourceCode.AppendLine("/// <summary>Frees any unmanaged resources owned by the service.</summary>");
@@ -340,6 +342,13 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             return result;
         }
 
+        var platformInteropClass = compilation.GetTypeByMetadataName("Elemental.PlatformServiceInterop");
+
+        if (platformInteropClass == null)
+        {
+            return result;
+        }
+
         foreach (var interfaceDeclarationSyntax in interfaces)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -360,11 +369,24 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                 continue;
             }
 
+            var initMethodName = attribute.NamedArguments.FirstOrDefault(item => item.Key == "InitMethod").Value.ToCSharpString();
+            var initMethod = (IMethodSymbol)platformInteropClass.GetMembers().FirstOrDefault(member => member.Name == initMethodName.Replace("\"", ""));
+            var methodParameters = string.Empty;
+            var methodParametersValues = string.Empty;
+
+            if (initMethod is not null)
+            {
+                methodParameters = $"{string.Join(",", initMethod.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name + (item.HasExplicitDefaultValue ? " = " + item.ExplicitDefaultValue : "")))}";
+                methodParametersValues = $"{string.Join(",", initMethod.Parameters.Select(item => item.Name))}";
+            }
+
             var platformService = new PlatformServiceToGenerate
             {
                 InterfaceName = interfaceName,
                 Namespace = namespaceName?.ToString(),
-                InitMethod = attribute.NamedArguments.FirstOrDefault(item => item.Key == "InitMethod").Value.ToCSharpString(),
+                InitMethod = initMethodName,
+                InitMethodParameters = methodParameters,
+                InitMethodParametersValues = methodParametersValues,
                 DisposeMethod = attribute.NamedArguments.FirstOrDefault(item => item.Key == "DisposeMethod").Value.ToCSharpString()
             };
 

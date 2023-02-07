@@ -1,13 +1,13 @@
 #include "WindowsCommon.h"
 #include "Direct3D12GraphicsService.h"
 
+Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServicesOptions options)
+{
+    InitSdk(options.GraphicsDiagnostics == GraphicsDiagnostics_Debug);
+}
+
 void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
-    if (_dxgiFactory == nullptr)
-    {
-        InitSdk(false);
-    }
-
     ComPtr<IDXGIAdapter4> graphicsAdapter;
 
     for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
@@ -49,11 +49,6 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
 
 void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
 {
-    if (_dxgiFactory == nullptr)
-    {
-        InitSdk(options.GraphicsDiagnostics == GraphicsDiagnostics_Debug);
-    }
-    
     ComPtr<IDXGIAdapter4> graphicsAdapter;
     DXGI_ADAPTER_DESC3 adapterDescription;
     bool foundAdapter = false;

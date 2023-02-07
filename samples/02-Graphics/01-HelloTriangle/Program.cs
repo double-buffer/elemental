@@ -28,7 +28,6 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
-    GraphicsDiagnostics = GraphicsDiagnostics.Debug,
     //DeviceId = selectedGraphicsDevice.DeviceId
 });
 

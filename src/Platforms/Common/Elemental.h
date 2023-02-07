@@ -60,8 +60,12 @@ enum GraphicsDiagnostics
     GraphicsDiagnostics_Debug
 };
 
-struct GraphicsDeviceOptions
+struct GraphicsServicesOptions
 {
     enum GraphicsDiagnostics GraphicsDiagnostics;
+};
+
+struct GraphicsDeviceOptions
+{
     uint64_t DeviceId;
 };

@@ -4,15 +4,26 @@
 #include "../../Common/BaseGraphicsService.h"
 #include "../../Common/Vulkan/VulkanGraphicsService.h"
 
+static Direct3D12GraphicsService* _globalDirect3D12GraphicsService; 
+static VulkanGraphicsService* _globalVulkanGraphicsService; 
+
+DllExport void Native_InitGraphicsService(GraphicsServicesOptions options)
+{
+    _globalDirect3D12GraphicsService = new Direct3D12GraphicsService(options);
+    _globalVulkanGraphicsService = new VulkanGraphicsService(options);
+}
+
+DllExport void Native_FreeGraphicsService()
+{
+    delete _globalDirect3D12GraphicsService;
+}
+
 DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
     (*count) = 0;
 
-    auto direct3D12Service = Direct3D12GraphicsService();
-    direct3D12Service.GetAvailableGraphicsDevices(graphicsDevices, count);
-    
-    auto vulkanService = VulkanGraphicsService();
-    vulkanService.GetAvailableGraphicsDevices(graphicsDevices, count);
+    _globalDirect3D12GraphicsService->GetAvailableGraphicsDevices(graphicsDevices, count);
+    _globalVulkanGraphicsService->GetAvailableGraphicsDevices(graphicsDevices, count);
 }
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
@@ -47,11 +58,11 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
 
     if (selectedDevice.GraphicsApi == GraphicsApi_Vulkan)
     {
-        graphicsService = (BaseGraphicsService*)new VulkanGraphicsService();
+        graphicsService = (BaseGraphicsService*)_globalVulkanGraphicsService;
     }
     else
     {
-        graphicsService = (BaseGraphicsService*)new Direct3D12GraphicsService();
+        graphicsService = (BaseGraphicsService*)_globalDirect3D12GraphicsService;
     }
 
     return graphicsService->CreateGraphicsDevice(options);
