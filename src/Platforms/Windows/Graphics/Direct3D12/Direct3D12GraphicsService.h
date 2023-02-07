@@ -9,7 +9,7 @@
 class Direct3D12GraphicsService : BaseGraphicsService
 {
 public:
-    Direct3D12GraphicsService(GraphicsServicesOptions options);
+    Direct3D12GraphicsService(GraphicsServiceOptions options);
 
     void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) override;
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;

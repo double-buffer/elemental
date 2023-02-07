@@ -15,7 +15,7 @@
 class VulkanGraphicsService : BaseGraphicsService
 {
 public:
-    VulkanGraphicsService(GraphicsServicesOptions options);
+    VulkanGraphicsService(GraphicsServiceOptions options);
 
     void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) override;
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;

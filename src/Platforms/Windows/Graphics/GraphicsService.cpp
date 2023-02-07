@@ -7,7 +7,7 @@
 static Direct3D12GraphicsService* _globalDirect3D12GraphicsService; 
 static VulkanGraphicsService* _globalVulkanGraphicsService; 
 
-DllExport void Native_InitGraphicsService(GraphicsServicesOptions options)
+DllExport void Native_InitGraphicsService(GraphicsServiceOptions options)
 {
     _globalDirect3D12GraphicsService = new Direct3D12GraphicsService(options);
     _globalVulkanGraphicsService = new VulkanGraphicsService(options);

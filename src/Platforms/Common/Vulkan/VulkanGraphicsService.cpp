@@ -4,7 +4,7 @@
 
 #include "VulkanGraphicsService.h"
 
-VulkanGraphicsService::VulkanGraphicsService(GraphicsServicesOptions options)
+VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
 {
     InitSdk(options.GraphicsDiagnostics == GraphicsDiagnostics_Debug);
 }

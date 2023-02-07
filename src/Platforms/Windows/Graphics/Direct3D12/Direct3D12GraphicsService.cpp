@@ -1,7 +1,7 @@
 #include "WindowsCommon.h"
 #include "Direct3D12GraphicsService.h"
 
-Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServicesOptions options)
+Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions options)
 {
     // TODO: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
     // select the SDK version without setting windows developer mode.

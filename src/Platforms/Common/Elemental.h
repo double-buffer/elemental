@@ -60,7 +60,7 @@ enum GraphicsDiagnostics
     GraphicsDiagnostics_Debug
 };
 
-struct GraphicsServicesOptions
+struct GraphicsServiceOptions
 {
     enum GraphicsDiagnostics GraphicsDiagnostics;
 };

@@ -2,6 +2,14 @@ import Cocoa
 import Metal
 import NativeElemental
 
+@_cdecl("Native_InitGraphicsService")
+public func initGraphicsService(options: GraphicsServiceOptions) {
+}
+
+@_cdecl("Native_FreeGraphicsService")
+public func freeGraphicsService() {
+}
+
 @_cdecl("Native_GetAvailableGraphicsDevices")
 public func Native_GetAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePointer<GraphicsDeviceInfo>, graphicsDeviceCount: UnsafeMutablePointer<Int>) {
     let devices = MTLCopyAllDevices()
