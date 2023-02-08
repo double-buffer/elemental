@@ -3,7 +3,7 @@ namespace Elemental;
 internal unsafe static partial class PlatformServiceInterop
 {
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_InitGraphicsService(GraphicsServiceOptions options = default(GraphicsServiceOptions));
+    internal static partial void Native_InitGraphicsService(GraphicsServiceOptions options = default);
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeGraphicsService();

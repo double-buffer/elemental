@@ -17,7 +17,7 @@ public interface IGraphicsService
     /// </summary>
     /// <param name="options">Optional parameters used by the graphics device creation.</param>
     /// <returns>Graphics device handle.</returns>
-    GraphicsDevice CreateGraphicsDevice(GraphicsDeviceOptions options = default(GraphicsDeviceOptions));
+    GraphicsDevice CreateGraphicsDevice(GraphicsDeviceOptions options = default);
 
     /// <summary>
     /// Frees the specified <see cref="GraphicsDevice" />.
