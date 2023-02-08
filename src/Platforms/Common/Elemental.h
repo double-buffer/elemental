@@ -56,8 +56,8 @@ struct GraphicsDeviceInfo
 
 enum GraphicsDiagnostics
 {
-    GraphicsDiagnostics_None,
-    GraphicsDiagnostics_Debug
+    GraphicsDiagnostics_None = 0,
+    GraphicsDiagnostics_Debug = 1
 };
 
 struct GraphicsServiceOptions

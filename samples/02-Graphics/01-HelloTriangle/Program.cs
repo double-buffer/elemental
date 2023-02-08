@@ -34,6 +34,8 @@ using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDevi
     //DeviceId = selectedGraphicsDevice.DeviceId
 });
 
+using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Render);
+
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");
 

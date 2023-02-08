@@ -59,6 +59,22 @@ public func getGraphicsDeviceInfo(graphicsDevicePointer: UnsafeRawPointer) -> Gr
     return constructGraphicsDeviceInfo(graphicsDevice.metalDevice)
 }
 
+@_cdecl("Native_CreateCommandQueue")
+public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
+    print("Create CommandQueue")
+    return nil
+}
+
+@_cdecl("Native_FreeCommandQueue")
+public func freeCommandQueue(commandQueuePointer: UnsafeRawPointer) {
+    //MetalGraphicsDevice.release(graphicsDevicePointer)
+}
+
+@_cdecl("Native_SetCommandQueueLabel")
+public func setCommandQueueLabel(commandQueuePointer: UnsafeRawPointer, label: UnsafeMutablePointer<Int8>) {
+    //MetalGraphicsDevice.release(graphicsDevicePointer)
+}
+
 private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDeviceInfo {
     return GraphicsDeviceInfo(DeviceName: convertString(from: metalDevice.name),
                                 GraphicsApi: GraphicsApi_Metal,
@@ -66,7 +82,7 @@ private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDe
                                 AvailableMemory: UInt64(metalDevice.recommendedMaxWorkingSetSize))
 }
 
-func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {
+private func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {
     var utf8 = Array(str.utf8)
     utf8.append(0)  // adds null character
     let count = utf8.count
