@@ -15,4 +15,6 @@ public enum GraphicsDiagnostics
     /// It also enable the debug names for each created resources.
     /// </summary>
     Debug = 1
+
+    // TODO: Create an OnlyLabels feature that disable the validation layer but keep labels for each resources
 }

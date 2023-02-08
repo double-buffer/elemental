@@ -22,4 +22,5 @@ private:
     ComPtr<ID3D12Debug6> _debugInterface;
 
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);
+    uint64_t GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription);
 };

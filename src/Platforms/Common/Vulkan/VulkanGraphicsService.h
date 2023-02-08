@@ -12,10 +12,13 @@
 #define VOLK_IMPLEMENTATION
 #include "Volk/volk.h"
 
+#include "VulkanGraphicsDevice.h"
+
 class VulkanGraphicsService : BaseGraphicsService
 {
 public:
     VulkanGraphicsService(GraphicsServiceOptions options);
+    ~VulkanGraphicsService();
 
     void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) override;
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
@@ -23,6 +26,12 @@ public:
     GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) override;
 
 private:
-    void InitSdk(bool enableDebugDiagnostics);
-    GraphicsDeviceInfo ConstructGraphicsDeviceInfo(int adapterDescription);
+    GraphicsDiagnostics _graphicsDiagnostics;
+    VkInstance _vulkanInstance = nullptr;
+    VkDebugReportCallbackEXT _debugCallback = nullptr;
+
+    GraphicsDeviceInfo ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties);
+    VkDeviceQueueCreateInfo CreateDeviceQueueCreateInfo(uint32_t queueFamilyIndex, uint32_t count);
 };
+
+static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);

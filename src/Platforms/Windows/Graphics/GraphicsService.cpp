@@ -16,6 +16,7 @@ DllExport void Native_InitGraphicsService(GraphicsServiceOptions options)
 DllExport void Native_FreeGraphicsService()
 {
     delete _globalDirect3D12GraphicsService;
+    delete _globalVulkanGraphicsService;
 }
 
 DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
