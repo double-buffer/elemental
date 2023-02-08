@@ -1,12 +1,21 @@
 #include "WindowsCommon.h"
-#include "../Common/Elemental.h"
 #include "Libs/Win32DarkMode/DarkMode.h"
-#include "NativeApplicationService.h"
-#include "StringConverters.h"
+#include "../Common/Elemental.h"
+#include "../Common/StringConverters.h"
+#include "Win32Application.h"
+#include "Win32Window.h"
+
+void ProcessMessages(Win32Application* application);
+LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
+DllExport void Native_FreeNativePointer(unsigned char* nativePointer)
+{
+    delete nativePointer;
+}
 
 DllExport void* Native_CreateApplication(unsigned char* applicationName)
 {
-    auto application = new WindowsApplication();
+    auto application = new Win32Application();
     application->ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
 
     WNDCLASS windowClass {};
@@ -22,14 +31,13 @@ DllExport void* Native_CreateApplication(unsigned char* applicationName)
     return application;
 }
 
-DllExport void Native_DeleteApplication(void* applicationPointer)
+DllExport void Native_FreeApplication(void* applicationPointer)
 {
-    delete (WindowsApplication*)applicationPointer;
+    delete (Win32Application*)applicationPointer;
 }
 
-DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr runHandler)
+DllExport void Native_RunApplication(Win32Application* application, RunHandlerPtr runHandler)
 {
-    auto application = (WindowsApplication*)applicationPointer;
     auto canRun = true;
 
     while (canRun) 
@@ -44,18 +52,15 @@ DllExport void Native_RunApplication(void* applicationPointer, RunHandlerPtr run
     }
 }
 
-DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescription description)
+DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions options)
 {
-    InitCommonControls();
-    auto nativeApplication = (WindowsApplication*)applicationPointer;
-
-    auto width = description.Width;
-    auto height = description.Height;
+    auto width = options.Width;
+    auto height = options.Height;
 
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
-        ConvertUtf8ToWString(description.Title).c_str(),
+        ConvertUtf8ToWString(options.Title).c_str(),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -102,12 +107,12 @@ DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescri
     SetWindowPos(window, nullptr, x, y, width, height, 0);
     ShowWindow(window, SW_NORMAL);
 
-    if (description.WindowState == NativeWindowState::Maximized)
+    if (options.WindowState == NativeWindowState::Maximized)
     {
         ShowWindow(window, SW_MAXIMIZE);
     }
 
-    auto nativeWindow = new WindowsWindow();
+    auto nativeWindow = new Win32Window();
     nativeWindow->WindowHandle = window;
     nativeWindow->Width = width;
     nativeWindow->Height = height;
@@ -116,17 +121,14 @@ DllExport void* Native_CreateWindow(void* applicationPointer, NativeWindowDescri
     return nativeWindow;
 }
 
-DllExport void Native_DeleteWindow(void* windowPointer)
+DllExport void Native_FreeWindow(Win32Window* window)
 {
-    auto window = (WindowsWindow*)windowPointer;
     DestroyWindow(window->WindowHandle);
     delete window;
 }
 
-DllExport NativeWindowSize Native_GetWindowRenderSize(void* windowPointer)
+DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
 {
-    auto nativeWindow = (WindowsWindow*)windowPointer;
-
     RECT windowRectangle;
 	GetClientRect(nativeWindow->WindowHandle, &windowRectangle);
 
@@ -145,13 +147,12 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(void* windowPointer)
     return result;
 }
 
-DllExport void Native_SetWindowTitle(void* windowPointer, unsigned char* title)
+DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, unsigned char* title)
 {
-    auto nativeWindow = (WindowsWindow*)windowPointer;
     SetWindowText(nativeWindow->WindowHandle, ConvertUtf8ToWString(title).c_str());
 }
 
-void ProcessMessages(WindowsApplication* application)
+void ProcessMessages(Win32Application* application)
 {
     MSG message;
 

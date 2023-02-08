@@ -1,5 +1,7 @@
 #pragma once
 #include <stdbool.h>
+#include <stdint.h>
+#include <math.h>
 
 enum NativeApplicationStatusFlags
 {
@@ -10,7 +12,7 @@ enum NativeApplicationStatusFlags
 
 struct NativeApplicationStatus
 {
-    unsigned int Status;
+    uint32_t Status;
 };
 
 typedef bool (*RunHandlerPtr)(struct NativeApplicationStatus status);
@@ -21,17 +23,49 @@ enum NativeWindowState
     Maximized
 };
 
-struct NativeWindowDescription
+struct NativeWindowOptions
 {
-    unsigned char* Title;
-    int Width;
-    int Height;
+    uint8_t* Title;
+    int32_t Width;
+    int32_t Height;
     enum NativeWindowState WindowState;
 };
 
 struct NativeWindowSize
 {
-    int Width;
-    int Height;
-    float UIScale;
+    int32_t Width;
+    int32_t Height;
+    float_t UIScale;
+};
+
+enum GraphicsApi
+{
+    GraphicsApi_Unknown = 0,
+    GraphicsApi_Direct3D12 = 1,
+    GraphicsApi_Vulkan = 2,
+    GraphicsApi_Metal = 3
+};
+
+struct GraphicsDeviceInfo
+{
+    uint8_t* DeviceName;
+    enum GraphicsApi GraphicsApi;
+    uint64_t DeviceId;
+    uint64_t AvailableMemory;
+};
+
+enum GraphicsDiagnostics
+{
+    GraphicsDiagnostics_None,
+    GraphicsDiagnostics_Debug
+};
+
+struct GraphicsServiceOptions
+{
+    enum GraphicsDiagnostics GraphicsDiagnostics;
+};
+
+struct GraphicsDeviceOptions
+{
+    uint64_t DeviceId;
 };

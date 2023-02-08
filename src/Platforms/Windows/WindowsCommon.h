@@ -11,12 +11,25 @@
 #include <stack>
 #include <assert.h>
 
-#define ISOLATION_AWARE_ENABLED 1
+#define D3D12SDKVersion 608
+#define D3D12SDKPath u8".\\D3D12\\"
 
 #include <ShellScalingAPI.h>
 #include <Windows.h>
 #include <dwmapi.h>
 #include <Uxtheme.h>
+
+#include <wrl/client.h>
+#include "d3d12.h"
+#include <d3dcompiler.h>
+
+#if defined(NTDDI_WIN10_RS2)
+#include <dxgi1_6.h>
+#include <dxgidebug.h>
+#else
+#include <dxgi1_5.h>
+#endif
+
 
 #define AssertIfFailed(result) assert(!FAILED(result))
 
@@ -29,3 +42,5 @@ struct WindowsEvent
     WPARAM WParam;
     LPARAM LParam;
 };
+
+using namespace Microsoft::WRL;

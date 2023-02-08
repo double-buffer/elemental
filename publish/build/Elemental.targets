@@ -10,6 +10,10 @@
             <Link>%(FileName)%(Extension)</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
+        <Content Condition="$([MSBuild]::IsOSPlatform('Windows'))" Include="$(MSBuildThisFileDirectory)\..\runtimes\win-x64\D3D12\*.*">
+            <Link>D3D12\%(FileName)%(Extension)</Link>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
         <Content Condition="$([MSBuild]::IsOSPlatform('OSX'))" Include="$(MSBuildThisFileDirectory)\..\runtimes\osx\*.*">
             <Link>%(FileName)%(Extension)</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

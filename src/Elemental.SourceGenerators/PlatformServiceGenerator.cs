@@ -11,6 +11,10 @@ record PlatformServiceToGenerate
 {
     public string? Namespace { get; set; }
     public string InterfaceName { get; set; } = "";
+    public string InitMethod { get; set; } = "";
+    public string InitMethodParameters { get; set; } = "";
+    public string InitMethodParametersValues { get; set; } = "";
+    public string DisposeMethod { get; set; } = "";
 
     public IList<IMethodSymbol> MethodList { get; } = new List<IMethodSymbol>();
 
@@ -64,6 +68,26 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                             [AttributeUsage(AttributeTargets.Interface)]
                             public class PlatformServiceAttribute : Attribute
                             {
+                                /// <summary>
+                                /// Default constructor.
+                                /// </summary>
+                                public PlatformServiceAttribute()
+                                {
+                                    InitMethod = null;
+                                    DisposeMethod = null;
+                                }
+
+                                /// <summary>
+                                /// Gets or sets the name of the init method to use when the platform service is first created.
+                                /// </summary>
+                                /// <value>Name of the init method.</value>
+                                public string InitMethod { get; set; }
+
+                                /// <summary>
+                                /// Gets or sets the name of the dispose method to use when the platform service is disposed.
+                                /// </summary>
+                                /// <value>Name of the dispose method.</value>
+                                public string DisposeMethod { get; set; }
                             }
                             """;
 
@@ -155,8 +179,26 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         }
 
         sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-        sourceCode.AppendLine($"public partial class {platformService.ImplementationClassName} : {platformService.InterfaceName}");
+        sourceCode.AppendLine($"public partial class {platformService.ImplementationClassName} : {platformService.InterfaceName}{((platformService.DisposeMethod != "null") ? ", IDisposable" : "")}");
         sourceCode.AppendLine("{");
+
+        if (platformService.InitMethod != "null")
+        {
+            sourceCode.AppendLine("/// <summary>Default constructor.</summary>");
+            sourceCode.AppendLine($"public {platformService.ImplementationClassName}({platformService.InitMethodParameters})");
+            sourceCode.AppendLine("{");
+            sourceCode.AppendLine($"PlatformServiceInterop.{platformService.InitMethod.Replace("\"", "")}({platformService.InitMethodParametersValues});");
+            sourceCode.AppendLine("}");
+        }
+
+        if (platformService.DisposeMethod != "null")
+        {
+            sourceCode.AppendLine("/// <summary>Frees any unmanaged resources owned by the service.</summary>");
+            sourceCode.AppendLine($"public void Dispose()");
+            sourceCode.AppendLine("{");
+            sourceCode.AppendLine($"PlatformServiceInterop.{platformService.DisposeMethod.Replace("\"", "")}();");
+            sourceCode.AppendLine("}");
+        }
 
         foreach (var method in platformService.MethodList)
         {
@@ -168,22 +210,40 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             }
 
             sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-            sourceCode.AppendLine($"public {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + ((INamedTypeSymbol)item.Type).ToString() + " " + item.Name))})");
+            sourceCode.AppendLine($"public unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))})");
             sourceCode.AppendLine("{");
 
-            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformNativePointerAttribute");
+            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformServiceAttribute");
+            var isReturnTypeSpan = method.ReturnType.Name == "Span" || method.ReturnType.Name == "ReadOnlySpan";
 
             if (isReturnTypeNativePointer)
             {
                 sourceCode.Append("var result = ");
             }
 
-            else if (method.ReturnType.Name.ToLower() != "void")
+            else if (isReturnTypeSpan)
+            {
+                var structName = ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].Name;
+
+                // TODO: This is really hacky, this is temporary
+                sourceCode.AppendLine("int outputCount = 0;");
+                sourceCode.AppendLine($"var convertedResult = Array.Empty<{structName}>();");
+                sourceCode.AppendLine($"Span<{structName}Marshaller.{structName}Unmanaged> result = stackalloc {structName}Marshaller.{structName}Unmanaged[50];");
+                sourceCode.AppendLine($"fixed({structName}Marshaller.{structName}Unmanaged* nativeResult = result)");
+                sourceCode.AppendLine("{");
+
+                sourceCode.AppendLine("try");
+                sourceCode.AppendLine("{");
+            }
+
+            else if (method.ReturnType.Name.ToLower() != "void" && !isReturnTypeSpan)
             {
                 sourceCode.Append("return ");
             }
 
-            sourceCode.AppendLine($"PlatformServiceInterop.Native_{method.Name}({string.Join(",", method.Parameters.Select(item => GenerateReferenceType(item) + item.Name))});");
+            var parameterList = method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: false)).ToList();
+            parameterList.AddRange(GetSpanParameters(isReturnTypeSpan));
+            sourceCode.AppendLine($"PlatformServiceInterop.Native_{method.Name}({string.Join(",", parameterList)});");
 
             if (isReturnTypeNativePointer)
             {
@@ -194,10 +254,77 @@ public class PlatformServiceGenerator : IIncrementalGenerator
                 sourceCode.AppendLine("return result;");
             }
 
+            else if (isReturnTypeSpan)
+            {
+                var structName = ((INamedTypeSymbol)method.ReturnType).TypeArguments[0].Name;
+
+                sourceCode.AppendLine($"convertedResult = new {structName}[outputCount];");
+                sourceCode.AppendLine("for (var i = 0; i < outputCount; i++)");
+                sourceCode.AppendLine("{");
+                sourceCode.AppendLine($"convertedResult[i] = {structName}Marshaller.ConvertToManaged(result[i]);");
+                sourceCode.AppendLine("}");
+
+                sourceCode.AppendLine("}");
+                sourceCode.AppendLine("finally");
+                sourceCode.AppendLine("{");
+                sourceCode.AppendLine("for (var i = 0; i < outputCount; i++)");
+                sourceCode.AppendLine("{");
+                sourceCode.AppendLine($"{structName}Marshaller.Free(result[i]);");
+                sourceCode.AppendLine("}");
+
+                sourceCode.AppendLine("}");
+
+                sourceCode.AppendLine("return convertedResult;");
+                sourceCode.AppendLine("}");
+
+                sourceCode.AppendLine("throw new InvalidOperationException();");
+                // TODO: Cleanup
+
+            }
+
             sourceCode.AppendLine("}");
         }
 
         sourceCode.AppendLine("}");
+    }
+
+    private static string GenerateParameterValue(IParameterSymbol item, bool isMethodDefinition)
+    {
+        var result = GenerateReferenceType(item);
+        var typeName = ((INamedTypeSymbol)item.Type).ToString();
+
+        if (isMethodDefinition)
+        {
+            result += typeName + " ";
+        }
+
+        result += item.Name;
+
+        if (isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue != null)
+        {
+            result += " = " + item.ExplicitDefaultValue;
+        }
+
+        else if (isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue == null)
+        {
+            result += $" = default({typeName})";
+        }
+
+        else if (!isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue == null)
+        {
+            result += $" == default({typeName}) ? new {typeName}() : {item.Name}";
+        }
+
+        return result;
+    }
+
+    private static IEnumerable<string> GetSpanParameters(bool generateParameters)
+    {
+        if (generateParameters)
+        {
+            yield return "nativeResult";
+            yield return "out outputCount";
+        }
     }
 
     private static string GenerateReferenceType(IParameterSymbol item)
@@ -245,6 +372,13 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             return result;
         }
 
+        var platformInteropClass = compilation.GetTypeByMetadataName("Elemental.PlatformServiceInterop");
+
+        if (platformInteropClass == null)
+        {
+            return result;
+        }
+
         foreach (var interfaceDeclarationSyntax in interfaces)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -258,16 +392,32 @@ public class PlatformServiceGenerator : IIncrementalGenerator
 
             var interfaceName = interfaceSymbol.Name;
             var namespaceName = interfaceSymbol.ContainingNamespace;
+            var attribute = interfaceSymbol.GetAttributes().First(item => item.AttributeClass!.Name == "PlatformServiceAttribute");
 
             if (interfaceName is null)
             {
                 continue;
             }
 
+            var initMethodName = attribute.NamedArguments.FirstOrDefault(item => item.Key == "InitMethod").Value.ToCSharpString();
+            var initMethod = (IMethodSymbol?)platformInteropClass.GetMembers().FirstOrDefault(member => member.Name == initMethodName.Replace("\"", ""));
+            var methodParameters = string.Empty;
+            var methodParametersValues = string.Empty;
+
+            if (initMethod is not null)
+            {
+                methodParameters = $"{string.Join(",", initMethod.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))}";
+                methodParametersValues = $"{string.Join(",", initMethod.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: false)))}";
+            }
+
             var platformService = new PlatformServiceToGenerate
             {
                 InterfaceName = interfaceName,
-                Namespace = namespaceName?.ToString()
+                Namespace = namespaceName?.ToString(),
+                InitMethod = initMethodName,
+                InitMethodParameters = methodParameters,
+                InitMethodParametersValues = methodParametersValues,
+                DisposeMethod = attribute.NamedArguments.FirstOrDefault(item => item.Key == "DisposeMethod").Value.ToCSharpString()
             };
 
             var members = interfaceSymbol.GetMembers();

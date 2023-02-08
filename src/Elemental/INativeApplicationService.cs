@@ -7,20 +7,20 @@ namespace Elemental;
 public interface INativeApplicationService
 {
     /// <summary>
-    /// Creates a new native application.
+    /// Creates a new <see cref="NativeApplication" />.
     /// </summary>
     /// <param name="applicationName">Name of the application.</param>
     /// <returns>Application handle.</returns>
     NativeApplication CreateApplication(string applicationName);
 
     /// <summary>
-    /// Deletes the specified native application.
+    /// Frees the specified <see cref="NativeApplication" />.
     /// </summary>
     /// <param name="application">Application handle.</param>
-    void DeleteApplication(NativeApplication application);
+    void FreeApplication(NativeApplication application);
 
     /// <summary>
-    /// Executes the main loop for the specified application. This method returns
+    /// Executes the main loop for the specified <see cref="NativeApplication" />. This method returns
     /// when the application is closed. 
     /// </summary>
     /// <param name="application">Application used to run the main loop.</param>
@@ -28,28 +28,28 @@ public interface INativeApplicationService
     void RunApplication(NativeApplication application, RunHandler runHandler);
 
     /// <summary>
-    /// Creates a new native window.
+    /// Creates a new <see cref="NativeWindow" />.
     /// </summary>
     /// <param name="application">Application that owns the window.</param>
-    /// <param name="description">Description of the window to create.</param>
+    /// <param name="options">Optional parameters used by the graphics device creation.</param>
     /// <returns>Window handle.</returns>
-    NativeWindow CreateWindow(NativeApplication application, NativeWindowDescription description);
+    NativeWindow CreateWindow(NativeApplication application, NativeWindowOptions options);
 
     /// <summary>
-    /// Deletes the specified native window.
+    /// Frees the specified <see cref="NativeWindow" />.
     /// </summary>
     /// <param name="window">Window handle.</param>
-    void DeleteWindow(NativeWindow window);
+    void FreeWindow(NativeWindow window);
     
     /// <summary>
-    /// Gets the available render size of the specified window.
+    /// Gets the available render size of the specified <see cref="NativeWindow" />.
     /// </summary>
     /// <param name="window">Window handle.</param>
     /// <returns>Informations about the size of the window.</returns>
     NativeWindowSize GetWindowRenderSize(NativeWindow window);
 
     /// <summary>
-    /// Sets the title of the window.
+    /// Sets the title of the <see cref="NativeWindow" />.
     /// </summary>
     /// <param name="window">Window handle.</param>
     /// <param name="title">Title of the window.</param>

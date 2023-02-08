@@ -74,7 +74,8 @@ try
     }
 
     RegisterVisualStudioEnvironment
-    #TODO: Nuget restore
+
+    msbuild -t:restore,build -p:RestorePackagesConfig=true
     msbuild "Elemental.vcxproj" /p:configuration=$Configuration /p:outDir=$outputDirectory /p:platform=x64
     
     if (-Not $?) {

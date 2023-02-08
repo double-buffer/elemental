@@ -4,13 +4,18 @@
 
 Elemental is a portable low-level game platform abstraction library for .NET 7+ that targets only next-gen features.
 
+It currently runs on:
+
+- Windows (Direct3D12, Vulkan)
+- MacOS (Metal)
+
 ## 🚀 Getting Started
 
 Open a command line, create a new console project and add the Elemental NuGet package.
 
 ```
 dotnet new console
-dotnet add package Elemental
+dotnet add package Elemental --prerelease
 ```
 
 Copy and paste this sample code to create an empty window and display its current render size in the title bar.
@@ -44,10 +49,19 @@ applicationService.RunApplication(application, (status) =>
 });
 ```
 
+For MacOS, put those lines into the csproj:
+
+```
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>./bin/$(Configuration)/$(AssemblyName).app/Contents/MacOS</OutputPath>
+  </PropertyGroup>
+```
+
 Run the app using on any supported platform. (Currently Windows and MacOS)
 
 ```
 dotnet run
 ```
 
-You will find more examples in the [samples folder](samples/readme.md).
+You will find more examples in the [samples folder](samples/README.md).
