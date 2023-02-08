@@ -203,6 +203,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
     createInfo.ppEnabledExtensionNames = extensions;
     createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
+    // TODO: Replace that with standard extension but it doesn't seems to work for now :/
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV };
     meshFeatures.meshShader = true;
     meshFeatures.taskShader = true;
