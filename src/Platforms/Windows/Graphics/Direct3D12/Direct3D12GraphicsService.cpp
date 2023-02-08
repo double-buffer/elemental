@@ -35,6 +35,8 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
     }
 
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf())));
+
+    // TODO: Setup debug callback!
 }
 
 void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
@@ -88,7 +90,7 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
     {
         AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
 
-        if (adapterDescription.DeviceId == options.DeviceId)
+        if (GetDeviceId(adapterDescription) == options.DeviceId)
         {
             foundAdapter = true;
             break;
@@ -133,8 +135,13 @@ GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_A
     auto result = GraphicsDeviceInfo();
     result.DeviceName = ConvertWStringToUtf8(adapterDescription.Description);
     result.GraphicsApi = GraphicsApi_Direct3D12;
-    result.DeviceId = adapterDescription.DeviceId;
+    result.DeviceId = GetDeviceId(adapterDescription);
     result.AvailableMemory = adapterDescription.DedicatedVideoMemory;
 
     return result;
+}
+
+uint64_t Direct3D12GraphicsService::GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription)
+{
+    return adapterDescription.DeviceId + GraphicsApi_Direct3D12;
 }
