@@ -8,12 +8,12 @@
 void ProcessMessages(Win32Application* application);
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
-DllExport void Native_FreeNativePointer(unsigned char* nativePointer)
+DllExport void Native_FreeNativePointer(void* nativePointer)
 {
     delete nativePointer;
 }
 
-DllExport void* Native_CreateApplication(unsigned char* applicationName)
+DllExport void* Native_CreateApplication(uint8_t* applicationName)
 {
     auto application = new Win32Application();
     application->ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
@@ -147,7 +147,7 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
     return result;
 }
 
-DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, unsigned char* title)
+DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, uint8_t* title)
 {
     SetWindowText(nativeWindow->WindowHandle, ConvertUtf8ToWString(title).c_str());
 }

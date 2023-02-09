@@ -80,3 +80,21 @@ DllExport GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(void* graphicsDevicePo
     auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
     return graphicsService->GetGraphicsDeviceInfo(graphicsDevicePointer);
 }
+
+DllExport void* Native_CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+{
+    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
+    return graphicsService->CreateCommandQueue(graphicsDevicePointer, type);
+}
+
+DllExport void Native_FreeCommandQueue(void* commandQueuePointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
+    graphicsService->FreeCommandQueue(commandQueuePointer);
+}
+
+DllExport void Native_SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
+    graphicsService->SetCommandQueueLabel(commandQueuePointer, label);
+}

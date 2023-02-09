@@ -265,6 +265,21 @@ GraphicsDeviceInfo VulkanGraphicsService::GetGraphicsDeviceInfo(void* graphicsDe
     return ConstructGraphicsDeviceInfo(graphicsDevice->DeviceProperties, graphicsDevice->DeviceMemoryProperties);
 }
 
+void* VulkanGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+{
+    return nullptr;
+}
+
+void VulkanGraphicsService::FreeCommandQueue(void* commandQueuePointer)
+{
+
+}
+
+void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
+{
+
+}
+
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
     auto result = GraphicsDeviceInfo();

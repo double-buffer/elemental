@@ -130,6 +130,62 @@ GraphicsDeviceInfo Direct3D12GraphicsService::GetGraphicsDeviceInfo(void* graphi
     return ConstructGraphicsDeviceInfo(graphicsDevice->AdapterDescription);
 }
 
+void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+{
+    auto graphicsDevice = (Direct3D12GraphicsDevice*)graphicsDevicePointer;
+
+    D3D12_COMMAND_QUEUE_DESC commandQueueDesc = {};
+	commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+
+	if (type == CommandQueueType_Compute)
+	{
+		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+	}
+
+	else if (type == CommandQueueType_Copy)
+	{
+		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+	}
+
+	Direct3D12CommandQueue* commandQueue = new Direct3D12CommandQueue(this);
+	AssertIfFailed(graphicsDevice->Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(commandQueue->DeviceObject.ReleaseAndGetAddressOf())));
+/*
+	ComPtr<ID3D12Fence1> commandQueueFence;
+	AssertIfFailed(this->graphicsDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(commandQueueFence.ReleaseAndGetAddressOf())));
+
+	auto commandAllocators = new ComPtr<ID3D12CommandAllocator>[CommandAllocatorsCount];
+
+	// Init command allocators for each frame in flight
+	// TODO: For multi threading support we need to allocate on allocator per frame per thread
+	for (int i = 0; i < CommandAllocatorsCount; i++)
+	{
+		ComPtr<ID3D12CommandAllocator> commandAllocator;
+		AssertIfFailed(this->graphicsDevice->CreateCommandAllocator(commandQueueDesc.Type, IID_PPV_ARGS(commandAllocator.ReleaseAndGetAddressOf())));
+		commandAllocators[i] = commandAllocator;
+	}
+
+	Direct3D12CommandQueue* commandQueueStruct = new Direct3D12CommandQueue();
+	commandQueueStruct->CommandQueueObject = commandQueue;
+	commandQueueStruct->CommandAllocators = commandAllocators;
+	commandQueueStruct->Type = commandQueueDesc.Type;
+	commandQueueStruct->Fence = commandQueueFence;
+	commandQueueStruct->FenceValue = 0;*/
+
+	return commandQueue;
+}
+
+void Direct3D12GraphicsService::FreeCommandQueue(void* commandQueuePointer)
+{
+    delete (Direct3D12CommandQueue*)commandQueuePointer;
+}
+
+void Direct3D12GraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
+{
+    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+	commandQueue->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
+}
+
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
 {
     auto result = GraphicsDeviceInfo();

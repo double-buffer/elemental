@@ -29,5 +29,5 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial void Native_FreeCommandQueue(nint commandQueue);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void Native_SetCommandQueueLabel(CommandQueue commandQueue, string label);
+    internal static partial void Native_SetCommandQueueLabel(nint commandQueue, string label);
 }
