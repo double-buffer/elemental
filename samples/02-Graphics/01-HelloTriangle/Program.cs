@@ -34,7 +34,7 @@ using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDevi
     //DeviceId = selectedGraphicsDevice.DeviceId
 });
 
-using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Render);
+using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandType.Graphics);
 graphicsService.SetCommandQueueLabel(commandQueue, "Test Render Queue");
 
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);

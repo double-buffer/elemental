@@ -130,7 +130,7 @@ GraphicsDeviceInfo Direct3D12GraphicsService::GetGraphicsDeviceInfo(void* graphi
     return ConstructGraphicsDeviceInfo(graphicsDevice->AdapterDescription);
 }
 
-void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandType type)
 {
     auto graphicsDevice = (Direct3D12GraphicsDevice*)graphicsDevicePointer;
 
@@ -138,12 +138,12 @@ void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer,
 	commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-	if (type == CommandQueueType_Compute)
+	if (type == CommandType_Compute)
 	{
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 	}
 
-	else if (type == CommandQueueType_Copy)
+	else if (type == CommandType_Copy)
 	{
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 	}

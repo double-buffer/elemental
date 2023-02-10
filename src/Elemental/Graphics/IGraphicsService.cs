@@ -3,7 +3,7 @@ namespace Elemental.Graphics;
 /// <summary>
 /// Manages low level GPU graphics resources and commands.
 /// </summary>
-[PlatformService(InitMethod = nameof(PlatformServiceInterop.Native_InitGraphicsService), DisposeMethod = nameof(PlatformServiceInterop.Native_FreeGraphicsService))] 
+[PlatformService(InitMethod = nameof(PlatformServiceInterop.Native_InitGraphicsService), DisposeMethod = nameof(PlatformServiceInterop.Native_FreeGraphicsService))]
 public interface IGraphicsService
 {
     /// <summary>
@@ -38,7 +38,7 @@ public interface IGraphicsService
     /// <param name="graphicsDevice">Graphics device to use.</param>
     /// <param name="type">Type of the command queue.</param>
     /// <returns>Command Queue handle.</returns>
-    CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type);
+    CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandType type);
 
     /// <summary>
     /// Frees the specified <see cref="CommandQueue" />.
@@ -52,4 +52,12 @@ public interface IGraphicsService
     /// <param name="commandQueue">Comand queue to use.</param>
     /// <param name="label">Debug label that will be used by trace tools.</param>
     void SetCommandQueueLabel(CommandQueue commandQueue, string label);
+
+    /*
+    CommandList CreateCommandList(CommandType type);
+    void SetCommandListLabel(CommandList commandList);
+    void CommitCommandList(CommandList commandList);
+
+    Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlyList<CommandList> commandLists, ReadOnlyList<Fence> fenceToWait);
+    */
 }

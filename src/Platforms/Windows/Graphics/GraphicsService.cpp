@@ -81,7 +81,7 @@ DllExport GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(void* graphicsDevicePo
     return graphicsService->GetGraphicsDeviceInfo(graphicsDevicePointer);
 }
 
-DllExport void* Native_CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+DllExport void* Native_CreateCommandQueue(void* graphicsDevicePointer, CommandType type)
 {
     auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
     return graphicsService->CreateCommandQueue(graphicsDevicePointer, type);
