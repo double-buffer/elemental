@@ -280,6 +280,26 @@ void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint
 
 }
 
+void* VulkanGraphicsService::CreateCommandList(void* commandQueuePointer)
+{
+    return nullptr;
+}
+
+void VulkanGraphicsService::FreeCommandList(void* commandListPointer)
+{
+
+}
+
+void VulkanGraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
+{
+
+}
+
+void VulkanGraphicsService::CommitCommandList(void* commandListPointer)
+{
+
+}
+
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
     auto result = GraphicsDeviceInfo();

@@ -34,7 +34,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
         createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
     }
 
-    AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf())));
+    AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.GetAddressOf())));
 
     // TODO: Setup debug callback!
 }
@@ -51,7 +51,7 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
         if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0)
 		{
 			ComPtr<ID3D12Device> tempDevice;
-			D3D12CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(tempDevice.ReleaseAndGetAddressOf()));
+			D3D12CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(tempDevice.GetAddressOf()));
 
 			if (tempDevice == nullptr)
 			{
@@ -102,15 +102,16 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
         return nullptr;
     }
 
-    auto graphicsDevice = new Direct3D12GraphicsDevice(this);
-    graphicsDevice->AdapterDescription = adapterDescription;
-
-	HRESULT result = D3D12CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(graphicsDevice->Device.ReleaseAndGetAddressOf()));
+    ComPtr<ID3D12Device10> device;
+    HRESULT result = D3D12CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(device.GetAddressOf()));
 
 	if (FAILED(result))
 	{
         return nullptr;
     }
+    
+    auto graphicsDevice = new Direct3D12GraphicsDevice(this, device);
+    graphicsDevice->AdapterDescription = adapterDescription;
 
 	// TODO: Provide an option for this bad but useful feature?
     // If so, it must be with an additional flag
@@ -138,18 +139,20 @@ void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer,
 	commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-	if (type == CommandType_Compute)
+	if (type == CommandQueueType_Compute)
 	{
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 	}
 
-	else if (type == CommandType_Copy)
+	else if (type == CommandQueueType_Copy)
 	{
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 	}
 
-	Direct3D12CommandQueue* commandQueue = new Direct3D12CommandQueue(this);
-	AssertIfFailed(graphicsDevice->Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(commandQueue->DeviceObject.ReleaseAndGetAddressOf())));
+	Direct3D12CommandQueue* commandQueue = new Direct3D12CommandQueue(this, graphicsDevice->Device);
+    commandQueue->CommandListType = commandQueueDesc.Type;
+
+    AssertIfFailed(graphicsDevice->Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(commandQueue->DeviceObject.GetAddressOf())));
 /*
 	ComPtr<ID3D12Fence1> commandQueueFence;
 	AssertIfFailed(this->graphicsDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(commandQueueFence.ReleaseAndGetAddressOf())));
@@ -184,6 +187,34 @@ void Direct3D12GraphicsService::SetCommandQueueLabel(void* commandQueuePointer, 
 {
     Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 	commandQueue->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
+}
+
+void* Direct3D12GraphicsService::CreateCommandList(void *commandQueuePointer)
+{
+    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+
+    Direct3D12CommandList* commandList = new Direct3D12CommandList(this, commandQueue->Device);
+    commandList->CommandListType = commandQueue->CommandListType;
+
+    AssertIfFailed(commandQueue->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList->DeviceObject.GetAddressOf())));
+
+    return commandList;
+}
+
+void Direct3D12GraphicsService::FreeCommandList(void* commandListPointer)
+{
+    delete (Direct3D12CommandList*)commandListPointer;
+}
+
+void Direct3D12GraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
+{
+    Direct3D12CommandList* commandList = (Direct3D12CommandList*)commandListPointer;
+	commandList->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
+}
+
+void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
+{
+
 }
 
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)

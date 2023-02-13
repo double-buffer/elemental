@@ -22,12 +22,17 @@ public:
 
     void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) override;
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
-    void FreeGraphicsDevice(void *graphicsDevicePointer) override;
-    GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) override;
+    void FreeGraphicsDevice(void* graphicsDevicePointer) override;
+    GraphicsDeviceInfo GetGraphicsDeviceInfo(void* graphicsDevicePointer) override;
     
     void* CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type) override;
     void FreeCommandQueue(void* commandQueuePointer) override;
     void SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label) override;
+    
+    void* CreateCommandList(void* commandQueuePointer) override;
+    void FreeCommandList(void* commandListPointer) override;
+    void SetCommandListLabel(void* commandListPointer, uint8_t* label) override;
+    void CommitCommandList(void* commandList) override;
 
 private:
     GraphicsDiagnostics _graphicsDiagnostics;
