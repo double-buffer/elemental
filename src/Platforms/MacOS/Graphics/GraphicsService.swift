@@ -60,9 +60,16 @@ public func getGraphicsDeviceInfo(graphicsDevicePointer: UnsafeRawPointer) -> Gr
 }
 
 @_cdecl("Native_CreateCommandQueue")
-public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
-    print("Create CommandQueue")
-    return nil
+public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer, type: CommandQueueType) -> UnsafeMutableRawPointer? {
+    let graphicsDevice = MetalGraphicsDevice.fromPointer(graphicsDevicePointer)
+    let initMetalCommandQueue = graphicsDevice.metalDevice.makeCommandQueue()
+
+    guard let metalCommandQueue = initMetalCommandQueue else {
+        return nil
+    }
+
+    let commandQueue = MetalCommandQueue(graphicsDevice.metalDevice, metalCommandQueue)
+    return Unmanaged.passRetained(commandQueue).toOpaque()
 }
 
 @_cdecl("Native_FreeCommandQueue")
@@ -72,6 +79,27 @@ public func freeCommandQueue(commandQueuePointer: UnsafeRawPointer) {
 
 @_cdecl("Native_SetCommandQueueLabel")
 public func setCommandQueueLabel(commandQueuePointer: UnsafeRawPointer, label: UnsafeMutablePointer<Int8>) {
+    //MetalGraphicsDevice.release(graphicsDevicePointer)
+}
+
+@_cdecl("Native_CreateCommandList")
+public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
+    print("Create CommandList")
+    return nil
+}
+
+@_cdecl("Native_FreeCommandList")
+public func freeCommandList(commandListPointer: UnsafeRawPointer) {
+    //MetalGraphicsDevice.release(graphicsDevicePointer)
+}
+
+@_cdecl("Native_SetCommandListLabel")
+public func setCommandListLabel(commandListPointer: UnsafeRawPointer, label: UnsafeMutablePointer<Int8>) {
+    //MetalGraphicsDevice.release(graphicsDevicePointer)
+}
+
+@_cdecl("Native_CommitCommandList")
+public func commitommandList(commandListPointer: UnsafeRawPointer) {
     //MetalGraphicsDevice.release(graphicsDevicePointer)
 }
 

@@ -9,7 +9,7 @@ public:
     virtual void FreeGraphicsDevice(void *graphicsDevicePointer) = 0;
     virtual GraphicsDeviceInfo GetGraphicsDeviceInfo(void *graphicsDevicePointer) = 0;
     
-    virtual void* CreateCommandQueue(void* graphicsDevicePointer, CommandType type) = 0;
+    virtual void* CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type) = 0;
     virtual void FreeCommandQueue(void* commandQueuePointer) = 0;
     virtual void SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label) = 0;
 };

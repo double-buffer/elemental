@@ -38,7 +38,7 @@ public interface IGraphicsService
     /// <param name="graphicsDevice">Graphics device to use.</param>
     /// <param name="type">Type of the command queue.</param>
     /// <returns>Command Queue handle.</returns>
-    CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandType type);
+    CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type);
 
     /// <summary>
     /// Frees the specified <see cref="CommandQueue" />.
@@ -52,12 +52,35 @@ public interface IGraphicsService
     /// <param name="commandQueue">Comand queue to use.</param>
     /// <param name="label">Debug label that will be used by trace tools.</param>
     void SetCommandQueueLabel(CommandQueue commandQueue, string label);
+ 
+    /// <summary>
+    /// Creates a new <see cref="CommandList" />.
+    /// </summary>
+    /// <param name="commandQueue"><see cref="CommandQueue" /> used by the command list.</param>
+    /// <returns>Command list handle.</returns>
+    CommandList CreateCommandList(CommandQueue commandQueue);
+    
+    /// <summary>
+    /// Frees the specified <see cref="CommandList" />.
+    /// </summary>
+    /// <param name="commandList">CommandList to free.</param>
+    void FreeCommandList(CommandList commandList);
+    
+    /// <summary>
+    /// Sets the debug label of the specified <see cref="CommandList" />.
+    /// </summary>
+    /// <param name="commandList">Comand list to use.</param>
+    /// <param name="label">Debug label that will be used by trace tools.</param>
+    void SetCommandListLabel(CommandList commandList, string label);
 
-    /*
-    CommandList CreateCommandList(CommandType type);
-    void SetCommandListLabel(CommandList commandList);
+    /// <summary>
+    /// Commits the the specified <see cref="CommandList" />. After commiting, the command list
+    /// cannot be used to record additional gpu commands.
+    /// </summary>
+    /// <param name="commandList">Command list to commit.</param>
     void CommitCommandList(CommandList commandList);
 
+/*
     Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlyList<CommandList> commandLists, ReadOnlyList<Fence> fenceToWait);
     */
 }

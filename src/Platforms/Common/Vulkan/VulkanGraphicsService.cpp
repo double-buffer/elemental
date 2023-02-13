@@ -265,7 +265,7 @@ GraphicsDeviceInfo VulkanGraphicsService::GetGraphicsDeviceInfo(void* graphicsDe
     return ConstructGraphicsDeviceInfo(graphicsDevice->DeviceProperties, graphicsDevice->DeviceMemoryProperties);
 }
 
-void* VulkanGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandType type)
+void* VulkanGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
 {
     return nullptr;
 }

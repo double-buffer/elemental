@@ -23,11 +23,23 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(nint graphicsDevice);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_CreateCommandQueue(nint graphicsDevice, CommandType type);
+    internal static partial nint Native_CreateCommandQueue(nint graphicsDevice, CommandQueueType type);
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeCommandQueue(nint commandQueue);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial void Native_SetCommandQueueLabel(nint commandQueue, string label);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial int Native_CreateCommandList(nint commandQueue);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial int Native_FreeCommandList(nint commandList);
+    
+    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial void Native_SetCommandListLabel(nint commandList, string label);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_CommitCommandList(nint commandList);
 }

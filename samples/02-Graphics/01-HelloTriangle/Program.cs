@@ -34,7 +34,7 @@ using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDevi
     //DeviceId = selectedGraphicsDevice.DeviceId
 });
 
-using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandType.Graphics);
+using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
 graphicsService.SetCommandQueueLabel(commandQueue, "Test Render Queue");
 
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
@@ -50,6 +50,11 @@ applicationService.RunApplication(application, (status) =>
     var renderSize = applicationService.GetWindowRenderSize(window);
 
     Thread.Sleep(5);
+
+    using var commandList = graphicsService.CreateCommandList(commandQueue);
+    graphicsService.SetCommandListLabel(commandList, "Triangle CommandList");
+
+    graphicsService.CommitCommandList(commandList);
 
     return true;
 });

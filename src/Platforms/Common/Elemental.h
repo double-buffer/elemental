@@ -70,9 +70,9 @@ struct GraphicsDeviceOptions
     uint64_t DeviceId;
 };
 
-enum CommandType
+enum CommandQueueType
 {
-    CommandType_Graphics = 0,
-    CommandType_Compute = 1,
-    CommandType_Copy = 2
+    CommandQueueType_Graphics = 0,
+    CommandQueueType_Compute = 1,
+    CommandQueueType_Copy = 2
 };

@@ -130,7 +130,7 @@ GraphicsDeviceInfo Direct3D12GraphicsService::GetGraphicsDeviceInfo(void* graphi
     return ConstructGraphicsDeviceInfo(graphicsDevice->AdapterDescription);
 }
 
-void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandType type)
+void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
 {
     auto graphicsDevice = (Direct3D12GraphicsDevice*)graphicsDevicePointer;
 
