@@ -193,6 +193,21 @@ void* Direct3D12GraphicsService::CreateCommandList(void *commandQueuePointer)
 {
     Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
+    uint32_t threadId = GetThreadId();
+    printf("Thread Id: %u\n", threadId);
+
+    // TODO: We need to be carreful about multi threading here, it shouldn't be a problem because
+    // the key is framenumber + threadid
+
+    // TODO: Validate that we have an allocator for the queue for the current frame and thread id combination
+    // TODO: If not, try to get an existing free command allocator based on frame number and thread id
+    // TODO: If available, reset it
+    // TODO: If no command allocator available, create a new one
+
+    // TODO: Try to get an existing free command list
+    // TODO: If available, reset it
+    // TODO: If not, create a new one
+
     Direct3D12CommandList* commandList = new Direct3D12CommandList(this, commandQueue->Device);
     commandList->CommandListType = commandQueue->CommandListType;
 
@@ -214,7 +229,7 @@ void Direct3D12GraphicsService::SetCommandListLabel(void* commandListPointer, ui
 
 void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
 {
-
+    // TODO: Commit the list and put it in the free list
 }
 
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)

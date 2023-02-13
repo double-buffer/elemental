@@ -2,6 +2,7 @@
 #include "WindowsCommon.h"
 #include "../../../Common/BaseGraphicsService.h"
 #include "../../../Common/BaseGraphicsObject.h"
+#include "../../../Common/SystemFunctions.h"
 #include "../../../Common/StringConverters.h"
 
 #include "Direct3D12GraphicsDevice.h"

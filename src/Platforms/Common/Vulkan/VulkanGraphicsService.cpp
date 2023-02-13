@@ -153,12 +153,11 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
     
     auto graphicsDevice = new VulkanGraphicsDevice(this);
 
-    // TODO: Change that, queue creation is fixed
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+    VkQueueFamilyProperties queueFamilies[32];
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
 
     VkDeviceQueueCreateInfo queueCreateInfos[3];
 
