@@ -74,33 +74,42 @@ public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer, type: Co
 
 @_cdecl("Native_FreeCommandQueue")
 public func freeCommandQueue(commandQueuePointer: UnsafeRawPointer) {
-    //MetalGraphicsDevice.release(graphicsDevicePointer)
+    MetalCommandQueue.release(commandQueuePointer)
 }
 
 @_cdecl("Native_SetCommandQueueLabel")
 public func setCommandQueueLabel(commandQueuePointer: UnsafeRawPointer, label: UnsafeMutablePointer<Int8>) {
-    //MetalGraphicsDevice.release(graphicsDevicePointer)
+    let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
+    commandQueue.deviceObject.label = String(cString: label)
 }
 
 @_cdecl("Native_CreateCommandList")
 public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
-    print("Create CommandList")
-    return nil
+    let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
+    
+    guard let metalCommandBuffer = commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
+        return nil
+    }
+
+    let commandList = MetalCommandList(commandQueue.metalDevice, metalCommandBuffer)
+    return Unmanaged.passRetained(commandList).toOpaque()
 }
 
 @_cdecl("Native_FreeCommandList")
 public func freeCommandList(commandListPointer: UnsafeRawPointer) {
-    //MetalGraphicsDevice.release(graphicsDevicePointer)
+    MetalCommandList.release(commandListPointer)
 }
 
 @_cdecl("Native_SetCommandListLabel")
 public func setCommandListLabel(commandListPointer: UnsafeRawPointer, label: UnsafeMutablePointer<Int8>) {
-    //MetalGraphicsDevice.release(graphicsDevicePointer)
+    let commandList = MetalCommandList.fromPointer(commandListPointer)
+    commandList.deviceObject.label = String(cString: label)
 }
 
 @_cdecl("Native_CommitCommandList")
 public func commitommandList(commandListPointer: UnsafeRawPointer) {
-    //MetalGraphicsDevice.release(graphicsDevicePointer)
+    let commandList = MetalCommandList.fromPointer(commandListPointer)
+    // TODO
 }
 
 private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDeviceInfo {
