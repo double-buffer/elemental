@@ -31,6 +31,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
             _debugInterface->EnableDebugLayer();
         }
 
+        AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(_dxgiDebugInterface.GetAddressOf())));
         createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
     }
 
@@ -39,11 +40,19 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
     // TODO: Setup debug callback!
 }
 
+Direct3D12GraphicsService::~Direct3D12GraphicsService()
+{
+    if (_dxgiDebugInterface)
+    {
+        AssertIfFailed(_dxgiDebugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY));
+    }
+}
+
 void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
     ComPtr<IDXGIAdapter4> graphicsAdapter;
 
-    for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
+    for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.ReleaseAndGetAddressOf())); i++)
     {
         DXGI_ADAPTER_DESC3 adapterDescription;
         AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
@@ -110,10 +119,12 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
         return nullptr;
     }
     
-    auto graphicsDevice = new Direct3D12GraphicsDevice(this, device);
+    auto graphicsDevice = new Direct3D12GraphicsDevice(this);
+    graphicsDevice->Device = device;
     graphicsDevice->AdapterDescription = adapterDescription;
+    graphicsDevice->CurrentFrameNumber = 0;
 
-	// TODO: Provide an option for this bad but useful feature?
+    // TODO: Provide an option for this bad but useful feature?
     // If so, it must be with an additional flag
 	//AssertIfFailed(this->graphicsDevice->SetStablePowerState(true));
 
@@ -149,24 +160,13 @@ void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer,
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 	}
 
-	Direct3D12CommandQueue* commandQueue = new Direct3D12CommandQueue(this, graphicsDevice->Device);
+	Direct3D12CommandQueue* commandQueue = new Direct3D12CommandQueue(this, graphicsDevice);
     commandQueue->CommandListType = commandQueueDesc.Type;
 
     AssertIfFailed(graphicsDevice->Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(commandQueue->DeviceObject.GetAddressOf())));
 /*
 	ComPtr<ID3D12Fence1> commandQueueFence;
 	AssertIfFailed(this->graphicsDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(commandQueueFence.ReleaseAndGetAddressOf())));
-
-	auto commandAllocators = new ComPtr<ID3D12CommandAllocator>[CommandAllocatorsCount];
-
-	// Init command allocators for each frame in flight
-	// TODO: For multi threading support we need to allocate on allocator per frame per thread
-	for (int i = 0; i < CommandAllocatorsCount; i++)
-	{
-		ComPtr<ID3D12CommandAllocator> commandAllocator;
-		AssertIfFailed(this->graphicsDevice->CreateCommandAllocator(commandQueueDesc.Type, IID_PPV_ARGS(commandAllocator.ReleaseAndGetAddressOf())));
-		commandAllocators[i] = commandAllocator;
-	}
 
 	Direct3D12CommandQueue* commandQueueStruct = new Direct3D12CommandQueue();
 	commandQueueStruct->CommandQueueObject = commandQueue;
@@ -189,30 +189,17 @@ void Direct3D12GraphicsService::SetCommandQueueLabel(void* commandQueuePointer, 
 	commandQueue->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
 }
 
-void* Direct3D12GraphicsService::CreateCommandList(void *commandQueuePointer)
+void* Direct3D12GraphicsService::CreateCommandList(void* commandQueuePointer)
 {
     Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
-    uint32_t threadId = GetThreadId();
-    printf("Thread Id: %u\n", threadId);
+    auto commandAllocator = GetCommandAllocator(commandQueue);
+    auto direct3DCommandList = GetCommandList(commandQueue);
 
-    // TODO: We need to be carreful about multi threading here, it shouldn't be a problem because
-    // the key is framenumber + threadid
+    Direct3D12CommandList* commandList = new Direct3D12CommandList(commandQueue, this, commandQueue->GraphicsDevice);
+    commandList->DeviceObject = direct3DCommandList;
 
-    // TODO: Validate that we have an allocator for the queue for the current frame and thread id combination
-    // TODO: If not, try to get an existing free command allocator based on frame number and thread id
-    // TODO: If available, reset it
-    // TODO: If no command allocator available, create a new one
-
-    // TODO: Try to get an existing free command list
-    // TODO: If available, reset it
-    // TODO: If not, create a new one
-
-    Direct3D12CommandList* commandList = new Direct3D12CommandList(this, commandQueue->Device);
-    commandList->CommandListType = commandQueue->CommandListType;
-
-    AssertIfFailed(commandQueue->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList->DeviceObject.GetAddressOf())));
-
+    AssertIfFailed(commandList->DeviceObject->Reset(commandAllocator.Get(), nullptr));
     return commandList;
 }
 
@@ -229,7 +216,10 @@ void Direct3D12GraphicsService::SetCommandListLabel(void* commandListPointer, ui
 
 void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
 {
-    // TODO: Commit the list and put it in the free list
+    Direct3D12CommandList* commandList = (Direct3D12CommandList*)commandListPointer;
+    AssertIfFailed(commandList->DeviceObject->Close());
+
+    PushFreeCommandList(commandList->CommandQueue, commandList->DeviceObject);
 }
 
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
@@ -246,4 +236,80 @@ GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_A
 uint64_t Direct3D12GraphicsService::GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription)
 {
     return adapterDescription.DeviceId + GraphicsApi_Direct3D12;
+}
+
+ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Direct3D12CommandQueue* commandQueue)
+{
+    // TODO: Refactor when present is implemented
+
+    // TODO: The goal is to have a simple fast lookup here and do the heavy work in the present
+    // method
+    // TODO: We have 4 parameters: ThreadID, Device, FrameIndex and CommandType
+    // ThreadID can be avoided by have a local pool for each thread.
+    // FrameIndex can be avoided by keeping a list of running allocator and when we call present
+    // Check that list to insert the available allocators in the free list of each threads
+    // CommandType is just 3 possible values so we can fix the array of have 3 separate lists.
+
+    // TODO: This method needs a lot of optimizations!
+    // TODO: Avoid using STD here, for now it is a basic working implementation
+
+    // TODO: For the moment we will support only one swapchain per device
+    // TODO: We need to be carreful about multi threading here, it shouldn't be a problem because
+    // TODO: For the moment we are bound to present :(
+
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    uint32_t frameIndex = graphicsDevice->CurrentFrameNumber % 2;
+    uint32_t threadId = GetThreadId();
+
+    if (graphicsDevice->CommandAllocators.size() <= frameIndex)
+    {
+        graphicsDevice->CommandAllocators.push_back(std::map<D3D12_COMMAND_LIST_TYPE, std::map<uint32_t, ComPtr<ID3D12CommandAllocator>>>());
+    }
+
+    if (graphicsDevice->CommandAllocators[frameIndex].count(commandQueue->CommandListType) == 0)
+    {
+        graphicsDevice->CommandAllocators[frameIndex][commandQueue->CommandListType] = std::map<uint32_t, ComPtr<ID3D12CommandAllocator>>();
+    }
+
+    auto dictionary = &graphicsDevice->CommandAllocators[frameIndex][commandQueue->CommandListType];
+
+    if (dictionary->count(threadId) == 0)
+    {
+        printf("Creating CommandAllocator...\n");
+        ComPtr<ID3D12CommandAllocator> commandAllocator;
+		AssertIfFailed(graphicsDevice->Device->CreateCommandAllocator(commandQueue->CommandListType, IID_PPV_ARGS(commandAllocator.ReleaseAndGetAddressOf())));
+        (*dictionary)[threadId] = commandAllocator;
+    }
+
+    // TODO: Reset the command allocator when present is called
+    return (*dictionary)[threadId];
+}
+    
+ComPtr<ID3D12GraphicsCommandList7> Direct3D12GraphicsService::GetCommandList(Direct3D12CommandQueue* commandQueue)
+{
+    // TODO: IMPORTANT: This must be threadsafe !
+    // TODO: Try to get an existing free command list
+    // TODO: If available, reset it
+    // TODO: If not, create a new one
+
+    if (commandQueue->AvailableCommandLists.empty())
+    {
+        printf("Creating CommandList...\n");
+        ComPtr<ID3D12GraphicsCommandList7> direct3DCommandList;
+        AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(direct3DCommandList.GetAddressOf())));
+
+        return direct3DCommandList;
+    }
+
+    auto direct3DCommandList = commandQueue->AvailableCommandLists.top();
+    commandQueue->AvailableCommandLists.pop();
+
+    return direct3DCommandList;
+}
+    
+void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList)
+{
+    // TODO: IMPORTANT: This must be threadsafe !
+    commandQueue->AvailableCommandLists.push(commandList);
 }

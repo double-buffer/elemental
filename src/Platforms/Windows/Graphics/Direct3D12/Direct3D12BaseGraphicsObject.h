@@ -1,13 +1,14 @@
 #pragma once
 #include "WindowsCommon.h"
 #include "../../../Common/BaseGraphicsObject.h"
+#include "Direct3D12GraphicsDevice.h"
 
 struct Direct3D12BaseGraphicsObject : BaseGraphicsObject
 {
-    Direct3D12BaseGraphicsObject(BaseGraphicsService* graphicsService, ComPtr<ID3D12Device10> device) : BaseGraphicsObject(graphicsService)
+    Direct3D12BaseGraphicsObject(BaseGraphicsService* graphicsService, Direct3D12GraphicsDevice* graphicsDevice) : BaseGraphicsObject(graphicsService)
     {
-        Device = device;
+        GraphicsDevice = graphicsDevice;
     }
 
-    ComPtr<ID3D12Device10> Device;
+    Direct3D12GraphicsDevice* GraphicsDevice;
 };

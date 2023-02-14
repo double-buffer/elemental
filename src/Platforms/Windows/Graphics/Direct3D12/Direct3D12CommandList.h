@@ -4,10 +4,11 @@
 
 struct Direct3D12CommandList : Direct3D12BaseGraphicsObject
 {
-    Direct3D12CommandList(BaseGraphicsService* graphicsService, ComPtr<ID3D12Device10> device) : Direct3D12BaseGraphicsObject(graphicsService, device)
+    Direct3D12CommandList(Direct3D12CommandQueue* commandQueue, BaseGraphicsService* graphicsService, Direct3D12GraphicsDevice* graphicsDevice) : Direct3D12BaseGraphicsObject(graphicsService, graphicsDevice)
     {
+        CommandQueue = commandQueue;
     }
 
     ComPtr<ID3D12GraphicsCommandList7> DeviceObject;
-    D3D12_COMMAND_LIST_TYPE CommandListType;
+    Direct3D12CommandQueue* CommandQueue;
 };

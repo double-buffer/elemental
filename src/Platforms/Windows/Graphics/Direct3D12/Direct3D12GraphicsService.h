@@ -13,6 +13,7 @@ class Direct3D12GraphicsService : BaseGraphicsService
 {
 public:
     Direct3D12GraphicsService(GraphicsServiceOptions options);
+    ~Direct3D12GraphicsService();
 
     void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) override;
     void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
@@ -32,7 +33,12 @@ private:
     ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
     ComPtr<IDXGIFactory6> _dxgiFactory; 
     ComPtr<ID3D12Debug6> _debugInterface;
+    ComPtr<IDXGIDebug1> _dxgiDebugInterface;
 
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);
     uint64_t GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription);
+
+    ComPtr<ID3D12CommandAllocator> GetCommandAllocator(Direct3D12CommandQueue* commandQueue);
+    ComPtr<ID3D12GraphicsCommandList7> GetCommandList(Direct3D12CommandQueue* commandQueue);
+    void PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList);
 };
