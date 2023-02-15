@@ -122,3 +122,9 @@ DllExport void Native_CommitCommandList(void* commandListPointer)
     auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
     graphicsService->CommitCommandList(commandListPointer);
 }
+    
+DllExport Fence Native_ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
+    return graphicsService->ExecuteCommandLists(commandQueuePointer, commandLists, commandListCount, fencesToWait, fenceToWaitCount);
+}

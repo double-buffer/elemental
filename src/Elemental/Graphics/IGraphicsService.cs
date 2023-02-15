@@ -80,7 +80,12 @@ public interface IGraphicsService
     /// <param name="commandList">Command list to commit.</param>
     void CommitCommandList(CommandList commandList);
 
-/*
-    Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlyList<CommandList> commandLists, ReadOnlyList<Fence> fenceToWait);
-    */
+    /// <summary>
+    /// Executes a list of <see cref="CommandList" /> on the specified <see cref="CommandQueue" />.
+    /// </summary>
+    /// <param name="commandQueue">Command queue to use.</param>
+    /// <param name="commandLists">List of command lists.</param>
+    /// <param name="fencesToWait">List of fence objects to wait before executing the commandlists on the GPU.</param>
+    /// <returns>Fence object that will be signaled when the execution is finished on the GPU.</returns>
+    Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlySpan<CommandList> commandLists, ReadOnlySpan<Fence> fencesToWait);
 }

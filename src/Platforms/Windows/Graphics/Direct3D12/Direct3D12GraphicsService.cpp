@@ -162,18 +162,10 @@ void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer,
 
 	Direct3D12CommandQueue* commandQueue = new Direct3D12CommandQueue(this, graphicsDevice);
     commandQueue->CommandListType = commandQueueDesc.Type;
+    commandQueue->FenceValue = 0;
 
     AssertIfFailed(graphicsDevice->Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(commandQueue->DeviceObject.GetAddressOf())));
-/*
-	ComPtr<ID3D12Fence1> commandQueueFence;
-	AssertIfFailed(this->graphicsDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(commandQueueFence.ReleaseAndGetAddressOf())));
-
-	Direct3D12CommandQueue* commandQueueStruct = new Direct3D12CommandQueue();
-	commandQueueStruct->CommandQueueObject = commandQueue;
-	commandQueueStruct->CommandAllocators = commandAllocators;
-	commandQueueStruct->Type = commandQueueDesc.Type;
-	commandQueueStruct->Fence = commandQueueFence;
-	commandQueueStruct->FenceValue = 0;*/
+	AssertIfFailed(graphicsDevice->Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(commandQueue->Fence.GetAddressOf())));
 
 	return commandQueue;
 }
@@ -221,6 +213,37 @@ void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
 
     PushFreeCommandList(commandList->CommandQueue, commandList->DeviceObject);
 }
+    
+Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
+{
+    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+
+	/*for (int i = 0; i < fenceToWaitCount; i++)
+	{
+		auto fenceToWait = fencesToWait[i];
+		Direct3D12CommandQueue* commandQueueToWait = (Direct3D12CommandQueue*)fenceToWait.CommandQueuePointer;
+
+		AssertIfFailed(commandQueue->CommandQueueObject->Wait(commandQueueToWait->Fence.Get(), fenceToWait.Value));
+	}
+
+	vector<ID3D12CommandList*> commandListsToExecute = vector<ID3D12CommandList*>(commandListsLength);
+
+	for (int i = 0; i < commandListsLength; i++)
+	{
+		commandListsToExecute[i] = ((Direct3D12CommandList*)commandLists[i])->CommandListObject.Get();
+	}
+
+	commandQueue->CommandQueueObject->ExecuteCommandLists(commandListsLength, commandListsToExecute.data());
+
+	// TODO: Switch to an atomic increment here for multi threading
+	auto fenceValue = commandQueue->FenceValue;
+	commandQueue->CommandQueueObject->Signal(commandQueue->Fence.Get(), fenceValue);
+	commandQueue->FenceValue = fenceValue + 1;*/
+
+	//return fenceValue;
+
+    return Fence();
+}
 
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
 {
@@ -240,7 +263,8 @@ uint64_t Direct3D12GraphicsService::GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescri
 
 ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Direct3D12CommandQueue* commandQueue)
 {
-    // TODO: Refactor when present is implemented
+    // TODO: Try to not take into account the frame number but instead use the fence value of the commandqueue
+    // to track if the allocator is free for re-use
 
     // TODO: The goal is to have a simple fast lookup here and do the heavy work in the present
     // method
@@ -311,5 +335,7 @@ ComPtr<ID3D12GraphicsCommandList7> Direct3D12GraphicsService::GetCommandList(Dir
 void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList)
 {
     // TODO: IMPORTANT: This must be threadsafe !
+    // TODO: Don't put the list in the queue object
+    // TODO: Freelist or ring buffer?
     commandQueue->AvailableCommandLists.push(commandList);
 }

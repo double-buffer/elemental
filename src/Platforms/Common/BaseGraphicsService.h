@@ -17,4 +17,6 @@ public:
     virtual void FreeCommandList(void* commandListPointer) = 0;
     virtual void SetCommandListLabel(void* commandListPointer, uint8_t* label) = 0;    
     virtual void CommitCommandList(void* commandList) = 0;
+
+    virtual Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) = 0;
 };

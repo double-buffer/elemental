@@ -34,6 +34,8 @@ public:
     void SetCommandListLabel(void* commandListPointer, uint8_t* label) override;
     void CommitCommandList(void* commandList) override;
 
+    Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) override;
+
 private:
     GraphicsDiagnostics _graphicsDiagnostics;
     VkInstance _vulkanInstance = nullptr;

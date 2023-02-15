@@ -315,6 +315,11 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             result += $" == default({typeName}) ? new {typeName}() : {item.Name}";
         }
 
+        if (!isMethodDefinition && ((INamedTypeSymbol)item.Type).Name == "ReadOnlySpan")
+        {
+            result += $", {item.Name}.Length";
+        }
+
         return result;
     }
 

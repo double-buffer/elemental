@@ -76,3 +76,9 @@ enum CommandQueueType
     CommandQueueType_Compute = 1,
     CommandQueueType_Copy = 2
 };
+
+struct Fence
+{
+    void* CommandQueuePointer;
+    uint64_t FenceValue;
+};

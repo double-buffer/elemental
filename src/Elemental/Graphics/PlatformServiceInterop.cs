@@ -17,13 +17,13 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial nint Native_CreateGraphicsDevice(GraphicsDeviceOptions options);
 
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_FreeGraphicsDevice(nint graphicsDevice);
+    internal static partial void Native_FreeGraphicsDevice(GraphicsDevice graphicsDevice);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(nint graphicsDevice);
+    internal static partial GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(GraphicsDevice graphicsDevice);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_CreateCommandQueue(nint graphicsDevice, CommandQueueType type);
+    internal static partial nint Native_CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type);
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeCommandQueue(nint commandQueue);
@@ -42,4 +42,7 @@ internal unsafe static partial class PlatformServiceInterop
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_CommitCommandList(nint commandList);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial Fence Native_ExecuteCommandLists(nint commandQueue, ReadOnlySpan<CommandList> commandLists, int commandListCount, ReadOnlySpan<Fence> fencesToWait, int fenceToWaitCount);
 }

@@ -56,5 +56,12 @@ applicationService.RunApplication(application, (status) =>
 
     graphicsService.CommitCommandList(commandList);
 
+    Span<CommandList> commandLists = stackalloc CommandList[1];
+    commandLists[0] = commandList;
+
+    var fence = graphicsService.ExecuteCommandLists(commandQueue, commandLists, Array.Empty<Fence>());
+
+    // TODO: Wait for fence
+
     return true;
 });

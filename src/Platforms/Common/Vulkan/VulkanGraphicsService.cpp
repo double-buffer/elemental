@@ -299,6 +299,11 @@ void VulkanGraphicsService::CommitCommandList(void* commandListPointer)
 
 }
 
+Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
+{
+    return Fence();
+}
+
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
     auto result = GraphicsDeviceInfo();
