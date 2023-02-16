@@ -8,6 +8,7 @@
 #include "Direct3D12GraphicsDevice.h"
 #include "Direct3D12CommandQueue.h"
 #include "Direct3D12CommandList.h"
+#include "Direct3D12SwapChain.h"
 
 class Direct3D12GraphicsService : BaseGraphicsService
 {
@@ -30,12 +31,17 @@ public:
     void CommitCommandList(void* commandList) override;
     
     Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) override;
+    void WaitForFenceOnCpu(Fence fence) override;
+    
+    void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) override;
+    void FreeSwapChain(void* swapChainPointer) override;
 
 private:
     ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
     ComPtr<IDXGIFactory6> _dxgiFactory; 
     ComPtr<ID3D12Debug6> _debugInterface;
     ComPtr<IDXGIDebug1> _dxgiDebugInterface;
+    HANDLE _globalFenceEvent;
 
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);
     uint64_t GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription);

@@ -35,6 +35,10 @@ public:
     void CommitCommandList(void* commandList) override;
 
     Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) override;
+    void WaitForFenceOnCpu(Fence fence) override;
+    
+    void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) override;
+    void FreeSwapChain(void* swapChainPointer) override;
 
 private:
     GraphicsDiagnostics _graphicsDiagnostics;

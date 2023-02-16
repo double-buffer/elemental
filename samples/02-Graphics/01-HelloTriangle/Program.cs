@@ -40,15 +40,17 @@ graphicsService.SetCommandQueueLabel(commandQueue, "Test Render Queue");
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");
 
+using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
+
 applicationService.RunApplication(application, (status) =>
 {
     if (status.IsClosing)
     {
         Console.WriteLine("Closing Application...");
+        return false;
     }
 
     var renderSize = applicationService.GetWindowRenderSize(window);
-
     Thread.Sleep(5);
 
     using var commandList = graphicsService.CreateCommandList(commandQueue);
@@ -56,12 +58,8 @@ applicationService.RunApplication(application, (status) =>
 
     graphicsService.CommitCommandList(commandList);
 
-    Span<CommandList> commandLists = stackalloc CommandList[1];
-    commandLists[0] = commandList;
-
-    var fence = graphicsService.ExecuteCommandLists(commandQueue, commandLists, Array.Empty<Fence>());
-
-    // TODO: Wait for fence
+    var fence = graphicsService.ExecuteCommandList(commandQueue, commandList);
+    graphicsService.WaitForFenceOnCpu(fence);
 
     return true;
 });

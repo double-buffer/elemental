@@ -82,3 +82,16 @@ struct Fence
     void* CommandQueuePointer;
     uint64_t FenceValue;
 };
+
+enum TextureFormat
+{
+    TextureFormat_Unknown = 0,
+    TextureFormat_Rgba8UnormSrgb = 1
+};
+
+struct SwapChainOptions
+{
+    int32_t Width;
+    int32_t Height;
+    enum TextureFormat TextureFormat;
+};

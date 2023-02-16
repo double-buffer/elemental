@@ -304,6 +304,21 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
     return Fence();
 }
 
+void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
+{
+
+}
+
+void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
+{
+    return nullptr;
+}
+
+void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
+{
+
+}
+   
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
     auto result = GraphicsDeviceInfo();

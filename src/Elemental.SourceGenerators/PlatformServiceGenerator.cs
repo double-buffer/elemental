@@ -110,6 +110,23 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         context.RegisterPostInitializationOutput(context => context.AddSource(
             "PlatformMethodOverrideAttribute.g.cs",
             overrideAttributeCode));
+            
+            
+        var ignoreAttributeCode =   """
+                                    namespace Elemental;
+
+                                    /// <summary>
+                                    /// Attribute used by the source generator that tell the generator to ignore the method.
+                                    /// </summary>
+                                    [AttributeUsage(AttributeTargets.Method)]
+                                    public class PlatformMethodIgnoreAttribute : Attribute
+                                    {
+                                    }
+                                    """;
+
+        context.RegisterPostInitializationOutput(context => context.AddSource(
+            "PlatformMethodIgnoreAttribute.g.cs",
+            ignoreAttributeCode));
     }
 
     private static bool FilterInterfaceNodes(SyntaxNode syntaxNode)
@@ -431,7 +448,10 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             {
                 if (member is IMethodSymbol method)
                 {
-                    platformService.MethodList.Add(method);
+                    if (!method.GetAttributes().Any(item => item.AttributeClass!.Name == "PlatformMethodIgnoreAttribute"))
+                    {
+                        platformService.MethodList.Add(method);
+                    }
                 }
             }
 

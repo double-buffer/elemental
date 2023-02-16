@@ -37,6 +37,8 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
 
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.GetAddressOf())));
 
+    _globalFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+
     // TODO: Setup debug callback!
 }
 
@@ -122,6 +124,8 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
     auto graphicsDevice = new Direct3D12GraphicsDevice(this);
     graphicsDevice->Device = device;
     graphicsDevice->AdapterDescription = adapterDescription;
+
+    // TODO: Move that to swapchain
     graphicsDevice->CurrentFrameNumber = 0;
 
     // TODO: Provide an option for this bad but useful feature?
@@ -218,33 +222,60 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 {
     Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
-	/*for (int i = 0; i < fenceToWaitCount; i++)
+	for (int32_t i = 0; i < fenceToWaitCount; i++)
 	{
 		auto fenceToWait = fencesToWait[i];
 		Direct3D12CommandQueue* commandQueueToWait = (Direct3D12CommandQueue*)fenceToWait.CommandQueuePointer;
 
-		AssertIfFailed(commandQueue->CommandQueueObject->Wait(commandQueueToWait->Fence.Get(), fenceToWait.Value));
+		AssertIfFailed(commandQueue->DeviceObject->Wait(commandQueueToWait->Fence.Get(), fenceToWait.FenceValue));
 	}
 
-	vector<ID3D12CommandList*> commandListsToExecute = vector<ID3D12CommandList*>(commandListsLength);
+    ID3D12CommandList* commandListsToExecute[255];
 
-	for (int i = 0; i < commandListsLength; i++)
+    for (int32_t i = 0; i < commandListCount; i++)
 	{
-		commandListsToExecute[i] = ((Direct3D12CommandList*)commandLists[i])->CommandListObject.Get();
+		commandListsToExecute[i] = ((Direct3D12CommandList*)commandLists[i])->DeviceObject.Get();
 	}
 
-	commandQueue->CommandQueueObject->ExecuteCommandLists(commandListsLength, commandListsToExecute.data());
+	commandQueue->DeviceObject->ExecuteCommandLists(commandListCount, commandListsToExecute);
 
-	// TODO: Switch to an atomic increment here for multi threading
-	auto fenceValue = commandQueue->FenceValue;
-	commandQueue->CommandQueueObject->Signal(commandQueue->Fence.Get(), fenceValue);
-	commandQueue->FenceValue = fenceValue + 1;*/
+    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
+	AssertIfFailed(commandQueue->DeviceObject->Signal(commandQueue->Fence.Get(), fenceValue));
 
-	//return fenceValue;
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = fenceValue;
 
-    return Fence();
+    return fence;
+}
+    
+void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
+{
+    Direct3D12CommandQueue* commandQueueToWait = (Direct3D12CommandQueue*)fence.CommandQueuePointer;
+
+	if (commandQueueToWait->Fence->GetCompletedValue() < fence.FenceValue)
+	{
+		commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
+		WaitForSingleObject(_globalFenceEvent, INFINITE);
+	}
 }
 
+void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
+{
+    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+
+    // TODO:
+
+    auto swapChain = new Direct3D12SwapChain(commandQueue->GraphicsService, commandQueue->GraphicsDevice);
+
+    return swapChain;
+}
+
+void Direct3D12GraphicsService::FreeSwapChain(void* swapChainPointer)
+{
+
+}
+   
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
 {
     auto result = GraphicsDeviceInfo();
@@ -304,6 +335,10 @@ ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Di
         ComPtr<ID3D12CommandAllocator> commandAllocator;
 		AssertIfFailed(graphicsDevice->Device->CreateCommandAllocator(commandQueue->CommandListType, IID_PPV_ARGS(commandAllocator.ReleaseAndGetAddressOf())));
         (*dictionary)[threadId] = commandAllocator;
+    }
+    else
+    {
+        AssertIfFailed((*dictionary)[threadId]->Reset());
     }
 
     // TODO: Reset the command allocator when present is called

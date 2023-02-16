@@ -128,3 +128,21 @@ DllExport Fence Native_ExecuteCommandLists(void* commandQueuePointer, void** com
     auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
     return graphicsService->ExecuteCommandLists(commandQueuePointer, commandLists, commandListCount, fencesToWait, fenceToWaitCount);
 }
+    
+DllExport void Native_WaitForFenceOnCpu(Fence fence)
+{
+    auto graphicsService = ((BaseGraphicsObject*)fence.CommandQueuePointer)->GraphicsService;
+    graphicsService->WaitForFenceOnCpu(fence);
+}
+
+DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
+    return graphicsService->CreateSwapChain(windowPointer, commandQueuePointer, options);
+}
+
+DllExport void Native_FreeSwapChain(void* swapChainPointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
+    graphicsService->FreeSwapChain(swapChainPointer);
+}

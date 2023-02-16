@@ -81,6 +81,15 @@ public interface IGraphicsService
     void CommitCommandList(CommandList commandList);
 
     /// <summary>
+    /// Executes a <see cref="CommandList" /> on the specified <see cref="CommandQueue" />.
+    /// </summary>
+    /// <param name="commandQueue">CommandQueue to use.</param>
+    /// <param name="commandList">Command list to execute.</param>
+    /// <returns>Fence object that will be signaled when the execution is finished on the GPU.</returns>
+    [PlatformMethodIgnore]
+    Fence ExecuteCommandList(CommandQueue commandQueue, CommandList commandList);
+
+    /// <summary>
     /// Executes a list of <see cref="CommandList" /> on the specified <see cref="CommandQueue" />.
     /// </summary>
     /// <param name="commandQueue">Command queue to use.</param>
@@ -88,4 +97,25 @@ public interface IGraphicsService
     /// <param name="fencesToWait">List of fence objects to wait before executing the commandlists on the GPU.</param>
     /// <returns>Fence object that will be signaled when the execution is finished on the GPU.</returns>
     Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlySpan<CommandList> commandLists, ReadOnlySpan<Fence> fencesToWait);
+
+    /// <summary>
+    /// Blocks the CPU thread until the GPU has reach the specific <see cref="Fence" />.
+    /// </summary>
+    /// <param name="fence">Fence to wait.</param>
+    void WaitForFenceOnCpu(Fence fence);
+
+    /// <summary>
+    /// Creates a new swap chain that can be presented to the screen.
+    /// </summary>
+    /// <param name="window"><see cref="NativeWindow" /> object that will be used to host the swap chain.</param>
+    /// <param name="commandQueue"><see cref="CommandQueue" /> object that will be used to present the swap chain.</param>
+    /// <param name="options">Optional parameters used by the swap chain creation.</param> 
+    /// <returns>SwapChain handle.</returns> 
+    SwapChain CreateSwapChain(NativeWindow window, CommandQueue commandQueue, SwapChainOptions options = default);
+
+    /// <summary>
+    /// Frees the specified <see cref="SwapChain" />.
+    /// </summary>
+    /// <param name="swapChain">SwapChain to free.</param>
+    void FreeSwapChain(SwapChain swapChain);
 }

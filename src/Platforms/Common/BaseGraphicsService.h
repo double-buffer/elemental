@@ -19,4 +19,8 @@ public:
     virtual void CommitCommandList(void* commandList) = 0;
 
     virtual Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) = 0;
+    virtual void WaitForFenceOnCpu(Fence fence) = 0;
+
+    virtual void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) = 0;
+    virtual void FreeSwapChain(void* swapChainPointer) = 0;
 };

@@ -45,4 +45,13 @@ internal unsafe static partial class PlatformServiceInterop
     
     [LibraryImport("Elemental.Native")]
     internal static partial Fence Native_ExecuteCommandLists(CommandQueue commandQueue, ReadOnlySpan<CommandList> commandLists, int commandListCount, ReadOnlySpan<Fence> fencesToWait, int fenceToWaitCount);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_WaitForFenceOnCpu(Fence fence);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial SwapChain Native_CreateSwapChain(NativeWindow window, CommandQueue commandQueue, SwapChainOptions options);
+
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_FreeSwapChain(SwapChain swapChain);
 }
