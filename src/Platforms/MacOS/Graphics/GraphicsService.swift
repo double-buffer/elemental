@@ -85,8 +85,12 @@ public func setCommandQueueLabel(commandQueuePointer: UnsafeRawPointer, label: U
 
 @_cdecl("Native_CreateCommandList")
 public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
+    // TODO: We should reuse on the same queue and on the same thread the commandbuffer for multiple
+    // commandlists.
+    // Commandlists in metal are the encoders, command buffers are the allocators
     let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
     
+    print("Create Command buffer")
     guard let metalCommandBuffer = commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
         return nil
     }

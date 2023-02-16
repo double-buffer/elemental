@@ -150,7 +150,7 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
                             {
                                 if (NativePointer != nint.Zero)
                                 {
-                                    PlatformServiceInterop.##DELETEMETHOD##(NativePointer);
+                                    PlatformServiceInterop.##DELETEMETHOD##(this);
                                 }
                             }
                           """;

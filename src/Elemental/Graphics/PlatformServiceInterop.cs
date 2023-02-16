@@ -14,7 +14,7 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfoMarshaller.GraphicsDeviceInfoUnmanaged* graphicsDevices, out int graphicsDeviceCount);
 
     [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_CreateGraphicsDevice(GraphicsDeviceOptions options);
+    internal static partial GraphicsDevice Native_CreateGraphicsDevice(GraphicsDeviceOptions options);
 
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeGraphicsDevice(GraphicsDevice graphicsDevice);
@@ -23,26 +23,26 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(GraphicsDevice graphicsDevice);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type);
+    internal static partial CommandQueue Native_CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_FreeCommandQueue(nint commandQueue);
+    internal static partial void Native_FreeCommandQueue(CommandQueue commandQueue);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void Native_SetCommandQueueLabel(nint commandQueue, string label);
+    internal static partial void Native_SetCommandQueueLabel(CommandQueue commandQueue, string label);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_CreateCommandList(nint commandQueue);
+    internal static partial CommandList Native_CreateCommandList(CommandQueue commandQueue);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_FreeCommandList(nint commandList);
+    internal static partial void Native_FreeCommandList(CommandList commandList);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void Native_SetCommandListLabel(nint commandList, string label);
+    internal static partial void Native_SetCommandListLabel(CommandList commandList, string label);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_CommitCommandList(nint commandList);
+    internal static partial void Native_CommitCommandList(CommandList commandList);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial Fence Native_ExecuteCommandLists(nint commandQueue, ReadOnlySpan<CommandList> commandLists, int commandListCount, ReadOnlySpan<Fence> fencesToWait, int fenceToWaitCount);
+    internal static partial Fence Native_ExecuteCommandLists(CommandQueue commandQueue, ReadOnlySpan<CommandList> commandLists, int commandListCount, ReadOnlySpan<Fence> fencesToWait, int fenceToWaitCount);
 }

@@ -247,7 +247,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
 
             if (isReturnTypeNativePointer)
             {
-                sourceCode.AppendLine("if (result == nint.Zero)");
+                sourceCode.AppendLine("if (result.NativePointer == nint.Zero)");
                 sourceCode.AppendLine("{");
                 sourceCode.AppendLine($"throw new InvalidOperationException(\"There was an error when executing '{methodName}'.\");");
                 sourceCode.AppendLine("}");
