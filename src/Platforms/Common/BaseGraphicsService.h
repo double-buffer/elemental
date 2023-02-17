@@ -23,4 +23,10 @@ public:
 
     virtual void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) = 0;
     virtual void FreeSwapChain(void* swapChainPointer) = 0;
+    virtual void* GetSwapChainBackBufferTexture(void* swapChainPointer) = 0;
+    virtual void PresentSwapChain(void* swapChainPointer) = 0;
+    virtual void WaitForSwapChainOnCpu(void* swapChainPointer) = 0;
+
+    virtual void BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor) = 0;
+    virtual void EndRenderPass(void* commandListPointer) = 0;
 };

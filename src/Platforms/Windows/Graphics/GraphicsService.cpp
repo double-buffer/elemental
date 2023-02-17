@@ -146,3 +146,33 @@ DllExport void Native_FreeSwapChain(void* swapChainPointer)
     auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
     graphicsService->FreeSwapChain(swapChainPointer);
 }
+
+DllExport void* Native_GetSwapChainBackBufferTexture(void* swapChainPointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
+    return graphicsService->GetSwapChainBackBufferTexture(swapChainPointer);
+}
+
+DllExport void Native_PresentSwapChain(void* swapChainPointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
+    graphicsService->PresentSwapChain(swapChainPointer);
+}
+
+DllExport void Native_WaitForSwapChainOnCpu(void* swapChainPointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
+    graphicsService->WaitForSwapChainOnCpu(swapChainPointer);
+}
+
+DllExport void Native_BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
+    graphicsService->BeginRenderPass(commandListPointer, renderPassDescriptor);
+}
+    
+DllExport void Native_EndRenderPass(void* commandListPointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
+    graphicsService->EndRenderPass(commandListPointer);
+}

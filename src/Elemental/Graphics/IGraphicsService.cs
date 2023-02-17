@@ -118,4 +118,37 @@ public interface IGraphicsService
     /// </summary>
     /// <param name="swapChain">SwapChain to free.</param>
     void FreeSwapChain(SwapChain swapChain);
+
+    /// <summary>
+    /// Gets the current back buffer <see cref="Texture" />of the specified <see cref="SwapChain" />.
+    /// </summary>
+    /// <param name="swapChain">SwapChain to use.</param>
+    /// <returns>Backbuffer texture.</returns>
+    Texture GetSwapChainBackBufferTexture(SwapChain swapChain);
+
+    /// <summary>
+    /// Presents the specified <see cref="SwapChain" /> to the screen. Notes that this function is not blocking. 
+    /// </summary>
+    /// <param name="swapChain">Swap chain to present.</param>
+    void PresentSwapChain(SwapChain swapChain);
+
+    /// <summary>
+    /// Blocks the CPU thread until a swap chain back buffer is available.
+    /// </summary>
+    /// <param name="swapChain">Swap chain to wait.</param>
+    void WaitForSwapChainOnCpu(SwapChain swapChain);
+
+    /// <summary>
+    /// Begins a new render pass on the specified <see cref="CommandList" />.
+    /// </summary>
+    /// <param name="commandList">Command list.</param>
+    /// <param name="renderPassDescriptor">Full description of the render pass.</param>
+    // TODO: Add validations 
+    void BeginRenderPass(CommandList commandList, in RenderPassDescriptor renderPassDescriptor);
+
+    /// <summary>
+    /// Ends the currently active render pass on the specified <see cref="CommandList" />.
+    /// </summary>
+    /// <param name="commandList">Command list.</param>
+    void EndRenderPass(CommandList commandList);
 }

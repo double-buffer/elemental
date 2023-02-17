@@ -1,4 +1,5 @@
-﻿using Elemental;
+﻿using System.Numerics;
+using Elemental;
 using Elemental.Graphics;
 
 var applicationService = new NativeApplicationService();
@@ -50,17 +51,31 @@ applicationService.RunApplication(application, (status) =>
         return false;
     }
 
+    graphicsService.WaitForSwapChainOnCpu(swapChain);
+
     var renderSize = applicationService.GetWindowRenderSize(window);
-    Thread.Sleep(5);
 
     using var commandList = graphicsService.CreateCommandList(commandQueue);
     graphicsService.SetCommandListLabel(commandList, "Triangle CommandList");
+
+    graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
+    {
+        RenderTarget0 = new RenderPassRenderTarget
+        {
+            Texture = graphicsService.GetSwapChainBackBufferTexture(swapChain),
+            ClearColor = new Vector4(1.0f, 0.0f, 1.0f, 1.0f)
+        }
+    });
+
+    graphicsService.EndRenderPass(commandList);
 
     graphicsService.CommitCommandList(commandList);
 
     var fence = graphicsService.ExecuteCommandList(commandQueue, commandList);
     Console.WriteLine($"Fence: {fence}");
     graphicsService.WaitForFenceOnCpu(fence);
+
+    graphicsService.PresentSwapChain(swapChain);
 
     return true;
 });

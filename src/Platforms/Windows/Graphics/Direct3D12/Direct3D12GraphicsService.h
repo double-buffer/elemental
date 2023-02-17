@@ -5,9 +5,11 @@
 #include "../../../Common/SystemFunctions.h"
 #include "../../../Common/StringConverters.h"
 
+#include "../Win32Window.h"
 #include "Direct3D12GraphicsDevice.h"
 #include "Direct3D12CommandQueue.h"
 #include "Direct3D12CommandList.h"
+#include "Direct3D12Texture.h"
 #include "Direct3D12SwapChain.h"
 
 class Direct3D12GraphicsService : BaseGraphicsService
@@ -35,6 +37,12 @@ public:
     
     void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) override;
     void FreeSwapChain(void* swapChainPointer) override;
+    void* GetSwapChainBackBufferTexture(void* swapChainPointer) override;
+    void PresentSwapChain(void* swapChainPointer) override;
+    void WaitForSwapChainOnCpu(void* swapChainPointer) override;
+    
+    void BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor) override;
+    void EndRenderPass(void* commandListPointer) override;
 
 private:
     ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
@@ -50,3 +58,5 @@ private:
     ComPtr<ID3D12GraphicsCommandList7> GetCommandList(Direct3D12CommandQueue* commandQueue);
     void PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList);
 };
+
+NativeWindowSize Native_GetWindowRenderSize(Win32Window *nativeWindow);

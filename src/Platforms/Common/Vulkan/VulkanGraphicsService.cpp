@@ -318,6 +318,31 @@ void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
 {
 
 }
+
+void* VulkanGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
+{
+    return nullptr;
+}
+
+void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
+{
+
+}
+
+void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
+{
+
+}
+
+void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
+{
+
+}
+    
+void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
+{
+
+}
    
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {

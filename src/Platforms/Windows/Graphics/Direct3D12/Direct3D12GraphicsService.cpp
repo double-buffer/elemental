@@ -164,7 +164,7 @@ void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer,
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 	}
 
-	Direct3D12CommandQueue* commandQueue = new Direct3D12CommandQueue(this, graphicsDevice);
+	auto commandQueue = new Direct3D12CommandQueue(this, graphicsDevice);
     commandQueue->CommandListType = commandQueueDesc.Type;
     commandQueue->FenceValue = 0;
 
@@ -176,23 +176,30 @@ void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer,
 
 void Direct3D12GraphicsService::FreeCommandQueue(void* commandQueuePointer)
 {
+    auto commandQueue = (Direct3D12CommandQueue *)commandQueuePointer;
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueuePointer;
+    fence.FenceValue = commandQueue->FenceValue;
+
+    WaitForFenceOnCpu(fence);
     delete (Direct3D12CommandQueue*)commandQueuePointer;
 }
 
 void Direct3D12GraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
-    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+    auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 	commandQueue->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
 }
 
 void* Direct3D12GraphicsService::CreateCommandList(void* commandQueuePointer)
 {
-    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+    auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
     auto commandAllocator = GetCommandAllocator(commandQueue);
     auto direct3DCommandList = GetCommandList(commandQueue);
 
-    Direct3D12CommandList* commandList = new Direct3D12CommandList(commandQueue, this, commandQueue->GraphicsDevice);
+    auto commandList = new Direct3D12CommandList(commandQueue, this, commandQueue->GraphicsDevice);
     commandList->DeviceObject = direct3DCommandList;
 
     AssertIfFailed(commandList->DeviceObject->Reset(commandAllocator.Get(), nullptr));
@@ -206,13 +213,13 @@ void Direct3D12GraphicsService::FreeCommandList(void* commandListPointer)
 
 void Direct3D12GraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
-    Direct3D12CommandList* commandList = (Direct3D12CommandList*)commandListPointer;
+    auto commandList = (Direct3D12CommandList*)commandListPointer;
 	commandList->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
 }
 
 void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
 {
-    Direct3D12CommandList* commandList = (Direct3D12CommandList*)commandListPointer;
+    auto commandList = (Direct3D12CommandList*)commandListPointer;
     AssertIfFailed(commandList->DeviceObject->Close());
 
     PushFreeCommandList(commandList->CommandQueue, commandList->DeviceObject);
@@ -220,7 +227,7 @@ void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
     
 Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
-    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+    auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
 	for (int32_t i = 0; i < fenceToWaitCount; i++)
 	{
@@ -251,7 +258,7 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
     
 void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
 {
-    Direct3D12CommandQueue* commandQueueToWait = (Direct3D12CommandQueue*)fence.CommandQueuePointer;
+    auto commandQueueToWait = (Direct3D12CommandQueue*)fence.CommandQueuePointer;
 
 	if (commandQueueToWait->Fence->GetCompletedValue() < fence.FenceValue)
 	{
@@ -262,16 +269,103 @@ void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
 
 void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
 {
-    Direct3D12CommandQueue* commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+    auto window = (Win32Window*)windowPointer;
+    auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
-    // TODO:
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 
-    auto swapChain = new Direct3D12SwapChain(commandQueue->GraphicsService, commandQueue->GraphicsDevice);
+    if (options.Width == 0 || options.Height == 0)
+    {
+        auto windowRenderSize = Native_GetWindowRenderSize(window);
+        swapChainDesc.Width = windowRenderSize.Width;
+        swapChainDesc.Height = windowRenderSize.Height;
+    }
+    else
+    {
+        swapChainDesc.Width = options.Width;
+        swapChainDesc.Height = options.Height;
+    }
+
+    // TODO: Handle options!
+	swapChainDesc.BufferCount = 2;
+    swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // ConvertTextureFormat(textureFormat, true);
+    swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+	swapChainDesc.SampleDesc = { 1, 0 };
+	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapChainFullScreenDesc = {};
+	swapChainFullScreenDesc.Windowed = true;
+	
+	auto swapChain = new Direct3D12SwapChain(this, commandQueue->GraphicsDevice);
+
+	AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));
+ 
+    // TODO: Check that parameter
+	swapChain->DeviceObject->SetMaximumFrameLatency(1);
+
+	swapChain->CommandQueue = commandQueue;
+	swapChain->WaitHandle = swapChain->DeviceObject->GetFrameLatencyWaitableObject();
 
     return swapChain;
 }
 
 void Direct3D12GraphicsService::FreeSwapChain(void* swapChainPointer)
+{
+    auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
+    auto commandQueue = swapChain->CommandQueue;
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = commandQueue->FenceValue;
+
+    WaitForFenceOnCpu(fence);
+    WaitForSwapChainOnCpu(swapChainPointer);
+
+    /*for (int i = 0; i < RenderBuffersCount; i++)
+	{
+		DeleteTexture(swapChain->BackBufferTextures[i]);
+	}*/
+
+    delete (Direct3D12SwapChain*)swapChainPointer;
+}
+    
+void* Direct3D12GraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
+{
+    auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
+    auto texture = new Direct3D12Texture(this, swapChain->GraphicsDevice);
+    // TODO:
+    return texture;
+}
+
+void Direct3D12GraphicsService::PresentSwapChain(void* swapChainPointer)
+{
+    auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
+	AssertIfFailed(swapChain->DeviceObject->Present(1, 0));
+}
+
+void Direct3D12GraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
+{
+    auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
+
+	if (WaitForSingleObjectEx(swapChain->WaitHandle, 1000, true) == WAIT_TIMEOUT)
+	{
+		assert("Wait for SwapChain timeout");
+	}
+}
+
+void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
+{
+    if (renderPassDescriptor->RenderTarget0.ClearColor.HasValue)
+    {
+        auto clearColor = renderPassDescriptor->RenderTarget0.ClearColor.Value;
+        printf("Clear Color: %f %f %f %f\n", clearColor.X, clearColor.Y, clearColor.Z, clearColor.W);
+    }
+}
+    
+void Direct3D12GraphicsService::EndRenderPass(void* commandListPointer)
 {
 
 }

@@ -3,6 +3,23 @@
 #include <stdint.h>
 #include <math.h>
 
+struct Vector4
+{
+    float X, Y, Z, W;
+};
+
+struct NullableVector4
+{
+    bool HasValue;
+    Vector4 Value;
+};
+
+struct NullablePointer
+{
+    bool HasValue;
+    void* Value;
+};
+
 enum NativeApplicationStatusFlags
 {
     None = 0,
@@ -94,4 +111,15 @@ struct SwapChainOptions
     int32_t Width;
     int32_t Height;
     enum TextureFormat TextureFormat;
+};
+
+struct RenderPassRenderTarget
+{
+    NullablePointer TexturePointer;
+    NullableVector4 ClearColor;
+};
+
+struct RenderPassDescriptor
+{
+    RenderPassRenderTarget RenderTarget0;
 };

@@ -39,6 +39,12 @@ public:
     
     void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) override;
     void FreeSwapChain(void* swapChainPointer) override;
+    void* GetSwapChainBackBufferTexture(void* swapChainPointer) override;
+    void PresentSwapChain(void* swapChainPointer) override;
+    void WaitForSwapChainOnCpu(void* swapChainPointer) override;
+    
+    void BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor) override;
+    void EndRenderPass(void* commandListPointer) override;
 
 private:
     GraphicsDiagnostics _graphicsDiagnostics;

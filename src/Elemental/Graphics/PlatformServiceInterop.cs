@@ -54,4 +54,19 @@ internal unsafe static partial class PlatformServiceInterop
 
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeSwapChain(SwapChain swapChain);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial Texture Native_GetSwapChainBackBufferTexture(SwapChain swapChain);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_PresentSwapChain(SwapChain swapChain);
+
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_WaitForSwapChainOnCpu(SwapChain swapChain);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_BeginRenderPass(CommandList commandList, in RenderPassDescriptor renderPassDescriptor);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_EndRenderPass(CommandList commandList);
 }
