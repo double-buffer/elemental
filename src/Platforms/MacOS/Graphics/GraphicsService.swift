@@ -1,6 +1,9 @@
 import Cocoa
 import Metal
+import QuartzCore.CAMetalLayer
 import NativeElemental
+
+let sharedEventListener: MTLSharedEventListener = MTLSharedEventListener()
 
 @_cdecl("Native_InitGraphicsService")
 public func initGraphicsService(options: GraphicsServiceOptions) {
@@ -64,11 +67,14 @@ public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer, type: Co
     let graphicsDevice = MetalGraphicsDevice.fromPointer(graphicsDevicePointer)
     let initMetalCommandQueue = graphicsDevice.metalDevice.makeCommandQueue()
 
-    guard let metalCommandQueue = initMetalCommandQueue else {
+    guard 
+        let metalCommandQueue = initMetalCommandQueue,
+        let fence = graphicsDevice.metalDevice.makeSharedEvent()
+    else {
         return nil
     }
 
-    let commandQueue = MetalCommandQueue(graphicsDevice.metalDevice, metalCommandQueue)
+    let commandQueue = MetalCommandQueue(graphicsDevice.metalDevice, metalCommandQueue, fence)
     return Unmanaged.passRetained(commandQueue).toOpaque()
 }
 
@@ -111,9 +117,103 @@ public func setCommandListLabel(commandListPointer: UnsafeRawPointer, label: Uns
 }
 
 @_cdecl("Native_CommitCommandList")
-public func commitommandList(commandListPointer: UnsafeRawPointer) {
+public func commitCommandList(commandListPointer: UnsafeRawPointer) {
     let commandList = MetalCommandList.fromPointer(commandListPointer)
-    // TODO
+
+    guard let commandEncoder = commandList.commandEncoder else {
+        return
+    }
+    
+    commandEncoder.endEncoding()
+}
+
+@_cdecl("Native_ExecuteCommandLists")
+public func executeCommandLists(commandQueuePointer: UnsafeRawPointer, commandLists: UnsafePointer<UnsafeRawPointer>, commandListCount: Int, fencesToWait: UnsafePointer<Fence>, fenceToWaitCount: Int) -> Fence {
+    let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
+    var fenceValue = UInt64(0)
+
+    if (fenceToWaitCount > 0) {
+        guard let waitCommandBuffer = commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
+            print("executeCommandLists: Error while creating wait command buffer object.")
+            return Fence()
+        }
+
+        for i in 0..<fenceToWaitCount {
+            let fenceToWait = fencesToWait[i]
+            let commandQueueToWait = MetalCommandQueue.fromPointer(fenceToWait.CommandQueuePointer)
+
+            waitCommandBuffer.encodeWaitForEvent(commandQueueToWait.fence, value: UInt64(fenceToWait.FenceValue))
+            waitCommandBuffer.commit()
+        }
+    }
+
+    for i in 0..<commandListCount {
+        let commandList = MetalCommandList.fromPointer(commandLists[i])
+
+        if (i == commandListCount - 1) {
+            // TODO: Atomic inc with https://github.com/apple/swift-atomics
+            fenceValue = commandQueue.fenceValue
+            commandList.deviceObject.encodeSignalEvent(commandQueue.fence, value: fenceValue)
+            commandQueue.fenceValue = commandQueue.fenceValue + 1
+        }
+
+        commandList.deviceObject.commit()
+    }
+
+    var fence = Fence()
+    fence.CommandQueuePointer = UnsafeMutableRawPointer(mutating: commandQueuePointer)
+    fence.FenceValue = fenceValue
+    return fence
+}
+    
+@_cdecl("Native_WaitForFenceOnCpu")
+public func waitForFenceOnCpu(fence: Fence) {
+    let commandQueueToWait = MetalCommandQueue.fromPointer(fence.CommandQueuePointer)
+
+    if (commandQueueToWait.fence.signaledValue < fence.FenceValue) {
+        // TODO: Review that?
+        let group = DispatchGroup()
+        group.enter()
+
+        commandQueueToWait.fence.notify(sharedEventListener, atValue: UInt64(fence.FenceValue)) { (sEvent, value) in
+            group.leave()
+        }
+
+        group.wait()
+    }
+}
+    
+@_cdecl("Native_CreateSwapChain")
+public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer: UnsafeRawPointer, options: SwapChainOptions) -> UnsafeMutableRawPointer? {
+    let window = MacOSWindow.fromPointer(windowPointer)
+    let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
+
+    let contentView = window.window.contentView! as NSView
+    let metalView = MacOSMetalView()
+    metalView.frame = contentView.frame
+    contentView.addSubview(metalView)
+
+    // TODO: Check options
+    let renderSize = getWindowRenderSize(windowPointer)
+
+    let metalLayer = metalView.metalLayer
+    metalLayer.device = commandQueue.metalDevice
+    metalLayer.pixelFormat = .bgra8Unorm_srgb
+    metalLayer.framebufferOnly = true
+    metalLayer.allowsNextDrawableTimeout = true
+    metalLayer.displaySyncEnabled = true
+    metalLayer.maximumDrawableCount = 2
+    metalLayer.drawableSize = CGSize(width: Int(renderSize.Width), height: Int(renderSize.Height))
+
+    //let descriptor = createTextureDescriptor(textureFormat, RenderTarget, width, height, 1, 1, 1)
+
+    let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer)
+    return Unmanaged.passRetained(swapChain).toOpaque()
+}
+
+@_cdecl("Native_FreeSwapChain")
+public func freeSwapChain(swapChainPointer: UnsafeRawPointer) {
+    MetalSwapChain.release(swapChainPointer)
 }
 
 private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDeviceInfo {

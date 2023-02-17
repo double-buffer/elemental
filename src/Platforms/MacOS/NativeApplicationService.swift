@@ -74,7 +74,7 @@ public func freeWindow(windowPointer: UnsafeRawPointer) {
 }
 
 @_cdecl("Native_GetWindowRenderSize")
-public func getWindowRenderSize(windowPointer: UnsafeRawPointer) -> NativeWindowSize {
+public func getWindowRenderSize(_ windowPointer: UnsafeRawPointer) -> NativeWindowSize {
     let window = MacOSWindow.fromPointer(windowPointer)
 
     let contentView = window.window.contentView! as NSView
