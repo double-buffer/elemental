@@ -125,6 +125,7 @@ public func commitCommandList(commandListPointer: UnsafeRawPointer) {
     }
     
     commandEncoder.endEncoding()
+    commandList.commandEncoder = nil
 }
 
 @_cdecl("Native_ExecuteCommandLists")
@@ -133,10 +134,13 @@ public func executeCommandLists(commandQueuePointer: UnsafeRawPointer, commandLi
     var fenceValue = UInt64(0)
 
     if (fenceToWaitCount > 0) {
+        // TODO: Can we avoid creating an empty command buffer?
         guard let waitCommandBuffer = commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
             print("executeCommandLists: Error while creating wait command buffer object.")
             return Fence()
         }
+
+        waitCommandBuffer.label = "WaitCommandBuffer"
 
         for i in 0..<fenceToWaitCount {
             let fenceToWait = fencesToWait[i]
@@ -207,13 +211,144 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
 
     //let descriptor = createTextureDescriptor(textureFormat, RenderTarget, width, height, 1, 1, 1)
 
-    let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer)
+    let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer, commandQueue)
     return Unmanaged.passRetained(swapChain).toOpaque()
 }
 
 @_cdecl("Native_FreeSwapChain")
 public func freeSwapChain(swapChainPointer: UnsafeRawPointer) {
     MetalSwapChain.release(swapChainPointer)
+}
+
+@_cdecl("Native_GetSwapChainBackBufferTexture")
+public func getSwapChainBackBufferTexture(swapChainPointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
+    let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
+
+    guard let backBufferDrawable = swapChain.backBufferDrawable else {
+        return nil
+    }
+    
+    /*if (swapChain.backBufferTexture == nil) {
+        swapChain.backBufferTexture = MetalTexture(nextMetalDrawable.texture, swapChain.textureDescriptor, isPresentTexture: true)
+    } else {
+        swapChain.backBufferTexture!.textureObject = nextMetalDrawable.texture
+    }*/
+    let metalTexture = backBufferDrawable.texture
+
+    let texture = MetalTexture(swapChain.metalDevice, metalTexture)
+    texture.isPresentTexture = true
+    return Unmanaged.passRetained(texture).toOpaque()
+}
+
+@_cdecl("Native_PresentSwapChain")
+public func presentSwapChain(swapChainPointer: UnsafeRawPointer) {
+    let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
+
+    // TODO: Can we avoid creating an empty command buffer?
+    guard let commandBuffer = swapChain.commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
+        print("presentSwapChain: Error while creating command buffer object.")
+        return
+    }
+
+    guard let backBufferDrawable = swapChain.backBufferDrawable else {
+        return
+    }
+
+    commandBuffer.label = "PresentSwapChainCommandBuffer"
+    commandBuffer.present(backBufferDrawable)
+
+    commandBuffer.commit()
+}
+
+@_cdecl("Native_WaitForSwapChainOnCpu")
+public func waitForSwapChainOnCpu(swapChainPointer: UnsafeRawPointer) {
+    let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
+
+    guard let nextMetalDrawable = swapChain.deviceObject.nextDrawable() else {
+        print("waitForSwapChainOnCpu: Cannot acquire a back buffer")
+        return
+    }
+    
+    swapChain.backBufferDrawable = nextMetalDrawable
+}
+    
+@_cdecl("Native_BeginRenderPass")
+public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDescriptorPointer: UnsafePointer<RenderPassDescriptor>) {
+    let commandList = MetalCommandList.fromPointer(commandListPointer)
+
+    // TODO: Add an util function that checks the current encoder and create a new one if it can.
+    // It will also check if the command queue is compatible
+    if (commandList.commandEncoder != nil) {
+        commandList.commandEncoder!.endEncoding()
+    }
+
+    let renderPassDescriptor = renderPassDescriptorPointer.pointee
+    let metalRenderPassDescriptor = MTLRenderPassDescriptor()
+
+    if (renderPassDescriptor.RenderTarget0.TexturePointer.HasValue) {
+        let texture = MetalTexture.fromPointer(renderPassDescriptor.RenderTarget0.TexturePointer.Value)
+
+        metalRenderPassDescriptor.colorAttachments[0].texture = texture.deviceObject
+
+        if (texture.isPresentTexture) {
+            metalRenderPassDescriptor.colorAttachments[0].loadAction = .dontCare
+            metalRenderPassDescriptor.colorAttachments[0].storeAction = .dontCare
+        } /*else {
+            let resourceFence = self.graphicsDevice.makeFence()!
+            colorTexture.resourceFence = resourceFence
+
+            commandList.resourceFences.append(resourceFence)
+
+            metalRenderPassDescriptor.colorAttachments[0].storeAction = .store
+        }*/
+        
+        if (renderPassDescriptor.RenderTarget0.ClearColor.HasValue) {
+            let clearColor = renderPassDescriptor.RenderTarget0.ClearColor.Value
+
+            metalRenderPassDescriptor.colorAttachments[0].loadAction = .clear
+            metalRenderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor.init(red: Double(clearColor.X), green: Double(clearColor.Y), blue: Double(clearColor.Z), alpha: Double(clearColor.W))
+        }
+    }
+
+    // TODO: other render targets + Depth buffer
+    
+    guard let renderCommandEncoder = commandList.deviceObject.makeRenderCommandEncoder(descriptor: metalRenderPassDescriptor) else {
+        print("beginRenderPass: Render command encoder creation failed.")
+        return
+    }
+
+    commandList.commandEncoder = renderCommandEncoder
+
+    /*
+    if (renderPassDescriptor.DepthBufferOperation == Write || renderPassDescriptor.DepthBufferOperation == ClearWrite) {
+        renderCommandEncoder.setDepthStencilState(self.depthWriteOperationState)
+    } else if (renderPassDescriptor.DepthBufferOperation == CompareEqual) {
+        renderCommandEncoder.setDepthStencilState(self.depthCompareEqualState)
+    } else if (renderPassDescriptor.DepthBufferOperation == CompareGreater) {
+        renderCommandEncoder.setDepthStencilState(self.depthCompareGreaterState)
+    } else {
+        renderCommandEncoder.setDepthStencilState(self.depthNoneOperationState)
+    }
+
+    if (renderPassDescriptor.BackfaceCulling == 1) {
+        renderCommandEncoder.setCullMode(.back)
+    } else {
+        renderCommandEncoder.setCullMode(.none)
+    }*/
+
+    /*
+    if (metalRenderPassDescriptor.colorAttachments[0].texture != nil) {
+        renderCommandEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: Double(metalRenderPassDescriptor.colorAttachments[0].texture!.width), height: Double(metalRenderPassDescriptor.colorAttachments[0].texture!.height), znear: 0.0, zfar: 1.0))
+        renderCommandEncoder.setScissorRect(MTLScissorRect(x: 0, y: 0, width: metalRenderPassDescriptor.colorAttachments[0].texture!.width, height: metalRenderPassDescriptor.colorAttachments[0].texture!.height))
+    } else if (metalRenderPassDescriptor.depthAttachment.texture != nil) {
+        renderCommandEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: Double(metalRenderPassDescriptor.depthAttachment.texture!.width), height: Double(metalRenderPassDescriptor.depthAttachment.texture!.height), znear: 0.0, zfar: 1.0))
+        renderCommandEncoder.setScissorRect(MTLScissorRect(x: 0, y: 0, width: metalRenderPassDescriptor.depthAttachment.texture!.width, height: metalRenderPassDescriptor.depthAttachment.texture!.height))
+    }*/
+}
+    
+@_cdecl("Native_EndRenderPass")
+public func endRenderPass(commandListPointer: UnsafeRawPointer) {
+
 }
 
 private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDeviceInfo {

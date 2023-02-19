@@ -1,11 +1,11 @@
 import Metal
 
 public class MetalGraphicsDevice {
-    let metalDevice: MTLDevice
-
     public init(_ metalDevice: MTLDevice) {
         self.metalDevice = metalDevice
     }
+    
+    public let metalDevice: MTLDevice
 
     public static func release(_ pointer: UnsafeRawPointer) {
         Unmanaged<MetalGraphicsDevice>.fromOpaque(pointer).release()

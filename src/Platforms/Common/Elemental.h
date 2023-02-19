@@ -11,7 +11,7 @@ struct Vector4
 struct NullableVector4
 {
     bool HasValue;
-    Vector4 Value;
+    struct Vector4 Value;
 };
 
 struct NullablePointer
@@ -115,11 +115,11 @@ struct SwapChainOptions
 
 struct RenderPassRenderTarget
 {
-    NullablePointer TexturePointer;
-    NullableVector4 ClearColor;
+    struct NullablePointer TexturePointer;
+    struct NullableVector4 ClearColor;
 };
 
 struct RenderPassDescriptor
 {
-    RenderPassRenderTarget RenderTarget0;
+    struct RenderPassRenderTarget RenderTarget0;
 };
