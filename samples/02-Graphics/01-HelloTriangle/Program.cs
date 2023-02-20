@@ -42,6 +42,7 @@ var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");
 
 using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
+var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 applicationService.RunApplication(application, (status) =>
 {
@@ -51,10 +52,17 @@ applicationService.RunApplication(application, (status) =>
         return false;
     }
 
-    graphicsService.WaitForSwapChainOnCpu(swapChain);
-
     var renderSize = applicationService.GetWindowRenderSize(window);
 
+    if (renderSize != currentRenderSize)
+    {
+        Console.WriteLine($"Resize SwapChain to: {renderSize}");
+        graphicsService.ResizeSwapChain(swapChain, renderSize.Width, renderSize.Height);
+        currentRenderSize = renderSize;
+    }
+
+    graphicsService.WaitForSwapChainOnCpu(swapChain);
+    
     using var commandList = graphicsService.CreateCommandList(commandQueue);
     graphicsService.SetCommandListLabel(commandList, "Triangle CommandList");
 

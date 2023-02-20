@@ -14,7 +14,7 @@ public func freeGraphicsService() {
 }
 
 @_cdecl("Native_GetAvailableGraphicsDevices")
-public func Native_GetAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePointer<GraphicsDeviceInfo>, graphicsDeviceCount: UnsafeMutablePointer<Int>) {
+public func getAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePointer<GraphicsDeviceInfo>, graphicsDeviceCount: UnsafeMutablePointer<Int>) {
     let devices = MTLCopyAllDevices()
     var i = 0
 
@@ -192,10 +192,15 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
     let window = MacOSWindow.fromPointer(windowPointer)
     let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
 
+    // TODO: This code is only working on MacOS!
     let contentView = window.window.contentView! as NSView
     let metalView = MacOSMetalView()
+    metalView.translatesAutoresizingMaskIntoConstraints = false
     metalView.frame = contentView.frame
     contentView.addSubview(metalView)
+
+    contentView.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[metalView]|", options: [], metrics: nil, views: ["metalView" : metalView]))
+    contentView.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[metalView]|", options: [], metrics: nil, views: ["metalView" : metalView]))
 
     // TODO: Check options
     let renderSize = getWindowRenderSize(windowPointer)
@@ -206,7 +211,7 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
     metalLayer.framebufferOnly = true
     metalLayer.allowsNextDrawableTimeout = true
     metalLayer.displaySyncEnabled = true
-    metalLayer.maximumDrawableCount = 2
+    metalLayer.maximumDrawableCount = 2 // TODO: In metal on fullscreen mode, we need one more drawable otherwise we have some stalls
     metalLayer.drawableSize = CGSize(width: Int(renderSize.Width), height: Int(renderSize.Height))
 
     //let descriptor = createTextureDescriptor(textureFormat, RenderTarget, width, height, 1, 1, 1)
@@ -218,6 +223,12 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
 @_cdecl("Native_FreeSwapChain")
 public func freeSwapChain(swapChainPointer: UnsafeRawPointer) {
     MetalSwapChain.release(swapChainPointer)
+}
+    
+@_cdecl("Native_ResizeSwapChain")
+public func resizeSwapChain(swapChainPointer: UnsafeRawPointer, width: Int, height: Int) {
+    let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
+    swapChain.deviceObject.drawableSize = CGSize(width: width, height: height)
 }
 
 @_cdecl("Native_GetSwapChainBackBufferTexture")
@@ -285,29 +296,8 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
     let renderPassDescriptor = renderPassDescriptorPointer.pointee
     let metalRenderPassDescriptor = MTLRenderPassDescriptor()
 
-    if (renderPassDescriptor.RenderTarget0.TexturePointer.HasValue) {
-        let texture = MetalTexture.fromPointer(renderPassDescriptor.RenderTarget0.TexturePointer.Value)
-
-        metalRenderPassDescriptor.colorAttachments[0].texture = texture.deviceObject
-
-        if (texture.isPresentTexture) {
-            metalRenderPassDescriptor.colorAttachments[0].loadAction = .dontCare
-            metalRenderPassDescriptor.colorAttachments[0].storeAction = .dontCare
-        } /*else {
-            let resourceFence = self.graphicsDevice.makeFence()!
-            colorTexture.resourceFence = resourceFence
-
-            commandList.resourceFences.append(resourceFence)
-
-            metalRenderPassDescriptor.colorAttachments[0].storeAction = .store
-        }*/
-        
-        if (renderPassDescriptor.RenderTarget0.ClearColor.HasValue) {
-            let clearColor = renderPassDescriptor.RenderTarget0.ClearColor.Value
-
-            metalRenderPassDescriptor.colorAttachments[0].loadAction = .clear
-            metalRenderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor.init(red: Double(clearColor.X), green: Double(clearColor.Y), blue: Double(clearColor.Z), alpha: Double(clearColor.W))
-        }
+    if (renderPassDescriptor.RenderTarget0.HasValue) {
+        initRenderPassColorDescriptor(metalRenderPassDescriptor.colorAttachments[0], renderPassDescriptor.RenderTarget0.Value)
     }
 
     // TODO: other render targets + Depth buffer
@@ -336,11 +326,11 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
         renderCommandEncoder.setCullMode(.none)
     }*/
 
-    /*
+    // TODO: Use an actual viewport object and if null do that
     if (metalRenderPassDescriptor.colorAttachments[0].texture != nil) {
         renderCommandEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: Double(metalRenderPassDescriptor.colorAttachments[0].texture!.width), height: Double(metalRenderPassDescriptor.colorAttachments[0].texture!.height), znear: 0.0, zfar: 1.0))
         renderCommandEncoder.setScissorRect(MTLScissorRect(x: 0, y: 0, width: metalRenderPassDescriptor.colorAttachments[0].texture!.width, height: metalRenderPassDescriptor.colorAttachments[0].texture!.height))
-    } else if (metalRenderPassDescriptor.depthAttachment.texture != nil) {
+    }/* else if (metalRenderPassDescriptor.depthAttachment.texture != nil) {
         renderCommandEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: Double(metalRenderPassDescriptor.depthAttachment.texture!.width), height: Double(metalRenderPassDescriptor.depthAttachment.texture!.height), znear: 0.0, zfar: 1.0))
         renderCommandEncoder.setScissorRect(MTLScissorRect(x: 0, y: 0, width: metalRenderPassDescriptor.depthAttachment.texture!.width, height: metalRenderPassDescriptor.depthAttachment.texture!.height))
     }*/
@@ -356,6 +346,33 @@ private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDe
                                 GraphicsApi: GraphicsApi_Metal,
                                 DeviceId: UInt64(metalDevice.registryID),
                                 AvailableMemory: UInt64(metalDevice.recommendedMaxWorkingSetSize))
+}
+
+private func initRenderPassColorDescriptor(_ descriptor: MTLRenderPassColorAttachmentDescriptor, _ renderTargetDescriptor: RenderPassRenderTarget) {
+    let texture = MetalTexture.fromPointer(renderTargetDescriptor.TexturePointer)
+
+    descriptor.texture = texture.deviceObject
+
+    if (texture.isPresentTexture) {
+        descriptor.loadAction = .dontCare
+        descriptor.storeAction = .dontCare
+    } /*else {
+        let resourceFence = self.graphicsDevice.makeFence()!
+        colorTexture.resourceFence = resourceFence
+
+        commandList.resourceFences.append(resourceFence)
+
+        metalRenderPassDescriptor.colorAttachments[0].storeAction = .store
+    }*/
+
+    // TODO: Texture transitions with metal fences
+    
+    if (renderTargetDescriptor.ClearColor.HasValue) {
+        let clearColor = renderTargetDescriptor.ClearColor.Value
+
+        descriptor.loadAction = .clear
+        descriptor.clearColor = MTLClearColor.init(red: Double(clearColor.X), green: Double(clearColor.Y), blue: Double(clearColor.Z), alpha: Double(clearColor.W))
+    }
 }
 
 private func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {

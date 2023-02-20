@@ -115,11 +115,17 @@ struct SwapChainOptions
 
 struct RenderPassRenderTarget
 {
-    struct NullablePointer TexturePointer;
+    void* TexturePointer;
     struct NullableVector4 ClearColor;
+};
+
+struct NullableRenderPassRenderTarget
+{
+    bool HasValue;
+    struct RenderPassRenderTarget Value;
 };
 
 struct RenderPassDescriptor
 {
-    struct RenderPassRenderTarget RenderTarget0;
+    struct NullableRenderPassRenderTarget RenderTarget0;
 };

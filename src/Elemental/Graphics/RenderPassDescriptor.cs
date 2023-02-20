@@ -12,5 +12,9 @@ public readonly record struct RenderPassDescriptor
     {
     }
 
+    /// <summary>
+    /// Gets or sets the render target 0 properties.
+    /// </summary>
+    /// <value>Render target 0 properties.</value>
     public RenderPassRenderTarget? RenderTarget0 { get; init; }
 }

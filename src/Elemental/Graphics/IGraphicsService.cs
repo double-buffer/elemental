@@ -120,6 +120,14 @@ public interface IGraphicsService
     void FreeSwapChain(SwapChain swapChain);
 
     /// <summary>
+    /// Resizes the specified <see cref="SwapChain" />.
+    /// </summary>
+    /// <param name="swapChain">SwapChain to resize.</param>
+    /// <param name="width">New width value.</param>
+    /// <param name="height">New height value.</param>
+    void ResizeSwapChain(SwapChain swapChain, int width, int height);
+
+    /// <summary>
     /// Gets the current back buffer <see cref="Texture" />of the specified <see cref="SwapChain" />.
     /// </summary>
     /// <param name="swapChain">SwapChain to use.</param>

@@ -56,6 +56,9 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial void Native_FreeSwapChain(SwapChain swapChain);
     
     [LibraryImport("Elemental.Native")]
+    internal static partial void Native_ResizeSwapChain(SwapChain swapChain, int width, int height);
+    
+    [LibraryImport("Elemental.Native")]
     internal static partial Texture Native_GetSwapChainBackBufferTexture(SwapChain swapChain);
     
     [LibraryImport("Elemental.Native")]
