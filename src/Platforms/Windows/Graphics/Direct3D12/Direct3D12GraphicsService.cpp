@@ -18,9 +18,6 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
     AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, D3D12SDKPath));
 
     UINT createFactoryFlags = 0;
-    ComPtr<ID3D12InfoQueue1> debugInfoQueue;
-    ComPtr<IDXGIDebug> dxgiDebug;
-    ComPtr<ID3D12Device9> graphicsDevice;
 
     if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
@@ -38,6 +35,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.GetAddressOf())));
 
     _globalFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+    _graphicsDiagnostics = options.GraphicsDiagnostics;
 
     // TODO: Setup debug callback!
 }
@@ -125,12 +123,32 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
     graphicsDevice->Device = device;
     graphicsDevice->AdapterDescription = adapterDescription;
 
-    // TODO: Move that to swapchain
-    graphicsDevice->CurrentFrameNumber = 0;
-
     // TODO: Provide an option for this bad but useful feature?
     // If so, it must be with an additional flag
 	//AssertIfFailed(this->graphicsDevice->SetStablePowerState(true));
+    // TODO: see also https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device6-setbackgroundprocessingmode
+    
+    if (_graphicsDiagnostics == GraphicsDiagnostics_Debug)
+    {
+        graphicsDevice->Device->QueryInterface(IID_PPV_ARGS(_debugInfoQueue.GetAddressOf()));
+
+        if (_debugInfoQueue)
+        {
+            DWORD callBackCookie = 0;
+            AssertIfFailed(_debugInfoQueue->RegisterMessageCallback(DebugReportCallback, D3D12_MESSAGE_CALLBACK_IGNORE_FILTERS, nullptr, &callBackCookie));
+        }
+    }
+
+    // TODO: We need to have a kind of manager for that with maybe a freeslot list?
+    // TODO: This is temporary!
+	D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc = {};
+	rtvDescriptorHeapDesc.NumDescriptors = 1000; //TODO: Change that
+	rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+	AssertIfFailed(graphicsDevice->Device->CreateDescriptorHeap(&rtvDescriptorHeapDesc, IID_PPV_ARGS(graphicsDevice->RtvDescriptorHeap.ReleaseAndGetAddressOf())));
+	graphicsDevice->RtvDescriptorHandleSize = graphicsDevice->Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	graphicsDevice->CurrentRtvDescriptorOffset = 0;
 
     return graphicsDevice;
 }
@@ -227,6 +245,8 @@ void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
     
 Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
+    // TODO: Review and refactor all static stack alloc here
+
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
 	for (int32_t i = 0; i < fenceToWaitCount; i++)
@@ -237,7 +257,7 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 		AssertIfFailed(commandQueue->DeviceObject->Wait(commandQueueToWait->Fence.Get(), fenceToWait.FenceValue));
 	}
 
-    ID3D12CommandList* commandListsToExecute[255];
+    ID3D12CommandList *commandListsToExecute[255];
 
     for (int32_t i = 0; i < commandListCount; i++)
 	{
@@ -271,6 +291,7 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 {
     auto window = (Win32Window*)windowPointer;
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+    auto graphicsDevice = commandQueue->GraphicsDevice;
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 
@@ -287,7 +308,9 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
     }
 
     // TODO: Handle options!
-	swapChainDesc.BufferCount = 2;
+    uint32_t renderBufferCount = 2;
+
+    swapChainDesc.BufferCount = renderBufferCount;
     swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // ConvertTextureFormat(textureFormat, true);
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -299,15 +322,48 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapChainFullScreenDesc = {};
 	swapChainFullScreenDesc.Windowed = true;
 	
-	auto swapChain = new Direct3D12SwapChain(this, commandQueue->GraphicsDevice);
+	auto swapChain = new Direct3D12SwapChain(this, graphicsDevice);
 
 	AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));
  
     // TODO: Check that parameter
 	swapChain->DeviceObject->SetMaximumFrameLatency(1);
-
-	swapChain->CommandQueue = commandQueue;
+    swapChain->CommandQueue = commandQueue;
 	swapChain->WaitHandle = swapChain->DeviceObject->GetFrameLatencyWaitableObject();
+
+    // TODO: Review that and refactor!
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+    rtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // ConvertTextureFormat(textureFormat);
+    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+	for (uint32_t i = 0; i < renderBufferCount; i++)
+	{
+		ComPtr<ID3D12Resource> backBuffer;
+		AssertIfFailed(swapChain->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.ReleaseAndGetAddressOf())));
+
+		wchar_t buff[64] = {};
+  		swprintf(buff, 64, L"BackBufferRenderTarget%d", i);
+		backBuffer->SetName(buff);
+
+		Direct3D12Texture* backBufferTexture = new Direct3D12Texture(this, graphicsDevice);
+		backBufferTexture->DeviceObject = backBuffer;
+		//backBufferTexture->ResourceState = D3D12_RESOURCE_STATE_PRESENT;
+		backBufferTexture->IsPresentTexture = true;
+		//backBufferTexture->ResourceDesc = CreateTextureResourceDescription(textureFormat, GraphicsTextureUsage::RenderTarget, width, height, 1, 1, 1);
+
+		auto rtvDescriptorHeapHandle = graphicsDevice->RtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		rtvDescriptorHeapHandle.ptr += graphicsDevice->CurrentRtvDescriptorOffset;
+
+		graphicsDevice->Device->CreateRenderTargetView(backBuffer.Get(), &rtvDesc, rtvDescriptorHeapHandle);
+		backBufferTexture->RtvDescriptorOffset = graphicsDevice->CurrentRtvDescriptorOffset;
+        
+        // TODO: Do an atomic increment
+		graphicsDevice->CurrentRtvDescriptorOffset += graphicsDevice->RtvDescriptorHandleSize;
+
+		swapChain->RenderBuffers[i] = backBufferTexture;
+	}
+    
+    swapChain->RenderBufferCount = renderBufferCount;
 
     return swapChain;
 }
@@ -332,12 +388,15 @@ void Direct3D12GraphicsService::FreeSwapChain(void* swapChainPointer)
     delete (Direct3D12SwapChain*)swapChainPointer;
 }
     
+void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
+{
+
+}
+    
 void* Direct3D12GraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
 {
     auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
-    auto texture = new Direct3D12Texture(this, swapChain->GraphicsDevice);
-    // TODO:
-    return texture;
+    return swapChain->RenderBuffers[swapChain->DeviceObject->GetCurrentBackBufferIndex()];
 }
 
 void Direct3D12GraphicsService::PresentSwapChain(void* swapChainPointer)
@@ -358,16 +417,148 @@ void Direct3D12GraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
 
 void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
-    if (renderPassDescriptor->RenderTarget0.ClearColor.HasValue)
-    {
-        auto clearColor = renderPassDescriptor->RenderTarget0.ClearColor.Value;
-        printf("Clear Color: %f %f %f %f\n", clearColor.X, clearColor.Y, clearColor.Z, clearColor.W);
+    auto commandList = (Direct3D12CommandList*)commandListPointer;
+    auto graphicsDevice = commandList->GraphicsDevice;
+
+    commandList->CurrentRenderPassDescriptor = *renderPassDescriptor;
+
+    D3D12_RENDER_PASS_RENDER_TARGET_DESC renderTargetDescList[8];
+    uint32_t renderTargetDescCount = 0;
+
+    if (renderPassDescriptor->RenderTarget0.HasValue)
+	{
+        Direct3D12Texture* texture = (Direct3D12Texture*)renderPassDescriptor->RenderTarget0.Value.TexturePointer;
+
+		// TODO: Refactor that
+		D3D12_CPU_DESCRIPTOR_HANDLE descriptorHeapHandle = {};
+		descriptorHeapHandle.ptr = graphicsDevice->RtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + texture->RtvDescriptorOffset;
+
+        // TODO: Do this only if not present texture
+        // TODO: Put that in an util function
+        D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
+        renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
+        renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
+        renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_COMMON;
+        renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+        renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
+        renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
+        renderTargetBarrier.pResource = texture->DeviceObject.Get();
+
+        D3D12_BARRIER_GROUP textureBarriersGroup;
+        textureBarriersGroup = {};
+        textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+        textureBarriersGroup.NumBarriers = 1;
+        textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
+
+        commandList->DeviceObject->Barrier(1, &textureBarriersGroup);
+
+		D3D12_RENDER_PASS_RENDER_TARGET_DESC* renderTargetDesc = &renderTargetDescList[renderTargetDescCount++];
+        *renderTargetDesc = {};
+        renderTargetDesc->cpuDescriptor = descriptorHeapHandle;
+
+        // TODO: Allow user code to customize
+        if (texture->IsPresentTexture)
+        {
+            renderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+            renderTargetDesc->EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+        }
+        else
+        {
+            renderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+            renderTargetDesc->EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+        }
+
+		if (renderPassDescriptor->RenderTarget0.Value.ClearColor.HasValue)
+		{
+            auto clearColor = renderPassDescriptor->RenderTarget0.Value.ClearColor.Value;
+
+            // TODO: Use Texture format
+			renderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+            renderTargetDesc->BeginningAccess.Clear.ClearValue.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // texture->ResourceDesc.Format;
+            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[0] = clearColor.X;
+            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[1] = clearColor.Y;
+            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[2] = clearColor.Z;
+            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[3] = clearColor.W;
+        }
     }
+	
+    D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* depthStencilDesc = nullptr;
+/*
+    D3D12_RENDER_PASS_DEPTH_STENCIL_DESC tmpDepthDesc = {};
+
+    if (renderDescriptor.DepthTexturePointer.HasValue)
+    {
+        Direct3D12Texture* depthTexture = (Direct3D12Texture*)renderDescriptor.DepthTexturePointer.Value;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE depthDescriptorHeapHandle = {};
+        depthDescriptorHeapHandle.ptr = this->globalDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + depthTexture->TextureDescriptorOffset;
+
+        tmpDepthDesc.cpuDescriptor = depthDescriptorHeapHandle;
+        tmpDepthDesc.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+
+        if (renderDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::ClearWrite)
+        {
+            D3D12_DEPTH_STENCIL_VALUE clearValue = {};
+            clearValue.Depth = 0.0f;
+
+            tmpDepthDesc.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+            tmpDepthDesc.DepthBeginningAccess.Clear.ClearValue.Format = texture->ResourceDesc.Format;
+            tmpDepthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil = clearValue;
+        }
+
+        tmpDepthDesc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+
+        depthStencilDesc = &tmpDepthDesc;
+    }*/
+
+    commandList->DeviceObject->BeginRenderPass(renderTargetDescCount, renderTargetDescList, depthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
+/*
+    D3D12_VIEWPORT viewport = {};
+    viewport.Width = (float)texture->ResourceDesc.Width;
+    viewport.Height = (float)texture->ResourceDesc.Height;
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    commandList->CommandListObject->RSSetViewports(1, &viewport);
+
+    D3D12_RECT scissorRect = {};
+    scissorRect.right = (long)texture->ResourceDesc.Width;
+    scissorRect.bottom = (long)texture->ResourceDesc.Height;
+    commandList->CommandListObject->RSSetScissorRects(1, &scissorRect);*/
 }
     
 void Direct3D12GraphicsService::EndRenderPass(void* commandListPointer)
 {
+    auto commandList = (Direct3D12CommandList*)commandListPointer;
+    auto graphicsDevice = commandList->GraphicsDevice;
 
+	commandList->DeviceObject->EndRenderPass();
+
+    if (commandList->CurrentRenderPassDescriptor.RenderTarget0.HasValue)
+    {
+        auto texture = (Direct3D12Texture*)commandList->CurrentRenderPassDescriptor.RenderTarget0.Value.TexturePointer;
+
+        if (texture->IsPresentTexture)
+        {
+            D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
+            renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_RENDER_TARGET;
+            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_COMMON;
+            renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+            renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_PRESENT;
+            renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_RENDER_TARGET;
+            renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
+            renderTargetBarrier.pResource = texture->DeviceObject.Get();
+
+            D3D12_BARRIER_GROUP textureBarriersGroup;
+            textureBarriersGroup = {};
+            textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+            textureBarriersGroup.NumBarriers = 1;
+            textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
+
+            commandList->DeviceObject->Barrier(1, &textureBarriersGroup);
+        }
+    }
+
+    commandList->CurrentRenderPassDescriptor = {};
 }
    
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
@@ -407,8 +598,9 @@ ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Di
     // TODO: For the moment we are bound to present :(
 
     auto graphicsDevice = commandQueue->GraphicsDevice;
+    uint32_t currentFrameNumber = 0; // TODO: This will disappear
 
-    uint32_t frameIndex = graphicsDevice->CurrentFrameNumber % 2;
+    uint32_t frameIndex = currentFrameNumber % 2;
     uint32_t threadId = GetThreadId();
 
     if (graphicsDevice->CommandAllocators.size() <= frameIndex)
@@ -467,4 +659,9 @@ void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* comm
     // TODO: Don't put the list in the queue object
     // TODO: Freelist or ring buffer?
     commandQueue->AvailableCommandLists.push(commandList);
+}
+
+static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)
+{
+    printf("Debug Callback\n");
 }

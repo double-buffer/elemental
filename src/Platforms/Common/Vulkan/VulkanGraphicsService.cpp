@@ -319,6 +319,11 @@ void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
 
 }
 
+void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
+{
+
+}
+
 void* VulkanGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
 {
     return nullptr;

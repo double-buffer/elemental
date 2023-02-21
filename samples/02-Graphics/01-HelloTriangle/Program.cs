@@ -80,7 +80,6 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.CommitCommandList(commandList);
 
     var fence = graphicsService.ExecuteCommandList(commandQueue, commandList);
-    Console.WriteLine($"Fence: {fence}");
     graphicsService.WaitForFenceOnCpu(fence);
 
     graphicsService.PresentSwapChain(swapChain);

@@ -11,4 +11,5 @@ struct Direct3D12CommandList : Direct3D12BaseGraphicsObject
 
     ComPtr<ID3D12GraphicsCommandList7> DeviceObject;
     Direct3D12CommandQueue* CommandQueue;
+    RenderPassDescriptor CurrentRenderPassDescriptor;
 };
