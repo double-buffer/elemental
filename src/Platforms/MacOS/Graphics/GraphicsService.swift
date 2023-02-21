@@ -199,11 +199,14 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
     metalView.frame = contentView.frame
     contentView.addSubview(metalView)
 
+    // TODO: Can we use something else to apply the contrains?
     contentView.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[metalView]|", options: [], metrics: nil, views: ["metalView" : metalView]))
     contentView.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[metalView]|", options: [], metrics: nil, views: ["metalView" : metalView]))
 
     // TODO: Check options
     let renderSize = getWindowRenderSize(windowPointer)
+
+    let backBufferCount = 2
 
     let metalLayer = metalView.metalLayer
     metalLayer.device = commandQueue.metalDevice
@@ -211,7 +214,7 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
     metalLayer.framebufferOnly = true
     metalLayer.allowsNextDrawableTimeout = true
     metalLayer.displaySyncEnabled = true
-    metalLayer.maximumDrawableCount = 2 // TODO: In metal on fullscreen mode, we need one more drawable otherwise we have some stalls
+    metalLayer.maximumDrawableCount = backBufferCount + 1
     metalLayer.drawableSize = CGSize(width: Int(renderSize.Width), height: Int(renderSize.Height))
 
     //let descriptor = createTextureDescriptor(textureFormat, RenderTarget, width, height, 1, 1, 1)
