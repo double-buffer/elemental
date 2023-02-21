@@ -39,6 +39,7 @@ public:
     
     void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) override;
     void FreeSwapChain(void* swapChainPointer) override;
+    void ResizeSwapChain(void* swapChainPointer, int width, int height) override;
     void* GetSwapChainBackBufferTexture(void* swapChainPointer) override;
     void PresentSwapChain(void* swapChainPointer) override;
     void WaitForSwapChainOnCpu(void* swapChainPointer) override;

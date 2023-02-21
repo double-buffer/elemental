@@ -146,6 +146,12 @@ DllExport void Native_FreeSwapChain(void* swapChainPointer)
     auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
     graphicsService->FreeSwapChain(swapChainPointer);
 }
+    
+DllExport void Native_ResizeSwapChain(void* swapChainPointer, int width, int height)
+{
+    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
+    graphicsService->ResizeSwapChain(swapChainPointer, width, height);
+}
 
 DllExport void* Native_GetSwapChainBackBufferTexture(void* swapChainPointer)
 {

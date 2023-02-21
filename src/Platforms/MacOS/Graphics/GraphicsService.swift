@@ -276,6 +276,8 @@ public func presentSwapChain(swapChainPointer: UnsafeRawPointer) {
 
 @_cdecl("Native_WaitForSwapChainOnCpu")
 public func waitForSwapChainOnCpu(swapChainPointer: UnsafeRawPointer) {
+    // TODO: Be carefull here, because we set back buffer count + so fix 
+    // the fullscreen direct mode. It means it could change the behavior of latency
     let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
 
     guard let nextMetalDrawable = swapChain.deviceObject.nextDrawable() else {

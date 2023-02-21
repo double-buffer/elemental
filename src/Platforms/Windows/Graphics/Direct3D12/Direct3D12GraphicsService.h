@@ -37,6 +37,7 @@ public:
     
     void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) override;
     void FreeSwapChain(void* swapChainPointer) override;
+    void ResizeSwapChain(void* swapChainPointer, int width, int height) override;
     void* GetSwapChainBackBufferTexture(void* swapChainPointer) override;
     void PresentSwapChain(void* swapChainPointer) override;
     void WaitForSwapChainOnCpu(void* swapChainPointer) override;
@@ -45,9 +46,11 @@ public:
     void EndRenderPass(void* commandListPointer) override;
 
 private:
+    GraphicsDiagnostics _graphicsDiagnostics;
     ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
     ComPtr<IDXGIFactory6> _dxgiFactory; 
     ComPtr<ID3D12Debug6> _debugInterface;
+    ComPtr<ID3D12InfoQueue1> _debugInfoQueue;
     ComPtr<IDXGIDebug1> _dxgiDebugInterface;
     HANDLE _globalFenceEvent;
 
@@ -60,3 +63,4 @@ private:
 };
 
 NativeWindowSize Native_GetWindowRenderSize(Win32Window *nativeWindow);
+static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void *pContext);
