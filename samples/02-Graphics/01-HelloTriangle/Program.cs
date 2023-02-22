@@ -75,6 +75,8 @@ applicationService.RunApplication(application, (status) =>
         }
     });
 
+    // TODO: Add a counter in the mesh dispatch push constant to test the frame latency
+
     graphicsService.EndRenderPass(commandList);
 
     graphicsService.CommitCommandList(commandList);

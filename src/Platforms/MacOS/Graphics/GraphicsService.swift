@@ -204,9 +204,8 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
     contentView.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[metalView]|", options: [], metrics: nil, views: ["metalView" : metalView]))
 
     // TODO: Check options
+    let frameLatency = 2
     let renderSize = getWindowRenderSize(windowPointer)
-
-    let backBufferCount = 2
 
     let metalLayer = metalView.metalLayer
     metalLayer.device = commandQueue.metalDevice
@@ -214,12 +213,14 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
     metalLayer.framebufferOnly = true
     metalLayer.allowsNextDrawableTimeout = true
     metalLayer.displaySyncEnabled = true
-    metalLayer.maximumDrawableCount = backBufferCount + 1
+    metalLayer.maximumDrawableCount = 3
     metalLayer.drawableSize = CGSize(width: Int(renderSize.Width), height: Int(renderSize.Height))
+
+    let presentSemaphore = DispatchSemaphore.init(value: frameLatency);
 
     //let descriptor = createTextureDescriptor(textureFormat, RenderTarget, width, height, 1, 1, 1)
 
-    let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer, commandQueue)
+    let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer, commandQueue, presentSemaphore)
     return Unmanaged.passRetained(swapChain).toOpaque()
 }
 
@@ -238,16 +239,19 @@ public func resizeSwapChain(swapChainPointer: UnsafeRawPointer, width: Int, heig
 public func getSwapChainBackBufferTexture(swapChainPointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
     let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
 
-    guard let backBufferDrawable = swapChain.backBufferDrawable else {
+    guard let nextMetalDrawable = swapChain.deviceObject.nextDrawable() else {
+        print("waitForSwapChainOnCpu: Cannot acquire a back buffer")
         return nil
     }
+    
+    swapChain.backBufferDrawable = nextMetalDrawable
     
     /*if (swapChain.backBufferTexture == nil) {
         swapChain.backBufferTexture = MetalTexture(nextMetalDrawable.texture, swapChain.textureDescriptor, isPresentTexture: true)
     } else {
         swapChain.backBufferTexture!.textureObject = nextMetalDrawable.texture
     }*/
-    let metalTexture = backBufferDrawable.texture
+    let metalTexture = nextMetalDrawable.texture
 
     let texture = MetalTexture(swapChain.metalDevice, metalTexture)
     texture.isPresentTexture = true
@@ -268,6 +272,12 @@ public func presentSwapChain(swapChainPointer: UnsafeRawPointer) {
         return
     }
 
+    let presentSemaphore = swapChain.presentSemaphore
+
+    commandBuffer.addCompletedHandler { cb in
+        presentSemaphore.signal()
+    }
+
     commandBuffer.label = "PresentSwapChainCommandBuffer"
     commandBuffer.present(backBufferDrawable)
 
@@ -276,16 +286,8 @@ public func presentSwapChain(swapChainPointer: UnsafeRawPointer) {
 
 @_cdecl("Native_WaitForSwapChainOnCpu")
 public func waitForSwapChainOnCpu(swapChainPointer: UnsafeRawPointer) {
-    // TODO: Be carefull here, because we set back buffer count + so fix 
-    // the fullscreen direct mode. It means it could change the behavior of latency
     let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
-
-    guard let nextMetalDrawable = swapChain.deviceObject.nextDrawable() else {
-        print("waitForSwapChainOnCpu: Cannot acquire a back buffer")
-        return
-    }
-    
-    swapChain.backBufferDrawable = nextMetalDrawable
+    swapChain.presentSemaphore.wait()
 }
     
 @_cdecl("Native_BeginRenderPass")
@@ -360,7 +362,7 @@ private func initRenderPassColorDescriptor(_ descriptor: MTLRenderPassColorAttac
 
     if (texture.isPresentTexture) {
         descriptor.loadAction = .dontCare
-        descriptor.storeAction = .dontCare
+        descriptor.storeAction = .store
     } /*else {
         let resourceFence = self.graphicsDevice.makeFence()!
         colorTexture.resourceFence = resourceFence

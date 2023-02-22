@@ -28,8 +28,11 @@ public readonly record struct SwapChainOptions
     public int Height { get; init; }
 
     /// <summary>
-    /// Texture format of the swap chain.
+    /// Texture format of the <see cref="SwapChain" />.
     /// </summary>
     /// <value>Texture format of the swap chain.</value>
+    // TODO: Provide another enum so that we cannot set the wrong format
     public TextureFormat TextureFormat { get; init; }
+
+    // TODO: Don't provide a render buffer count parameter but a frame latency instead
 }
