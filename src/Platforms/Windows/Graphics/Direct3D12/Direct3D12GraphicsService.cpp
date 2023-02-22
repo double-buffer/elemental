@@ -118,7 +118,8 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
 	{
         return nullptr;
     }
-    
+
+    // TODO: 
     auto graphicsDevice = new Direct3D12GraphicsDevice(this);
     graphicsDevice->Device = device;
     graphicsDevice->AdapterDescription = adapterDescription;
@@ -195,12 +196,10 @@ void* Direct3D12GraphicsService::CreateCommandQueue(void* graphicsDevicePointer,
 void Direct3D12GraphicsService::FreeCommandQueue(void* commandQueuePointer)
 {
     auto commandQueue = (Direct3D12CommandQueue *)commandQueuePointer;
-
-    auto fence = Fence();
-    fence.CommandQueuePointer = commandQueuePointer;
-    fence.FenceValue = commandQueue->FenceValue;
-
+    
+    auto fence = CreateCommandQueueFence(commandQueue);
     WaitForFenceOnCpu(fence);
+
     delete (Direct3D12CommandQueue*)commandQueuePointer;
 }
 
@@ -265,15 +264,7 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 	}
 
 	commandQueue->DeviceObject->ExecuteCommandLists(commandListCount, commandListsToExecute);
-
-    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
-	AssertIfFailed(commandQueue->DeviceObject->Signal(commandQueue->Fence.Get(), fenceValue));
-
-    auto fence = Fence();
-    fence.CommandQueuePointer = commandQueue;
-    fence.FenceValue = fenceValue;
-
-    return fence;
+    return CreateCommandQueueFence(commandQueue);
 }
     
 void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
@@ -330,41 +321,9 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	swapChain->DeviceObject->SetMaximumFrameLatency(2);
     swapChain->CommandQueue = commandQueue;
 	swapChain->WaitHandle = swapChain->DeviceObject->GetFrameLatencyWaitableObject();
-
-    // TODO: Review that and refactor!
-    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-    rtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // ConvertTextureFormat(textureFormat);
-    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-
-	for (uint32_t i = 0; i < renderBufferCount; i++)
-	{
-		ComPtr<ID3D12Resource> backBuffer;
-		AssertIfFailed(swapChain->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.ReleaseAndGetAddressOf())));
-
-		wchar_t buff[64] = {};
-  		swprintf(buff, 64, L"BackBufferRenderTarget%d", i);
-		backBuffer->SetName(buff);
-
-		Direct3D12Texture* backBufferTexture = new Direct3D12Texture(this, graphicsDevice);
-		backBufferTexture->DeviceObject = backBuffer;
-		//backBufferTexture->ResourceState = D3D12_RESOURCE_STATE_PRESENT;
-		backBufferTexture->IsPresentTexture = true;
-		//backBufferTexture->ResourceDesc = CreateTextureResourceDescription(textureFormat, GraphicsTextureUsage::RenderTarget, width, height, 1, 1, 1);
-
-		auto rtvDescriptorHeapHandle = graphicsDevice->RtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		rtvDescriptorHeapHandle.ptr += graphicsDevice->CurrentRtvDescriptorOffset;
-
-		graphicsDevice->Device->CreateRenderTargetView(backBuffer.Get(), &rtvDesc, rtvDescriptorHeapHandle);
-		backBufferTexture->RtvDescriptorOffset = graphicsDevice->CurrentRtvDescriptorOffset;
-        
-        // TODO: Do an atomic increment
-		graphicsDevice->CurrentRtvDescriptorOffset += graphicsDevice->RtvDescriptorHandleSize;
-
-		swapChain->RenderBuffers[i] = backBufferTexture;
-	}
-    
     swapChain->RenderBufferCount = renderBufferCount;
 
+    CreateSwapChainBackBuffers(swapChain);
     return swapChain;
 }
 
@@ -373,24 +332,35 @@ void Direct3D12GraphicsService::FreeSwapChain(void* swapChainPointer)
     auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
     auto commandQueue = swapChain->CommandQueue;
 
-    auto fence = Fence();
-    fence.CommandQueuePointer = commandQueue;
-    fence.FenceValue = commandQueue->FenceValue;
-
+    auto fence = CreateCommandQueueFence(commandQueue);
     WaitForFenceOnCpu(fence);
-    WaitForSwapChainOnCpu(swapChainPointer);
-
-    /*for (int i = 0; i < RenderBuffersCount; i++)
+    
+    for (uint32_t i = 0; i < swapChain->RenderBufferCount; i++)
 	{
-		DeleteTexture(swapChain->BackBufferTextures[i]);
-	}*/
+        delete swapChain->RenderBuffers[i];
+    }
 
-    delete (Direct3D12SwapChain*)swapChainPointer;
+    delete swapChain;
 }
     
 void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
 {
+    auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
 
+	auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
+    WaitForFenceOnCpu(fence);
+    
+    for (uint32_t i = 0; i < swapChain->RenderBufferCount; i++)
+	{
+        swapChain->RenderBuffers[i]->DeviceObject.Reset();
+    }
+	
+	D3D12_RESOURCE_DESC backBufferDesc;
+	backBufferDesc.Width = width;
+	backBufferDesc.Height = height;
+
+	AssertIfFailed(swapChain->DeviceObject->ResizeBuffers(swapChain->RenderBufferCount, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
+    CreateSwapChainBackBuffers(swapChain);
 }
     
 void* Direct3D12GraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
@@ -429,10 +399,6 @@ void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, Render
 	{
         Direct3D12Texture* texture = (Direct3D12Texture*)renderPassDescriptor->RenderTarget0.Value.TexturePointer;
 
-		// TODO: Refactor that
-		D3D12_CPU_DESCRIPTOR_HANDLE descriptorHeapHandle = {};
-		descriptorHeapHandle.ptr = graphicsDevice->RtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + texture->RtvDescriptorOffset;
-
         // TODO: Do this only if not present texture
         // TODO: Put that in an util function
         D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
@@ -454,7 +420,7 @@ void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, Render
 
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC* renderTargetDesc = &renderTargetDescList[renderTargetDescCount++];
         *renderTargetDesc = {};
-        renderTargetDesc->cpuDescriptor = descriptorHeapHandle;
+        renderTargetDesc->cpuDescriptor = texture->RtvDescriptor;
 
         // TODO: Allow user code to customize
         if (texture->IsPresentTexture)
@@ -659,6 +625,69 @@ void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* comm
     // TODO: Don't put the list in the queue object
     // TODO: Freelist or ring buffer?
     commandQueue->AvailableCommandLists.push(commandList);
+}
+    
+Fence Direct3D12GraphicsService::CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue)
+{
+    InterlockedIncrement(&commandQueue->FenceValue);
+	AssertIfFailed(commandQueue->DeviceObject->Signal(commandQueue->Fence.Get(), commandQueue->FenceValue));
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = commandQueue->FenceValue;
+
+    return fence;
+}
+
+void Direct3D12GraphicsService::CreateSwapChainBackBuffers(Direct3D12SwapChain* swapChain)
+{
+    auto graphicsDevice = swapChain->GraphicsDevice;
+
+    // TODO: Review that and refactor!
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+    rtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // ConvertTextureFormat(textureFormat);
+    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+	for (uint32_t i = 0; i < swapChain->RenderBufferCount; i++)
+	{
+		ComPtr<ID3D12Resource> backBuffer;
+		AssertIfFailed(swapChain->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.ReleaseAndGetAddressOf())));
+
+		wchar_t buff[64] = {};
+  		swprintf(buff, 64, L"BackBufferRenderTarget%d", i);
+		backBuffer->SetName(buff);
+
+        if (swapChain->RenderBuffers[i] == nullptr)
+        {
+            printf("Creating BackBuffer...\n");
+            
+    		Direct3D12Texture* backBufferTexture = new Direct3D12Texture(this, graphicsDevice);
+            backBufferTexture->DeviceObject = backBuffer;
+            //backBufferTexture->ResourceState = D3D12_RESOURCE_STATE_PRESENT;
+            backBufferTexture->IsPresentTexture = true;
+            //backBufferTexture->ResourceDesc = CreateTextureResourceDescription(textureFormat, GraphicsTextureUsage::RenderTarget, width, height, 1, 1, 1);
+
+		    swapChain->RenderBuffers[i] = backBufferTexture;
+
+            // TODO: Move that code
+            auto rtvDescriptorHeapHandle = graphicsDevice->RtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+            rtvDescriptorHeapHandle.ptr += graphicsDevice->CurrentRtvDescriptorOffset;
+            backBufferTexture->RtvDescriptor = rtvDescriptorHeapHandle;
+
+            // TODO: Implement that
+            //InterlockedAdd((int32_t*)&graphicsDevice->CurrentRtvDescriptorOffset, graphicsDevice->RtvDescriptorHandleSize);
+            graphicsDevice->CurrentRtvDescriptorOffset += graphicsDevice->RtvDescriptorHandleSize;
+        }
+        else
+        {
+            swapChain->RenderBuffers[i]->DeviceObject = backBuffer;
+
+            // TODO: Update texture desc
+            printf("Update BackBuffer...\n");
+        }
+
+		graphicsDevice->Device->CreateRenderTargetView(backBuffer.Get(), &rtvDesc, swapChain->RenderBuffers[i]->RtvDescriptor);
+	}
 }
 
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)

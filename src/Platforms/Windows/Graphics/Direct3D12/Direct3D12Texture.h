@@ -11,6 +11,5 @@ struct Direct3D12Texture : Direct3D12BaseGraphicsObject
     ComPtr<ID3D12Resource> DeviceObject;
     bool IsPresentTexture;
 
-    // TODO: Review and refactor
-    uint32_t RtvDescriptorOffset;
+    D3D12_CPU_DESCRIPTOR_HANDLE RtvDescriptor;
 };

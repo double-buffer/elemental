@@ -60,7 +60,10 @@ private:
     ComPtr<ID3D12CommandAllocator> GetCommandAllocator(Direct3D12CommandQueue* commandQueue);
     ComPtr<ID3D12GraphicsCommandList7> GetCommandList(Direct3D12CommandQueue* commandQueue);
     void PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList);
+    Fence CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue);
+
+    void CreateSwapChainBackBuffers(Direct3D12SwapChain* swapChain);
 };
 
-NativeWindowSize Native_GetWindowRenderSize(Win32Window *nativeWindow);
-static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void *pContext);
+NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
+static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
