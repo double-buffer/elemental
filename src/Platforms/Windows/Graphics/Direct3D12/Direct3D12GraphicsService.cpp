@@ -308,7 +308,7 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
     }
 
     // TODO: Handle options!
-    uint32_t renderBufferCount = 2;
+    uint32_t renderBufferCount = 3;
 
     swapChainDesc.BufferCount = renderBufferCount;
     swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // ConvertTextureFormat(textureFormat, true);
@@ -327,7 +327,7 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));
  
     // TODO: Check that parameter
-	swapChain->DeviceObject->SetMaximumFrameLatency(1);
+	swapChain->DeviceObject->SetMaximumFrameLatency(2);
     swapChain->CommandQueue = commandQueue;
 	swapChain->WaitHandle = swapChain->DeviceObject->GetFrameLatencyWaitableObject();
 

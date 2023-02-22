@@ -71,7 +71,7 @@ applicationService.RunApplication(application, (status) =>
         RenderTarget0 = new RenderPassRenderTarget
         {
             Texture = graphicsService.GetSwapChainBackBufferTexture(swapChain),
-            ClearColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f)
+            ClearColor = new Vector4(0.8f, 5.0f, 0.0f, 1.0f)
         }
     });
 
