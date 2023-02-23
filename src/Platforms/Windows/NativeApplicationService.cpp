@@ -4,6 +4,7 @@
 #include "../Common/StringConverters.h"
 #include "Win32Application.h"
 #include "Win32Window.h"
+#include <map>
 
 void ProcessMessages(Win32Application* application);
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
@@ -57,6 +58,8 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     auto width = options.Width;
     auto height = options.Height;
 
+    auto nativeWindow = new Win32Window();
+
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
@@ -69,7 +72,7 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
         nullptr,
         nullptr,
         nativeApplication->ApplicationInstance,
-        0);
+        nativeWindow);
    
     HMODULE shcoreLibrary = LoadLibrary(L"shcore.dll");
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -107,16 +110,16 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     SetWindowPos(window, nullptr, x, y, width, height, 0);
     ShowWindow(window, SW_NORMAL);
 
-    if (options.WindowState == NativeWindowState::Maximized)
-    {
-        ShowWindow(window, SW_MAXIMIZE);
-    }
+    WINDOWPLACEMENT windowPlacement;
+    GetWindowPlacement(window, &windowPlacement);
 
-    auto nativeWindow = new Win32Window();
     nativeWindow->WindowHandle = window;
     nativeWindow->Width = width;
     nativeWindow->Height = height;
     nativeWindow->UIScale = mainScreenScaling;
+    nativeWindow->WindowPlacement = windowPlacement;
+
+    Native_SetWindowState(nativeWindow, options.WindowState);
 
     return nativeWindow;
 }
@@ -144,12 +147,84 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
     result.Height = nativeWindow->Height;
     result.UIScale = nativeWindow->UIScale;
 
+    DWORD windowStyle = GetWindowLong(nativeWindow->WindowHandle, GWL_STYLE);
+    WINDOWPLACEMENT windowPlacement;
+    GetWindowPlacement(nativeWindow->WindowHandle, &windowPlacement);
+    
+    MONITORINFO monitorInfos = { sizeof(monitorInfos) };
+    GetMonitorInfo(MonitorFromWindow(nativeWindow->WindowHandle, MONITOR_DEFAULTTOPRIMARY), &monitorInfos);
+
+    auto screenWidth = monitorInfos.rcMonitor.right - monitorInfos.rcMonitor.left;
+    auto screenHeight = monitorInfos.rcMonitor.bottom - monitorInfos.rcMonitor.top;
+
+    if (screenWidth == nativeWindow->Width && screenHeight == nativeWindow->Height)
+    {
+        result.WindowState = NativeWindowState_FullScreen;
+    }
+    
+    else if (nativeWindow->Width == 0 && nativeWindow->Height == 0)
+    {
+        result.WindowState = NativeWindowState_Minimized;
+    }
+    
+    else if (windowPlacement.showCmd == SW_MAXIMIZE)
+    {
+        result.WindowState = NativeWindowState_Maximized;
+    }
+
+    else if (windowStyle & WS_OVERLAPPEDWINDOW)
+    {
+        result.WindowState = NativeWindowState_Normal;
+    }
+
     return result;
 }
 
 DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, uint8_t* title)
 {
     SetWindowText(nativeWindow->WindowHandle, ConvertUtf8ToWString(title).c_str());
+}
+    
+DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState windowState)
+{
+    DWORD windowStyle = GetWindowLong(window->WindowHandle, GWL_STYLE);
+
+    if (windowState == NativeWindowState_FullScreen && (windowStyle & WS_OVERLAPPEDWINDOW))
+    {
+        WINDOWPLACEMENT windowPlacement;
+        GetWindowPlacement(window->WindowHandle, &windowPlacement);
+        window->WindowPlacement = windowPlacement;
+
+        MONITORINFO monitorInfos = { sizeof(monitorInfos) };
+        GetMonitorInfo(MonitorFromWindow(window->WindowHandle, MONITOR_DEFAULTTOPRIMARY), &monitorInfos);
+
+        SetWindowLong(window->WindowHandle, GWL_STYLE, windowStyle & ~WS_OVERLAPPEDWINDOW);
+        SetWindowPos(window->WindowHandle, HWND_TOP,
+            monitorInfos.rcMonitor.left, monitorInfos.rcMonitor.top,
+            monitorInfos.rcMonitor.right - monitorInfos.rcMonitor.left,
+            monitorInfos.rcMonitor.bottom - monitorInfos.rcMonitor.top,
+            SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+
+        ShowWindow(window->WindowHandle, SW_MAXIMIZE);
+    }
+
+    else 
+    {
+        SetWindowLong(window->WindowHandle, GWL_STYLE, windowStyle | WS_OVERLAPPEDWINDOW);
+        SetWindowPlacement(window->WindowHandle, &window->WindowPlacement);
+        SetWindowPos(window->WindowHandle, NULL, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+
+        if (windowState == NativeWindowState_Maximized)
+        {
+            ShowWindow(window->WindowHandle, SW_MAXIMIZE);
+        }
+        
+        else if (windowState == NativeWindowState_Minimized)
+        {
+            ShowWindow(window->WindowHandle, SW_MINIMIZE);
+        }
+    }
 }
 
 void ProcessMessages(Win32Application* application)
@@ -168,6 +243,9 @@ void ProcessMessages(Win32Application* application)
     }
 }
 
+// TODO: Change that
+static std::map<HWND, Win32Window*> windowMap = std::map<HWND, Win32Window*>();
+
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	// TODO: Bind correct application
@@ -181,18 +259,32 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 
 	switch (message)
 	{
-	case WM_ACTIVATE:
+    case WM_CREATE:
+    {
+        auto createParameters = (LPCREATESTRUCT)lParam;
+        auto nativeWindow = (Win32Window*)createParameters->lpCreateParams;
+        windowMap[window] = nativeWindow;
+        break;
+    }
+
+    case WM_ACTIVATE:
 	{
 		//isAppActive = !(wParam == WA_INACTIVE);
 		break;
 	}
 
-	case WM_SIZE:
-	{
-		//doChangeSize = true;
-		// TODO: Handle minimized state
+    case WM_SYSKEYUP:
+		if (wParam == VK_RETURN)
+		{
+			if ((HIWORD(lParam) & KF_ALTDOWN))
+			{
+                auto nativeWindow = windowMap[window];
+                auto size = Native_GetWindowRenderSize(nativeWindow);
+                Native_SetWindowState(nativeWindow, NativeWindowState_FullScreen);
+			}
+		}
 		break;
-	}
+
     case WM_DPICHANGED:
     {
         RECT* const prcNewWindow = (RECT*)lParam;

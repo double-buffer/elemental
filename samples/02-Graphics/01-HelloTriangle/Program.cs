@@ -10,7 +10,7 @@ using var window = applicationService.CreateWindow(application, new NativeWindow
     Title = "Hello Window!",
     Width = 1280,
     Height = 720,
-    WindowState = NativeWindowState.Normal
+    WindowState = NativeWindowState.FullScreen
 });
 
 using var graphicsService = new GraphicsService(new GraphicsServiceOptions
@@ -45,22 +45,12 @@ applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {gr
 using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
-var stopwatch = new System.Diagnostics.Stopwatch();
-stopwatch.Start();
-
 applicationService.RunApplication(application, (status) =>
 {
     if (status.IsClosing)
     {
         Console.WriteLine("Closing Application...");
         return false;
-    }
-
-    if (stopwatch.ElapsedMilliseconds > 5000)
-    {
-        applicationService.SetWindowState(window, NativeWindowState.FullScreen);
-        stopwatch.Reset();
-        stopwatch.Stop();
     }
     
     var renderSize = applicationService.GetWindowRenderSize(window);

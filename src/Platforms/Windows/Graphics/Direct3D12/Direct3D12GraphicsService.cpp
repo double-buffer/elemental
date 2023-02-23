@@ -299,6 +299,7 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
     }
 
     // TODO: Handle options!
+    // TODO: Support VRR
     uint32_t renderBufferCount = 3;
 
     swapChainDesc.BufferCount = renderBufferCount;
@@ -315,9 +316,12 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	
 	auto swapChain = new Direct3D12SwapChain(this, graphicsDevice);
 
-	AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));
+	AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));  
+    AssertIfFailed(_dxgiFactory->MakeWindowAssociation((HWND)window->WindowHandle, DXGI_MWA_NO_ALT_ENTER)); 
  
     // TODO: Check that parameter
+    // TODO: Support Fullscreen exclusive in the future
+    // TODO: Support VRR
 	swapChain->DeviceObject->SetMaximumFrameLatency(2);
     swapChain->CommandQueue = commandQueue;
 	swapChain->WaitHandle = swapChain->DeviceObject->GetFrameLatencyWaitableObject();
@@ -345,6 +349,11 @@ void Direct3D12GraphicsService::FreeSwapChain(void* swapChainPointer)
     
 void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
 {
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
+
     auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
 
 	auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
@@ -659,8 +668,6 @@ void Direct3D12GraphicsService::CreateSwapChainBackBuffers(Direct3D12SwapChain* 
 
         if (swapChain->RenderBuffers[i] == nullptr)
         {
-            printf("Creating BackBuffer...\n");
-            
     		Direct3D12Texture* backBufferTexture = new Direct3D12Texture(this, graphicsDevice);
             backBufferTexture->DeviceObject = backBuffer;
             //backBufferTexture->ResourceState = D3D12_RESOURCE_STATE_PRESENT;
@@ -683,7 +690,6 @@ void Direct3D12GraphicsService::CreateSwapChainBackBuffers(Direct3D12SwapChain* 
             swapChain->RenderBuffers[i]->DeviceObject = backBuffer;
 
             // TODO: Update texture desc
-            printf("Update BackBuffer...\n");
         }
 
 		graphicsDevice->Device->CreateRenderTargetView(backBuffer.Get(), &rtvDesc, swapChain->RenderBuffers[i]->RtvDescriptor);
