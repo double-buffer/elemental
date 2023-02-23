@@ -27,4 +27,7 @@ internal static partial class PlatformServiceInterop
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial void Native_SetWindowTitle(NativeWindow window, string title);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_SetWindowState(NativeWindow window, NativeWindowState windowState);
 }

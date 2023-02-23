@@ -54,6 +54,13 @@ public interface INativeApplicationService
     /// <param name="window">Window handle.</param>
     /// <param name="title">Title of the window.</param>
     void SetWindowTitle(NativeWindow window, string title);
+
+    /// <summary>
+    /// Sets the state of the <see cref="NativeWindow" />.
+    /// </summary>
+    /// <param name="window">Window handle.</param>
+    /// <param name="windowState">State of the window.</param>
+    void SetWindowState(NativeWindow window, NativeWindowState windowState);
 }
 
 /// <summary>

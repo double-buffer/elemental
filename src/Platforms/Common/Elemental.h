@@ -36,8 +36,10 @@ typedef bool (*RunHandlerPtr)(struct NativeApplicationStatus status);
 
 enum NativeWindowState
 {
-    Normal,
-    Maximized
+    NativeWindowState_Normal = 0,
+    NativeWindowState_Minimized = 1,
+    NativeWindowState_Maximized = 2,
+    NativeWindowState_FullScreen = 3
 };
 
 struct NativeWindowOptions
@@ -53,6 +55,7 @@ struct NativeWindowSize
     int32_t Width;
     int32_t Height;
     float_t UIScale;
+    enum NativeWindowState WindowState;
 };
 
 enum GraphicsApi

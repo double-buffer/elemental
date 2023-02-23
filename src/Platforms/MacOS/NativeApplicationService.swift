@@ -60,8 +60,12 @@ public func createWindow(application: UnsafeRawPointer, options: NativeWindowOpt
     window.center()
     window.makeKeyAndOrderFront(nil)
 
-    if (options.WindowState == Maximized) {
+    if (options.WindowState == NativeWindowState_Maximized) {
         window.setFrame(window.screen!.visibleFrame, display: true, animate: false)
+    } else if (options.WindowState == NativeWindowState_FullScreen) {
+        window.toggleFullScreen(nil)
+    } else if (options.WindowState == NativeWindowState_Minimized) {
+        window.miniaturize(nil)
     }
 
     let nativeWindow = MacOSWindow(window)
@@ -79,18 +83,55 @@ public func getWindowRenderSize(_ windowPointer: UnsafeRawPointer) -> NativeWind
 
     let contentView = window.window.contentView! as NSView
     let mainScreenScaling = window.window.screen!.backingScaleFactor
+    
+    let contentViewSize = window.window.contentView!.frame.size
+    let windowSize = window.window.screen!.frame.size
 
     var size = contentView.frame.size
     size.width *= mainScreenScaling;
     size.height *= mainScreenScaling;
+    
+    var windowState = NativeWindowState_Normal
+    
+    if (window.window.isMiniaturized) {
+        windowState = NativeWindowState_Minimized
+    } else if (contentViewSize.width == windowSize.width && contentViewSize.height == windowSize.height) {
+        windowState = NativeWindowState_FullScreen
+    } else if (window.window.isZoomed) {
+        windowState = NativeWindowState_Maximized
+    }
 
-    return NativeWindowSize(Width: Int32(size.width), Height: Int32(size.height), UIScale: Float(mainScreenScaling))
+    return NativeWindowSize(Width: Int32(size.width), Height: Int32(size.height), UIScale: Float(mainScreenScaling), WindowState: windowState)
 }
 
 @_cdecl("Native_SetWindowTitle")
 public func setWindowTitle(windowPointer: UnsafeRawPointer, title: UnsafeMutablePointer<Int8>) {
     let window = MacOSWindow.fromPointer(windowPointer)
     window.window.title = String(cString: title)
+}
+
+@_cdecl("Native_SetWindowState")
+public func setWindowState(windowPointer: UnsafeRawPointer, windowState: NativeWindowState) {
+    let window = MacOSWindow.fromPointer(windowPointer)
+
+    let contentViewSize = window.window.contentView!.frame.size
+    let windowSize = window.window.screen!.frame.size
+
+    if (window.window.isMiniaturized) {
+        window.window.deminiaturize(nil) 
+    } else if (contentViewSize.width == windowSize.width && contentViewSize.height == windowSize.height) {
+        window.window.toggleFullScreen(nil) 
+    } else if (window.window.isZoomed) {
+        window.window.zoom(nil)
+    }
+
+    if (windowState == NativeWindowState_Maximized && !window.window.isZoomed) {
+        window.window.zoom(nil)
+    } else if (windowState == NativeWindowState_FullScreen) {
+        window.window.toggleFullScreen(nil)
+    } else if (windowState == NativeWindowState_Minimized) {
+        window.window.miniaturize(nil)
+    } 
 }
 
 private func processEvents(_ application: MacOSApplication) {

@@ -96,7 +96,7 @@ public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMu
     // Commandlists in metal are the encoders, command buffers are the allocators
     let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
     
-    print("Create Command buffer")
+    //print("Create Command buffer")
     guard let metalCommandBuffer = commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
         return nil
     }
