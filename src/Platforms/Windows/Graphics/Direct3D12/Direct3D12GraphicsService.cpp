@@ -34,7 +34,6 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
 
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.GetAddressOf())));
 
-    _globalFenceEvent = CreateEvent(nullptr, false, false, nullptr);
     _graphicsDiagnostics = options.GraphicsDiagnostics;
 
     // TODO: Setup debug callback!
@@ -264,18 +263,37 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 	}
 
 	commandQueue->DeviceObject->ExecuteCommandLists(commandListCount, commandListsToExecute);
-    return CreateCommandQueueFence(commandQueue);
+    auto fence = CreateCommandQueueFence(commandQueue);
+
+    UpdateCommandAllocatorFence(commandQueue);
+
+    return fence;
 }
     
 void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
 {
     auto commandQueueToWait = (Direct3D12CommandQueue*)fence.CommandQueuePointer;
+    
+    if (_globalFenceEvent == nullptr)
+    {
+        _globalFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+    }
 
-	if (commandQueueToWait->Fence->GetCompletedValue() < fence.FenceValue)
+    printf("Before fence wait\n");
+
+    if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue) 
+    {
+        commandQueueToWait->LastCompletedFenceValue = max(commandQueueToWait->LastCompletedFenceValue, commandQueueToWait->Fence->GetCompletedValue());
+    }
+
+    if (commandQueueToWait->LastCompletedFenceValue <= fence.FenceValue)
 	{
-		commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
+        printf("Waiting for fence...\n");
+        commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
 		WaitForSingleObject(_globalFenceEvent, INFINITE);
 	}
+    
+    printf("AFter fence wait\n");
 }
 
 void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
@@ -380,8 +398,12 @@ void* Direct3D12GraphicsService::GetSwapChainBackBufferTexture(void* swapChainPo
 
 void Direct3D12GraphicsService::PresentSwapChain(void* swapChainPointer)
 {
+    printf("Present (%d)\n", GetThreadId());
     auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
 	AssertIfFailed(swapChain->DeviceObject->Present(1, 0));
+    
+    auto deviceId = swapChain->GraphicsDevice->AdapterDescription.DeviceId;
+    swapChain->GraphicsDevice->CommandAllocationGeneration++;
 }
 
 void Direct3D12GraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
@@ -554,86 +576,91 @@ uint64_t Direct3D12GraphicsService::GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescri
 
 ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Direct3D12CommandQueue* commandQueue)
 {
-    // TODO: Try to not take into account the frame number but instead use the fence value of the commandqueue
-    // to track if the allocator is free for re-use
-
-    // TODO: The goal is to have a simple fast lookup here and do the heavy work in the present
-    // method
-    // TODO: We have 4 parameters: ThreadID, Device, FrameIndex and CommandType
-    // ThreadID can be avoided by have a local pool for each thread.
-    // FrameIndex can be avoided by keeping a list of running allocator and when we call present
-    // Check that list to insert the available allocators in the free list of each threads
-    // CommandType is just 3 possible values so we can fix the array of have 3 separate lists.
-
-    // TODO: This method needs a lot of optimizations!
-    // TODO: Avoid using STD here, for now it is a basic working implementation
-
-    // TODO: For the moment we will support only one swapchain per device
-    // TODO: We need to be carreful about multi threading here, it shouldn't be a problem because
-    // TODO: For the moment we are bound to present :(
-
     auto graphicsDevice = commandQueue->GraphicsDevice;
-    uint32_t currentFrameNumber = 0; // TODO: This will disappear
+    auto deviceId = graphicsDevice->AdapterDescription.DeviceId;
 
-    uint32_t frameIndex = currentFrameNumber % 2;
-    uint32_t threadId = GetThreadId();
-
-    if (graphicsDevice->CommandAllocators.size() <= frameIndex)
+    if (CommandAllocators.count(deviceId) == 0)
     {
-        graphicsDevice->CommandAllocators.push_back(std::map<D3D12_COMMAND_LIST_TYPE, std::map<uint32_t, ComPtr<ID3D12CommandAllocator>>>());
+        CommandAllocators[deviceId] = DeviceCommandAllocators();
     }
 
-    if (graphicsDevice->CommandAllocators[frameIndex].count(commandQueue->CommandListType) == 0)
+    DeviceCommandAllocators& commandAllocatorCache = CommandAllocators[deviceId];
+
+    if (commandAllocatorCache.Generation != graphicsDevice->CommandAllocationGeneration)
     {
-        graphicsDevice->CommandAllocators[frameIndex][commandQueue->CommandListType] = std::map<uint32_t, ComPtr<ID3D12CommandAllocator>>();
+        commandAllocatorCache.Reset(graphicsDevice->CommandAllocationGeneration);
     }
 
-    auto dictionary = &graphicsDevice->CommandAllocators[frameIndex][commandQueue->CommandListType];
-
-    if (dictionary->count(threadId) == 0)
+    if (commandAllocatorCache.DirectAllocator == nullptr)
     {
-        printf("Creating CommandAllocator...\n");
-        ComPtr<ID3D12CommandAllocator> commandAllocator;
-		AssertIfFailed(graphicsDevice->Device->CreateCommandAllocator(commandQueue->CommandListType, IID_PPV_ARGS(commandAllocator.ReleaseAndGetAddressOf())));
-        (*dictionary)[threadId] = commandAllocator;
-    }
-    else
-    {
-        AssertIfFailed((*dictionary)[threadId]->Reset());
+        CommandAllocatorPoolItem* commandAllocatorPoolItem;
+        graphicsDevice->DirectCommandAllocatorsPool.GetCurrentItemPointerAndMove(&commandAllocatorPoolItem);
+
+        if (commandAllocatorPoolItem->Allocator == nullptr)
+        {
+            // TODO: Get a new allocator from the pool and reset it if found
+
+            printf("Creating CommandAllocator...(%d)\n", GetThreadId());
+            AssertIfFailed(graphicsDevice->Device->CreateCommandAllocator(commandQueue->CommandListType, IID_PPV_ARGS(commandAllocatorPoolItem->Allocator.ReleaseAndGetAddressOf())));
+
+        }
+        else
+        {
+            // TODO: Check fence
+            printf("Resetting CommandAllocator...%d(Fence: %d) %d\n", commandAllocatorPoolItem->Allocator.Get(), commandAllocatorPoolItem->Fence.FenceValue, GetThreadId());
+
+            if (commandAllocatorPoolItem->Fence.FenceValue > 0)
+            {
+                WaitForFenceOnCpu(commandAllocatorPoolItem->Fence);
+            }
+
+            AssertIfFailed(commandAllocatorPoolItem->Allocator->Reset());
+        }
+
+        // TODO: Do other queue types
+        commandAllocatorCache.DirectAllocator = commandAllocatorPoolItem;
     }
 
-    // TODO: Reset the command allocator when present is called
-    return (*dictionary)[threadId];
+    // TODO: Do other types
+    return commandAllocatorCache.DirectAllocator->Allocator;
+}
+
+void Direct3D12GraphicsService::UpdateCommandAllocatorFence(Direct3D12CommandQueue* commandQueue)
+{
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+    auto deviceId = graphicsDevice->AdapterDescription.DeviceId;
+
+    // TODO: Other queue types
+
+    DeviceCommandAllocators& commandAllocatorCache = CommandAllocators[deviceId];
+
+    assert(commandAllocatorCache.DirectAllocator != nullptr);
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = commandQueue->FenceValue;
+
+    commandAllocatorCache.DirectAllocator->Fence = fence;
 }
     
 ComPtr<ID3D12GraphicsCommandList7> Direct3D12GraphicsService::GetCommandList(Direct3D12CommandQueue* commandQueue)
 {
-    // TODO: IMPORTANT: This must be threadsafe !
-    // TODO: Try to get an existing free command list
-    // TODO: If available, reset it
-    // TODO: If not, create a new one
+    ComPtr<ID3D12GraphicsCommandList7> commandList;
 
-    if (commandQueue->AvailableCommandLists.empty())
+    if (!commandQueue->AvailableCommandLists.GetItem(&commandList))
     {
         printf("Creating CommandList...\n");
-        ComPtr<ID3D12GraphicsCommandList7> direct3DCommandList;
-        AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(direct3DCommandList.GetAddressOf())));
+        AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
 
-        return direct3DCommandList;
+        return commandList;
     }
 
-    auto direct3DCommandList = commandQueue->AvailableCommandLists.top();
-    commandQueue->AvailableCommandLists.pop();
-
-    return direct3DCommandList;
+    return commandList;
 }
     
 void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList)
 {
-    // TODO: IMPORTANT: This must be threadsafe !
-    // TODO: Don't put the list in the queue object
-    // TODO: Freelist or ring buffer?
-    commandQueue->AvailableCommandLists.push(commandList);
+    commandQueue->AvailableCommandLists.Add(commandList);
 }
     
 Fence Direct3D12GraphicsService::CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue)

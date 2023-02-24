@@ -4,6 +4,7 @@
 #include "../../../Common/BaseGraphicsObject.h"
 #include "../../../Common/SystemFunctions.h"
 #include "../../../Common/StringConverters.h"
+#include "../../../Common/FreeList.h"
 
 #include "../Win32Window.h"
 #include "Direct3D12GraphicsDevice.h"
@@ -58,6 +59,7 @@ private:
     uint64_t GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription);
 
     ComPtr<ID3D12CommandAllocator> GetCommandAllocator(Direct3D12CommandQueue* commandQueue);
+    void UpdateCommandAllocatorFence(Direct3D12CommandQueue* commandQueue);
     ComPtr<ID3D12GraphicsCommandList7> GetCommandList(Direct3D12CommandQueue* commandQueue);
     void PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList);
     Fence CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue);
@@ -67,3 +69,6 @@ private:
 
 NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
+
+// TODO: Remove map
+thread_local std::map<uint32_t, DeviceCommandAllocators> CommandAllocators;

@@ -68,13 +68,17 @@ applicationService.RunApplication(application, (status) =>
 
     graphicsService.WaitForSwapChainOnCpu(swapChain);
 
-    var commandLists = new CommandList[5 * 5];
+    var threadCount = 5;
+    var commandListCount = 5;
+
+    var commandLists = new CommandList[threadCount * commandListCount];
     
     var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
 
-    Parallel.For (0, 5, (i) =>
+    Parallel.For (0, threadCount, (i) =>
+    //for (int i = 0; i < threadCount; i++)
     {
-        for (var j = 0; j < 5; j++)
+        for (var j = 0; j < commandListCount; j++)
         {
             var commandList = graphicsService.CreateCommandList(commandQueue);
             graphicsService.SetCommandListLabel(commandList, $"Triangle CommandList {j} (Thread :{i})");
@@ -91,28 +95,26 @@ applicationService.RunApplication(application, (status) =>
             // TODO: Add a counter in the mesh dispatch push constant to test the frame latency
 
             graphicsService.EndRenderPass(commandList);
-           /* 
-            graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
-            {
-                RenderTarget0 = new RenderPassRenderTarget
-                {
-                    Texture = graphicsService.GetSwapChainBackBufferTexture(swapChain),
-                    ClearColor = new Vector4(0.0f, 1.0f, i == 4 ? 1.0f : 0.0f, 1.0f)
-                }
-            });
+            
+             graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
+             {
+                 RenderTarget0 = new RenderPassRenderTarget
+                 {
+                     Texture = graphicsService.GetSwapChainBackBufferTexture(swapChain),
+                     ClearColor = new Vector4(0.0f, 1.0f, i == (threadCount - 1) && j == (commandListCount - 1) ? 1.0f : 0.0f, 1.0f)
+                 }
+             });
 
-            graphicsService.EndRenderPass(commandList);*/
+            graphicsService.EndRenderPass(commandList);
 
             graphicsService.CommitCommandList(commandList);
 
-            commandLists[i * 5 + j] = commandList;
+            commandLists[i * commandListCount + j] = commandList;
         }
+    //}
     });
 
-    var fence = graphicsService.ExecuteCommandLists(commandQueue, commandLists, Array.Empty<Fence>());
-
-    graphicsService.WaitForFenceOnCpu(fence);
-
+    graphicsService.ExecuteCommandLists(commandQueue, commandLists, Array.Empty<Fence>());
     graphicsService.PresentSwapChain(swapChain);
 
     return true;

@@ -1,11 +1,18 @@
 #pragma once
 #include "WindowsCommon.h"
+#include "../../../Common/CircularList.h"
 #include <vector>
 #include <map>
 
+struct CommandAllocatorPoolItem
+{
+    ComPtr<ID3D12CommandAllocator> Allocator;
+    Fence Fence;
+};
+
 struct Direct3D12GraphicsDevice : BaseGraphicsObject
 {
-    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService)
+    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(10) 
     {
     }
 
@@ -17,5 +24,27 @@ struct Direct3D12GraphicsDevice : BaseGraphicsObject
     uint32_t RtvDescriptorHandleSize;
     uint32_t CurrentRtvDescriptorOffset;
 
-    std::vector<std::map<D3D12_COMMAND_LIST_TYPE, std::map<uint32_t, ComPtr<ID3D12CommandAllocator>>>> CommandAllocators;
+    CircularList<CommandAllocatorPoolItem> DirectCommandAllocatorsPool;
+    uint64_t CommandAllocationGeneration = 0;
+};
+
+struct DeviceCommandAllocators
+{
+    uint64_t Generation = 0;
+    CommandAllocatorPoolItem *DirectAllocator = nullptr;
+    CommandAllocatorPoolItem* ComputeAllocator = nullptr;
+    CommandAllocatorPoolItem* CopyAllocator = nullptr;
+
+    bool IsEmpty()
+    {
+        return DirectAllocator == nullptr;
+    }
+
+    void Reset(uint64_t currentGeneration)
+    {
+        DirectAllocator = nullptr;
+        ComputeAllocator = nullptr;
+        CopyAllocator = nullptr;
+        Generation = currentGeneration;
+    }
 };
