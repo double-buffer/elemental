@@ -46,7 +46,8 @@ public func runApplication(applicationPointer: UnsafeRawPointer, runHandler: Run
 }
 
 @_cdecl("Native_CreateWindow")
-public func createWindow(application: UnsafeRawPointer, options: NativeWindowOptions) -> UnsafeMutableRawPointer? {
+public func createWindow(application: UnsafeRawPointer, optionsPointer: UnsafePointer<NativeWindowOptions>) -> UnsafeMutableRawPointer? {
+    let options = optionsPointer.pointee
     let width = options.Width
     let height = options.Height
     

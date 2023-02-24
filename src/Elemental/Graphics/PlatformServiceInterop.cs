@@ -3,7 +3,7 @@ namespace Elemental;
 internal unsafe static partial class PlatformServiceInterop
 {
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_InitGraphicsService(GraphicsServiceOptions options = default);
+    internal static partial void Native_InitGraphicsService(in GraphicsServiceOptions options = default);
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeGraphicsService();
@@ -14,7 +14,7 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfoMarshaller.GraphicsDeviceInfoUnmanaged* graphicsDevices, out int graphicsDeviceCount);
 
     [LibraryImport("Elemental.Native")]
-    internal static partial GraphicsDevice Native_CreateGraphicsDevice(GraphicsDeviceOptions options);
+    internal static partial GraphicsDevice Native_CreateGraphicsDevice(in GraphicsDeviceOptions options);
 
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeGraphicsDevice(GraphicsDevice graphicsDevice);
@@ -50,7 +50,7 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial void Native_WaitForFenceOnCpu(Fence fence);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial SwapChain Native_CreateSwapChain(NativeWindow window, CommandQueue commandQueue, SwapChainOptions options);
+    internal static partial SwapChain Native_CreateSwapChain(NativeWindow window, CommandQueue commandQueue, in SwapChainOptions options);
 
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeSwapChain(SwapChain swapChain);

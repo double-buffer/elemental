@@ -17,7 +17,7 @@ public interface IGraphicsService
     /// </summary>
     /// <param name="options">Optional parameters used by the graphics device creation.</param>
     /// <returns>Graphics device handle.</returns>
-    GraphicsDevice CreateGraphicsDevice(GraphicsDeviceOptions options = default);
+    GraphicsDevice CreateGraphicsDevice(in GraphicsDeviceOptions options = default);
 
     /// <summary>
     /// Frees the specified <see cref="GraphicsDevice" />.
@@ -111,7 +111,7 @@ public interface IGraphicsService
     /// <param name="commandQueue"><see cref="CommandQueue" /> object that will be used to present the swap chain.</param>
     /// <param name="options">Optional parameters used by the swap chain creation.</param> 
     /// <returns>SwapChain handle.</returns> 
-    SwapChain CreateSwapChain(NativeWindow window, CommandQueue commandQueue, SwapChainOptions options = default);
+    SwapChain CreateSwapChain(NativeWindow window, CommandQueue commandQueue, in SwapChainOptions options = default);
 
     /// <summary>
     /// Frees the specified <see cref="SwapChain" />.

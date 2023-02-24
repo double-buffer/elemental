@@ -10,7 +10,7 @@ using var window = applicationService.CreateWindow(application, new NativeWindow
     Title = "Hello Window!",
     Width = 1280,
     Height = 720,
-    WindowState = NativeWindowState.FullScreen
+    WindowState = NativeWindowState.Normal
 });
 
 using var graphicsService = new GraphicsService(new GraphicsServiceOptions
@@ -42,7 +42,11 @@ graphicsService.SetCommandQueueLabel(commandQueue, "Test Render Queue");
 var graphicsDeviceInfos = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
 applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {graphicsDeviceInfos})");
 
-using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
+using var swapChain = graphicsService.CreateSwapChain(window, commandQueue, new SwapChainOptions
+{
+
+});
+
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 applicationService.RunApplication(application, (status) =>
@@ -63,26 +67,50 @@ applicationService.RunApplication(application, (status) =>
     }
 
     graphicsService.WaitForSwapChainOnCpu(swapChain);
-    
-    using var commandList = graphicsService.CreateCommandList(commandQueue);
-    graphicsService.SetCommandListLabel(commandList, "Triangle CommandList");
 
-    graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
+    var commandLists = new CommandList[5 * 5];
+    
+    var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
+
+    Parallel.For (0, 5, (i) =>
     {
-        RenderTarget0 = new RenderPassRenderTarget
+        for (var j = 0; j < 5; j++)
         {
-            Texture = graphicsService.GetSwapChainBackBufferTexture(swapChain),
-            ClearColor = new Vector4(0.8f, 0.5f, 0.0f, 1.0f)
+            var commandList = graphicsService.CreateCommandList(commandQueue);
+            graphicsService.SetCommandListLabel(commandList, $"Triangle CommandList {j} (Thread :{i})");
+
+            graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
+            {
+                RenderTarget0 = new RenderPassRenderTarget
+                {
+                    Texture = backbufferTexture,
+                    ClearColor = new Vector4(0.8f, 0.5f, 0.0f, 1.0f)
+                }
+            });
+
+            // TODO: Add a counter in the mesh dispatch push constant to test the frame latency
+
+            graphicsService.EndRenderPass(commandList);
+           /* 
+            graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
+            {
+                RenderTarget0 = new RenderPassRenderTarget
+                {
+                    Texture = graphicsService.GetSwapChainBackBufferTexture(swapChain),
+                    ClearColor = new Vector4(0.0f, 1.0f, i == 4 ? 1.0f : 0.0f, 1.0f)
+                }
+            });
+
+            graphicsService.EndRenderPass(commandList);*/
+
+            graphicsService.CommitCommandList(commandList);
+
+            commandLists[i * 5 + j] = commandList;
         }
     });
 
-    // TODO: Add a counter in the mesh dispatch push constant to test the frame latency
+    var fence = graphicsService.ExecuteCommandLists(commandQueue, commandLists, Array.Empty<Fence>());
 
-    graphicsService.EndRenderPass(commandList);
-
-    graphicsService.CommitCommandList(commandList);
-
-    var fence = graphicsService.ExecuteCommandList(commandQueue, commandList);
     graphicsService.WaitForFenceOnCpu(fence);
 
     graphicsService.PresentSwapChain(swapChain);

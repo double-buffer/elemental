@@ -33,7 +33,7 @@ public interface INativeApplicationService
     /// <param name="application">Application that owns the window.</param>
     /// <param name="options">Optional parameters used by the graphics device creation.</param>
     /// <returns>Window handle.</returns>
-    NativeWindow CreateWindow(NativeApplication application, NativeWindowOptions options);
+    NativeWindow CreateWindow(NativeApplication application, in NativeWindowOptions options);
 
     /// <summary>
     /// Frees the specified <see cref="NativeWindow" />.

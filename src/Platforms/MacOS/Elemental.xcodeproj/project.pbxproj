@@ -11,14 +11,18 @@
 		D822C43A297908B800CCA054 /* NativeApplicationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeApplicationService.swift; sourceTree = "<group>"; };
 		D822C43B297908B800CCA054 /* MacOSApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSApplication.swift; sourceTree = "<group>"; };
 		D822C43D297908F200CCA054 /* Elemental.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Elemental.h; path = ../Common/Elemental.h; sourceTree = "<group>"; };
+		D8B503C929A8817E00B918B3 /* MacOSWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSWindow.swift; sourceTree = "<group>"; };
+		D8B503CA29A8818A00B918B3 /* Graphics */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Graphics; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		D822C4322979088800CCA054 = {
 			isa = PBXGroup;
 			children = (
+				D8B503CA29A8818A00B918B3 /* Graphics */,
 				D822C43C297908C200CCA054 /* Interop */,
 				D822C43B297908B800CCA054 /* MacOSApplication.swift */,
+				D8B503C929A8817E00B918B3 /* MacOSWindow.swift */,
 				D822C43A297908B800CCA054 /* NativeApplicationService.swift */,
 			);
 			sourceTree = "<group>";

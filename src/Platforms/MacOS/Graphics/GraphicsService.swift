@@ -6,7 +6,7 @@ import NativeElemental
 let sharedEventListener: MTLSharedEventListener = MTLSharedEventListener()
 
 @_cdecl("Native_InitGraphicsService")
-public func initGraphicsService(options: GraphicsServiceOptions) {
+public func initGraphicsService(optionsPointer: UnsafePointer<GraphicsServiceOptions>) {
 }
 
 @_cdecl("Native_FreeGraphicsService")
@@ -27,8 +27,9 @@ public func getAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePointer<Gr
 }
 
 @_cdecl("Native_CreateGraphicsDevice")
-public func createGraphicsDevice(options: GraphicsDeviceOptions) -> UnsafeMutableRawPointer? {
+public func createGraphicsDevice(optionsPointer: UnsafePointer<GraphicsDeviceOptions>) -> UnsafeMutableRawPointer? {
     var initMetalDevice: MTLDevice? = nil
+    let options = optionsPointer.pointee
 
     if (options.DeviceId != 0) {
         let devices = MTLCopyAllDevices()
@@ -65,7 +66,7 @@ public func getGraphicsDeviceInfo(graphicsDevicePointer: UnsafeRawPointer) -> Gr
 @_cdecl("Native_CreateCommandQueue")
 public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer, type: CommandQueueType) -> UnsafeMutableRawPointer? {
     let graphicsDevice = MetalGraphicsDevice.fromPointer(graphicsDevicePointer)
-    let initMetalCommandQueue = graphicsDevice.metalDevice.makeCommandQueue()
+    let initMetalCommandQueue = graphicsDevice.metalDevice.makeCommandQueue(maxCommandBufferCount: 100)
 
     guard 
         let metalCommandQueue = initMetalCommandQueue,
@@ -91,12 +92,8 @@ public func setCommandQueueLabel(commandQueuePointer: UnsafeRawPointer, label: U
 
 @_cdecl("Native_CreateCommandList")
 public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
-    // TODO: We should reuse on the same queue and on the same thread the commandbuffer for multiple
-    // commandlists.
-    // Commandlists in metal are the encoders, command buffers are the allocators
     let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
-    
-    //print("Create Command buffer")
+
     guard let metalCommandBuffer = commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
         return nil
     }
@@ -106,7 +103,7 @@ public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMu
 }
 
 @_cdecl("Native_FreeCommandList")
-public func freeCommandList(commandListPointer: UnsafeRawPointer) {
+public func freeCommandList(_ commandListPointer: UnsafeRawPointer) {
     MetalCommandList.release(commandListPointer)
 }
 
@@ -162,6 +159,7 @@ public func executeCommandLists(commandQueuePointer: UnsafeRawPointer, commandLi
         }
 
         commandList.deviceObject.commit()
+        freeCommandList(commandLists[i])
     }
 
     var fence = Fence()
@@ -188,9 +186,10 @@ public func waitForFenceOnCpu(fence: Fence) {
 }
     
 @_cdecl("Native_CreateSwapChain")
-public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer: UnsafeRawPointer, options: SwapChainOptions) -> UnsafeMutableRawPointer? {
+public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer: UnsafeRawPointer, optionsPointer: UnsafePointer<SwapChainOptions>) -> UnsafeMutableRawPointer? {
     let window = MacOSWindow.fromPointer(windowPointer)
     let commandQueue = MetalCommandQueue.fromPointer(commandQueuePointer)
+    let options = optionsPointer.pointee
 
     // TODO: This code is only working on MacOS!
     let contentView = window.window.contentView! as NSView
@@ -239,23 +238,12 @@ public func resizeSwapChain(swapChainPointer: UnsafeRawPointer, width: Int, heig
 public func getSwapChainBackBufferTexture(swapChainPointer: UnsafeRawPointer) -> UnsafeMutableRawPointer? {
     let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
 
-    guard let nextMetalDrawable = swapChain.deviceObject.nextDrawable() else {
-        print("waitForSwapChainOnCpu: Cannot acquire a back buffer")
+    guard let backBufferTexture = swapChain.backBufferTexture else {
+        print("getSwapChainBackBufferTexture: backBufferTexture is null")
         return nil
     }
-    
-    swapChain.backBufferDrawable = nextMetalDrawable
-    
-    /*if (swapChain.backBufferTexture == nil) {
-        swapChain.backBufferTexture = MetalTexture(nextMetalDrawable.texture, swapChain.textureDescriptor, isPresentTexture: true)
-    } else {
-        swapChain.backBufferTexture!.textureObject = nextMetalDrawable.texture
-    }*/
-    let metalTexture = nextMetalDrawable.texture
 
-    let texture = MetalTexture(swapChain.metalDevice, metalTexture)
-    texture.isPresentTexture = true
-    return Unmanaged.passRetained(texture).toOpaque()
+    return Unmanaged.passRetained(backBufferTexture).toOpaque()
 }
 
 @_cdecl("Native_PresentSwapChain")
@@ -282,12 +270,28 @@ public func presentSwapChain(swapChainPointer: UnsafeRawPointer) {
     commandBuffer.present(backBufferDrawable)
 
     commandBuffer.commit()
+
+    swapChain.backBufferTexture = nil
+    swapChain.backBufferDrawable = nil
 }
 
 @_cdecl("Native_WaitForSwapChainOnCpu")
 public func waitForSwapChainOnCpu(swapChainPointer: UnsafeRawPointer) {
     let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
     swapChain.presentSemaphore.wait()
+    
+    if (swapChain.backBufferDrawable == nil) {
+        guard let nextMetalDrawable = swapChain.deviceObject.nextDrawable() else {
+            print("waitForSwapChainOnCpu: Cannot acquire a back buffer")
+            return
+        }
+
+        let texture = MetalTexture(swapChain.metalDevice, nextMetalDrawable.texture)
+        texture.isPresentTexture = true
+
+        swapChain.backBufferTexture = texture
+        swapChain.backBufferDrawable = nextMetalDrawable
+    }
 }
     
 @_cdecl("Native_BeginRenderPass")
@@ -298,6 +302,7 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
     // It will also check if the command queue is compatible
     if (commandList.commandEncoder != nil) {
         commandList.commandEncoder!.endEncoding()
+        commandList.commandEncoder = nil
     }
 
     let renderPassDescriptor = renderPassDescriptorPointer.pointee
@@ -345,7 +350,14 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
     
 @_cdecl("Native_EndRenderPass")
 public func endRenderPass(commandListPointer: UnsafeRawPointer) {
+    let commandList = MetalCommandList.fromPointer(commandListPointer)
 
+    guard let commandEncoder = commandList.commandEncoder else {
+        return
+    }
+    
+    commandEncoder.endEncoding()
+    commandList.commandEncoder = nil
 }
 
 private func constructGraphicsDeviceInfo(_ metalDevice: MTLDevice) -> GraphicsDeviceInfo {

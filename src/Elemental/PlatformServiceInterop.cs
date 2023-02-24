@@ -17,7 +17,7 @@ internal static partial class PlatformServiceInterop
     internal static partial void Native_RunApplication(NativeApplication application, RunHandler runHandler);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial NativeWindow Native_CreateWindow(NativeApplication application, NativeWindowOptions options);
+    internal static partial NativeWindow Native_CreateWindow(NativeApplication application, in NativeWindowOptions options);
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeWindow(NativeWindow window);
