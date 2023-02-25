@@ -10,6 +10,5 @@ public class MetalSwapChain : MetalObject<MetalSwapChain, CAMetalLayer> {
 
     public let commandQueue: MetalCommandQueue
     public let presentSemaphore: DispatchSemaphore
-    public var backBufferTexture: MetalTexture?
     public var backBufferDrawable: CAMetalDrawable?
 }

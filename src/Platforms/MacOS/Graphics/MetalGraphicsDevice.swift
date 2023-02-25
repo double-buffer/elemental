@@ -7,6 +7,10 @@ public class MetalGraphicsDevice {
     
     public let metalDevice: MTLDevice
 
+    public func toPointer() -> UnsafeMutableRawPointer {
+        return Unmanaged.passRetained(self).toOpaque()
+    }
+
     public static func release(_ pointer: UnsafeRawPointer) {
         Unmanaged<MetalGraphicsDevice>.fromOpaque(pointer).release()
     }

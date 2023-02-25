@@ -9,7 +9,16 @@ public class MetalObject<T: AnyObject, TMetal> {
     public let metalDevice: MTLDevice
     public let deviceObject: TMetal
 
+    public func toPointer() -> UnsafeMutableRawPointer {
+        return Unmanaged.passRetained(self).toOpaque()
+    }
+    
+    public func toPointerUnretained() -> UnsafeMutableRawPointer {
+        return Unmanaged.passUnretained(self).toOpaque()
+    }
+
     public static func release(_ pointer: UnsafeRawPointer) {
+        //Unmanaged<T>.fromOpaque(pointer).takeRetainedValue()
         Unmanaged<T>.fromOpaque(pointer).release()
     }
 

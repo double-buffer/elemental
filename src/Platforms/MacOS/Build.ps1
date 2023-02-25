@@ -29,7 +29,7 @@ try
         Write-Output "Release"
         swiftc *.swift ./**/*.swift -wmo -emit-library -module-name "ElementalPlatformNative" -v -O -g -o "obj/Release/Elemental.Native.dylib" -I "." -debug-info-format=dwarf -swift-version 5 -target x86_64-apple-macosx13 -Xlinker -rpath -Xlinker "@executable_path/../Frameworks"
     }
-
+    
     if (-Not $?) {
         Pop-Location
         Exit 1

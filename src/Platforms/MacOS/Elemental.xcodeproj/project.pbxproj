@@ -24,6 +24,7 @@
 				D822C43B297908B800CCA054 /* MacOSApplication.swift */,
 				D8B503C929A8817E00B918B3 /* MacOSWindow.swift */,
 				D822C43A297908B800CCA054 /* NativeApplicationService.swift */,
+				D838B59B29A9DC1C0003B05E /* Products */,
 			);
 			sourceTree = "<group>";
 		};
@@ -34,6 +35,13 @@
 				D822C439297908B800CCA054 /* module.modulemap */,
 			);
 			name = Interop;
+			sourceTree = "<group>";
+		};
+		D838B59B29A9DC1C0003B05E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -54,6 +62,7 @@
 				Base,
 			);
 			mainGroup = D822C4322979088800CCA054;
+			productRefGroup = D838B59B29A9DC1C0003B05E /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (

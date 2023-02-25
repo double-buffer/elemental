@@ -72,8 +72,8 @@ applicationService.RunApplication(application, (status) =>
     var commandListCount = 5;
 
     var commandLists = new CommandList[threadCount * commandListCount];
-    
-    var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
+
+    using var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
 
     Parallel.For (0, threadCount, (i) =>
     //for (int i = 0; i < threadCount; i++)
@@ -100,7 +100,7 @@ applicationService.RunApplication(application, (status) =>
              {
                  RenderTarget0 = new RenderPassRenderTarget
                  {
-                     Texture = graphicsService.GetSwapChainBackBufferTexture(swapChain),
+                     Texture = backbufferTexture,
                      ClearColor = new Vector4(0.0f, 1.0f, i == (threadCount - 1) && j == (commandListCount - 1) ? 1.0f : 0.0f, 1.0f)
                  }
              });
@@ -115,6 +115,12 @@ applicationService.RunApplication(application, (status) =>
     });
 
     graphicsService.ExecuteCommandLists(commandQueue, commandLists, Array.Empty<Fence>());
+
+    for (var i = 0; i < commandLists.Length; i++)
+    {
+        commandLists[i].Dispose();
+    }
+
     graphicsService.PresentSwapChain(swapChain);
 
     return true;
