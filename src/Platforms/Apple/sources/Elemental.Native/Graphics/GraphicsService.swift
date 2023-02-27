@@ -121,7 +121,6 @@ public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMu
 @_cdecl("Native_FreeCommandList")
 public func freeCommandList(_ commandListPointer: UnsafeRawPointer) {
     autoreleasepool {
-        let commandList = MetalCommandList.fromPointer(commandListPointer)
         MetalCommandList.release(commandListPointer)
     }
 }
@@ -245,8 +244,6 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
 
         let presentSemaphore = DispatchSemaphore.init(value: frameLatency);
 
-        //let descriptor = createTextureDescriptor(textureFormat, RenderTarget, width, height, 1, 1, 1)
-
         let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer, commandQueue, presentSemaphore)
         return swapChain.toPointer()
     }
@@ -295,22 +292,25 @@ public func presentSwapChain(swapChainPointer: UnsafeRawPointer) {
             return
         }
 
+        guard let backBufferDrawable = swapChain.backBufferDrawable else {
+            print("presentSwapChain: Cannot get drawable")
+            return
+        }
+                
+        swapChain.backBufferDrawable = nil
+
         commandBuffer.addScheduledHandler { cb in
             autoreleasepool {
-                let localSwapChain = swapChain 
-                guard let backBufferDrawable = localSwapChain.backBufferDrawable else {
-                    print("presentSwapChain: Cannot get drawable")
-                    return
-                }
-
-                backBufferDrawable.present()
-                localSwapChain.backBufferDrawable = nil
+                let localDrawable = backBufferDrawable
+                localDrawable.present()
             }
         }
 
         commandBuffer.addCompletedHandler { cb in
-            let localPresentSemaphore = swapChain.presentSemaphore
-            localPresentSemaphore.signal()
+            autoreleasepool {
+                let localPresentSemaphore = swapChain.presentSemaphore
+                localPresentSemaphore.signal()
+            }
         }
 
         commandBuffer.label = "PresentSwapChainCommandBuffer"
@@ -356,11 +356,23 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
         let renderPassDescriptor = renderPassDescriptorPointer.pointee
         let metalRenderPassDescriptor = MTLRenderPassDescriptor()
 
+        // TODO: Depth buffer
         if (renderPassDescriptor.RenderTarget0.HasValue) {
             initRenderPassColorDescriptor(metalRenderPassDescriptor.colorAttachments[0], renderPassDescriptor.RenderTarget0.Value)
         }
+        
+        if (renderPassDescriptor.RenderTarget1.HasValue) {
+            initRenderPassColorDescriptor(metalRenderPassDescriptor.colorAttachments[1], renderPassDescriptor.RenderTarget1.Value)
+        }
+        
+        if (renderPassDescriptor.RenderTarget2.HasValue) {
+            initRenderPassColorDescriptor(metalRenderPassDescriptor.colorAttachments[2], renderPassDescriptor.RenderTarget2.Value)
+        }
+        
+        if (renderPassDescriptor.RenderTarget3.HasValue) {
+            initRenderPassColorDescriptor(metalRenderPassDescriptor.colorAttachments[3], renderPassDescriptor.RenderTarget3.Value)
+        }
 
-        // TODO: other render targets + Depth buffer
         guard let renderCommandEncoder = commandList.deviceObject.makeRenderCommandEncoder(descriptor: metalRenderPassDescriptor) else {
             print("beginRenderPass: Render command encoder creation failed.")
             return

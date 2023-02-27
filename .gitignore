@@ -6,6 +6,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.resolved
 
 xcuserdata/
 packages/
@@ -24,3 +25,5 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+.build/
+.swiftpm/

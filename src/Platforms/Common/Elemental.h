@@ -131,4 +131,7 @@ struct NullableRenderPassRenderTarget
 struct RenderPassDescriptor
 {
     struct NullableRenderPassRenderTarget RenderTarget0;
+    struct NullableRenderPassRenderTarget RenderTarget1;
+    struct NullableRenderPassRenderTarget RenderTarget2;
+    struct NullableRenderPassRenderTarget RenderTarget3;
 };
