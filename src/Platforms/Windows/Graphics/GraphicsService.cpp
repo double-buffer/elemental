@@ -7,7 +7,7 @@
 static Direct3D12GraphicsService* _globalDirect3D12GraphicsService; 
 static VulkanGraphicsService* _globalVulkanGraphicsService; 
 
-DllExport void Native_InitGraphicsService(GraphicsServiceOptions options)
+DllExport void Native_InitGraphicsService(GraphicsServiceOptions* options)
 {
     _globalDirect3D12GraphicsService = new Direct3D12GraphicsService(options);
     _globalVulkanGraphicsService = new VulkanGraphicsService(options);
@@ -27,7 +27,7 @@ DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDe
     _globalVulkanGraphicsService->GetAvailableGraphicsDevices(graphicsDevices, count);
 }
 
-DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
+DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
     GraphicsDeviceInfo availableDevices[50];
     int availableDeviceCount;
@@ -41,11 +41,11 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
 
     auto selectedDevice = availableDevices[0];
 
-    if (options.DeviceId != 0)
+    if (options->DeviceId != 0)
     {
         for (int i = 0; i < availableDeviceCount; i++)
         {
-            if (availableDevices[i].DeviceId == options.DeviceId)
+            if (availableDevices[i].DeviceId == options->DeviceId)
             {
                 selectedDevice = availableDevices[i];
                 break;
@@ -53,7 +53,7 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions options)
         }
     }
 
-    options.DeviceId = selectedDevice.DeviceId;
+    options->DeviceId = selectedDevice.DeviceId;
 
     BaseGraphicsService* graphicsService;
 
@@ -134,8 +134,14 @@ DllExport void Native_WaitForFenceOnCpu(Fence fence)
     auto graphicsService = ((BaseGraphicsObject*)fence.CommandQueuePointer)->GraphicsService;
     graphicsService->WaitForFenceOnCpu(fence);
 }
+    
+DllExport void Native_FreeTexture(void* texturePointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)texturePointer)->GraphicsService;
+    graphicsService->FreeTexture(texturePointer);
+}
 
-DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
+DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
     auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
     return graphicsService->CreateSwapChain(windowPointer, commandQueuePointer, options);

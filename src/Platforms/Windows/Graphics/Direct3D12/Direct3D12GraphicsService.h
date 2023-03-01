@@ -16,11 +16,11 @@
 class Direct3D12GraphicsService : BaseGraphicsService
 {
 public:
-    Direct3D12GraphicsService(GraphicsServiceOptions options);
+    Direct3D12GraphicsService(GraphicsServiceOptions* options);
     ~Direct3D12GraphicsService();
 
     void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) override;
-    void* CreateGraphicsDevice(GraphicsDeviceOptions options) override;
+    void* CreateGraphicsDevice(GraphicsDeviceOptions* options) override;
     void FreeGraphicsDevice(void* graphicsDevicePointer) override;
     GraphicsDeviceInfo GetGraphicsDeviceInfo(void* graphicsDevicePointer) override;
     
@@ -36,7 +36,9 @@ public:
     Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) override;
     void WaitForFenceOnCpu(Fence fence) override;
     
-    void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) override;
+    void FreeTexture(void* texturePointer) override;
+    
+    void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options) override;
     void FreeSwapChain(void* swapChainPointer) override;
     void ResizeSwapChain(void* swapChainPointer, int width, int height) override;
     void* GetSwapChainBackBufferTexture(void* swapChainPointer) override;

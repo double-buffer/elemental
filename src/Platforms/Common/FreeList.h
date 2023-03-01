@@ -25,7 +25,7 @@ public:
 
     ~FreeList()
     {
-        // TODO: Delete recurse
+        DeleteNode(_rootNode);
     }
 
     void Add(T value)
@@ -39,6 +39,8 @@ public:
         }
 
         printf("Failed to add freelist node\n");
+
+        // TODO: Do a standard lock
     }
 
     bool GetItem(T* value)
@@ -64,5 +66,15 @@ public:
 
 private:
     FreeListNode<T>* _rootNode;
-    uint32_t _count;
+
+    void DeleteNode(FreeListNode<T>* node)
+    {
+        auto nextNode = node->Next;
+        delete node;
+
+        if (nextNode != nullptr)
+        {
+            DeleteNode(nextNode);
+        }
+    }
 };

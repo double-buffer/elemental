@@ -1,7 +1,7 @@
 #include "WindowsCommon.h"
 #include "Direct3D12GraphicsService.h"
 
-Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions options)
+Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* options)
 {
     // HACK: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
     // select the SDK version without setting windows developer mode.
@@ -19,7 +19,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
 
     UINT createFactoryFlags = 0;
 
-    if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
@@ -34,7 +34,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
 
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.GetAddressOf())));
 
-    _graphicsDiagnostics = options.GraphicsDiagnostics;
+    _graphicsDiagnostics = options->GraphicsDiagnostics;
 }
 
 Direct3D12GraphicsService::~Direct3D12GraphicsService()
@@ -86,7 +86,7 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
     }
 }
 
-void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
+void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
     ComPtr<IDXGIAdapter4> graphicsAdapter;
     DXGI_ADAPTER_DESC3 adapterDescription;
@@ -96,7 +96,7 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
     {
         AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
 
-        if (GetDeviceId(adapterDescription) == options.DeviceId)
+        if (GetDeviceId(adapterDescription) == options->DeviceId)
         {
             foundAdapter = true;
             break;
@@ -233,8 +233,6 @@ void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
     AssertIfFailed(commandList->DeviceObject->Close());
-
-    PushFreeCommandList(commandList->CommandQueue, commandList->DeviceObject);
 }
     
 Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
@@ -251,7 +249,7 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 		AssertIfFailed(commandQueue->DeviceObject->Wait(commandQueueToWait->Fence.Get(), fenceToWait.FenceValue));
 	}
 
-    ID3D12CommandList *commandListsToExecute[255];
+    ID3D12CommandList* commandListsToExecute[255];
 
     for (int32_t i = 0; i < commandListCount; i++)
 	{
@@ -262,6 +260,12 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
     auto fence = CreateCommandQueueFence(commandQueue);
 
     UpdateCommandAllocatorFence(commandQueue);
+    
+    for (int32_t i = 0; i < commandListCount; i++)
+	{
+        auto commandList = (Direct3D12CommandList*)commandLists[i];
+        PushFreeCommandList(commandList->CommandQueue, commandList->DeviceObject);
+    }
 
     return fence;
 }
@@ -292,7 +296,18 @@ void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
     printf("AFter fence wait\n");
 }
 
-void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
+void Direct3D12GraphicsService::FreeTexture(void* texturePointer)
+{
+    auto texture = (Direct3D12Texture*)texturePointer;
+
+    if (!texture->IsPresentTexture)
+    {
+        printf("Delete Texture\n");
+        delete texture;
+    }
+}
+
+void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
     auto window = (Win32Window*)windowPointer;
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
@@ -300,7 +315,7 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 
-    if (options.Width == 0 || options.Height == 0)
+    if (options->Width == 0 || options->Height == 0)
     {
         auto windowRenderSize = Native_GetWindowRenderSize(window);
         swapChainDesc.Width = windowRenderSize.Width;
@@ -308,8 +323,8 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
     }
     else
     {
-        swapChainDesc.Width = options.Width;
-        swapChainDesc.Height = options.Height;
+        swapChainDesc.Width = options->Width;
+        swapChainDesc.Height = options->Height;
     }
 
     // TODO: Handle options!

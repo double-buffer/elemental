@@ -4,9 +4,9 @@
 
 #include "VulkanGraphicsService.h"
 
-VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
+VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
 {
-    _graphicsDiagnostics = options.GraphicsDiagnostics;
+    _graphicsDiagnostics = options->GraphicsDiagnostics;
 
     AssertIfFailed(volkInitialize());
 
@@ -17,7 +17,7 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
 
     createInfo.pApplicationInfo = &appInfo;
 
-    if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
         const char* layers[] =
         {
@@ -61,7 +61,7 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
 
     volkLoadInstance(_vulkanInstance);
     
-    if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
         VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
         createInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
@@ -119,7 +119,7 @@ void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* grap
     }
 }
 
-void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
+void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
     printf("Create Vulkan Device\n");
 
@@ -138,7 +138,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
         vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
         vkGetPhysicalDeviceMemoryProperties(devices[i], &deviceMemoryProperties);
 
-        if (deviceProperties.deviceID == options.DeviceId)
+        if (deviceProperties.deviceID == options->DeviceId)
         {
             physicalDevice = devices[i];
             foundDevice = true;
@@ -309,7 +309,12 @@ void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
 
 }
 
-void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options)
+void VulkanGraphicsService::FreeTexture(void* texturePointer)
+{
+
+}
+
+void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
     return nullptr;
 }

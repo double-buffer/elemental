@@ -5,7 +5,7 @@ class BaseGraphicsService
 {
 public:
     virtual void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) = 0;
-    virtual void* CreateGraphicsDevice(GraphicsDeviceOptions options) = 0;
+    virtual void* CreateGraphicsDevice(GraphicsDeviceOptions* options) = 0;
     virtual void FreeGraphicsDevice(void* graphicsDevicePointer) = 0;
     virtual GraphicsDeviceInfo GetGraphicsDeviceInfo(void* graphicsDevicePointer) = 0;
     
@@ -20,8 +20,10 @@ public:
 
     virtual Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) = 0;
     virtual void WaitForFenceOnCpu(Fence fence) = 0;
+    
+    virtual void FreeTexture(void* texturePointer) = 0;
 
-    virtual void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions options) = 0;
+    virtual void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options) = 0;
     virtual void FreeSwapChain(void* swapChainPointer) = 0;
     virtual void ResizeSwapChain(void* swapChainPointer, int width, int height) = 0;
     virtual void* GetSwapChainBackBufferTexture(void* swapChainPointer) = 0;
