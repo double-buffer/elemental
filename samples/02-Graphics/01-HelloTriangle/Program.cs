@@ -44,7 +44,7 @@ applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {gr
 
 using var swapChain = graphicsService.CreateSwapChain(window, commandQueue, new SwapChainOptions
 {
-
+    Format = SwapChainFormat.HighDynamicRange
 });
 
 var currentRenderSize = applicationService.GetWindowRenderSize(window);

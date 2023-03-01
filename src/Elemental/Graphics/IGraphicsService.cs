@@ -111,6 +111,7 @@ public interface IGraphicsService
     /// <param name="commandQueue"><see cref="CommandQueue" /> object that will be used to present the swap chain.</param>
     /// <param name="options">Optional parameters used by the swap chain creation.</param> 
     /// <returns>SwapChain handle.</returns> 
+    [PlatformMethodOverride] 
     SwapChain CreateSwapChain(NativeWindow window, CommandQueue commandQueue, in SwapChainOptions options = default);
 
     /// <summary>

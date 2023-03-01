@@ -109,11 +109,18 @@ enum TextureFormat
     TextureFormat_Rgba8UnormSrgb = 1
 };
 
+enum SwapChainFormat
+{
+    SwapChainFormat_Default = 0,
+    SwapChainFormat_HighDynamicRange = 1
+};
+
 struct SwapChainOptions
 {
     int32_t Width;
     int32_t Height;
-    enum TextureFormat TextureFormat;
+    enum SwapChainFormat Format;
+    int32_t MaximumFrameLatency;
 };
 
 struct RenderPassRenderTarget

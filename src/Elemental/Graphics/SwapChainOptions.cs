@@ -12,7 +12,8 @@ public readonly record struct SwapChainOptions
     {
         Width = 0;
         Height = 0;
-        TextureFormat = TextureFormat.Rgba8UnormSrgb;
+        Format = SwapChainFormat.Default;
+        MaximumFrameLatency = 2;
     }
 
     /// <summary>
@@ -28,11 +29,23 @@ public readonly record struct SwapChainOptions
     public int Height { get; init; }
 
     /// <summary>
-    /// Texture format of the <see cref="SwapChain" />.
+    /// Format of the <see cref="SwapChain" />.
     /// </summary>
-    /// <value>Texture format of the swap chain.</value>
-    // TODO: Provide another enum so that we cannot set the wrong format
-    public TextureFormat TextureFormat { get; init; }
+    /// <value>Format of the swap chain.</value>
+    public SwapChainFormat Format { get; init; }
 
-    // TODO: Don't provide a render buffer count parameter but a frame latency instead
+    /// <summary>
+    /// Maximum frame latency of the <see cref="SwapChain" />.
+    /// This value represents the maximum number of back buffers that can be
+    /// submitted at the same time. Maximum value is 3 and minimum is 1.
+    /// Default value is 2.
+    /// </summary>
+    /// <value>Maximum frame latency.</value>
+    /// <remarks>
+    /// Setting this value to 1 can reduce latency but reduce the ability for the
+    /// CPU and GPU to work in parallel. 
+    /// </remarks>
+    public int MaximumFrameLatency { get; init; }
+
+    // TODO: Provide options for VRR
 }

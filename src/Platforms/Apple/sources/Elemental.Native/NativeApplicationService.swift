@@ -1,6 +1,8 @@
 import Cocoa
 import NativeElemental
 
+// TODO: Split AppKit specific code! 
+
 @_cdecl("Native_FreeNativePointer")
 public func freeNativePointer(pointer: UnsafeRawPointer) {
     pointer.deallocate()

@@ -175,10 +175,8 @@ public func executeCommandLists(commandQueuePointer: UnsafeRawPointer, commandLi
             let commandList = MetalCommandList.fromPointer(commandLists[i])
 
             if (i == commandListCount - 1) {
-                // TODO: Atomic inc with https://github.com/apple/swift-atomics
-                fenceValue = commandQueue.fenceValue
+                fenceValue = commandQueue.fenceValue.loadThenWrappingIncrement(ordering: .relaxed)
                 commandList.deviceObject.encodeSignalEvent(commandQueue.fence, value: fenceValue)
-                commandQueue.fenceValue = commandQueue.fenceValue + 1
             }
 
             commandList.deviceObject.commit()
@@ -198,7 +196,7 @@ public func waitForFenceOnCpu(fence: Fence) {
         let commandQueueToWait = MetalCommandQueue.fromPointer(fence.CommandQueuePointer)
 
         if (commandQueueToWait.fence.signaledValue < fence.FenceValue) {
-            // TODO: Review that?
+            // HACK: Review that?
             let group = DispatchGroup()
             group.enter()
 
@@ -225,24 +223,30 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
         metalView.frame = contentView.frame
         contentView.addSubview(metalView)
 
-        // TODO: Can we use something else to apply the contrains?
+        // HACK: Can we use something else to apply the contrains?
         contentView.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[metalView]|", options: [], metrics: nil, views: ["metalView" : metalView]))
         contentView.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[metalView]|", options: [], metrics: nil, views: ["metalView" : metalView]))
 
-        // TODO: Check options
-        let frameLatency = 2
-        let renderSize = getWindowRenderSize(windowPointer)
+        var renderSize = getWindowRenderSize(windowPointer)
+
+        if (options.Width != 0) {
+            renderSize.Width = options.Width
+        }
+        
+        if (options.Height != 0) {
+            renderSize.Height = options.Height
+        }
 
         let metalLayer = metalView.metalLayer
         metalLayer.device = commandQueue.metalDevice
-        metalLayer.pixelFormat = .bgra8Unorm_srgb
+        metalLayer.pixelFormat = options.Format == SwapChainFormat_HighDynamicRange ? .rgba16Float : .bgra8Unorm_srgb
         metalLayer.framebufferOnly = true
         metalLayer.allowsNextDrawableTimeout = true
         metalLayer.displaySyncEnabled = true
         metalLayer.maximumDrawableCount = 3
         metalLayer.drawableSize = CGSize(width: Int(renderSize.Width), height: Int(renderSize.Height))
 
-        let presentSemaphore = DispatchSemaphore.init(value: frameLatency);
+        let presentSemaphore = DispatchSemaphore.init(value: Int(options.MaximumFrameLatency));
 
         let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer, commandQueue, presentSemaphore)
         return swapChain.toPointer()
@@ -286,7 +290,7 @@ public func presentSwapChain(swapChainPointer: UnsafeRawPointer) {
     autoreleasepool {
         let swapChain = MetalSwapChain.fromPointer(swapChainPointer)
 
-        // TODO: Can we avoid creating an empty command buffer?
+        // HACK: Can we avoid creating an empty command buffer?
         guard let commandBuffer = swapChain.commandQueue.deviceObject.makeCommandBufferWithUnretainedReferences() else {
             print("presentSwapChain: Error while creating command buffer object.")
             return
@@ -352,11 +356,10 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
             commandList.commandEncoder = nil
         }
 
-        // TODO: There is a memory leak when encoding more than one render pass with drawable
+        // BUG: There is a memory leak when encoding more than one render pass with drawable
         let renderPassDescriptor = renderPassDescriptorPointer.pointee
         let metalRenderPassDescriptor = MTLRenderPassDescriptor()
 
-        // TODO: Depth buffer
         if (renderPassDescriptor.RenderTarget0.HasValue) {
             initRenderPassColorDescriptor(metalRenderPassDescriptor.colorAttachments[0], renderPassDescriptor.RenderTarget0.Value)
         }
@@ -377,6 +380,8 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
             print("beginRenderPass: Render command encoder creation failed.")
             return
         }
+        
+        // TODO: Depth buffer
 
         commandList.commandEncoder = renderCommandEncoder
 

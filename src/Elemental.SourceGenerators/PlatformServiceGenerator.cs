@@ -220,14 +220,16 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         foreach (var method in platformService.MethodList)
         {
             var methodName = method.Name;
+            var isOverride = false;
 
             if (method.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformMethodOverrideAttribute"))
             {
                 methodName += "Implementation";
+                isOverride = true;
             }
 
             sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-            sourceCode.AppendLine($"public unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))})");
+            sourceCode.AppendLine($"{(!isOverride ? "public" : "private")} unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))})");
             sourceCode.AppendLine("{");
 
             var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformNativePointerAttribute");

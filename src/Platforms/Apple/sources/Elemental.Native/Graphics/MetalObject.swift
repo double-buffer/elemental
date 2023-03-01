@@ -18,7 +18,6 @@ public class MetalObject<T: AnyObject, TMetal> {
     }
 
     public static func release(_ pointer: UnsafeRawPointer) {
-        //Unmanaged<T>.fromOpaque(pointer).takeRetainedValue()
         Unmanaged<T>.fromOpaque(pointer).release()
     }
 

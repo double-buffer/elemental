@@ -1,5 +1,6 @@
-import Cocoa
+#if canImport(AppKit)
 import QuartzCore.CAMetalLayer
+import Cocoa
 
 class MacOSMetalView: NSView, MetalView {
     @available(*, unavailable) public required init?(coder: NSCoder) { fatalError() }
@@ -24,3 +25,4 @@ class MacOSMetalView: NSView, MetalView {
     public override func updateLayer() {
     }
 }
+#endif

@@ -19,7 +19,7 @@ struct Direct3D12GraphicsDevice : BaseGraphicsObject
     ComPtr<ID3D12Device10> Device;
     DXGI_ADAPTER_DESC3 AdapterDescription;
 
-    // TODO: This is temporary, will be refactored later!
+    // HACK: This is temporary, will be refactored later!
     ComPtr<ID3D12DescriptorHeap> RtvDescriptorHeap;
     uint32_t RtvDescriptorHandleSize;
     uint32_t CurrentRtvDescriptorOffset;

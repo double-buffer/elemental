@@ -22,7 +22,7 @@ public readonly record struct RenderPassRenderTarget
     // - LoadAction (Discard, Load) clear is implictly declared with the color
     // - StoreAction (Discard, Store)
 
-    // - Those could be store in a textureview?
+    // - Those could be stored in a textureview?
     // - level
     // - slice
     // - depthplace

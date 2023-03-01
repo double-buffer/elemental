@@ -3,7 +3,7 @@
 
 Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions options)
 {
-    // TODO: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
+    // HACK: For the moment we don't use ID3D12SDKConfiguration1 but we should so we can
     // select the SDK version without setting windows developer mode.
     // See: https://github.com/microsoft/DirectX-Specs/blob/master/d3d/IndependentDevices.md
 
@@ -35,8 +35,6 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions opti
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.GetAddressOf())));
 
     _graphicsDiagnostics = options.GraphicsDiagnostics;
-
-    // TODO: Setup debug callback!
 }
 
 Direct3D12GraphicsService::~Direct3D12GraphicsService()
@@ -118,7 +116,6 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
         return nullptr;
     }
 
-    // TODO: 
     auto graphicsDevice = new Direct3D12GraphicsDevice(this);
     graphicsDevice->Device = device;
     graphicsDevice->AdapterDescription = adapterDescription;
@@ -139,10 +136,9 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions opti
         }
     }
 
-    // TODO: We need to have a kind of manager for that with maybe a freeslot list?
-    // TODO: This is temporary!
+    // HACK: We need to have a kind of manager for that with maybe a freeslot list?
 	D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc = {};
-	rtvDescriptorHeapDesc.NumDescriptors = 1000; //TODO: Change that
+	rtvDescriptorHeapDesc.NumDescriptors = 1000; //HACK: Change that
 	rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
@@ -243,7 +239,7 @@ void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
     
 Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
-    // TODO: Review and refactor all static stack alloc here
+    // HACK: Review and refactor all static stack alloc here
 
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
@@ -337,7 +333,6 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));  
     AssertIfFailed(_dxgiFactory->MakeWindowAssociation((HWND)window->WindowHandle, DXGI_MWA_NO_ALT_ENTER)); 
  
-    // TODO: Check that parameter
     // TODO: Support Fullscreen exclusive in the future
     // TODO: Support VRR
 	swapChain->DeviceObject->SetMaximumFrameLatency(2);
