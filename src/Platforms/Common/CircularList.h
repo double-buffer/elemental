@@ -25,8 +25,6 @@ public:
     void GetCurrentItemPointerAndMove(T** value)
     {
         auto localIndex = InterlockedIncrement(&_currentIndex) % _maxSize;
-
-        printf("Localindex: %d\n", localIndex);
         *value = &_data[localIndex];
     }
 

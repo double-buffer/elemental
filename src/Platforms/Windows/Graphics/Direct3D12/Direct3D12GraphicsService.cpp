@@ -279,21 +279,17 @@ void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
         _globalFenceEvent = CreateEvent(nullptr, false, false, nullptr);
     }
 
-    printf("Before fence wait\n");
-
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue) 
     {
         commandQueueToWait->LastCompletedFenceValue = max(commandQueueToWait->LastCompletedFenceValue, commandQueueToWait->Fence->GetCompletedValue());
     }
 
-    if (commandQueueToWait->LastCompletedFenceValue <= fence.FenceValue)
+    if (commandQueueToWait->LastCompletedFenceValue < fence.FenceValue)
 	{
         printf("Waiting for fence...\n");
         commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
 		WaitForSingleObject(_globalFenceEvent, INFINITE);
 	}
-    
-    printf("AFter fence wait\n");
 }
 
 void Direct3D12GraphicsService::FreeTexture(void* texturePointer)
@@ -302,7 +298,6 @@ void Direct3D12GraphicsService::FreeTexture(void* texturePointer)
 
     if (!texture->IsPresentTexture)
     {
-        printf("Delete Texture\n");
         delete texture;
     }
 }
@@ -408,7 +403,6 @@ void* Direct3D12GraphicsService::GetSwapChainBackBufferTexture(void* swapChainPo
 
 void Direct3D12GraphicsService::PresentSwapChain(void* swapChainPointer)
 {
-    printf("Present (%d)\n", GetThreadId());
     auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
 	AssertIfFailed(swapChain->DeviceObject->Present(1, 0));
     
@@ -608,17 +602,11 @@ ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Di
 
         if (commandAllocatorPoolItem->Allocator == nullptr)
         {
-            // TODO: Get a new allocator from the pool and reset it if found
-
-            printf("Creating CommandAllocator...(%d)\n", GetThreadId());
             AssertIfFailed(graphicsDevice->Device->CreateCommandAllocator(commandQueue->CommandListType, IID_PPV_ARGS(commandAllocatorPoolItem->Allocator.ReleaseAndGetAddressOf())));
 
         }
         else
         {
-            // TODO: Check fence
-            printf("Resetting CommandAllocator...%d(Fence: %d) %d\n", commandAllocatorPoolItem->Allocator.Get(), commandAllocatorPoolItem->Fence.FenceValue, GetThreadId());
-
             if (commandAllocatorPoolItem->Fence.FenceValue > 0)
             {
                 WaitForFenceOnCpu(commandAllocatorPoolItem->Fence);
@@ -659,7 +647,6 @@ ComPtr<ID3D12GraphicsCommandList7> Direct3D12GraphicsService::GetCommandList(Dir
 
     if (!commandQueue->AvailableCommandLists.GetItem(&commandList))
     {
-        printf("Creating CommandList...\n");
         AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
 
         return commandList;

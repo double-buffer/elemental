@@ -12,7 +12,7 @@ struct CommandAllocatorPoolItem
 
 struct Direct3D12GraphicsDevice : BaseGraphicsObject
 {
-    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(10) 
+    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(64) 
     {
     }
 
