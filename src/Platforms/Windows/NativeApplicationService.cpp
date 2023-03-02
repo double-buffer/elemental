@@ -1,9 +1,11 @@
 #include "WindowsCommon.h"
 #include "Libs/Win32DarkMode/DarkMode.h"
 #include "../Common/Elemental.h"
-#include "../Common/StringConverters.h"
+#include "../Common/SystemFunctions.h"
 #include "Win32Application.h"
 #include "Win32Window.h"
+
+// HACK: Remove that
 #include <map>
 
 void ProcessMessages(Win32Application* application);

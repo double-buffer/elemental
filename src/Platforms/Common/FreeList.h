@@ -2,81 +2,53 @@
 #include <stdint.h>
 
 template<typename T>
-struct FreeListNode
-{
-    FreeListNode(T data)
-    {
-        Data = data;
-        Next = nullptr;
-    }
-
-    T Data;
-    FreeListNode *Next;
-};
-
-template<typename T>
 class FreeList
 {
 public:
-    FreeList()
+    FreeList() : FreeList(64)
     {
-        _rootNode = nullptr;
+    }
+
+    FreeList(uint32_t maxSize)
+    {
+        _maxSize = maxSize;
+        _currentIndex = 0;
+        _data = new T[maxSize];
+
+        for (uint32_t i = 0; i < maxSize; i++)
+        {
+            _data[i] = T();
+        }
     }
 
     ~FreeList()
     {
-        DeleteNode(_rootNode);
+        delete[] _data;
     }
-
+    
     void Add(T value)
     {
-        auto newRootNode = new FreeListNode(value);
-        newRootNode->Next = _rootNode;
+        printf("Add\n");
 
-        if (InterlockedCompareExchangePointer((PVOID*)&_rootNode, newRootNode, newRootNode->Next) == newRootNode->Next)
-        {
-            return;
-        }
-
-        printf("Failed to add freelist node\n");
-
-        // TODO: Do a standard lock
+        assert(_currentIndex < _maxSize);
+        _data[_currentIndex++] = value;
     }
 
     bool GetItem(T* value)
-    {
-        auto localRootNode = _rootNode;
+    { 
+        printf("Get\n");
 
-        if (localRootNode == nullptr)
+        if (_currentIndex > 0)
         {
-            return false;
-        }
-
-        if (InterlockedCompareExchangePointer((PVOID*)&_rootNode, _rootNode->Next, localRootNode) == localRootNode)
-        {
-            *value = localRootNode->Data;
-
-            delete localRootNode;
+            *value = _data[_currentIndex--];
             return true;
         }
-        
-        // TODO: Do a standard lock
-        // SEE: https://github.com/microsoft/referencesource/blob/master/mscorlib/system/collections/Concurrent/ConcurrentStack.cs
-        printf("Failed to get Item freelist node\n");
+
         return false;
     }
 
 private:
-    FreeListNode<T>* _rootNode;
-
-    void DeleteNode(FreeListNode<T>* node)
-    {
-        auto nextNode = node->Next;
-        delete node;
-
-        if (nextNode != nullptr)
-        {
-            DeleteNode(nextNode);
-        }
-    }
+    T* _data;
+    uint32_t _maxSize;
+    uint64_t _currentIndex;
 };

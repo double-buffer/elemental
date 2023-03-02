@@ -28,8 +28,8 @@ public:
         *value = &_data[localIndex];
     }
 
-private:
     T* _data;
     uint32_t _maxSize;
+private:
     uint64_t _currentIndex;
 };

@@ -640,24 +640,56 @@ void Direct3D12GraphicsService::UpdateCommandAllocatorFence(Direct3D12CommandQue
 
     commandAllocatorCache.DirectAllocator->Fence = fence;
 }
-    
+
+uint32_t _clCounter = 0;
+
 ComPtr<ID3D12GraphicsCommandList7> Direct3D12GraphicsService::GetCommandList(Direct3D12CommandQueue* commandQueue)
 {
-    ComPtr<ID3D12GraphicsCommandList7> commandList;
+    CommandListPoolItem* commandListPoolItem;
+    commandQueue->GraphicsDevice->DirectCommandListsPool.GetCurrentItemPointerAndMove(&commandListPoolItem);
 
-    if (!commandQueue->AvailableCommandLists.GetItem(&commandList))
+    if (commandListPoolItem->CommandList == nullptr)
     {
-        AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
+        printf("Create new command List %d...\n", _clCounter++);
+        AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandListPoolItem->CommandList.GetAddressOf())));
 
-        return commandList;
+        commandListPoolItem->IsUsed = true;
     }
+    else
+    {
+        if (commandListPoolItem->IsUsed)
+        {
+            printf("WAIIIIIT\n");
+            ComPtr<ID3D12GraphicsCommandList7> commandList;
+            AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
 
-    return commandList;
-}
+            return commandList;
+            // TODO: use semaphore?
+        }
+    }
     
+    return commandListPoolItem->CommandList;
+}
+
 void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList)
 {
-    commandQueue->AvailableCommandLists.Add(commandList);
+    CommandListPoolItem* commandListPoolItem = nullptr;
+
+    // HACK: Fix this, we need to avoid a loop here. Store the pool item in the object
+    for (uint32_t i = 0; i < commandQueue->GraphicsDevice->DirectCommandListsPool._maxSize; i++)
+    {
+        auto item = &commandQueue->GraphicsDevice->DirectCommandListsPool._data[i];
+
+        if (item->CommandList == commandList)
+        {
+            commandListPoolItem = item;
+        }
+    }
+
+    if (commandListPoolItem != nullptr)
+    {
+        commandListPoolItem->IsUsed = false;
+    }
 }
     
 Fence Direct3D12GraphicsService::CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue)

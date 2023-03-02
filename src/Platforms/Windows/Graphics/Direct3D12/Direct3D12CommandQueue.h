@@ -14,6 +14,4 @@ struct Direct3D12CommandQueue : Direct3D12BaseGraphicsObject
     ComPtr<ID3D12Fence1> Fence;
     uint64_t FenceValue = 0;
     uint64_t LastCompletedFenceValue = 0;
-
-    FreeList<ComPtr<ID3D12GraphicsCommandList7>> AvailableCommandLists;
 };

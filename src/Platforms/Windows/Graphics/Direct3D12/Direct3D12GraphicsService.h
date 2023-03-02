@@ -3,7 +3,6 @@
 #include "../../../Common/BaseGraphicsService.h"
 #include "../../../Common/BaseGraphicsObject.h"
 #include "../../../Common/SystemFunctions.h"
-#include "../../../Common/StringConverters.h"
 #include "../../../Common/FreeList.h"
 
 #include "../Win32Window.h"
@@ -72,5 +71,7 @@ private:
 NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
 
-// TODO: Remove map
+
+// HACK: Remove map
+#include <map>
 thread_local std::map<uint32_t, DeviceCommandAllocators> CommandAllocators;

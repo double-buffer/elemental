@@ -6,7 +6,7 @@
 
 #include "../BaseGraphicsService.h"
 #include "../BaseGraphicsObject.h"
-#include "../StringConverters.h"
+#include "../SystemFunctions.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #define VOLK_IMPLEMENTATION

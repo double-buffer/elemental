@@ -1,8 +1,6 @@
 #pragma once
 #include "WindowsCommon.h"
 #include "../../../Common/CircularList.h"
-#include <vector>
-#include <map>
 
 struct CommandAllocatorPoolItem
 {
@@ -10,9 +8,15 @@ struct CommandAllocatorPoolItem
     Fence Fence;
 };
 
+struct CommandListPoolItem
+{
+    ComPtr<ID3D12GraphicsCommandList7> CommandList;
+    bool IsUsed;
+};
+
 struct Direct3D12GraphicsDevice : BaseGraphicsObject
 {
-    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(64) 
+    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(64), DirectCommandListsPool(64)
     {
     }
 
@@ -26,12 +30,14 @@ struct Direct3D12GraphicsDevice : BaseGraphicsObject
 
     CircularList<CommandAllocatorPoolItem> DirectCommandAllocatorsPool;
     uint64_t CommandAllocationGeneration = 0;
+
+    CircularList<CommandListPoolItem> DirectCommandListsPool;
 };
 
 struct DeviceCommandAllocators
 {
     uint64_t Generation = 0;
-    CommandAllocatorPoolItem *DirectAllocator = nullptr;
+    CommandAllocatorPoolItem* DirectAllocator = nullptr;
     CommandAllocatorPoolItem* ComputeAllocator = nullptr;
     CommandAllocatorPoolItem* CopyAllocator = nullptr;
 
