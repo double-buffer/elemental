@@ -5,12 +5,14 @@
 #include "../../../Common/SystemFunctions.h"
 #include "../../../Common/FreeList.h"
 
+struct Direct3D12GraphicsDevice;
+
 #include "../Win32Window.h"
-#include "Direct3D12GraphicsDevice.h"
 #include "Direct3D12CommandQueue.h"
 #include "Direct3D12CommandList.h"
 #include "Direct3D12Texture.h"
 #include "Direct3D12SwapChain.h"
+#include "Direct3D12GraphicsDevice.h"
 
 class Direct3D12GraphicsService : BaseGraphicsService
 {
@@ -61,8 +63,8 @@ private:
 
     ComPtr<ID3D12CommandAllocator> GetCommandAllocator(Direct3D12CommandQueue* commandQueue);
     void UpdateCommandAllocatorFence(Direct3D12CommandQueue* commandQueue);
-    ComPtr<ID3D12GraphicsCommandList7> GetCommandList(Direct3D12CommandQueue* commandQueue);
-    void PushFreeCommandList(Direct3D12CommandQueue* commandQueue, ComPtr<ID3D12GraphicsCommandList7> commandList);
+    Direct3D12CommandList* GetCommandList(Direct3D12CommandQueue* commandQueue);
+    void PushFreeCommandList(Direct3D12CommandQueue* commandQueue, Direct3D12CommandList* commandList);
     Fence CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue);
 
     void CreateSwapChainBackBuffers(Direct3D12SwapChain* swapChain);

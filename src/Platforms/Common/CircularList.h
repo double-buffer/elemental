@@ -5,7 +5,7 @@ template<typename T>
 class CircularList
 {
 public:
-    CircularList(uint32_t maxSize)
+    CircularList(uint32_t maxSize, T defaultValue = T())
     {
         _maxSize = maxSize;
         _currentIndex = 0;
@@ -13,7 +13,7 @@ public:
 
         for (uint32_t i = 0; i < maxSize; i++)
         {
-            _data[i] = T();
+            _data[i] = defaultValue;
         }
     }
 
@@ -28,8 +28,8 @@ public:
         *value = &_data[localIndex];
     }
 
+private:
     T* _data;
     uint32_t _maxSize;
-private:
     uint64_t _currentIndex;
 };

@@ -10,13 +10,20 @@ struct CommandAllocatorPoolItem
 
 struct CommandListPoolItem
 {
-    ComPtr<ID3D12GraphicsCommandList7> CommandList;
-    bool IsUsed;
+    Direct3D12CommandList* CommandList;
+
+    ~CommandListPoolItem()
+    {
+        if (CommandList)
+        {
+            delete CommandList;
+        }
+    }
 };
 
 struct Direct3D12GraphicsDevice : BaseGraphicsObject
 {
-    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(64), DirectCommandListsPool(64)
+    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(64), DirectCommandListsPool(30)
     {
     }
 
