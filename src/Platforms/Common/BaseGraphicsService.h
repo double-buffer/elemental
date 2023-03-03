@@ -20,7 +20,8 @@ public:
 
     virtual Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) = 0;
     virtual void WaitForFenceOnCpu(Fence fence) = 0;
-    
+    virtual void ResetCommandAllocation(void* graphicsDevice) = 0;
+
     virtual void FreeTexture(void* texturePointer) = 0;
 
     virtual void* CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options) = 0;

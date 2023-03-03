@@ -50,6 +50,9 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial void Native_WaitForFenceOnCpu(Fence fence);
     
     [LibraryImport("Elemental.Native")]
+    internal static partial void Native_ResetCommandAllocation(GraphicsDevice graphicsDevice);
+    
+    [LibraryImport("Elemental.Native")]
     internal static partial SwapChain Native_CreateSwapChain(NativeWindow window, CommandQueue commandQueue, in SwapChainOptions options);
 
     [LibraryImport("Elemental.Native")]

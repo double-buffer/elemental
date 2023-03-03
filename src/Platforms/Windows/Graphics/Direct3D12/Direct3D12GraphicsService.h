@@ -3,7 +3,6 @@
 #include "../../../Common/BaseGraphicsService.h"
 #include "../../../Common/BaseGraphicsObject.h"
 #include "../../../Common/SystemFunctions.h"
-#include "../../../Common/FreeList.h"
 
 struct Direct3D12GraphicsDevice;
 
@@ -36,6 +35,7 @@ public:
     
     Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) override;
     void WaitForFenceOnCpu(Fence fence) override;
+    void ResetCommandAllocation(void* graphicsDevicePointer) override;
     
     void FreeTexture(void* texturePointer) override;
     
@@ -57,6 +57,7 @@ private:
     ComPtr<ID3D12InfoQueue1> _debugInfoQueue;
     ComPtr<IDXGIDebug1> _dxgiDebugInterface;
     HANDLE _globalFenceEvent;
+    uint32_t _currentDeviceInternalId = 0;
 
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);
     uint64_t GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription);

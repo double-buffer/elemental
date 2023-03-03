@@ -135,6 +135,12 @@ DllExport void Native_WaitForFenceOnCpu(Fence fence)
     graphicsService->WaitForFenceOnCpu(fence);
 }
     
+DllExport void Native_ResetCommandAllocation(void* graphicsDevicePointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
+    graphicsService->ResetCommandAllocation(graphicsDevicePointer);
+}
+    
 DllExport void Native_FreeTexture(void* texturePointer)
 {
     auto graphicsService = ((BaseGraphicsObject*)texturePointer)->GraphicsService;

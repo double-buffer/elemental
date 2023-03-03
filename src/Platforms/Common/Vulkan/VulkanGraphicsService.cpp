@@ -309,6 +309,11 @@ void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
 
 }
 
+void VulkanGraphicsService::ResetCommandAllocation(void* graphicsDevicePointer)
+{
+    printf("Reset\n");
+}
+
 void VulkanGraphicsService::FreeTexture(void* texturePointer)
 {
 

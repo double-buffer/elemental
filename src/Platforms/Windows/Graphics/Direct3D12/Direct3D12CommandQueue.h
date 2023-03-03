@@ -1,7 +1,6 @@
 #pragma once
 #include "WindowsCommon.h"
 #include "Direct3D12BaseGraphicsObject.h"
-#include "../../../Common/FreeList.h"
 
 struct Direct3D12CommandQueue : Direct3D12BaseGraphicsObject
 {

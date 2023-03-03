@@ -23,22 +23,34 @@ struct CommandListPoolItem
 
 struct Direct3D12GraphicsDevice : BaseGraphicsObject
 {
-    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), DirectCommandAllocatorsPool(64), DirectCommandListsPool(30)
+    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), 
+        DirectCommandAllocatorsPool(64), 
+        ComputeCommandAllocatorsPool(64), 
+        CopyCommandAllocatorsPool(64), 
+        DirectCommandListsPool(64),
+        ComputeCommandListsPool(64),
+        CopyCommandListsPool(64)
     {
+        InternalId = 0;
     }
 
+    uint32_t InternalId;
     ComPtr<ID3D12Device10> Device;
     DXGI_ADAPTER_DESC3 AdapterDescription;
 
+    CircularList<CommandAllocatorPoolItem> DirectCommandAllocatorsPool;
+    CircularList<CommandAllocatorPoolItem> ComputeCommandAllocatorsPool;
+    CircularList<CommandAllocatorPoolItem> CopyCommandAllocatorsPool;
+    uint64_t CommandAllocationGeneration = 0;
+
+    CircularList<CommandListPoolItem> DirectCommandListsPool;
+    CircularList<CommandListPoolItem> ComputeCommandListsPool;
+    CircularList<CommandListPoolItem> CopyCommandListsPool;
+    
     // HACK: This is temporary, will be refactored later!
     ComPtr<ID3D12DescriptorHeap> RtvDescriptorHeap;
     uint32_t RtvDescriptorHandleSize;
     uint32_t CurrentRtvDescriptorOffset;
-
-    CircularList<CommandAllocatorPoolItem> DirectCommandAllocatorsPool;
-    uint64_t CommandAllocationGeneration = 0;
-
-    CircularList<CommandListPoolItem> DirectCommandListsPool;
 };
 
 struct DeviceCommandAllocators

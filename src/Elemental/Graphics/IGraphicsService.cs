@@ -105,6 +105,12 @@ public interface IGraphicsService
     void WaitForFenceOnCpu(Fence fence);
 
     /// <summary>
+    /// Resets the command allocation to reuse memory. This method is called automatically by the present method.
+    /// </summary> 
+    /// <param name="graphicsDevice">Graphics device to free.</param>
+    void ResetCommandAllocation(GraphicsDevice graphicsDevice);
+
+    /// <summary>
     /// Creates a new swap chain that can be presented to the screen.
     /// </summary>
     /// <param name="window"><see cref="NativeWindow" /> object that will be used to host the swap chain.</param>
@@ -136,7 +142,8 @@ public interface IGraphicsService
     Texture GetSwapChainBackBufferTexture(SwapChain swapChain);
 
     /// <summary>
-    /// Presents the specified <see cref="SwapChain" /> to the screen. Notes that this function is not blocking. 
+    /// Presents the specified <see cref="SwapChain" /> to the screen. Notes that this function is not blocking.
+    /// This method calls automatically ResetCommandAllocation(). 
     /// </summary>
     /// <param name="swapChain">Swap chain to present.</param>
     void PresentSwapChain(SwapChain swapChain);

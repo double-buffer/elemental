@@ -36,6 +36,7 @@ public:
 
     Fence ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount) override;
     void WaitForFenceOnCpu(Fence fence) override;
+    void ResetCommandAllocation(void* graphicsDevicePointer) override;
 
     void FreeTexture(void* texturePointer) override;
 
