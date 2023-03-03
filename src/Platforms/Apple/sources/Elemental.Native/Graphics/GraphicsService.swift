@@ -208,6 +208,10 @@ public func waitForFenceOnCpu(fence: Fence) {
         }
     }
 }
+
+@_cdecl("Native_ResetCommandAllocation")
+public func resetCommandAllocation(graphicsDevicePointer: UnsafeRawPointer) {
+}
     
 @_cdecl("Native_CreateSwapChain")
 public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer: UnsafeRawPointer, optionsPointer: UnsafePointer<SwapChainOptions>) -> UnsafeMutableRawPointer? {

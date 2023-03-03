@@ -24,12 +24,12 @@ struct CommandListPoolItem
 struct Direct3D12GraphicsDevice : BaseGraphicsObject
 {
     Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), 
-        DirectCommandAllocatorsPool(64), 
-        ComputeCommandAllocatorsPool(64), 
-        CopyCommandAllocatorsPool(64), 
-        DirectCommandListsPool(64),
-        ComputeCommandListsPool(64),
-        CopyCommandListsPool(64)
+        DirectCommandAllocatorsPool(MAX_DIRECT3D12_COMMAND_ALLOCATORS), 
+        ComputeCommandAllocatorsPool(MAX_DIRECT3D12_COMMAND_ALLOCATORS), 
+        CopyCommandAllocatorsPool(MAX_DIRECT3D12_COMMAND_ALLOCATORS), 
+        DirectCommandListsPool(MAX_DIRECT3D12_COMMAND_LISTS),
+        ComputeCommandListsPool(MAX_DIRECT3D12_COMMAND_LISTS),
+        CopyCommandListsPool(MAX_DIRECT3D12_COMMAND_LISTS)
     {
         InternalId = 0;
     }

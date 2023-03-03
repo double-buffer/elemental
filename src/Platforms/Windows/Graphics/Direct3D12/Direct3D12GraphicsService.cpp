@@ -241,8 +241,6 @@ void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
     
 Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
-    // HACK: Review and refactor all static stack alloc here
-
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
 	for (int32_t i = 0; i < fenceToWaitCount; i++)
@@ -253,7 +251,7 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 		AssertIfFailed(commandQueue->DeviceObject->Wait(commandQueueToWait->Fence.Get(), fenceToWait.FenceValue));
 	}
 
-    ID3D12CommandList* commandListsToExecute[255];
+    ID3D12CommandList* commandListsToExecute[64];
 
     for (int32_t i = 0; i < commandListCount; i++)
 	{
@@ -261,8 +259,8 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 	}
 
 	commandQueue->DeviceObject->ExecuteCommandLists(commandListCount, commandListsToExecute);
-    auto fence = CreateCommandQueueFence(commandQueue);
 
+    auto fence = CreateCommandQueueFence(commandQueue);
     UpdateCommandAllocatorFence(commandQueue);
     
     for (int32_t i = 0; i < commandListCount; i++)
@@ -288,8 +286,9 @@ void Direct3D12GraphicsService::WaitForFenceOnCpu(Fence fence)
         commandQueueToWait->LastCompletedFenceValue = max(commandQueueToWait->LastCompletedFenceValue, commandQueueToWait->Fence->GetCompletedValue());
     }
 
-    if (commandQueueToWait->LastCompletedFenceValue < fence.FenceValue)
+    if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
 	{
+        printf("Wait for Fence on CPU...\n");
         commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
 		WaitForSingleObject(_globalFenceEvent, INFINITE);
 	}
@@ -331,12 +330,9 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
         swapChainDesc.Height = options->Height;
     }
 
-    // TODO: Handle options!
     // TODO: Support VRR
-    uint32_t renderBufferCount = 3;
-
-    swapChainDesc.BufferCount = renderBufferCount;
-    swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // ConvertTextureFormat(textureFormat, true);
+    swapChainDesc.BufferCount = 3;
+    swapChainDesc.Format = (options->Format == SwapChainFormat_HighDynamicRange) ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_B8G8R8A8_UNORM;
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -344,6 +340,7 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	swapChainDesc.SampleDesc = { 1, 0 };
 	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
+    // TODO: Support Fullscreen exclusive in the future
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapChainFullScreenDesc = {};
 	swapChainFullScreenDesc.Windowed = true;
 	
@@ -352,12 +349,11 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));  
     AssertIfFailed(_dxgiFactory->MakeWindowAssociation((HWND)window->WindowHandle, DXGI_MWA_NO_ALT_ENTER)); 
  
-    // TODO: Support Fullscreen exclusive in the future
-    // TODO: Support VRR
-	swapChain->DeviceObject->SetMaximumFrameLatency(2);
+	swapChain->DeviceObject->SetMaximumFrameLatency(options->MaximumFrameLatency);
     swapChain->CommandQueue = commandQueue;
 	swapChain->WaitHandle = swapChain->DeviceObject->GetFrameLatencyWaitableObject();
-    swapChain->RenderBufferCount = renderBufferCount;
+    swapChain->RenderBufferCount = swapChainDesc.BufferCount;
+    swapChain->Format = options->Format;
 
     CreateSwapChainBackBuffers(swapChain);
     return swapChain;
@@ -435,60 +431,27 @@ void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, Render
 
     commandList->CurrentRenderPassDescriptor = *renderPassDescriptor;
 
-    D3D12_RENDER_PASS_RENDER_TARGET_DESC renderTargetDescList[8];
+    D3D12_RENDER_PASS_RENDER_TARGET_DESC renderTargetDescList[4];
     uint32_t renderTargetDescCount = 0;
 
     if (renderPassDescriptor->RenderTarget0.HasValue)
 	{
-        Direct3D12Texture* texture = (Direct3D12Texture*)renderPassDescriptor->RenderTarget0.Value.TexturePointer;
-
-        // TODO: Do this only if not present texture
-        // TODO: Put that in an util function
-        D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
-        renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
-        renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
-        renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_COMMON;
-        renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-        renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
-        renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
-        renderTargetBarrier.pResource = texture->DeviceObject.Get();
-
-        D3D12_BARRIER_GROUP textureBarriersGroup;
-        textureBarriersGroup = {};
-        textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
-        textureBarriersGroup.NumBarriers = 1;
-        textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
-
-        commandList->DeviceObject->Barrier(1, &textureBarriersGroup);
-
-		D3D12_RENDER_PASS_RENDER_TARGET_DESC* renderTargetDesc = &renderTargetDescList[renderTargetDescCount++];
-        *renderTargetDesc = {};
-        renderTargetDesc->cpuDescriptor = texture->RtvDescriptor;
-
-        // TODO: Allow user code to customize
-        if (texture->IsPresentTexture)
-        {
-            renderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-            renderTargetDesc->EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-        }
-        else
-        {
-            renderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-            renderTargetDesc->EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-        }
-
-		if (renderPassDescriptor->RenderTarget0.Value.ClearColor.HasValue)
-		{
-            auto clearColor = renderPassDescriptor->RenderTarget0.Value.ClearColor.Value;
-
-            // TODO: Use Texture format
-			renderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-            renderTargetDesc->BeginningAccess.Clear.ClearValue.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // texture->ResourceDesc.Format;
-            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[0] = clearColor.X;
-            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[1] = clearColor.Y;
-            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[2] = clearColor.Z;
-            renderTargetDesc->BeginningAccess.Clear.ClearValue.Color[3] = clearColor.W;
-        }
+        InitRenderPassRenderTarget(commandList, &renderTargetDescList[renderTargetDescCount++], &renderPassDescriptor->RenderTarget0.Value);
+    }
+    
+    if (renderPassDescriptor->RenderTarget1.HasValue)
+	{
+        InitRenderPassRenderTarget(commandList, &renderTargetDescList[renderTargetDescCount++], &renderPassDescriptor->RenderTarget1.Value);
+    }
+    
+    if (renderPassDescriptor->RenderTarget2.HasValue)
+	{
+        InitRenderPassRenderTarget(commandList, &renderTargetDescList[renderTargetDescCount++], &renderPassDescriptor->RenderTarget2.Value);
+    }
+    
+    if (renderPassDescriptor->RenderTarget3.HasValue)
+	{
+        InitRenderPassRenderTarget(commandList, &renderTargetDescList[renderTargetDescCount++], &renderPassDescriptor->RenderTarget3.Value);
     }
 	
     D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* depthStencilDesc = nullptr;
@@ -589,15 +552,8 @@ uint64_t Direct3D12GraphicsService::GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescri
 ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Direct3D12CommandQueue* commandQueue)
 {
     auto graphicsDevice = commandQueue->GraphicsDevice;
-    auto deviceId = graphicsDevice->AdapterDescription.DeviceId;
 
-    // TODO: Replace the map
-    if (CommandAllocators.count(deviceId) == 0)
-    {
-        CommandAllocators[deviceId] = DeviceCommandAllocators();
-    }
-
-    DeviceCommandAllocators& commandAllocatorCache = CommandAllocators[deviceId];
+    DeviceCommandAllocators& commandAllocatorCache = CommandAllocators[graphicsDevice->InternalId];
 
     if (commandAllocatorCache.Generation != graphicsDevice->CommandAllocationGeneration)
     {
@@ -647,13 +603,12 @@ ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Di
 void Direct3D12GraphicsService::UpdateCommandAllocatorFence(Direct3D12CommandQueue* commandQueue)
 {
     auto graphicsDevice = commandQueue->GraphicsDevice;
-    auto deviceId = graphicsDevice->AdapterDescription.DeviceId;
 
     auto fence = Fence();
     fence.CommandQueuePointer = commandQueue;
     fence.FenceValue = commandQueue->FenceValue;
 
-    DeviceCommandAllocators& commandAllocatorCache = CommandAllocators[deviceId];
+    DeviceCommandAllocators& commandAllocatorCache = CommandAllocators[graphicsDevice->InternalId];
 
     if (commandQueue->CommandListType == D3D12_COMMAND_LIST_TYPE_COPY)
     {
@@ -694,7 +649,6 @@ Direct3D12CommandList* Direct3D12GraphicsService::GetCommandList(Direct3D12Comma
     if (commandListPoolItem->CommandList == nullptr)
     {
         auto commandList = new Direct3D12CommandList(commandQueue, this, commandQueue->GraphicsDevice);
-        printf("Create new command List %d...\n", _clCounter++);
         AssertIfFailed(commandQueue->GraphicsDevice->Device->CreateCommandList1(0, commandQueue->CommandListType, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList->DeviceObject.GetAddressOf())));
 
         commandList->IsUsed = true;
@@ -747,7 +701,7 @@ void Direct3D12GraphicsService::CreateSwapChainBackBuffers(Direct3D12SwapChain* 
 
     // TODO: Review that and refactor!
     D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-    rtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // ConvertTextureFormat(textureFormat);
+    rtvDesc.Format = (swapChain->Format == SwapChainFormat_HighDynamicRange) ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 	for (uint32_t i = 0; i < swapChain->RenderBufferCount; i++)
@@ -787,6 +741,58 @@ void Direct3D12GraphicsService::CreateSwapChainBackBuffers(Direct3D12SwapChain* 
 
 		graphicsDevice->Device->CreateRenderTargetView(backBuffer.Get(), &rtvDesc, swapChain->RenderBuffers[i]->RtvDescriptor);
 	}
+}
+    
+void Direct3D12GraphicsService::InitRenderPassRenderTarget(Direct3D12CommandList* commandList, D3D12_RENDER_PASS_RENDER_TARGET_DESC* renderPassRenderTargetDesc, RenderPassRenderTarget* renderTarget)
+{
+    auto texture = (Direct3D12Texture*)renderTarget->TexturePointer;
+
+    // TODO: Do this only if not present texture
+    // TODO: Put that in an util function
+    D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
+    renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
+    renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
+    renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_COMMON;
+    renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+    renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
+    renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
+    renderTargetBarrier.pResource = texture->DeviceObject.Get();
+
+    D3D12_BARRIER_GROUP textureBarriersGroup;
+    textureBarriersGroup = {};
+    textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+    textureBarriersGroup.NumBarriers = 1;
+    textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
+
+    commandList->DeviceObject->Barrier(1, &textureBarriersGroup);
+
+    *renderPassRenderTargetDesc = {};
+    renderPassRenderTargetDesc->cpuDescriptor = texture->RtvDescriptor;
+
+    // TODO: Allow user code to customize
+    if (texture->IsPresentTexture)
+    {
+        renderPassRenderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+        renderPassRenderTargetDesc->EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+    }
+    else
+    {
+        renderPassRenderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+        renderPassRenderTargetDesc->EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+    }
+
+    if (renderTarget->ClearColor.HasValue)
+    {
+        auto clearColor = renderTarget->ClearColor.Value;
+
+        // TODO: Use Texture format
+        renderPassRenderTargetDesc->BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+        renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // texture->ResourceDesc.Format;
+        renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[0] = clearColor.X;
+        renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[1] = clearColor.Y;
+        renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[2] = clearColor.Z;
+        renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[3] = clearColor.W;
+    }
 }
 
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)

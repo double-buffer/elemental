@@ -6,6 +6,10 @@
 
 struct Direct3D12GraphicsDevice;
 
+#define MAX_DIRECT3D12_GRAPHICS_DEVICES 64
+#define MAX_DIRECT3D12_COMMAND_ALLOCATORS 64
+#define MAX_DIRECT3D12_COMMAND_LISTS 64
+
 #include "../Win32Window.h"
 #include "Direct3D12CommandQueue.h"
 #include "Direct3D12CommandList.h"
@@ -69,12 +73,11 @@ private:
     Fence CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue);
 
     void CreateSwapChainBackBuffers(Direct3D12SwapChain* swapChain);
+
+    void InitRenderPassRenderTarget(Direct3D12CommandList* commandList, D3D12_RENDER_PASS_RENDER_TARGET_DESC* renderPassRenderTargetDesc, RenderPassRenderTarget* renderTarget);
 };
 
 NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
 
-
-// HACK: Remove map
-#include <map>
-thread_local std::map<uint32_t, DeviceCommandAllocators> CommandAllocators;
+thread_local DeviceCommandAllocators CommandAllocators[MAX_DIRECT3D12_GRAPHICS_DEVICES];

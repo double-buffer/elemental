@@ -16,7 +16,7 @@ struct Direct3D12SwapChain : Direct3D12BaseGraphicsObject
     Direct3D12CommandQueue* CommandQueue;
     HANDLE WaitHandle;
 
-    // TODO: Review and refactor
+    SwapChainFormat Format;
     Direct3D12Texture* RenderBuffers[3];
     uint32_t RenderBufferCount;
 };
