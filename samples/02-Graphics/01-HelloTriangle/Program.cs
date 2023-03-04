@@ -33,7 +33,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
-    //DeviceId = selectedGraphicsDevice.DeviceId
+    DeviceId = selectedGraphicsDevice.DeviceId
 });
 
 using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
@@ -68,8 +68,8 @@ applicationService.RunApplication(application, (status) =>
 
     graphicsService.WaitForSwapChainOnCpu(swapChain);
 
-    var threadCount = 5;
-    var commandListCount = 5;
+    var threadCount = 1;
+    var commandListCount = 1;
 
     var commandLists = new CommandList[threadCount * commandListCount];
 

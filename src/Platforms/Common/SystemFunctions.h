@@ -6,11 +6,6 @@
 #include "WindowsCommon.h"
 #endif
 
-void ThreadSleep(uint32_t milliSeconds)
-{
-    Sleep(milliSeconds);
-}
-
 std::wstring ConvertUtf8ToWString(unsigned char* source)
 {
     auto stringLength = std::string((char*)source).length();

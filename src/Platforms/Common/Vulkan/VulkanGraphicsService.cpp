@@ -266,17 +266,57 @@ GraphicsDeviceInfo VulkanGraphicsService::GetGraphicsDeviceInfo(void* graphicsDe
 
 void* VulkanGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
 {
-    return nullptr;
+    auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
+
+    auto commandQueue = new VulkanCommandQueue(this, graphicsDevice);
+    commandQueue->CommandQueueType = type;
+
+    auto queueFamilyIndex = graphicsDevice->RenderCommandQueueFamilyIndex;
+
+    if (type == CommandQueueType_Compute)
+    {
+        queueFamilyIndex = graphicsDevice->ComputeCommandQueueFamilyIndex;
+    }
+
+    else if (type == CommandQueueType_Copy)
+    {
+        queueFamilyIndex = graphicsDevice->CopyCommandQueueFamilyIndex;
+    }
+
+    commandQueue->FamilyIndex = queueFamilyIndex;
+
+    // TODO: Check count of VK Queues already created for this device
+    vkGetDeviceQueue(graphicsDevice->Device, queueFamilyIndex, 0, &commandQueue->DeviceObject);
+
+    VkSemaphoreTypeCreateInfo timelineCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    timelineCreateInfo.initialValue = 0;
+
+    VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    createInfo.pNext = &timelineCreateInfo;
+
+    AssertIfFailed(vkCreateSemaphore(graphicsDevice->Device, &createInfo, NULL, &commandQueue->TimelineSemaphore));
+    return commandQueue;
 }
 
 void VulkanGraphicsService::FreeCommandQueue(void* commandQueuePointer)
 {
-
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    
+    vkDestroySemaphore(commandQueue->GraphicsDevice->Device, commandQueue->TimelineSemaphore, nullptr);
+    delete commandQueue;
 }
 
 void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    
+    VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    nameInfo.objectType = VK_OBJECT_TYPE_QUEUE;
+    nameInfo.objectHandle = (uint64_t)commandQueue->DeviceObject;
+    nameInfo.pObjectName = (char*)label;
 
+    AssertIfFailed(vkSetDebugUtilsObjectNameEXT(commandQueue->GraphicsDevice->Device, &nameInfo)); 
 }
 
 void* VulkanGraphicsService::CreateCommandList(void* commandQueuePointer)

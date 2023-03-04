@@ -12,6 +12,9 @@
 #define VOLK_IMPLEMENTATION
 #include "Volk/volk.h"
 
+struct VulkanGraphicsDevice;
+
+#include "VulkanCommandQueue.h"
 #include "VulkanGraphicsDevice.h"
 
 class VulkanGraphicsService : BaseGraphicsService
