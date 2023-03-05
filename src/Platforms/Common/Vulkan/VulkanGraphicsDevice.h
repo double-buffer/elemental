@@ -12,6 +12,7 @@ struct VulkanGraphicsDevice : BaseGraphicsObject
     }
 
     VkDevice Device;
+    VkPhysicalDevice PhysicalDevice;
     VkPhysicalDeviceProperties DeviceProperties;
     VkPhysicalDeviceMemoryProperties DeviceMemoryProperties;
 

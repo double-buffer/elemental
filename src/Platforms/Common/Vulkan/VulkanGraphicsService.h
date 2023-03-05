@@ -15,6 +15,8 @@
 struct VulkanGraphicsDevice;
 
 #include "VulkanCommandQueue.h"
+#include "VulkanTexture.h"
+#include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
 
 class VulkanGraphicsService : BaseGraphicsService
@@ -60,6 +62,8 @@ private:
 
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties);
     VkDeviceQueueCreateInfo CreateDeviceQueueCreateInfo(uint32_t queueFamilyIndex, uint32_t count);
+
+    void CreateSwapChainBackBuffers(VulkanSwapChain* swapChain);
 };
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);

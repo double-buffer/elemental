@@ -154,9 +154,8 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     auto graphicsDevice = new VulkanGraphicsDevice(this);
 
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-
     VkQueueFamilyProperties queueFamilies[32];
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
 
     VkDeviceQueueCreateInfo queueCreateInfos[3];
@@ -182,6 +181,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
         }
     }
 
+    graphicsDevice->PhysicalDevice = physicalDevice;
     graphicsDevice->DeviceProperties = deviceProperties;
     graphicsDevice->DeviceMemoryProperties = deviceMemoryProperties;
 
@@ -356,17 +356,96 @@ void VulkanGraphicsService::ResetCommandAllocation(void* graphicsDevicePointer)
 
 void VulkanGraphicsService::FreeTexture(void* texturePointer)
 {
+    auto texture = (VulkanTexture*)texturePointer;
 
+    if (!texture->IsPresentTexture)
+    {
+        auto graphicsDevice = texture->GraphicsDevice;
+
+        vkDestroyImageView(graphicsDevice->Device, texture->ImageView, nullptr);
+        vkDestroyImage(graphicsDevice->Device, texture->DeviceObject, nullptr);
+
+        delete texture;    
+    }
 }
 
 void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
-    return nullptr;
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    auto swapChain = new VulkanSwapChain(this, graphicsDevice);
+    swapChain->CommandQueue = commandQueue;
+    swapChain->Format = options->Format;
+    swapChain->CurrentImageIndex = 0;
+
+    #ifdef _WINDOWS
+    auto window = (Win32Window*)windowPointer;
+    VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+    surfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
+    surfaceCreateInfo.hwnd = window->WindowHandle;
+
+    AssertIfFailed(vkCreateWin32SurfaceKHR(_vulkanInstance, &surfaceCreateInfo, nullptr, &swapChain->WindowSurface));
+    #endif
+
+    VkBool32 isPresentSupported;
+    AssertIfFailed(vkGetPhysicalDeviceSurfaceSupportKHR(graphicsDevice->PhysicalDevice, swapChain->CommandQueue->FamilyIndex, swapChain->WindowSurface, &isPresentSupported));
+    assert(isPresentSupported == 1);
+
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceCapabilities));
+
+    VkSwapchainCreateInfoKHR swapChainCreateInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+    swapChainCreateInfo.surface = swapChain->WindowSurface;
+    swapChainCreateInfo.minImageCount = 3;
+    swapChainCreateInfo.imageFormat = options->Format == SwapChainFormat_HighDynamicRange ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_B8G8R8A8_SRGB;
+    swapChainCreateInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    swapChainCreateInfo.imageArrayLayers = 1;
+    swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapChainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    swapChainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
+    swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapChainCreateInfo.flags = 0;
+    
+    if (options->Width == 0 || options->Height == 0)
+    {
+        auto windowRenderSize = Native_GetWindowRenderSize(window);
+        swapChainCreateInfo.imageExtent.width = windowRenderSize.Width;
+        swapChainCreateInfo.imageExtent.height = windowRenderSize.Height;
+    }
+    else
+    {
+        swapChainCreateInfo.imageExtent.width = options->Width;
+        swapChainCreateInfo.imageExtent.height = options->Height;
+    }
+
+    // TODO: Implement Latency await
+
+    AssertIfFailed(vkCreateSwapchainKHR(graphicsDevice->Device, &swapChainCreateInfo, nullptr, &swapChain->DeviceObject));
+
+    CreateSwapChainBackBuffers(swapChain);
+
+    //swapChain->BackBufferAcquireFence = VulkanCreateFence(this->graphicsDevice);
+    return swapChain;
 }
 
 void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
 {
+	auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    auto graphicsDevice = swapChain->GraphicsDevice;
 
+    //vkDestroyFence(this->graphicsDevice, swapChain->BackBufferAcquireFence, nullptr);
+
+    for (int i = 0; i < 3; i++)
+    {
+        vkDestroyImageView(graphicsDevice->Device, swapChain->BackBufferTextures[i]->ImageView, nullptr);
+        delete swapChain->BackBufferTextures[i];
+    }
+
+    vkDestroySwapchainKHR(swapChain->GraphicsDevice->Device, swapChain->DeviceObject, nullptr);
+    vkDestroySurfaceKHR(_vulkanInstance, swapChain->WindowSurface, nullptr);
+
+    delete swapChain;
 }
 
 void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
@@ -376,12 +455,24 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
 
 void* VulkanGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
 {
-    return nullptr;
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    return swapChain->BackBufferTextures[swapChain->CurrentImageIndex];
 }
 
 void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
 {
+    // TODO: Wait for the correct timeline semaphore value?
+    // Or just issue a barrier because the final buffer rendering and the present is done on the same queue
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
 
+    VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+    presentInfo.waitSemaphoreCount = 0;
+    // presentInfo.pWaitSemaphores = &releaseSemaphore;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &swapChain->DeviceObject;
+    presentInfo.pImageIndices = &swapChain->CurrentImageIndex;
+
+    AssertIfFailed(vkQueuePresentKHR(swapChain->CommandQueue->DeviceObject, &presentInfo));
 }
 
 void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
@@ -425,6 +516,39 @@ VkDeviceQueueCreateInfo VulkanGraphicsService::CreateDeviceQueueCreateInfo(uint3
     queueCreateInfo.queueFamilyIndex = queueFamilyIndex;
 
     return queueCreateInfo;
+}
+    
+void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChain)
+{
+    auto graphicsDevice = swapChain->GraphicsDevice;
+
+    uint32_t swapchainImageCount = 0;
+    VkImage swapchainImages[3];
+	AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, nullptr));
+	AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, swapchainImages));
+
+    auto format = swapChain->Format == SwapChainFormat_HighDynamicRange ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_B8G8R8A8_SRGB;
+
+    for (uint32_t i = 0; i < swapchainImageCount; i++)
+    {
+        auto backBufferTexture = new VulkanTexture(this, graphicsDevice);
+        backBufferTexture->DeviceObject = swapchainImages[i];
+        backBufferTexture->IsPresentTexture = true;
+
+        VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        createInfo.image = swapchainImages[i];
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = format;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkImageView view = nullptr;
+        AssertIfFailed(vkCreateImageView(graphicsDevice->Device, &createInfo, 0, &backBufferTexture->ImageView));    
+
+        swapChain->BackBufferTextures[i] = backBufferTexture;
+    }
 }
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
