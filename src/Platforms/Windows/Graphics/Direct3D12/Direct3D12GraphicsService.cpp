@@ -582,7 +582,6 @@ ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Di
         if (commandAllocatorPoolItem->Allocator == nullptr)
         {
             AssertIfFailed(graphicsDevice->Device->CreateCommandAllocator(commandQueue->CommandListType, IID_PPV_ARGS(commandAllocatorPoolItem->Allocator.ReleaseAndGetAddressOf())));
-
         }
         else
         {
@@ -626,8 +625,6 @@ void Direct3D12GraphicsService::UpdateCommandAllocatorFence(Direct3D12CommandQue
         commandAllocatorCache.DirectAllocator->Fence = fence;
     }
 }
-
-uint32_t _clCounter = 0;
 
 Direct3D12CommandList* Direct3D12GraphicsService::GetCommandList(Direct3D12CommandQueue* commandQueue)
 {

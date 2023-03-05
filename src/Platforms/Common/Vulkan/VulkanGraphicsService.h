@@ -14,7 +14,12 @@
 
 struct VulkanGraphicsDevice;
 
+#define MAX_VULKAN_GRAPHICS_DEVICES 64
+#define MAX_VULKAN_COMMAND_POOLS 64
+#define MAX_VULKAN_COMMAND_BUFFERS 16
+
 #include "VulkanCommandQueue.h"
+#include "VulkanCommandList.h"
 #include "VulkanTexture.h"
 #include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
@@ -59,11 +64,18 @@ private:
     GraphicsDiagnostics _graphicsDiagnostics;
     VkInstance _vulkanInstance = nullptr;
     VkDebugReportCallbackEXT _debugCallback = nullptr;
+    uint32_t _currentDeviceInternalId = 0;
 
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties);
     VkDeviceQueueCreateInfo CreateDeviceQueueCreateInfo(uint32_t queueFamilyIndex, uint32_t count);
+
+    VulkanCommandPoolItem* GetCommandPool(VulkanCommandQueue* commandQueue);
+    void UpdateCommandPoolFence(VulkanCommandQueue* commandQueue);
+    VulkanCommandList* GetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem);
 
     void CreateSwapChainBackBuffers(VulkanSwapChain* swapChain);
 };
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);
+
+thread_local VulkanDeviceCommandPools CommandPools[MAX_VULKAN_GRAPHICS_DEVICES];

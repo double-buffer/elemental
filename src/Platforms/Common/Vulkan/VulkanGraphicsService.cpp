@@ -181,6 +181,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
         }
     }
 
+    graphicsDevice->InternalId = InterlockedIncrement(&_currentDeviceInternalId) - 1;
     graphicsDevice->PhysicalDevice = physicalDevice;
     graphicsDevice->DeviceProperties = deviceProperties;
     graphicsDevice->DeviceMemoryProperties = deviceMemoryProperties;
@@ -251,7 +252,32 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
 void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
+    VulkanCommandPoolItem* item;
 
+    for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
+    {
+        graphicsDevice->DirectCommandPool.GetCurrentItemPointerAndMove(&item);
+
+        if (item->CommandPool != nullptr)
+        {
+            vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
+        }
+        
+        graphicsDevice->ComputeCommandPool.GetCurrentItemPointerAndMove(&item);
+
+        if (item->CommandPool != nullptr)
+        {
+            vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
+        }
+        
+        graphicsDevice->CopyCommandPool.GetCurrentItemPointerAndMove(&item);
+
+        if (item->CommandPool != nullptr)
+        {
+            vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
+        }
+    }
+    
     if (graphicsDevice->Device != nullptr)
     {
         vkDestroyDevice(graphicsDevice->Device, nullptr);
@@ -321,26 +347,53 @@ void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint
 
 void* VulkanGraphicsService::CreateCommandList(void* commandQueuePointer)
 {
-    return nullptr;
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    auto commandPool = GetCommandPool(commandQueue);
+    auto commandList = GetCommandList(commandQueue, commandPool);
+
+    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    AssertIfFailed(vkBeginCommandBuffer(commandList->DeviceObject, &beginInfo));
+
+    return commandList;
 }
 
 void VulkanGraphicsService::FreeCommandList(void* commandListPointer)
 {
-
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    
+    if (!commandList->IsFromCommandPool)
+    {
+        delete commandList;
+    }
 }
 
 void VulkanGraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
+    auto commandList = (VulkanCommandList*)commandListPointer;
 
+    VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    nameInfo.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER;
+    nameInfo.objectHandle = (uint64_t)commandList->DeviceObject;
+    nameInfo.pObjectName = (char*)label;
+
+    AssertIfFailed(vkSetDebugUtilsObjectNameEXT(commandList->GraphicsDevice->Device, &nameInfo));
 }
 
 void VulkanGraphicsService::CommitCommandList(void* commandListPointer)
 {
-
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    AssertIfFailed(vkEndCommandBuffer(commandList->DeviceObject));
 }
 
 Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+
+    UpdateCommandPoolFence(commandQueue);
     return Fence();
 }
 
@@ -351,7 +404,8 @@ void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
 
 void VulkanGraphicsService::ResetCommandAllocation(void* graphicsDevicePointer)
 {
-    printf("Reset\n");
+    auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
+    graphicsDevice->CommandPoolGeneration++;
 }
 
 void VulkanGraphicsService::FreeTexture(void* texturePointer)
@@ -472,7 +526,9 @@ void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
     presentInfo.pSwapchains = &swapChain->DeviceObject;
     presentInfo.pImageIndices = &swapChain->CurrentImageIndex;
 
-    AssertIfFailed(vkQueuePresentKHR(swapChain->CommandQueue->DeviceObject, &presentInfo));
+    //AssertIfFailed(vkQueuePresentKHR(swapChain->CommandQueue->DeviceObject, &presentInfo));
+    
+    ResetCommandAllocation(swapChain->GraphicsDevice);
 }
 
 void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
@@ -518,6 +574,140 @@ VkDeviceQueueCreateInfo VulkanGraphicsService::CreateDeviceQueueCreateInfo(uint3
     return queueCreateInfo;
 }
     
+VulkanCommandPoolItem* VulkanGraphicsService::GetCommandPool(VulkanCommandQueue* commandQueue)
+{
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    VulkanDeviceCommandPools& commandPoolsCache = CommandPools[graphicsDevice->InternalId];
+
+    if (commandPoolsCache.Generation != graphicsDevice->CommandPoolGeneration)
+    {
+        commandPoolsCache.Reset(graphicsDevice->CommandPoolGeneration);
+    }
+
+    auto& commandPool = graphicsDevice->DirectCommandPool;
+    auto commandPoolItemPointer = &commandPoolsCache.DirectCommandPool;
+    
+    if (commandQueue->CommandQueueType == CommandQueueType_Copy)
+    {
+        commandPool = graphicsDevice->CopyCommandPool;
+        commandPoolItemPointer = &commandPoolsCache.CopyCommandPool;
+    }
+    else if (commandQueue->CommandQueueType == CommandQueueType_Compute)
+    {
+        commandPool = graphicsDevice->ComputeCommandPool;
+        commandPoolItemPointer = &commandPoolsCache.ComputeCommandPool;
+    }
+
+    if (*commandPoolItemPointer == nullptr)
+    {
+        VulkanCommandPoolItem* commandPoolItem;
+        commandPool.GetCurrentItemPointerAndMove(&commandPoolItem);
+
+        if (commandPoolItem->CommandPool == nullptr)
+        {
+            VkCommandPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+            createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ;
+            createInfo.queueFamilyIndex = commandQueue->FamilyIndex;
+
+            AssertIfFailed(vkCreateCommandPool(graphicsDevice->Device, &createInfo, 0, &commandPoolItem->CommandPool));
+        }
+        else
+        {
+            if (commandPoolItem->Fence.FenceValue > 0)
+            {
+                WaitForFenceOnCpu(commandPoolItem->Fence);
+            }
+
+            AssertIfFailed(vkResetCommandPool(graphicsDevice->Device, commandPoolItem->CommandPool, 0));
+            commandPoolItem->CurrentCommandListIndex = 0;
+        }
+
+        *commandPoolItemPointer = commandPoolItem;
+    }
+
+    return (*commandPoolItemPointer);
+}
+    
+void VulkanGraphicsService::UpdateCommandPoolFence(VulkanCommandQueue* commandQueue)
+{
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = commandQueue->FenceValue;
+
+    VulkanDeviceCommandPools& commandPoolsCache = CommandPools[graphicsDevice->InternalId];
+
+    if (commandQueue->CommandQueueType == CommandQueueType_Copy)
+    {
+        assert(commandPoolsCache.CopyCommandPool != nullptr);
+        commandPoolsCache.CopyCommandPool->Fence = fence;
+    }
+    else if (commandQueue->CommandQueueType == CommandQueueType_Compute)
+    {
+        assert(commandPoolsCache.ComputeCommandPool != nullptr);
+        commandPoolsCache.ComputeCommandPool->Fence = fence;
+    }
+    else
+    {
+        assert(commandPoolsCache.DirectCommandPool != nullptr);
+        commandPoolsCache.DirectCommandPool->Fence = fence;
+    }
+}
+
+uint32_t _clCounter = 0;
+VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem)
+{
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    VulkanCommandList** commandListArrayPointer = nullptr;
+    VulkanCommandList* commandList = nullptr;
+    auto isFromCommandPoolItem = false;
+
+    if (commandPoolItem->CurrentCommandListIndex < MAX_VULKAN_COMMAND_BUFFERS)
+    {
+        commandListArrayPointer = &commandPoolItem->CommandLists[commandPoolItem->CurrentCommandListIndex++];
+        commandList = *commandListArrayPointer;
+        isFromCommandPoolItem = true;
+    }
+
+    if (commandList == nullptr)
+    {
+        // BUG: Is there a bug? If we increase the thread count in the test program
+        // We should get the same amount of command list creation. Maybe it is the case for the moment because
+        // the fence is always 0.
+
+        printf("Create CommandBuffer %d...\n", _clCounter++);
+        
+        if (!isFromCommandPoolItem)
+        {
+            printf("Warning: Not enough command buffer objects in the pool. Performance may decrease...\n");
+        } 
+
+        commandList = new VulkanCommandList(this, commandQueue->GraphicsDevice);
+        commandList->CommandQueue = commandQueue;
+        
+        VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        allocateInfo.commandPool = commandPoolItem->CommandPool;
+        allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocateInfo.commandBufferCount = 1;
+
+        AssertIfFailed(vkAllocateCommandBuffers(graphicsDevice->Device, &allocateInfo, &commandList->DeviceObject));
+
+        commandList->IsUsed = true;
+        commandList->IsFromCommandPool = true;
+
+        if (isFromCommandPoolItem)
+        {
+            *commandListArrayPointer = commandList;
+        }
+    }
+
+    assert(commandList != nullptr);
+    return commandList;
+}
+
 void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChain)
 {
     auto graphicsDevice = swapChain->GraphicsDevice;
