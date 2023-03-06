@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
-
 #include "../BaseGraphicsService.h"
 #include "../BaseGraphicsObject.h"
 #include "../SystemFunctions.h"
@@ -18,6 +14,7 @@ struct VulkanGraphicsDevice;
 #define MAX_VULKAN_COMMAND_POOLS 64
 #define MAX_VULKAN_COMMAND_BUFFERS 64
 
+#include "VulkanBaseGraphicsObject.h"
 #include "VulkanCommandQueue.h"
 #include "VulkanCommandList.h"
 #include "VulkanTexture.h"
@@ -72,8 +69,11 @@ private:
     VulkanCommandPoolItem* GetCommandPool(VulkanCommandQueue* commandQueue);
     void UpdateCommandPoolFence(VulkanCommandQueue* commandQueue);
     VulkanCommandList* GetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem);
+    Fence CreateCommandQueueFence(VulkanCommandQueue* commandQueue);
 
     void CreateSwapChainBackBuffers(VulkanSwapChain* swapChain);
+
+    void TransitionTextureToState(VulkanCommandList *commandList, VulkanTexture *texture, VkImageLayout destinationState, bool isTransfer = false);
 };
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);

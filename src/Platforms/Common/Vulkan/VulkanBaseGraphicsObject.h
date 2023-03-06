@@ -1,8 +1,4 @@
 #pragma once
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
-#include "../BaseGraphicsObject.h"
 
 struct VulkanBaseGraphicsObject : BaseGraphicsObject
 {

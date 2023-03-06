@@ -68,8 +68,8 @@ applicationService.RunApplication(application, (status) =>
 
     graphicsService.WaitForSwapChainOnCpu(swapChain);
 
-    var threadCount = 5;
-    var commandListCount = 5;
+    var threadCount = 1;
+    var commandListCount = 1;
 
     var commandLists = new CommandList[threadCount * commandListCount];
 

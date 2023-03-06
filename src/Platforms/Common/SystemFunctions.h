@@ -1,10 +1,4 @@
 #pragma once
-#include <stdint.h>
-#include <string>
-
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
 
 std::wstring ConvertUtf8ToWString(unsigned char* source)
 {

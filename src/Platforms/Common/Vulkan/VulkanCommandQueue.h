@@ -1,8 +1,4 @@
 #pragma once
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
-#include "VulkanBaseGraphicsObject.h"
 
 struct VulkanCommandQueue : VulkanBaseGraphicsObject
 {
@@ -16,4 +12,5 @@ struct VulkanCommandQueue : VulkanBaseGraphicsObject
 
     VkSemaphore TimelineSemaphore;
     uint64_t FenceValue = 0;
+    uint64_t LastCompletedFenceValue = 0;
 };

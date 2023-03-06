@@ -1,14 +1,15 @@
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
-
 #include "VulkanGraphicsService.h"
 
 VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
 {
+    // HACK: For the moment, the app will run only if Vulkan SDK 1.3 is installed
+    // We need to package the runtime
+    // TODO: If the vulkan loader is not here, don't proceed
+
     _graphicsDiagnostics = options->GraphicsDiagnostics;
 
     AssertIfFailed(volkInitialize());
+    assert(volkGetInstanceVersion() >= VK_API_VERSION_1_3);
 
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     appInfo.apiVersion = VK_API_VERSION_1_3;
@@ -39,6 +40,18 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
         
         createInfo.ppEnabledExtensionNames = extensions;
 	    createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+
+        VkValidationFeatureEnableEXT enabledValidationFeatures[] =
+        {
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+        };
+
+        VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+        validationFeatures.enabledValidationFeatureCount = ARRAYSIZE(enabledValidationFeatures);
+        validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
+
+        createInfo.pNext = &validationFeatures;
         
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &_vulkanInstance));
     }
@@ -59,7 +72,7 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &_vulkanInstance));
     }
 
-    volkLoadInstance(_vulkanInstance);
+    volkLoadInstanceOnly(_vulkanInstance);
     
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
@@ -103,8 +116,12 @@ void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* grap
         VkPhysicalDeviceFeatures deviceFeatures;
         vkGetPhysicalDeviceFeatures(devices[i], &deviceFeatures);
 
+        VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures {};
+        presentIdFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
+
         VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = {};
         meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+        meshShaderFeatures.pNext = &presentIdFeatures;
 
         VkPhysicalDeviceFeatures2 features2 = {};
         features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
@@ -112,7 +129,7 @@ void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* grap
 
         vkGetPhysicalDeviceFeatures2(devices[i], &features2);
 
-        if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader)
+        if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader && presentIdFeatures.presentId)
         {
             graphicsDevices[(*count)++] = ConstructGraphicsDeviceInfo(deviceProperties, deviceMemoryProperties);
         }
@@ -192,10 +209,9 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
 
     const char* extensions[] =
     {
-        VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_SWAPCHAIN_MUTABLE_FORMAT_EXTENSION_NAME,
-        VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+        VK_KHR_PRESENT_ID_EXTENSION_NAME,
+        VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
         VK_NV_MESH_SHADER_EXTENSION_NAME,
         VK_NV_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME
     };
@@ -203,36 +219,52 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     createInfo.ppEnabledExtensionNames = extensions;
     createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
+    VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+	features.features.multiDrawIndirect = true;
+	features.features.pipelineStatisticsQuery = true;
+	features.features.shaderInt16 = true;
+	features.features.shaderInt64 = true;
+
+    VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    features12.timelineSemaphore = true;
+    features12.runtimeDescriptorArray = true;
+    features12.descriptorIndexing = true;
+    features12.descriptorBindingVariableDescriptorCount = true;
+    features12.descriptorBindingPartiallyBound = true;
+    features12.descriptorBindingSampledImageUpdateAfterBind = true;
+    features12.descriptorBindingStorageBufferUpdateAfterBind = true;
+    features12.descriptorBindingStorageImageUpdateAfterBind = true;
+    features12.shaderSampledImageArrayNonUniformIndexing = true;
+    features12.separateDepthStencilLayouts = true;
+    features12.hostQueryReset = true;
+    features12.shaderInt8 = true;
+
+    if (_graphicsDiagnostics == GraphicsDiagnostics_Debug)
+    {
+        features12.bufferDeviceAddressCaptureReplay = true;
+    }
+
+    VkPhysicalDeviceVulkan13Features features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    features13.maintenance4 = true;
+    features13.synchronization2 = true;
+    
+    VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
+    presentIdFeatures.presentId = true;
+    
+    VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR };
+    presentWaitFeatures.presentWait = true;
+
     // TODO: Replace that with standard extension but it doesn't seems to work for now :/
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV };
     meshFeatures.meshShader = true;
     meshFeatures.taskShader = true;
 
-    VkPhysicalDeviceSynchronization2FeaturesKHR sync2Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR };
-    sync2Features.synchronization2 = true;
-    sync2Features.pNext = &meshFeatures;
-
-    VkPhysicalDeviceVulkan12Features features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    features.timelineSemaphore = true;
-    features.runtimeDescriptorArray = true;
-    features.descriptorIndexing = true;
-    features.descriptorBindingVariableDescriptorCount = true;
-    features.descriptorBindingPartiallyBound = true;
-    features.descriptorBindingSampledImageUpdateAfterBind = true;
-    features.descriptorBindingStorageBufferUpdateAfterBind = true;
-    features.descriptorBindingStorageImageUpdateAfterBind = true;
-    features.shaderSampledImageArrayNonUniformIndexing = true;
-    features.separateDepthStencilLayouts = true;
-    features.hostQueryReset = true;
-    features.shaderInt8 = true;
-
-    if (_graphicsDiagnostics == GraphicsDiagnostics_Debug)
-    {
-        features.bufferDeviceAddressCaptureReplay = true;
-    }
-
-    features.pNext = &sync2Features;
     createInfo.pNext = &features;
+    features.pNext = &features12;
+    features12.pNext = &features13;
+    features13.pNext = &presentIdFeatures;
+    presentIdFeatures.pNext = &presentWaitFeatures;
+    presentWaitFeatures.pNext = &meshFeatures;
 
     if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &(graphicsDevice->Device)) != VK_SUCCESS)
     {
@@ -329,6 +361,9 @@ void VulkanGraphicsService::FreeCommandQueue(void* commandQueuePointer)
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
     
+    auto fence = CreateCommandQueueFence(commandQueue);
+    WaitForFenceOnCpu(fence);
+    
     vkDestroySemaphore(commandQueue->GraphicsDevice->Device, commandQueue->TimelineSemaphore, nullptr);
     delete commandQueue;
 }
@@ -393,13 +428,80 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
 
+    VkPipelineStageFlags submitStageMasks[MAX_VULKAN_COMMAND_BUFFERS];
+    VkSemaphore waitSemaphores[MAX_VULKAN_COMMAND_BUFFERS];
+    uint64_t waitSemaphoreValues[MAX_VULKAN_COMMAND_BUFFERS];
+
+    for (int32_t i = 0; i < fenceToWaitCount; i++)
+	{
+		auto fenceToWait = fencesToWait[i];
+		auto commandQueueToWait = (VulkanCommandQueue*)fenceToWait.CommandQueuePointer;
+
+        waitSemaphores[i] = commandQueueToWait->TimelineSemaphore;
+        waitSemaphoreValues[i] = commandQueueToWait->FenceValue;
+        submitStageMasks[i] = (commandQueue->CommandQueueType == CommandQueueType_Compute) ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+	}
+
+    VkCommandBuffer vulkanCommandBuffers[MAX_VULKAN_COMMAND_BUFFERS];
+
+    for (int32_t i = 0; i < commandListCount; i++)
+	{
+		auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
+        vulkanCommandBuffers[i] = vulkanCommandList->DeviceObject;
+	}
+    
+    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
+
+    VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+    timelineInfo.waitSemaphoreValueCount = fenceToWaitCount;
+    timelineInfo.pWaitSemaphoreValues = waitSemaphoreValues;
+    timelineInfo.signalSemaphoreValueCount = 1;
+    timelineInfo.pSignalSemaphoreValues = &fenceValue;
+
+    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submitInfo.pNext = &timelineInfo;
+    submitInfo.waitSemaphoreCount = fenceToWaitCount;
+    submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &commandQueue->TimelineSemaphore;
+    submitInfo.commandBufferCount = commandListCount;
+    submitInfo.pCommandBuffers = vulkanCommandBuffers;
+    submitInfo.pWaitDstStageMask = submitStageMasks;
+
+    AssertIfFailed(vkQueueSubmit(commandQueue->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
+
     UpdateCommandPoolFence(commandQueue);
-    return Fence();
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = fenceValue;
+
+    return fence;
 }
 
 void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
 {
+    auto commandQueueToWait = (VulkanCommandQueue*)fence.CommandQueuePointer;
 
+    if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue) 
+    {
+        uint64_t semaphoreValue;
+        vkGetSemaphoreCounterValue(commandQueueToWait->GraphicsDevice->Device, commandQueueToWait->TimelineSemaphore, &semaphoreValue);
+
+        commandQueueToWait->LastCompletedFenceValue = max(commandQueueToWait->LastCompletedFenceValue, semaphoreValue);
+    }
+
+    if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
+	{
+        printf("Wait for fence on CPU...\n");
+
+        VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+        waitInfo.semaphoreCount = 1;
+        waitInfo.pSemaphores = &commandQueueToWait->TimelineSemaphore;
+        waitInfo.pValues = &fence.FenceValue;
+
+        AssertIfFailed(vkWaitSemaphores(commandQueueToWait->GraphicsDevice->Device, &waitInfo, UINT64_MAX));
+    }
 }
 
 void VulkanGraphicsService::ResetCommandAllocation(void* graphicsDevicePointer)
@@ -432,6 +534,7 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
     swapChain->CommandQueue = commandQueue;
     swapChain->Format = options->Format;
     swapChain->CurrentImageIndex = 0;
+    swapChain->MaximumFrameLatency = options->MaximumFrameLatency;
 
     #ifdef _WINDOWS
     auto window = (Win32Window*)windowPointer;
@@ -473,13 +576,13 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
         swapChainCreateInfo.imageExtent.height = options->Height;
     }
 
-    // TODO: Implement Latency await
-
     AssertIfFailed(vkCreateSwapchainKHR(graphicsDevice->Device, &swapChainCreateInfo, nullptr, &swapChain->DeviceObject));
 
     CreateSwapChainBackBuffers(swapChain);
 
-    //swapChain->BackBufferAcquireFence = VulkanCreateFence(this->graphicsDevice);
+    VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+	AssertIfFailed(vkCreateFence(graphicsDevice->Device, &fenceCreateInfo, 0, &swapChain->BackBufferAcquireFence ));
+
     return swapChain;
 }
 
@@ -488,7 +591,7 @@ void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
 	auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
 
-    //vkDestroyFence(this->graphicsDevice, swapChain->BackBufferAcquireFence, nullptr);
+    vkDestroyFence(graphicsDevice->Device, swapChain->BackBufferAcquireFence, nullptr);
 
     for (int i = 0; i < 3; i++)
     {
@@ -519,31 +622,64 @@ void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
     // Or just issue a barrier because the final buffer rendering and the present is done on the same queue
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
 
+    VkPresentIdKHR presentIdInfo = { VK_STRUCTURE_TYPE_PRESENT_ID_KHR };
+    presentIdInfo.swapchainCount = 1;
+    presentIdInfo.pPresentIds = &swapChain->CurrentPresentId;
+
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.waitSemaphoreCount = 0;
-    // presentInfo.pWaitSemaphores = &releaseSemaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &swapChain->DeviceObject;
     presentInfo.pImageIndices = &swapChain->CurrentImageIndex;
+    presentInfo.pNext = &presentIdInfo;
 
-    //AssertIfFailed(vkQueuePresentKHR(swapChain->CommandQueue->DeviceObject, &presentInfo));
+    AssertIfFailed(vkQueuePresentKHR(swapChain->CommandQueue->DeviceObject, &presentInfo));
     
     ResetCommandAllocation(swapChain->GraphicsDevice);
+    swapChain->CurrentPresentId++;
 }
 
 void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
 {
+    // BUG: There is a high GPU usage when the app is not active
 
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    auto graphicsDevice = swapChain->GraphicsDevice;
+
+    if (swapChain->CurrentPresentId > 0)
+    {
+        auto presentId = max(0, (int32_t)swapChain->CurrentPresentId - (int32_t)swapChain->MaximumFrameLatency);
+        AssertIfFailed(vkWaitForPresentKHR(graphicsDevice->Device, swapChain->DeviceObject, presentId, UINT64_MAX));
+    }
+
+    // TODO: Do we really need to have that? because we have the present ID now.
+    AssertIfFailed(vkAcquireNextImageKHR(swapChain->GraphicsDevice->Device, swapChain->DeviceObject, UINT64_MAX, VK_NULL_HANDLE, swapChain->BackBufferAcquireFence, &swapChain->CurrentImageIndex));
+    vkWaitForFences(swapChain->GraphicsDevice->Device, 1, &swapChain->BackBufferAcquireFence, true, UINT64_MAX);
+    vkResetFences(swapChain->GraphicsDevice->Device, 1, &swapChain->BackBufferAcquireFence);
 }
 
 void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
+    auto commandList = (VulkanCommandList*)commandListPointer;
 
+    commandList->CurrentRenderPassDescriptor = *renderPassDescriptor;
 }
     
 void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
 {
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    
+    if (commandList->CurrentRenderPassDescriptor.RenderTarget0.HasValue)
+    {
+        auto texture = (VulkanTexture*)commandList->CurrentRenderPassDescriptor.RenderTarget0.Value.TexturePointer;
 
+        if (texture->IsPresentTexture)
+        {
+            TransitionTextureToState(commandList, texture, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        }
+    }
+    
+    commandList->CurrentRenderPassDescriptor = {};
 }
    
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
@@ -607,7 +743,7 @@ VulkanCommandPoolItem* VulkanGraphicsService::GetCommandPool(VulkanCommandQueue*
         if (commandPoolItem->CommandPool == nullptr)
         {
             VkCommandPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-            createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ;
+            createInfo.flags = 0;
             createInfo.queueFamilyIndex = commandQueue->FamilyIndex;
 
             AssertIfFailed(vkCreateCommandPool(graphicsDevice->Device, &createInfo, 0, &commandPoolItem->CommandPool));
@@ -701,6 +837,35 @@ VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* com
     assert(commandList != nullptr);
     return commandList;
 }
+    
+Fence VulkanGraphicsService::CreateCommandQueueFence(VulkanCommandQueue* commandQueue)
+{
+    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
+
+    VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+    timelineInfo.waitSemaphoreValueCount = 0;
+    timelineInfo.pWaitSemaphoreValues = nullptr;
+    timelineInfo.signalSemaphoreValueCount = 1;
+    timelineInfo.pSignalSemaphoreValues = &fenceValue;
+
+    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submitInfo.pNext = &timelineInfo;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &commandQueue->TimelineSemaphore;
+    submitInfo.commandBufferCount = 0;
+    submitInfo.pCommandBuffers = nullptr;
+    submitInfo.pWaitDstStageMask = 0;
+
+    AssertIfFailed(vkQueueSubmit(commandQueue->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = fenceValue;
+
+    return fence;
+}
 
 void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChain)
 {
@@ -718,6 +883,7 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
         auto backBufferTexture = new VulkanTexture(this, graphicsDevice);
         backBufferTexture->DeviceObject = swapchainImages[i];
         backBufferTexture->IsPresentTexture = true;
+        backBufferTexture->Format = format;
 
         VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         createInfo.image = swapchainImages[i];
@@ -733,6 +899,39 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
 
         swapChain->BackBufferTextures[i] = backBufferTexture;
     }
+}
+
+void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout destinationState, bool isTransfer)
+{
+	// TODO: Handle texture accesses, currently we only handle the image layout
+
+	if (texture->ResourceState != destinationState)
+	{
+        VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+
+        barrier.srcAccessMask = VK_ACCESS_NONE_KHR;
+        barrier.dstAccessMask = VK_ACCESS_NONE_KHR;
+        barrier.oldLayout = texture->ResourceState;
+        barrier.newLayout = destinationState;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = texture->DeviceObject;
+        barrier.subresourceRange.aspectMask = texture->Format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+		if (!isTransfer)
+		{
+			vkCmdPipelineBarrier(commandList->DeviceObject, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrier);
+		}
+
+		else
+		{
+			vkCmdPipelineBarrier(commandList->DeviceObject, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrier);
+		}
+
+		texture->ResourceState = destinationState;
+	}
 }
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)

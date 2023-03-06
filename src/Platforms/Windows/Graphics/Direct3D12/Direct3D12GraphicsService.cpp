@@ -682,12 +682,12 @@ void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* comm
     
 Fence Direct3D12GraphicsService::CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue)
 {
-    InterlockedIncrement(&commandQueue->FenceValue);
-	AssertIfFailed(commandQueue->DeviceObject->Signal(commandQueue->Fence.Get(), commandQueue->FenceValue));
+    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
+	AssertIfFailed(commandQueue->DeviceObject->Signal(commandQueue->Fence.Get(), fenceValue));
 
     auto fence = Fence();
     fence.CommandQueuePointer = commandQueue;
-    fence.FenceValue = commandQueue->FenceValue;
+    fence.FenceValue = fenceValue;
 
     return fence;
 }

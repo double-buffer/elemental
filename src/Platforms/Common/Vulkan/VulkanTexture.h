@@ -1,8 +1,4 @@
 #pragma once
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
-#include "VulkanBaseGraphicsObject.h"
 
 struct VulkanTexture : VulkanBaseGraphicsObject
 {
@@ -12,5 +8,7 @@ struct VulkanTexture : VulkanBaseGraphicsObject
 
     VkImage DeviceObject;
     VkImageView ImageView;
-    bool IsPresentTexture;
+    VkFormat Format;
+    bool IsPresentTexture = false;
+    VkImageLayout ResourceState = VK_IMAGE_LAYOUT_UNDEFINED;
 };

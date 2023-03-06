@@ -1,8 +1,4 @@
 #pragma once
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
-#include "VulkanBaseGraphicsObject.h"
 
 struct VulkanCommandList : VulkanBaseGraphicsObject
 {
@@ -16,4 +12,5 @@ struct VulkanCommandList : VulkanBaseGraphicsObject
     VulkanCommandQueue* CommandQueue;
     bool IsUsed;
     bool IsFromCommandPool;
+    RenderPassDescriptor CurrentRenderPassDescriptor;
 };
