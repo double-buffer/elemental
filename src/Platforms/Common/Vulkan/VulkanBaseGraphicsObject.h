@@ -2,7 +2,6 @@
 #ifdef _WINDOWS
 #include "WindowsCommon.h"
 #endif
-#include "Volk/volk.h"
 #include "../BaseGraphicsObject.h"
 
 struct VulkanBaseGraphicsObject : BaseGraphicsObject

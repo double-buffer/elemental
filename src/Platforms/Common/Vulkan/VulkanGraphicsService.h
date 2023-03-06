@@ -10,7 +10,7 @@
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #define VOLK_IMPLEMENTATION
-#include "Volk/volk.h"
+#include "volk.h"
 
 struct VulkanGraphicsDevice;
 
