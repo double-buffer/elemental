@@ -674,12 +674,6 @@ VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* com
 
     if (commandList == nullptr)
     {
-        // BUG: Is there a bug? If we increase the thread count in the test program
-        // We should get the same amount of command list creation. Maybe it is the case for the moment because
-        // the fence is always 0.
-
-        printf("Create CommandBuffer %d...\n", _clCounter++);
-        
         if (!isFromCommandPoolItem)
         {
             printf("Warning: Not enough command buffer objects in the pool. Performance may decrease...\n");
@@ -696,7 +690,7 @@ VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* com
         AssertIfFailed(vkAllocateCommandBuffers(graphicsDevice->Device, &allocateInfo, &commandList->DeviceObject));
 
         commandList->IsUsed = true;
-        commandList->IsFromCommandPool = true;
+        commandList->IsFromCommandPool = isFromCommandPoolItem;
 
         if (isFromCommandPoolItem)
         {

@@ -16,7 +16,7 @@ struct VulkanGraphicsDevice;
 
 #define MAX_VULKAN_GRAPHICS_DEVICES 64
 #define MAX_VULKAN_COMMAND_POOLS 64
-#define MAX_VULKAN_COMMAND_BUFFERS 16
+#define MAX_VULKAN_COMMAND_BUFFERS 64
 
 #include "VulkanCommandQueue.h"
 #include "VulkanCommandList.h"
