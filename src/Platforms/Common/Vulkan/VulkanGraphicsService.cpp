@@ -1,14 +1,15 @@
-#ifdef _WINDOWS
-#include "WindowsCommon.h"
-#endif
-
 #include "VulkanGraphicsService.h"
 
-VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
+VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
 {
-    _graphicsDiagnostics = options.GraphicsDiagnostics;
+    // HACK: For the moment, the app will run only if Vulkan SDK 1.3 is installed
+    // We need to package the runtime
+    // TODO: If the vulkan loader is not here, don't proceed
+
+    _graphicsDiagnostics = options->GraphicsDiagnostics;
 
     AssertIfFailed(volkInitialize());
+    assert(volkGetInstanceVersion() >= VK_API_VERSION_1_3);
 
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     appInfo.apiVersion = VK_API_VERSION_1_3;
@@ -17,7 +18,7 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
 
     createInfo.pApplicationInfo = &appInfo;
 
-    if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
         const char* layers[] =
         {
@@ -39,6 +40,18 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
         
         createInfo.ppEnabledExtensionNames = extensions;
 	    createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+
+        VkValidationFeatureEnableEXT enabledValidationFeatures[] =
+        {
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+        };
+
+        VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+        validationFeatures.enabledValidationFeatureCount = ARRAYSIZE(enabledValidationFeatures);
+        validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
+
+        createInfo.pNext = &validationFeatures;
         
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &_vulkanInstance));
     }
@@ -59,9 +72,9 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions options)
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &_vulkanInstance));
     }
 
-    volkLoadInstance(_vulkanInstance);
+    volkLoadInstanceOnly(_vulkanInstance);
     
-    if (options.GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
         VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
         createInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
@@ -103,8 +116,12 @@ void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* grap
         VkPhysicalDeviceFeatures deviceFeatures;
         vkGetPhysicalDeviceFeatures(devices[i], &deviceFeatures);
 
+        VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures {};
+        presentIdFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
+
         VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = {};
         meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+        meshShaderFeatures.pNext = &presentIdFeatures;
 
         VkPhysicalDeviceFeatures2 features2 = {};
         features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
@@ -112,17 +129,15 @@ void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* grap
 
         vkGetPhysicalDeviceFeatures2(devices[i], &features2);
 
-        if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader)
+        if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader && presentIdFeatures.presentId)
         {
             graphicsDevices[(*count)++] = ConstructGraphicsDeviceInfo(deviceProperties, deviceMemoryProperties);
         }
     }
 }
 
-void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
+void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
-    printf("Create Vulkan Device\n");
-
     uint32_t deviceCount = 16;
     VkPhysicalDevice devices[16];
     VkPhysicalDevice physicalDevice = {};
@@ -138,7 +153,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
         vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
         vkGetPhysicalDeviceMemoryProperties(devices[i], &deviceMemoryProperties);
 
-        if (deviceProperties.deviceID == options.DeviceId)
+        if (deviceProperties.deviceID == options->DeviceId)
         {
             physicalDevice = devices[i];
             foundDevice = true;
@@ -153,12 +168,10 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
     
     auto graphicsDevice = new VulkanGraphicsDevice(this);
 
-    // TODO: Change that, queue creation is fixed
     uint32_t queueFamilyCount = 0;
+    VkQueueFamilyProperties queueFamilies[32];
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
 
     VkDeviceQueueCreateInfo queueCreateInfos[3];
 
@@ -183,6 +196,8 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
         }
     }
 
+    graphicsDevice->InternalId = InterlockedIncrement(&_currentDeviceInternalId) - 1;
+    graphicsDevice->PhysicalDevice = physicalDevice;
     graphicsDevice->DeviceProperties = deviceProperties;
     graphicsDevice->DeviceMemoryProperties = deviceMemoryProperties;
 
@@ -192,10 +207,9 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
 
     const char* extensions[] =
     {
-        VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_SWAPCHAIN_MUTABLE_FORMAT_EXTENSION_NAME,
-        VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+        VK_KHR_PRESENT_ID_EXTENSION_NAME,
+        VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
         VK_NV_MESH_SHADER_EXTENSION_NAME,
         VK_NV_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME
     };
@@ -203,36 +217,53 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
     createInfo.ppEnabledExtensionNames = extensions;
     createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
+    VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+	features.features.multiDrawIndirect = true;
+	features.features.pipelineStatisticsQuery = true;
+	features.features.shaderInt16 = true;
+	features.features.shaderInt64 = true;
+
+    VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    features12.timelineSemaphore = true;
+    features12.runtimeDescriptorArray = true;
+    features12.descriptorIndexing = true;
+    features12.descriptorBindingVariableDescriptorCount = true;
+    features12.descriptorBindingPartiallyBound = true;
+    features12.descriptorBindingSampledImageUpdateAfterBind = true;
+    features12.descriptorBindingStorageBufferUpdateAfterBind = true;
+    features12.descriptorBindingStorageImageUpdateAfterBind = true;
+    features12.shaderSampledImageArrayNonUniformIndexing = true;
+    features12.separateDepthStencilLayouts = true;
+    features12.hostQueryReset = true;
+    features12.shaderInt8 = true;
+
+    if (_graphicsDiagnostics == GraphicsDiagnostics_Debug)
+    {
+        features12.bufferDeviceAddressCaptureReplay = true;
+    }
+
+    VkPhysicalDeviceVulkan13Features features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    features13.maintenance4 = true;
+    features13.synchronization2 = true;
+    features13.dynamicRendering = true;
+
+    VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
+    presentIdFeatures.presentId = true;
+    
+    VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR };
+    presentWaitFeatures.presentWait = true;
+
     // TODO: Replace that with standard extension but it doesn't seems to work for now :/
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV };
     meshFeatures.meshShader = true;
     meshFeatures.taskShader = true;
 
-    VkPhysicalDeviceSynchronization2FeaturesKHR sync2Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR };
-    sync2Features.synchronization2 = true;
-    sync2Features.pNext = &meshFeatures;
-
-    VkPhysicalDeviceVulkan12Features features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    features.timelineSemaphore = true;
-    features.runtimeDescriptorArray = true;
-    features.descriptorIndexing = true;
-    features.descriptorBindingVariableDescriptorCount = true;
-    features.descriptorBindingPartiallyBound = true;
-    features.descriptorBindingSampledImageUpdateAfterBind = true;
-    features.descriptorBindingStorageBufferUpdateAfterBind = true;
-    features.descriptorBindingStorageImageUpdateAfterBind = true;
-    features.shaderSampledImageArrayNonUniformIndexing = true;
-    features.separateDepthStencilLayouts = true;
-    features.hostQueryReset = true;
-    features.shaderInt8 = true;
-
-    if (_graphicsDiagnostics == GraphicsDiagnostics_Debug)
-    {
-        features.bufferDeviceAddressCaptureReplay = true;
-    }
-
-    features.pNext = &sync2Features;
     createInfo.pNext = &features;
+    features.pNext = &features12;
+    features12.pNext = &features13;
+    features13.pNext = &presentIdFeatures;
+    presentIdFeatures.pNext = &presentWaitFeatures;
+    presentWaitFeatures.pNext = &meshFeatures;
 
     if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &(graphicsDevice->Device)) != VK_SUCCESS)
     {
@@ -252,7 +283,32 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions options)
 void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
+    VulkanCommandPoolItem* item;
 
+    for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
+    {
+        graphicsDevice->DirectCommandPool.GetCurrentItemPointerAndMove(&item);
+
+        if (item->CommandPool != nullptr)
+        {
+            vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
+        }
+        
+        graphicsDevice->ComputeCommandPool.GetCurrentItemPointerAndMove(&item);
+
+        if (item->CommandPool != nullptr)
+        {
+            vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
+        }
+        
+        graphicsDevice->CopyCommandPool.GetCurrentItemPointerAndMove(&item);
+
+        if (item->CommandPool != nullptr)
+        {
+            vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
+        }
+    }
+    
     if (graphicsDevice->Device != nullptr)
     {
         vkDestroyDevice(graphicsDevice->Device, nullptr);
@@ -265,6 +321,445 @@ GraphicsDeviceInfo VulkanGraphicsService::GetGraphicsDeviceInfo(void* graphicsDe
     return ConstructGraphicsDeviceInfo(graphicsDevice->DeviceProperties, graphicsDevice->DeviceMemoryProperties);
 }
 
+void* VulkanGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+{
+    auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
+
+    auto commandQueue = new VulkanCommandQueue(this, graphicsDevice);
+    commandQueue->CommandQueueType = type;
+
+    auto queueFamilyIndex = graphicsDevice->RenderCommandQueueFamilyIndex;
+
+    if (type == CommandQueueType_Compute)
+    {
+        queueFamilyIndex = graphicsDevice->ComputeCommandQueueFamilyIndex;
+    }
+
+    else if (type == CommandQueueType_Copy)
+    {
+        queueFamilyIndex = graphicsDevice->CopyCommandQueueFamilyIndex;
+    }
+
+    commandQueue->FamilyIndex = queueFamilyIndex;
+
+    // TODO: Check count of VK Queues already created for this device
+    vkGetDeviceQueue(graphicsDevice->Device, queueFamilyIndex, 0, &commandQueue->DeviceObject);
+
+    VkSemaphoreTypeCreateInfo timelineCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    timelineCreateInfo.initialValue = 0;
+
+    VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    createInfo.pNext = &timelineCreateInfo;
+
+    AssertIfFailed(vkCreateSemaphore(graphicsDevice->Device, &createInfo, NULL, &commandQueue->TimelineSemaphore));
+    return commandQueue;
+}
+
+void VulkanGraphicsService::FreeCommandQueue(void* commandQueuePointer)
+{
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    
+    auto fence = CreateCommandQueueFence(commandQueue);
+    WaitForFenceOnCpu(fence);
+    
+    vkDestroySemaphore(commandQueue->GraphicsDevice->Device, commandQueue->TimelineSemaphore, nullptr);
+    delete commandQueue;
+}
+
+void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
+{
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    
+    VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    nameInfo.objectType = VK_OBJECT_TYPE_QUEUE;
+    nameInfo.objectHandle = (uint64_t)commandQueue->DeviceObject;
+    nameInfo.pObjectName = (char*)label;
+
+    AssertIfFailed(vkSetDebugUtilsObjectNameEXT(commandQueue->GraphicsDevice->Device, &nameInfo)); 
+}
+
+void* VulkanGraphicsService::CreateCommandList(void* commandQueuePointer)
+{
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    auto commandPool = GetCommandPool(commandQueue);
+    auto commandList = GetCommandList(commandQueue, commandPool);
+
+    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    AssertIfFailed(vkBeginCommandBuffer(commandList->DeviceObject, &beginInfo));
+
+    return commandList;
+}
+
+void VulkanGraphicsService::FreeCommandList(void* commandListPointer)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    
+    if (!commandList->IsFromCommandPool)
+    {
+        delete commandList;
+    }
+}
+
+void VulkanGraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+
+    VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    nameInfo.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER;
+    nameInfo.objectHandle = (uint64_t)commandList->DeviceObject;
+    nameInfo.pObjectName = (char*)label;
+
+    AssertIfFailed(vkSetDebugUtilsObjectNameEXT(commandList->GraphicsDevice->Device, &nameInfo));
+}
+
+void VulkanGraphicsService::CommitCommandList(void* commandListPointer)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    AssertIfFailed(vkEndCommandBuffer(commandList->DeviceObject));
+}
+
+Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
+{
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+
+    VkPipelineStageFlags submitStageMasks[MAX_VULKAN_COMMAND_BUFFERS];
+    VkSemaphore waitSemaphores[MAX_VULKAN_COMMAND_BUFFERS];
+    uint64_t waitSemaphoreValues[MAX_VULKAN_COMMAND_BUFFERS];
+
+    for (int32_t i = 0; i < fenceToWaitCount; i++)
+	{
+		auto fenceToWait = fencesToWait[i];
+		auto commandQueueToWait = (VulkanCommandQueue*)fenceToWait.CommandQueuePointer;
+
+        waitSemaphores[i] = commandQueueToWait->TimelineSemaphore;
+        waitSemaphoreValues[i] = commandQueueToWait->FenceValue;
+        submitStageMasks[i] = (commandQueue->CommandQueueType == CommandQueueType_Compute) ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+	}
+
+    VkCommandBuffer vulkanCommandBuffers[MAX_VULKAN_COMMAND_BUFFERS];
+
+    for (int32_t i = 0; i < commandListCount; i++)
+	{
+		auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
+        vulkanCommandBuffers[i] = vulkanCommandList->DeviceObject;
+	}
+    
+    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
+
+    VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+    timelineInfo.waitSemaphoreValueCount = fenceToWaitCount;
+    timelineInfo.pWaitSemaphoreValues = waitSemaphoreValues;
+    timelineInfo.signalSemaphoreValueCount = 1;
+    timelineInfo.pSignalSemaphoreValues = &fenceValue;
+
+    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submitInfo.pNext = &timelineInfo;
+    submitInfo.waitSemaphoreCount = fenceToWaitCount;
+    submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &commandQueue->TimelineSemaphore;
+    submitInfo.commandBufferCount = commandListCount;
+    submitInfo.pCommandBuffers = vulkanCommandBuffers;
+    submitInfo.pWaitDstStageMask = submitStageMasks;
+
+    AssertIfFailed(vkQueueSubmit(commandQueue->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
+
+    for (int32_t i = 0; i < commandListCount; i++)
+	{
+		auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
+
+        if (vulkanCommandList->IsFromCommandPool)
+        {
+            UpdateCommandPoolFence(vulkanCommandList, fenceValue);
+        }
+	}
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = fenceValue;
+
+    return fence;
+}
+
+void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
+{
+    auto commandQueueToWait = (VulkanCommandQueue*)fence.CommandQueuePointer;
+
+    if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue) 
+    {
+        uint64_t semaphoreValue;
+        vkGetSemaphoreCounterValue(commandQueueToWait->GraphicsDevice->Device, commandQueueToWait->TimelineSemaphore, &semaphoreValue);
+
+        commandQueueToWait->LastCompletedFenceValue = max(commandQueueToWait->LastCompletedFenceValue, semaphoreValue);
+    }
+
+    if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
+	{
+        printf("Wait for fence on CPU...\n");
+
+        VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+        waitInfo.semaphoreCount = 1;
+        waitInfo.pSemaphores = &commandQueueToWait->TimelineSemaphore;
+        waitInfo.pValues = &fence.FenceValue;
+
+        AssertIfFailed(vkWaitSemaphores(commandQueueToWait->GraphicsDevice->Device, &waitInfo, UINT64_MAX));
+    }
+}
+
+void VulkanGraphicsService::ResetCommandAllocation(void* graphicsDevicePointer)
+{
+    auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
+    graphicsDevice->CommandPoolGeneration++;
+}
+
+void VulkanGraphicsService::FreeTexture(void* texturePointer)
+{
+    auto texture = (VulkanTexture*)texturePointer;
+
+    if (!texture->IsPresentTexture)
+    {
+        auto graphicsDevice = texture->GraphicsDevice;
+
+        vkDestroyImageView(graphicsDevice->Device, texture->ImageView, nullptr);
+        vkDestroyImage(graphicsDevice->Device, texture->DeviceObject, nullptr);
+
+        delete texture;    
+    }
+}
+
+void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
+{
+    auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    auto swapChain = new VulkanSwapChain(this, graphicsDevice);
+    swapChain->CommandQueue = commandQueue;
+    swapChain->Format = options->Format;
+    swapChain->CurrentImageIndex = 0;
+    swapChain->MaximumFrameLatency = options->MaximumFrameLatency;
+
+    #ifdef _WINDOWS
+    auto window = (Win32Window*)windowPointer;
+    VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+    surfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
+    surfaceCreateInfo.hwnd = window->WindowHandle;
+
+    AssertIfFailed(vkCreateWin32SurfaceKHR(_vulkanInstance, &surfaceCreateInfo, nullptr, &swapChain->WindowSurface));
+    #endif
+
+    VkBool32 isPresentSupported;
+    AssertIfFailed(vkGetPhysicalDeviceSurfaceSupportKHR(graphicsDevice->PhysicalDevice, swapChain->CommandQueue->FamilyIndex, swapChain->WindowSurface, &isPresentSupported));
+    assert(isPresentSupported == 1);
+
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceCapabilities));
+
+    uint32_t surfaceFormatCount = 0;
+    VkSurfaceFormatKHR surfaceFormats[16];
+    vkGetPhysicalDeviceSurfaceFormatsKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceFormatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceFormatCount, surfaceFormats);
+    assert(surfaceFormatCount > 0);
+
+    VkSwapchainCreateInfoKHR swapChainCreateInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+    swapChainCreateInfo.surface = swapChain->WindowSurface;
+    swapChainCreateInfo.minImageCount = 3;
+    swapChainCreateInfo.imageFormat = options->Format == SwapChainFormat_HighDynamicRange ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_B8G8R8A8_SRGB;
+    swapChainCreateInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    swapChainCreateInfo.imageArrayLayers = 1;
+    swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapChainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    swapChainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
+    swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapChainCreateInfo.flags = 0;
+    
+    if (options->Width == 0 || options->Height == 0)
+    {
+        auto windowRenderSize = Native_GetWindowRenderSize(window);
+        swapChainCreateInfo.imageExtent.width = windowRenderSize.Width;
+        swapChainCreateInfo.imageExtent.height = windowRenderSize.Height;
+    }
+    else
+    {
+        swapChainCreateInfo.imageExtent.width = options->Width;
+        swapChainCreateInfo.imageExtent.height = options->Height;
+    }
+
+    swapChain->CreateInfo = swapChainCreateInfo;
+    AssertIfFailed(vkCreateSwapchainKHR(graphicsDevice->Device, &swapChainCreateInfo, nullptr, &swapChain->DeviceObject));
+
+    CreateSwapChainBackBuffers(swapChain, swapChainCreateInfo.imageExtent.width, swapChainCreateInfo.imageExtent.height);
+
+    VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+	AssertIfFailed(vkCreateFence(graphicsDevice->Device, &fenceCreateInfo, 0, &swapChain->BackBufferAcquireFence ));
+
+    return swapChain;
+}
+
+void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
+{
+	auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    auto graphicsDevice = swapChain->GraphicsDevice;
+
+    vkDestroyFence(graphicsDevice->Device, swapChain->BackBufferAcquireFence, nullptr);
+
+    for (int i = 0; i < 3; i++)
+    {
+        vkDestroyImageView(graphicsDevice->Device, swapChain->BackBufferTextures[i]->ImageView, nullptr);
+        delete swapChain->BackBufferTextures[i];
+    }
+
+    vkDestroySwapchainKHR(swapChain->GraphicsDevice->Device, swapChain->DeviceObject, nullptr);
+    vkDestroySurfaceKHR(_vulkanInstance, swapChain->WindowSurface, nullptr);
+
+    delete swapChain;
+}
+
+void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
+{
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
+
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    auto graphicsDevice = swapChain->GraphicsDevice;
+
+	auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
+    WaitForFenceOnCpu(fence);
+
+    swapChain->CurrentPresentId = 0;
+    auto oldSwapChain = swapChain->DeviceObject;
+
+    auto swapChainCreateInfo = swapChain->CreateInfo;
+    swapChainCreateInfo.oldSwapchain = oldSwapChain;
+    swapChainCreateInfo.imageExtent.width = width;
+    swapChainCreateInfo.imageExtent.height = height;
+    
+    AssertIfFailed(vkCreateSwapchainKHR(graphicsDevice->Device, &swapChainCreateInfo, nullptr, &swapChain->DeviceObject));
+
+    for (int32_t i = 0; i < 3; i++)
+    {
+        auto texture = swapChain->BackBufferTextures[i];
+        vkDestroyImageView(graphicsDevice->Device, texture->ImageView, nullptr);
+    }
+
+    vkDestroySwapchainKHR(graphicsDevice->Device, oldSwapChain, nullptr);
+    
+    CreateSwapChainBackBuffers(swapChain, swapChainCreateInfo.imageExtent.width, swapChainCreateInfo.imageExtent.height);
+}
+
+void* VulkanGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
+{
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    return swapChain->BackBufferTextures[swapChain->CurrentImageIndex];
+}
+
+void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
+{
+    // TODO: Wait for the correct timeline semaphore value?
+    // Or just issue a barrier because the final buffer rendering and the present is done on the same queue
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
+
+    // HACK: We should set the release semaphore to the latest command buffer
+    // Otherwise, the results maybe undefined?
+
+    VkPresentIdKHR presentIdInfo = { VK_STRUCTURE_TYPE_PRESENT_ID_KHR };
+    presentIdInfo.swapchainCount = 1;
+    presentIdInfo.pPresentIds = &swapChain->CurrentPresentId;
+
+    VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+    presentInfo.waitSemaphoreCount = 0;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &swapChain->DeviceObject;
+    presentInfo.pImageIndices = &swapChain->CurrentImageIndex;
+    presentInfo.pNext = &presentIdInfo;
+
+    AssertIfFailed(vkQueuePresentKHR(swapChain->CommandQueue->DeviceObject, &presentInfo));
+    
+    ResetCommandAllocation(swapChain->GraphicsDevice);
+    swapChain->CurrentPresentId++;
+}
+
+void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
+{
+    // BUG: There is a high GPU usage when the app is not active
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    auto graphicsDevice = swapChain->GraphicsDevice;
+
+    if (swapChain->CurrentPresentId > 0)
+    {
+        auto presentId = max(0, (int32_t)swapChain->CurrentPresentId - (int32_t)swapChain->MaximumFrameLatency);
+        AssertIfFailed(vkWaitForPresentKHR(graphicsDevice->Device, swapChain->DeviceObject, presentId, UINT64_MAX));
+    }
+
+    // TODO: Do we really need to have that? because we have the present ID now.
+    AssertIfFailed(vkAcquireNextImageKHR(swapChain->GraphicsDevice->Device, swapChain->DeviceObject, UINT64_MAX, VK_NULL_HANDLE, swapChain->BackBufferAcquireFence, &swapChain->CurrentImageIndex));
+    vkWaitForFences(swapChain->GraphicsDevice->Device, 1, &swapChain->BackBufferAcquireFence, true, UINT64_MAX);
+    vkResetFences(swapChain->GraphicsDevice->Device, 1, &swapChain->BackBufferAcquireFence);
+}
+
+void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+
+    commandList->CurrentRenderPassDescriptor = *renderPassDescriptor;
+    
+    if (renderPassDescriptor->RenderTarget0.HasValue)
+    {
+        auto texture = (VulkanTexture*)commandList->CurrentRenderPassDescriptor.RenderTarget0.Value.TexturePointer;
+        auto clearColor = renderPassDescriptor->RenderTarget0.Value.ClearColor.Value;
+        TransitionTextureToState(commandList, texture, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+        VkRenderingAttachmentInfo colorAttachment = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        colorAttachment.imageView = texture->ImageView;
+        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        colorAttachment.loadOp = !renderPassDescriptor->RenderTarget0.Value.ClearColor.HasValue ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.clearValue.color = { clearColor.X, clearColor.Y, clearColor.Z, 1 };
+
+        VkRenderingInfo passInfo = { VK_STRUCTURE_TYPE_RENDERING_INFO };
+        passInfo.renderArea.extent.width = texture->Width;
+        passInfo.renderArea.extent.height = texture->Height;
+        passInfo.layerCount = 1;
+        passInfo.colorAttachmentCount = 1;
+        passInfo.pColorAttachments = &colorAttachment;
+
+        vkCmdBeginRendering(commandList->DeviceObject, &passInfo);
+
+        VkViewport viewport = { 0, float(texture->Height), float(texture->Width), -float(texture->Height), 0, 1 };
+        VkRect2D scissor = { {0, 0}, {uint32_t(texture->Height), uint32_t(texture->Height)} };
+
+        vkCmdSetViewport(commandList->DeviceObject, 0, 1, &viewport);
+        vkCmdSetScissor(commandList->DeviceObject, 0, 1, &scissor);
+    }
+
+    // TODO: We are not using render passes, will it works on tiled architecture GPUs on android?
+}
+    
+void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    
+    if (commandList->CurrentRenderPassDescriptor.RenderTarget0.HasValue)
+    {
+        vkCmdEndRendering(commandList->DeviceObject);
+
+        auto texture = (VulkanTexture*)commandList->CurrentRenderPassDescriptor.RenderTarget0.Value.TexturePointer;
+
+        if (texture->IsPresentTexture)
+        {
+            TransitionTextureToState(commandList, texture, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        }
+    }
+    
+    commandList->CurrentRenderPassDescriptor = {};
+}
+   
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
     auto result = GraphicsDeviceInfo();
@@ -291,6 +786,215 @@ VkDeviceQueueCreateInfo VulkanGraphicsService::CreateDeviceQueueCreateInfo(uint3
     queueCreateInfo.queueFamilyIndex = queueFamilyIndex;
 
     return queueCreateInfo;
+}
+    
+VulkanCommandPoolItem* VulkanGraphicsService::GetCommandPool(VulkanCommandQueue* commandQueue)
+{
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    VulkanDeviceCommandPools& commandPoolsCache = CommandPools[graphicsDevice->InternalId];
+
+    if (commandPoolsCache.Generation != graphicsDevice->CommandPoolGeneration)
+    {
+        commandPoolsCache.Reset(graphicsDevice->CommandPoolGeneration);
+    }
+
+    auto& commandPool = graphicsDevice->DirectCommandPool;
+    auto commandPoolItemPointer = &commandPoolsCache.DirectCommandPool;
+    
+    if (commandQueue->CommandQueueType == CommandQueueType_Copy)
+    {
+        commandPool = graphicsDevice->CopyCommandPool;
+        commandPoolItemPointer = &commandPoolsCache.CopyCommandPool;
+    }
+    else if (commandQueue->CommandQueueType == CommandQueueType_Compute)
+    {
+        commandPool = graphicsDevice->ComputeCommandPool;
+        commandPoolItemPointer = &commandPoolsCache.ComputeCommandPool;
+    }
+
+    if (*commandPoolItemPointer == nullptr)
+    {
+        VulkanCommandPoolItem* commandPoolItem;
+        commandPool.GetCurrentItemPointerAndMove(&commandPoolItem);
+
+        if (commandPoolItem->CommandPool == nullptr)
+        {
+            VkCommandPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+            createInfo.flags = 0;
+            createInfo.queueFamilyIndex = commandQueue->FamilyIndex;
+
+            AssertIfFailed(vkCreateCommandPool(graphicsDevice->Device, &createInfo, 0, &commandPoolItem->CommandPool));
+        }
+        else
+        {
+            assert(commandPoolItem->IsInUse == false);
+
+            if (commandPoolItem->Fence.FenceValue > 0)
+            {
+                WaitForFenceOnCpu(commandPoolItem->Fence);
+            }
+
+            AssertIfFailed(vkResetCommandPool(graphicsDevice->Device, commandPoolItem->CommandPool, 0));
+            commandPoolItem->CurrentCommandListIndex = 0;
+            commandPoolItem->IsInUse = true;
+        }
+
+        *commandPoolItemPointer = commandPoolItem;
+    }
+
+    return (*commandPoolItemPointer);
+}
+    
+void VulkanGraphicsService::UpdateCommandPoolFence(VulkanCommandList* commandList, uint64_t fenceValue)
+{
+    auto graphicsDevice = commandList->GraphicsDevice;
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandList->CommandQueue;
+    fence.FenceValue = fenceValue;
+
+    commandList->CommandPoolItem->Fence = fence;
+    commandList->CommandPoolItem->IsInUse = false;
+}
+
+VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem)
+{
+    auto graphicsDevice = commandQueue->GraphicsDevice;
+
+    VulkanCommandList** commandListArrayPointer = nullptr;
+    VulkanCommandList* commandList = nullptr;
+    auto isFromCommandPoolItem = false;
+
+    if (commandPoolItem->CurrentCommandListIndex < MAX_VULKAN_COMMAND_BUFFERS)
+    {
+        commandListArrayPointer = &commandPoolItem->CommandLists[commandPoolItem->CurrentCommandListIndex++];
+        commandList = *commandListArrayPointer;
+        isFromCommandPoolItem = true;
+    }
+
+    if (commandList == nullptr)
+    {
+        if (!isFromCommandPoolItem)
+        {
+            printf("Warning: Not enough command buffer objects in the pool. Performance may decrease...\n");
+        } 
+
+        commandList = new VulkanCommandList(this, commandQueue->GraphicsDevice);
+        commandList->CommandQueue = commandQueue;
+
+        VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        allocateInfo.commandPool = commandPoolItem->CommandPool;
+        allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocateInfo.commandBufferCount = 1;
+
+        AssertIfFailed(vkAllocateCommandBuffers(graphicsDevice->Device, &allocateInfo, &commandList->DeviceObject));
+
+        commandList->IsFromCommandPool = isFromCommandPoolItem;
+
+        if (isFromCommandPoolItem)
+        {
+            commandList->CommandPoolItem = commandPoolItem;
+            *commandListArrayPointer = commandList;
+        }
+    }
+
+    assert(commandList != nullptr);
+    return commandList;
+}
+    
+Fence VulkanGraphicsService::CreateCommandQueueFence(VulkanCommandQueue* commandQueue)
+{
+    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
+
+    VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+    timelineInfo.waitSemaphoreValueCount = 0;
+    timelineInfo.pWaitSemaphoreValues = nullptr;
+    timelineInfo.signalSemaphoreValueCount = 1;
+    timelineInfo.pSignalSemaphoreValues = &fenceValue;
+
+    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submitInfo.pNext = &timelineInfo;
+    submitInfo.waitSemaphoreCount = 0;
+    submitInfo.pWaitSemaphores = nullptr;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &commandQueue->TimelineSemaphore;
+    submitInfo.commandBufferCount = 0;
+    submitInfo.pCommandBuffers = nullptr;
+    submitInfo.pWaitDstStageMask = 0;
+
+    AssertIfFailed(vkQueueSubmit(commandQueue->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
+
+    auto fence = Fence();
+    fence.CommandQueuePointer = commandQueue;
+    fence.FenceValue = fenceValue;
+
+    return fence;
+}
+
+void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChain, int32_t width, int32_t height)
+{
+    auto graphicsDevice = swapChain->GraphicsDevice;
+
+    uint32_t swapchainImageCount = 0;
+    VkImage swapchainImages[3];
+	AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, nullptr));
+	AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, swapchainImages));
+
+    auto format = swapChain->Format == SwapChainFormat_HighDynamicRange ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_B8G8R8A8_SRGB;
+
+    for (uint32_t i = 0; i < swapchainImageCount; i++)
+    {
+        auto backBufferTexture = new VulkanTexture(this, graphicsDevice);
+        backBufferTexture->DeviceObject = swapchainImages[i];
+        backBufferTexture->IsPresentTexture = true;
+        backBufferTexture->Format = format;
+        backBufferTexture->Width = width;
+        backBufferTexture->Height = height;
+
+        VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        createInfo.image = swapchainImages[i];
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = format;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkImageView view = nullptr;
+        AssertIfFailed(vkCreateImageView(graphicsDevice->Device, &createInfo, 0, &backBufferTexture->ImageView));
+
+        swapChain->BackBufferTextures[i] = backBufferTexture;
+    }
+}
+
+void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer)
+{
+	// TODO: Handle texture accesses, currently we only handle the image layout
+    // TODO: Use VkImageMemoryBarrier2. What are the differences?
+
+    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+
+    barrier.srcAccessMask = VK_ACCESS_NONE_KHR;
+    barrier.dstAccessMask = VK_ACCESS_NONE_KHR;
+    barrier.oldLayout = sourceState;
+    barrier.newLayout = destinationState;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = texture->DeviceObject;
+    barrier.subresourceRange.aspectMask = texture->Format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    if (!isTransfer)
+    {
+        vkCmdPipelineBarrier(commandList->DeviceObject, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrier);
+    }
+
+    else
+    {
+        vkCmdPipelineBarrier(commandList->DeviceObject, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrier);
+    }
 }
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)

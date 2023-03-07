@@ -136,18 +136,6 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
                                     /// <value>Native pointer.</value>
                                     public nint NativePointer { get; init; }
 
-                                    /// <summary>
-                                    /// Converts from a <see langword="nint"/> type.
-                                    /// </summary>
-                                    /// <param name="src">Source value.</param>
-                                    public static implicit operator nint(##NAME## src) => src.NativePointer;
-
-                                    /// <summary>
-                                    /// Converts to a <see langword="nint"/> type.
-                                    /// </summary>
-                                    /// <param name="src">Source value.</param>
-                                    public static implicit operator ##NAME##(nint src) => new() { NativePointer = src };
-
                                     ##DISPOSE##
                                  }
                                  """;
@@ -162,7 +150,7 @@ public class PlatformNativePointerGenerator : IIncrementalGenerator
                             {
                                 if (NativePointer != nint.Zero)
                                 {
-                                    PlatformServiceInterop.##DELETEMETHOD##(NativePointer);
+                                    PlatformServiceInterop.##DELETEMETHOD##(this);
                                 }
                             }
                           """;

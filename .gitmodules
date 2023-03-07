@@ -1,0 +1,6 @@
+[submodule "src/Platforms/Common/Libs/Volk"]
+	path = src/Platforms/Common/Libs/Volk
+	url = https://github.com/zeux/volk.git
+[submodule "src/Platforms/Common/Libs/Vulkan"]
+	path = src/Platforms/Common/Libs/Vulkan
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git

@@ -4,11 +4,7 @@
 
 #include <locale>
 #include <codecvt>
-#include <string>
 
-#include <map>
-#include <vector>
-#include <stack>
 #include <assert.h>
 
 #define D3D12SDKVersion 608

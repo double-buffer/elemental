@@ -110,6 +110,23 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         context.RegisterPostInitializationOutput(context => context.AddSource(
             "PlatformMethodOverrideAttribute.g.cs",
             overrideAttributeCode));
+            
+            
+        var ignoreAttributeCode =   """
+                                    namespace Elemental;
+
+                                    /// <summary>
+                                    /// Attribute used by the source generator that tell the generator to ignore the method.
+                                    /// </summary>
+                                    [AttributeUsage(AttributeTargets.Method)]
+                                    public class PlatformMethodIgnoreAttribute : Attribute
+                                    {
+                                    }
+                                    """;
+
+        context.RegisterPostInitializationOutput(context => context.AddSource(
+            "PlatformMethodIgnoreAttribute.g.cs",
+            ignoreAttributeCode));
     }
 
     private static bool FilterInterfaceNodes(SyntaxNode syntaxNode)
@@ -203,17 +220,19 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         foreach (var method in platformService.MethodList)
         {
             var methodName = method.Name;
+            var isOverride = false;
 
             if (method.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformMethodOverrideAttribute"))
             {
                 methodName += "Implementation";
+                isOverride = true;
             }
 
             sourceCode.AppendLine($"/// <inheritdoc cref=\"{platformService.InterfaceName}\" />");
-            sourceCode.AppendLine($"public unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))})");
+            sourceCode.AppendLine($"{(!isOverride ? "public" : "private")} unsafe {((INamedTypeSymbol)method.ReturnType).ToString()} {methodName}({string.Join(",", method.Parameters.Select(item => GenerateParameterValue(item, isMethodDefinition: true)))})");
             sourceCode.AppendLine("{");
 
-            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformServiceAttribute");
+            var isReturnTypeNativePointer = method.ReturnType.GetAttributes().Any(item => item.AttributeClass?.Name == "PlatformNativePointerAttribute");
             var isReturnTypeSpan = method.ReturnType.Name == "Span" || method.ReturnType.Name == "ReadOnlySpan";
 
             if (isReturnTypeNativePointer)
@@ -247,7 +266,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
 
             if (isReturnTypeNativePointer)
             {
-                sourceCode.AppendLine("if (result == nint.Zero)");
+                sourceCode.AppendLine("if (result.NativePointer == nint.Zero)");
                 sourceCode.AppendLine("{");
                 sourceCode.AppendLine($"throw new InvalidOperationException(\"There was an error when executing '{methodName}'.\");");
                 sourceCode.AppendLine("}");
@@ -293,6 +312,11 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         var result = GenerateReferenceType(item);
         var typeName = ((INamedTypeSymbol)item.Type).ToString();
 
+        if (item.RefKind != RefKind.None && !(!isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue == null))
+        {
+            result += item.RefKind.ToString().ToLower() + " ";
+        }
+
         if (isMethodDefinition)
         {
             result += typeName + " ";
@@ -313,6 +337,11 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         else if (!isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue == null)
         {
             result += $" == default({typeName}) ? new {typeName}() : {item.Name}";
+        }
+
+        if (!isMethodDefinition && ((INamedTypeSymbol)item.Type).Name == "ReadOnlySpan")
+        {
+            result += $", {item.Name}.Length";
         }
 
         return result;
@@ -426,7 +455,10 @@ public class PlatformServiceGenerator : IIncrementalGenerator
             {
                 if (member is IMethodSymbol method)
                 {
-                    platformService.MethodList.Add(method);
+                    if (!method.GetAttributes().Any(item => item.AttributeClass!.Name == "PlatformMethodIgnoreAttribute"))
+                    {
+                        platformService.MethodList.Add(method);
+                    }
                 }
             }
 

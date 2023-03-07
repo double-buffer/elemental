@@ -8,23 +8,26 @@ internal static partial class PlatformServiceInterop
     internal static partial void Native_FreeNativePointer(nint pointer);
 
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial nint Native_CreateApplication(string applicationName);
+    internal static partial NativeApplication Native_CreateApplication(string applicationName);
 
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_FreeApplication(nint application);
+    internal static partial void Native_FreeApplication(NativeApplication application);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_RunApplication(nint application, RunHandler runHandler);
+    internal static partial void Native_RunApplication(NativeApplication application, RunHandler runHandler);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial nint Native_CreateWindow(nint application, NativeWindowOptions options);
+    internal static partial NativeWindow Native_CreateWindow(NativeApplication application, in NativeWindowOptions options);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial void Native_FreeWindow(nint window);
+    internal static partial void Native_FreeWindow(NativeWindow window);
     
     [LibraryImport("Elemental.Native")]
     internal static partial NativeWindowSize Native_GetWindowRenderSize(NativeWindow window);
     
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial void Native_SetWindowTitle(NativeWindow window, string title);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_SetWindowState(NativeWindow window, NativeWindowState windowState);
 }

@@ -75,6 +75,8 @@ try
 
     RegisterVisualStudioEnvironment
 
+    # TODO: Allow to have builds without Direct3D12 or Vulkan
+
     msbuild -t:restore,build -p:RestorePackagesConfig=true
     msbuild "Elemental.vcxproj" /p:configuration=$Configuration /p:outDir=$outputDirectory /p:platform=x64
     

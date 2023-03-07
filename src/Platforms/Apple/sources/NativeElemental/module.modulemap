@@ -1,0 +1,4 @@
+module NativeElemental {
+     header "../../../Common/Elemental.h"
+     export *
+ }

@@ -23,5 +23,11 @@ public readonly record struct NativeWindowSize
     /// </summary>
     /// <value>UIScale of the window.</value>
     public float UIScale { get; }
+
+    /// <summary>
+    /// Gets the Window state.
+    /// </summary>
+    /// <value>State of the window.</value>
+    public NativeWindowState WindowState { get; }
 }
 

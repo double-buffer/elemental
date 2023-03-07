@@ -1,7 +1,7 @@
 namespace Elemental.Graphics;
 
 /// <summary>
-/// Enumerates the differents Graphics APIs available.
+/// Supported Graphics APIs.
 /// </summary>
 public enum GraphicsApi
 {
