@@ -275,7 +275,10 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 		break;
 	}
 
-    case WM_SYSKEYUP:
+    case WM_MENUCHAR:
+        return MAKELRESULT(0, MNC_CLOSE);
+
+    case WM_SYSKEYDOWN:
 		if (wParam == VK_RETURN)
 		{
 			if ((HIWORD(lParam) & KF_ALTDOWN))
@@ -283,7 +286,7 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
                 auto nativeWindow = windowMap[window];
                 auto size = Native_GetWindowRenderSize(nativeWindow);
                 Native_SetWindowState(nativeWindow, NativeWindowState_FullScreen);
-			}
+            }
 		}
 		break;
 
@@ -306,9 +309,7 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 		PostQuitMessage(0);
 		break;
 	}
-	default:
-		return DefWindowProc(window, message, wParam, lParam);
 	}
 
-	return 0;
+	return DefWindowProc(window, message, wParam, lParam);
 }
