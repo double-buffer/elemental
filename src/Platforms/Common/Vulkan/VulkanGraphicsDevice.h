@@ -12,12 +12,14 @@ struct VulkanCommandPoolItem
         }
 
         CurrentCommandListIndex = 0;
+        IsInUse = true;
     }
 
     VkCommandPool CommandPool;
     Fence Fence;
     VulkanCommandList* CommandLists[MAX_VULKAN_COMMAND_BUFFERS];
     uint32_t CurrentCommandListIndex;
+    bool IsInUse;
 };
 
 struct VulkanGraphicsDevice : BaseGraphicsObject

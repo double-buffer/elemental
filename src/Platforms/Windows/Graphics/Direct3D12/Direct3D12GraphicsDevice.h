@@ -6,6 +6,7 @@ struct CommandAllocatorPoolItem
 {
     ComPtr<ID3D12CommandAllocator> Allocator;
     Fence Fence;
+    bool IsInUse = true;
 };
 
 struct CommandListPoolItem

@@ -10,5 +10,6 @@ struct VulkanTexture : VulkanBaseGraphicsObject
     VkImageView ImageView;
     VkFormat Format;
     bool IsPresentTexture = false;
-    VkImageLayout ResourceState = VK_IMAGE_LAYOUT_UNDEFINED;
+    int32_t Width;
+    int32_t Height;
 };

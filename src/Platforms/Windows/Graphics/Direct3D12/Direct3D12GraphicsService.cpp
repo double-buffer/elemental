@@ -211,9 +211,9 @@ void* Direct3D12GraphicsService::CreateCommandList(void* commandQueuePointer)
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
     auto commandAllocator = GetCommandAllocator(commandQueue);
-    auto commandList = GetCommandList(commandQueue);
+    auto commandList = GetCommandList(commandQueue, commandAllocator);
 
-    AssertIfFailed(commandList->DeviceObject->Reset(commandAllocator.Get(), nullptr));
+    AssertIfFailed(commandList->DeviceObject->Reset(commandAllocator->Allocator.Get(), nullptr));
     return commandList;
 }
 
@@ -261,12 +261,16 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
 	commandQueue->DeviceObject->ExecuteCommandLists(commandListCount, commandListsToExecute);
 
     auto fence = CreateCommandQueueFence(commandQueue);
-    UpdateCommandAllocatorFence(commandQueue);
     
     for (int32_t i = 0; i < commandListCount; i++)
 	{
         auto commandList = (Direct3D12CommandList*)commandLists[i];
         PushFreeCommandList(commandList->CommandQueue, commandList);
+        
+        if (commandList->IsFromCommandPool)
+        {
+            UpdateCommandAllocatorFence(commandList, fence.FenceValue);
+        }
     }
 
     return fence;
@@ -549,7 +553,7 @@ uint64_t Direct3D12GraphicsService::GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescri
     return adapterDescription.DeviceId + GraphicsApi_Direct3D12;
 }
 
-ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Direct3D12CommandQueue* commandQueue)
+CommandAllocatorPoolItem* Direct3D12GraphicsService::GetCommandAllocator(Direct3D12CommandQueue* commandQueue)
 {
     auto graphicsDevice = commandQueue->GraphicsDevice;
 
@@ -585,48 +589,36 @@ ComPtr<ID3D12CommandAllocator> Direct3D12GraphicsService::GetCommandAllocator(Di
         }
         else
         {
+            assert(commandAllocatorPoolItem->IsInUse == false);
+
             if (commandAllocatorPoolItem->Fence.FenceValue > 0)
             {
                 WaitForFenceOnCpu(commandAllocatorPoolItem->Fence);
             }
 
             AssertIfFailed(commandAllocatorPoolItem->Allocator->Reset());
+            commandAllocatorPoolItem->IsInUse = true;
         }
 
         *commandAllocatorPoolItemPointer = commandAllocatorPoolItem;
     }
 
-    return (*commandAllocatorPoolItemPointer)->Allocator;
+    return (*commandAllocatorPoolItemPointer);
 }
 
-void Direct3D12GraphicsService::UpdateCommandAllocatorFence(Direct3D12CommandQueue* commandQueue)
+void Direct3D12GraphicsService::UpdateCommandAllocatorFence(Direct3D12CommandList* commandList, uint64_t fenceValue)
 {
-    auto graphicsDevice = commandQueue->GraphicsDevice;
+    auto graphicsDevice = commandList->GraphicsDevice;
 
     auto fence = Fence();
-    fence.CommandQueuePointer = commandQueue;
-    fence.FenceValue = commandQueue->FenceValue;
-
-    DeviceCommandAllocators& commandAllocatorCache = CommandAllocators[graphicsDevice->InternalId];
-
-    if (commandQueue->CommandListType == D3D12_COMMAND_LIST_TYPE_COPY)
-    {
-        assert(commandAllocatorCache.CopyAllocator != nullptr);
-        commandAllocatorCache.CopyAllocator->Fence = fence;
-    }
-    else if (commandQueue->CommandListType == D3D12_COMMAND_LIST_TYPE_COMPUTE)
-    {
-        assert(commandAllocatorCache.ComputeAllocator != nullptr);
-        commandAllocatorCache.ComputeAllocator->Fence = fence;
-    }
-    else
-    {
-        assert(commandAllocatorCache.DirectAllocator != nullptr);
-        commandAllocatorCache.DirectAllocator->Fence = fence;
-    }
+    fence.CommandQueuePointer = commandList->CommandQueue;
+    fence.FenceValue = fenceValue;
+    
+    commandList->CommandAllocatorPoolItem->Fence = fence;
+    commandList->CommandAllocatorPoolItem->IsInUse = false;
 }
 
-Direct3D12CommandList* Direct3D12GraphicsService::GetCommandList(Direct3D12CommandQueue* commandQueue)
+Direct3D12CommandList* Direct3D12GraphicsService::GetCommandList(Direct3D12CommandQueue* commandQueue, CommandAllocatorPoolItem* commandAllocatorPoolItem)
 {
     CommandListPoolItem* commandListPoolItem;
 
@@ -650,7 +642,7 @@ Direct3D12CommandList* Direct3D12GraphicsService::GetCommandList(Direct3D12Comma
 
         commandList->IsUsed = true;
         commandList->IsFromCommandPool = true;
-
+        commandList->CommandAllocatorPoolItem = commandAllocatorPoolItem;
         commandListPoolItem->CommandList = commandList;
     }
     else
@@ -669,6 +661,7 @@ Direct3D12CommandList* Direct3D12GraphicsService::GetCommandList(Direct3D12Comma
             return commandListResult;
         }
 
+        commandList->CommandAllocatorPoolItem = commandAllocatorPoolItem;
         commandList->IsUsed = true;
     }
     

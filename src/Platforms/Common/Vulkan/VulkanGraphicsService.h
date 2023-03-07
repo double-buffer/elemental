@@ -67,13 +67,13 @@ private:
     VkDeviceQueueCreateInfo CreateDeviceQueueCreateInfo(uint32_t queueFamilyIndex, uint32_t count);
 
     VulkanCommandPoolItem* GetCommandPool(VulkanCommandQueue* commandQueue);
-    void UpdateCommandPoolFence(VulkanCommandQueue* commandQueue);
+    void UpdateCommandPoolFence(VulkanCommandList* commandList, uint64_t fenceValue);
     VulkanCommandList* GetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem);
     Fence CreateCommandQueueFence(VulkanCommandQueue* commandQueue);
 
-    void CreateSwapChainBackBuffers(VulkanSwapChain* swapChain);
+    void CreateSwapChainBackBuffers(VulkanSwapChain* swapChain, int32_t width, int32_t height);
 
-    void TransitionTextureToState(VulkanCommandList *commandList, VulkanTexture *texture, VkImageLayout destinationState, bool isTransfer = false);
+    void TransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer = false);
 };
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);

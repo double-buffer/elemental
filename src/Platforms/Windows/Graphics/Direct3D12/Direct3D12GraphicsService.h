@@ -66,9 +66,9 @@ private:
     GraphicsDeviceInfo ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription);
     uint64_t GetDeviceId(DXGI_ADAPTER_DESC3 adapterDescription);
 
-    ComPtr<ID3D12CommandAllocator> GetCommandAllocator(Direct3D12CommandQueue* commandQueue);
-    void UpdateCommandAllocatorFence(Direct3D12CommandQueue* commandQueue);
-    Direct3D12CommandList* GetCommandList(Direct3D12CommandQueue* commandQueue);
+    CommandAllocatorPoolItem* GetCommandAllocator(Direct3D12CommandQueue* commandQueue);
+    void UpdateCommandAllocatorFence(Direct3D12CommandList* commandList, uint64_t fenceValue);
+    Direct3D12CommandList* GetCommandList(Direct3D12CommandQueue* commandQueue, CommandAllocatorPoolItem* commandAllocatorPoolItem);
     void PushFreeCommandList(Direct3D12CommandQueue* commandQueue, Direct3D12CommandList* commandList);
     Fence CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue);
 

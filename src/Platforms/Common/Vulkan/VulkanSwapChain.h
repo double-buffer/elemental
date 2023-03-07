@@ -9,6 +9,7 @@ struct VulkanSwapChain : VulkanBaseGraphicsObject
     VkSwapchainKHR DeviceObject;
     VkSurfaceKHR WindowSurface;
     VulkanCommandQueue* CommandQueue;
+    VkSwapchainCreateInfoKHR CreateInfo;
     SwapChainFormat Format;
     VulkanTexture* BackBufferTextures[3];
     uint32_t CurrentImageIndex = 0;

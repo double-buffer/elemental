@@ -1,16 +1,18 @@
 #pragma once
 
+struct VulkanCommandPoolItem;
+
 struct VulkanCommandList : VulkanBaseGraphicsObject
 {
     VulkanCommandList(BaseGraphicsService* graphicsService, VulkanGraphicsDevice* graphicsDevice) : VulkanBaseGraphicsObject(graphicsService, graphicsDevice)
     {
         IsFromCommandPool = false;
-        IsUsed = true;
+        CommandPoolItem = nullptr;
     }
 
     VkCommandBuffer DeviceObject;
     VulkanCommandQueue* CommandQueue;
-    bool IsUsed;
     bool IsFromCommandPool;
+    VulkanCommandPoolItem* CommandPoolItem;
     RenderPassDescriptor CurrentRenderPassDescriptor;
 };

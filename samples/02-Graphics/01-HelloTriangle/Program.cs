@@ -33,7 +33,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
-    DeviceId = selectedGraphicsDevice.DeviceId
+    //DeviceId = selectedGraphicsDevice.DeviceId
 });
 
 using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
@@ -68,8 +68,8 @@ applicationService.RunApplication(application, (status) =>
 
     graphicsService.WaitForSwapChainOnCpu(swapChain);
 
-    var threadCount = 1;
-    var commandListCount = 1;
+    var threadCount = 5;
+    var commandListCount = 5;
 
     var commandLists = new CommandList[threadCount * commandListCount];
 
@@ -95,7 +95,7 @@ applicationService.RunApplication(application, (status) =>
             // TODO: Add a counter in the mesh dispatch push constant to test the frame latency
 
             graphicsService.EndRenderPass(commandList);
-/*            
+            
              graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
              {
                  RenderTarget0 = new RenderPassRenderTarget
@@ -105,7 +105,7 @@ applicationService.RunApplication(application, (status) =>
                  }
              });
 
-            graphicsService.EndRenderPass(commandList);*/
+            graphicsService.EndRenderPass(commandList);
 
             graphicsService.CommitCommandList(commandList);
 
