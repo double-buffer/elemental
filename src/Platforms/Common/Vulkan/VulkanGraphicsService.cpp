@@ -632,6 +632,7 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
 	auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
     WaitForFenceOnCpu(fence);
 
+    swapChain->CurrentPresentId = 0;
     auto oldSwapChain = swapChain->DeviceObject;
 
     auto swapChainCreateInfo = swapChain->CreateInfo;
@@ -643,7 +644,8 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
 
     for (int32_t i = 0; i < 3; i++)
     {
-        FreeTexture(swapChain->BackBufferTextures[i]);
+        auto texture = swapChain->BackBufferTextures[i];
+        vkDestroyImageView(graphicsDevice->Device, texture->ImageView, nullptr);
     }
 
     vkDestroySwapchainKHR(graphicsDevice->Device, oldSwapChain, nullptr);
@@ -686,7 +688,6 @@ void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
 void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
 {
     // BUG: There is a high GPU usage when the app is not active
-
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
 
@@ -970,6 +971,7 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
 void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer)
 {
 	// TODO: Handle texture accesses, currently we only handle the image layout
+    // TODO: Use VkImageMemoryBarrier2. What are the differences?
 
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 

@@ -33,7 +33,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
-    //DeviceId = selectedGraphicsDevice.DeviceId
+    DeviceId = selectedGraphicsDevice.DeviceId
 });
 
 using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
