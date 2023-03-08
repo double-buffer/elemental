@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Numerics;
+﻿using System.Numerics;
 using Elemental;
 using Elemental.Graphics;
 
@@ -34,7 +33,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
-    DeviceId = selectedGraphicsDevice.DeviceId
+    //DeviceId = selectedGraphicsDevice.DeviceId
 });
 
 using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
@@ -61,8 +60,6 @@ shaderParts[1] = new ShaderPart { Stage = ShaderStage.PixelShader, Data = pixelS
 
 using var shader = graphicsService.CreateShader();*/
 
-var stopWatch = new Stopwatch();
-
 applicationService.RunApplication(application, (status) =>
 {
     if (status.IsClosing)
@@ -80,36 +77,62 @@ applicationService.RunApplication(application, (status) =>
         currentRenderSize = renderSize;
     }
 
-    stopWatch.Restart();
     graphicsService.WaitForSwapChainOnCpu(swapChain);
-    stopWatch.Stop();
 
-    Console.WriteLine($"Wait for swapchain {stopWatch.Elapsed.TotalMilliseconds}");
+    var threadCount = 5;
+    var commandListCount = 5;
+
+    var commandLists = new CommandList[threadCount * commandListCount];
 
     using var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
 
-    var commandList = graphicsService.CreateCommandList(commandQueue);
-    graphicsService.SetCommandListLabel(commandList, $"Triangle CommandList)");
-
-        graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
+    Parallel.For (0, threadCount, (i) =>
+    //for (int i = 0; i < threadCount; i++)
+    {
+        for (var j = 0; j < commandListCount; j++)
         {
-            RenderTarget0 = new RenderPassRenderTarget
+            var commandList = graphicsService.CreateCommandList(commandQueue);
+            graphicsService.SetCommandListLabel(commandList, $"Triangle CommandList {j} (Thread :{i})");
+
+            graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
             {
-                Texture = backbufferTexture,
-                ClearColor = new Vector4(0.0f, 1.0f, 1.0f, 1.0f)
-            }
-        });
+                RenderTarget0 = new RenderPassRenderTarget
+                {
+                    Texture = backbufferTexture,
+                    ClearColor = new Vector4(0.8f, 0.5f, 0.0f, 1.0f)
+                }
+            });
 
-    graphicsService.EndRenderPass(commandList);
+            // TODO: Add a counter in the mesh dispatch push constant to test the frame latency
 
-    graphicsService.CommitCommandList(commandList);
+            graphicsService.EndRenderPass(commandList);
+            
+             graphicsService.BeginRenderPass(commandList, new RenderPassDescriptor
+             {
+                 RenderTarget0 = new RenderPassRenderTarget
+                 {
+                     Texture = backbufferTexture,
+                     ClearColor = new Vector4(0.0f, 1.0f, i == (threadCount - 1) && j == (commandListCount - 1) ? 1.0f : 0.0f, 1.0f)
+                 }
+             });
 
-    graphicsService.ExecuteCommandList(commandQueue, commandList);
+            graphicsService.EndRenderPass(commandList);
 
-    stopWatch.Restart();
+            graphicsService.CommitCommandList(commandList);
+
+            commandLists[i * commandListCount + j] = commandList;
+        }
+    //}
+    });
+
+    graphicsService.ExecuteCommandLists(commandQueue, commandLists, Array.Empty<Fence>());
+
+    for (var i = 0; i < commandLists.Length; i++)
+    {
+        commandLists[i].Dispose();
+    }
+
     graphicsService.PresentSwapChain(swapChain);
-    stopWatch.Stop();
 
-    Console.WriteLine($"Present swapchain {stopWatch.Elapsed.TotalMilliseconds}");
     return true;
 });

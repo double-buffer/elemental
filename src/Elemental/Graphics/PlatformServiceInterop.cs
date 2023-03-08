@@ -72,6 +72,12 @@ internal unsafe static partial class PlatformServiceInterop
         
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeTexture(Texture texture);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial Shader Native_CreateShader(ReadOnlySpan<ShaderPart> shaderParts, int shaderPartCount);
+
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_FreeShader(Shader shader);
 
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_BeginRenderPass(CommandList commandList, in RenderPassDescriptor renderPassDescriptor);

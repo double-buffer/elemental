@@ -209,9 +209,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_KHR_PRESENT_ID_EXTENSION_NAME,
-        VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
-        VK_NV_MESH_SHADER_EXTENSION_NAME,
-        VK_NV_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME
+        VK_KHR_PRESENT_WAIT_EXTENSION_NAME
     };
 
     createInfo.ppEnabledExtensionNames = extensions;
@@ -253,17 +251,11 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR };
     presentWaitFeatures.presentWait = true;
 
-    // TODO: Replace that with standard extension but it doesn't seems to work for now :/
-    VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV };
-    meshFeatures.meshShader = true;
-    meshFeatures.taskShader = true;
-
     createInfo.pNext = &features;
     features.pNext = &features12;
     features12.pNext = &features13;
     features13.pNext = &presentIdFeatures;
     presentIdFeatures.pNext = &presentWaitFeatures;
-    presentWaitFeatures.pNext = &meshFeatures;
 
     if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &(graphicsDevice->Device)) != VK_SUCCESS)
     {
@@ -453,7 +445,7 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
 
     VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
     timelineInfo.waitSemaphoreValueCount = fenceToWaitCount;
-    timelineInfo.pWaitSemaphoreValues = waitSemaphoreValues;
+    timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
     timelineInfo.signalSemaphoreValueCount = 1;
     timelineInfo.pSignalSemaphoreValues = &fenceValue;
 
@@ -674,6 +666,7 @@ void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.waitSemaphoreCount = 0;
+    presentInfo.pWaitSemaphores = nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &swapChain->DeviceObject;
     presentInfo.pImageIndices = &swapChain->CurrentImageIndex;
@@ -691,9 +684,10 @@ void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
 
-    if (swapChain->CurrentPresentId > 0)
+    // BUG: This method is not working correctly for now because present is blocking the CPU thread
+    if (swapChain->CurrentPresentId >= swapChain->MaximumFrameLatency)
     {
-        auto presentId = max(0, (int32_t)swapChain->CurrentPresentId - (int32_t)swapChain->MaximumFrameLatency);
+        auto presentId = swapChain->CurrentPresentId - swapChain->MaximumFrameLatency;
         AssertIfFailed(vkWaitForPresentKHR(graphicsDevice->Device, swapChain->DeviceObject, presentId, UINT64_MAX));
     }
 

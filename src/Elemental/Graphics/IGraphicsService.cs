@@ -155,6 +155,19 @@ public interface IGraphicsService
     void WaitForSwapChainOnCpu(SwapChain swapChain);
 
     /// <summary>
+    /// Creates a shader from one or more <see cref="ShaderPart" />
+    /// </summary>
+    /// <param name="shaderParts">List of shader parts.</param>
+    /// <returns>Shader handle.</returns>
+    Shader CreateShader(ReadOnlySpan<ShaderPart> shaderParts);
+
+    /// <summary>
+    /// Frees the specified <see cref="Shader" />.
+    /// </summary>
+    /// <param name="shader">Shader to free.</param>
+    void FreeShader(Shader shader);
+
+    /// <summary>
     /// Begins a new render pass on the specified <see cref="CommandList" />.
     /// </summary>
     /// <param name="commandList">Command list.</param>
