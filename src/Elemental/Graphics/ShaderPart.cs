@@ -1,9 +1,23 @@
 namespace Elemental.Graphics;
 
+/// <summary>
+/// Represents a part of a Shader.
+/// </summary>
 [NativeMarshalling(typeof(ShaderPartMarshaller))]
 public readonly record struct ShaderPart
 {
+    /// <summary>
+    /// Gets or sets the stage of the shader part.
+    /// </summary>
+    /// <value>Stage of the shader part.</value>
     public required ShaderStage Stage { get; init; }
+
+    /// <summary>
+    /// Gets or sets the compiled shader.
+    /// The binary data is platform specific. It can be provided by 
+    /// manually using the tools of the platform or by using Elemental.Tools.
+    /// </summary>
+    /// <value>Compiled shader.</value>
     public required ReadOnlyMemory<byte> Data { get; init; }
 }
 

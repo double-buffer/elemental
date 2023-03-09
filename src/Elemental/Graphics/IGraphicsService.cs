@@ -183,5 +183,19 @@ public interface IGraphicsService
     /// <param name="commandList">Command list.</param>
     void EndRenderPass(CommandList commandList);
 
+    /// <summary>
+    /// Sets the specified <see cref="Shader" /> to the specified <see cref="CommandList" />.
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="shader">Shader to set.</param>
     void SetShader(CommandList commandList, Shader shader);
+
+    /// <summary>
+    /// Dispatchs a mesh by using a MeshShader.
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="threadGroupCountX">Number of thread groups for X.</param>
+    /// <param name="threadGroupCountY">Number of thread groups for Y.</param>
+    /// <param name="threadGroupCountZ">Number of thread groups for Z.</param>
+    void DispatchMesh(CommandList commandList, uint threadGroupCountX, uint threadGroupCountY, uint threadGroupCountZ);
 }

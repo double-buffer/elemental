@@ -87,4 +87,7 @@ internal unsafe static partial class PlatformServiceInterop
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_SetShader(CommandList commandList, Shader shader);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_DispatchMesh(CommandList commandList, uint threadGroupCountX, uint threadGroupCountY, uint threadGroupCountZ);
 }

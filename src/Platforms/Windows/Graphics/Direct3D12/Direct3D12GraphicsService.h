@@ -58,6 +58,7 @@ public:
     void EndRenderPass(void* commandListPointer) override;
     
     void SetShader(void* commandListPointer, void* shaderPointer) override;
+    void DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) override;
 
 private:
     GraphicsDiagnostics _graphicsDiagnostics;

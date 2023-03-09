@@ -768,6 +768,11 @@ void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPoin
 {
 
 }
+
+void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
+
+}
    
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {

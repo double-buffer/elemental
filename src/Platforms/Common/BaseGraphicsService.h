@@ -38,4 +38,5 @@ public:
     virtual void EndRenderPass(void* commandListPointer) = 0;
 
     virtual void SetShader(void* commandListPointer, void* shaderPointer) = 0;
+    virtual void DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
 };

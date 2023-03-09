@@ -50,10 +50,10 @@ using var swapChain = graphicsService.CreateSwapChain(window, commandQueue, new 
 
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
-Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath);
+Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
-var meshShaderData = File.ReadAllBytes("TriangleMS.dxil");
-var pixelShaderData = File.ReadAllBytes("TrianglePS.dxil");
+var meshShaderData = File.ReadAllBytes("TriangleMS.bin");
+var pixelShaderData = File.ReadAllBytes("TrianglePS.bin");
 
 using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
 {
@@ -101,7 +101,7 @@ applicationService.RunApplication(application, (status) =>
     });
 
     graphicsService.SetShader(commandList, shader);
-    //graphicsService.DispatchMesh(commandList, 1, 1, 1);
+    graphicsService.DispatchMesh(commandList, 1, 1, 1);
 
     graphicsService.EndRenderPass(commandList);
     graphicsService.CommitCommandList(commandList);

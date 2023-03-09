@@ -591,6 +591,9 @@ void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shader
         if (shader->PipelineState == nullptr)
         {
             // TODO: Check if we already have compiled the correct PSO
+            // TODO: Hash the parameters
+            // TODO: Do a lookup in the hashlist
+            // TODO: Otherwise create the pipeline state (with the hardware cache if configured)
             printf("CREATE PIPELINE STATE...\n");
             shader->PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
         }
@@ -598,10 +601,19 @@ void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shader
         assert(shader->PipelineState != nullptr);
         commandList->DeviceObject->SetPipelineState(shader->PipelineState.Get());
         commandList->DeviceObject->SetGraphicsRootSignature(shader->RootSignature.Get());
-
-        // HACK: Temporary test !
-        commandList->DeviceObject->DispatchMesh(1, 1, 1);
     }
+}
+    
+void Direct3D12GraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
+    auto commandList = (Direct3D12CommandList*)commandListPointer;
+
+    if (!commandList->IsRenderPassActive)
+    {
+        return;
+    }
+        
+    commandList->DeviceObject->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
    
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
