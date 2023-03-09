@@ -123,6 +123,19 @@ struct SwapChainOptions
     int32_t MaximumFrameLatency;
 };
 
+enum ShaderStage
+{
+    ShaderStage_MeshShader = 1,
+    ShaderStage_PixelShader = 2
+};
+
+struct ShaderPart
+{
+    enum ShaderStage Stage;
+    void* DataPointer;
+    int32_t DataCount;
+};
+
 struct RenderPassRenderTarget
 {
     void* TexturePointer;

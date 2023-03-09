@@ -31,6 +31,11 @@ public:
     virtual void PresentSwapChain(void* swapChainPointer) = 0;
     virtual void WaitForSwapChainOnCpu(void* swapChainPointer) = 0;
 
+    virtual void* CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount) = 0;
+    virtual void FreeShader(void* shaderPointer) = 0;
+
     virtual void BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor) = 0;
     virtual void EndRenderPass(void* commandListPointer) = 0;
+
+    virtual void SetShader(void* commandListPointer, void* shaderPointer) = 0;
 };

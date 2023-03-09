@@ -157,9 +157,11 @@ public interface IGraphicsService
     /// <summary>
     /// Creates a shader from one or more <see cref="ShaderPart" />
     /// </summary>
+    /// <param name="graphicsDevice">Graphics device to use.</param>
     /// <param name="shaderParts">List of shader parts.</param>
     /// <returns>Shader handle.</returns>
-    Shader CreateShader(ReadOnlySpan<ShaderPart> shaderParts);
+    [PlatformMethodOverride] 
+    Shader CreateShader(GraphicsDevice graphicsDevice, ReadOnlySpan<ShaderPart> shaderParts);
 
     /// <summary>
     /// Frees the specified <see cref="Shader" />.
@@ -180,4 +182,6 @@ public interface IGraphicsService
     /// </summary>
     /// <param name="commandList">Command list.</param>
     void EndRenderPass(CommandList commandList);
+
+    void SetShader(CommandList commandList, Shader shader);
 }

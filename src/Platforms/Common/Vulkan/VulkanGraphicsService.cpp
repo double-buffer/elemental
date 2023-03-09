@@ -697,6 +697,16 @@ void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
     vkResetFences(swapChain->GraphicsDevice->Device, 1, &swapChain->BackBufferAcquireFence);
 }
 
+void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
+{
+    return nullptr;
+}
+
+void VulkanGraphicsService::FreeShader(void* shaderPointer)
+{
+
+}
+
 void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
@@ -752,6 +762,11 @@ void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
     }
     
     commandList->CurrentRenderPassDescriptor = {};
+}
+
+void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPointer)
+{
+
 }
    
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)

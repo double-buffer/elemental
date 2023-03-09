@@ -26,4 +26,12 @@ public sealed partial class GraphicsService
 
         return CreateSwapChainImplementation(window, commandQueue, localOptions);
     }
+    
+    /// <inheritdoc cref="IGraphicsService" />
+    public Shader CreateShader(GraphicsDevice graphicsDevice, ReadOnlySpan<ShaderPart> shaderParts)
+    {
+        // TODO: Add validation checks
+
+        return CreateShaderImplementation(graphicsDevice, shaderParts);
+    }
 }

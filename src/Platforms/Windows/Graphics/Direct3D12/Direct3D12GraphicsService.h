@@ -13,6 +13,7 @@ struct Direct3D12GraphicsDevice;
 #include "../Win32Window.h"
 #include "Direct3D12CommandQueue.h"
 #include "Direct3D12CommandList.h"
+#include "Direct3D12Shader.h"
 #include "Direct3D12Texture.h"
 #include "Direct3D12SwapChain.h"
 #include "Direct3D12GraphicsDevice.h"
@@ -49,9 +50,14 @@ public:
     void* GetSwapChainBackBufferTexture(void* swapChainPointer) override;
     void PresentSwapChain(void* swapChainPointer) override;
     void WaitForSwapChainOnCpu(void* swapChainPointer) override;
+
+    void* CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount) override;
+    void FreeShader(void* shaderPointer) override;
     
     void BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor) override;
     void EndRenderPass(void* commandListPointer) override;
+    
+    void SetShader(void* commandListPointer, void* shaderPointer) override;
 
 private:
     GraphicsDiagnostics _graphicsDiagnostics;
@@ -75,9 +81,44 @@ private:
     void CreateSwapChainBackBuffers(Direct3D12SwapChain* swapChain);
 
     void InitRenderPassRenderTarget(Direct3D12CommandList* commandList, D3D12_RENDER_PASS_RENDER_TARGET_DESC* renderPassRenderTargetDesc, RenderPassRenderTarget* renderTarget);
+    ComPtr<ID3D12PipelineState> CreateRenderPipelineState(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor);
 };
 
 NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
 
 thread_local DeviceCommandAllocators CommandAllocators[MAX_DIRECT3D12_GRAPHICS_DEVICES];
+
+
+#define PsoSubObject(name, subObjectType, subObject) 	struct alignas(void*) Def##name \
+						{ \
+						private: \
+							D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type; \
+							subObject innerObject; \
+ \
+						public: \
+							Def##name() noexcept : type(subObjectType), innerObject()  \
+							{ \
+							} \
+ \
+							Def##name(subObject const& i) : type(subObjectType), innerObject(i) {} \
+							Def##name& operator=(subObject const& i) { innerObject = i; return *this; } \
+							operator subObject() const { return innerObject; } \
+							operator subObject() { return innerObject; } \
+						} name; 
+
+struct GraphicsPso
+{
+public:
+	PsoSubObject(RootSignature, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE, ID3D12RootSignature*);
+	PsoSubObject(AS, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS, D3D12_SHADER_BYTECODE);
+	PsoSubObject(MS, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS, D3D12_SHADER_BYTECODE);
+	PsoSubObject(PS, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS, D3D12_SHADER_BYTECODE);
+	//PsoSubObject(PrimitiveTopologyType, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY, D3D12_PRIMITIVE_TOPOLOGY_TYPE);
+	PsoSubObject(RenderTargets, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS, D3D12_RT_FORMAT_ARRAY);
+	PsoSubObject(SampleDesc, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC, DXGI_SAMPLE_DESC);
+	PsoSubObject(RasterizerState, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER, D3D12_RASTERIZER_DESC);
+	PsoSubObject(DepthStencilFormat, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT, DXGI_FORMAT);
+	PsoSubObject(DepthStencilState, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL, D3D12_DEPTH_STENCIL_DESC);
+	PsoSubObject(BlendState, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND, D3D12_BLEND_DESC);
+};

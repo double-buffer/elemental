@@ -11,6 +11,7 @@ struct Direct3D12CommandList : Direct3D12BaseGraphicsObject
         CommandQueue = commandQueue;
         IsFromCommandPool = false;
         IsUsed = true;
+        IsRenderPassActive = false;
         CommandAllocatorPoolItem = nullptr;
     }
 
@@ -19,6 +20,7 @@ struct Direct3D12CommandList : Direct3D12BaseGraphicsObject
     RenderPassDescriptor CurrentRenderPassDescriptor;
     bool IsUsed;
     bool IsFromCommandPool;
+    bool IsRenderPassActive;
     CommandAllocatorPoolItem* CommandAllocatorPoolItem;
 };
 

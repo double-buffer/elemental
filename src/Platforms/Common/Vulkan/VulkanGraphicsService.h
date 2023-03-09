@@ -54,8 +54,13 @@ public:
     void PresentSwapChain(void* swapChainPointer) override;
     void WaitForSwapChainOnCpu(void* swapChainPointer) override;
     
+    void* CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount) override;
+    void FreeShader(void* shaderPointer) override;
+    
     void BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor) override;
     void EndRenderPass(void* commandListPointer) override;
+    
+    void SetShader(void* commandListPointer, void* shaderPointer) override;
 
 private:
     GraphicsDiagnostics _graphicsDiagnostics;

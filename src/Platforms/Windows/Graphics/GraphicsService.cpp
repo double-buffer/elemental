@@ -182,6 +182,18 @@ DllExport void Native_WaitForSwapChainOnCpu(void* swapChainPointer)
     auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
     graphicsService->WaitForSwapChainOnCpu(swapChainPointer);
 }
+    
+DllExport void* Native_CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
+{
+    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
+    return graphicsService->CreateShader(graphicsDevicePointer, shaderParts, shaderPartCount);
+}
+
+DllExport void Native_FreeShader(void* shaderPointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)shaderPointer)->GraphicsService;
+    graphicsService->FreeShader(shaderPointer);
+}
 
 DllExport void Native_BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
@@ -194,3 +206,10 @@ DllExport void Native_EndRenderPass(void* commandListPointer)
     auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
     graphicsService->EndRenderPass(commandListPointer);
 }
+
+DllExport void Native_SetShader(void* commandListPointer, void* shaderPointer)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
+    graphicsService->SetShader(commandListPointer, shaderPointer);
+}
+    

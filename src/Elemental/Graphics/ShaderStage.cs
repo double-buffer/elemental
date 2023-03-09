@@ -2,6 +2,6 @@ namespace Elemental.Graphics;
 
 public enum ShaderStage
 {
-    MeshShader,
-    PixelShader
+    MeshShader = 1,
+    PixelShader = 2
 }

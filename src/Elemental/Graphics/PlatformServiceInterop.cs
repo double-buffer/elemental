@@ -53,6 +53,9 @@ internal unsafe static partial class PlatformServiceInterop
     internal static partial void Native_ResetCommandAllocation(GraphicsDevice graphicsDevice);
     
     [LibraryImport("Elemental.Native")]
+    internal static partial void Native_FreeTexture(Texture texture);
+
+    [LibraryImport("Elemental.Native")]
     internal static partial SwapChain Native_CreateSwapChain(NativeWindow window, CommandQueue commandQueue, in SwapChainOptions options);
 
     [LibraryImport("Elemental.Native")]
@@ -69,12 +72,9 @@ internal unsafe static partial class PlatformServiceInterop
 
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_WaitForSwapChainOnCpu(SwapChain swapChain);
-        
-    [LibraryImport("Elemental.Native")]
-    internal static partial void Native_FreeTexture(Texture texture);
     
     [LibraryImport("Elemental.Native")]
-    internal static partial Shader Native_CreateShader(ReadOnlySpan<ShaderPart> shaderParts, int shaderPartCount);
+    internal static partial Shader Native_CreateShader(GraphicsDevice graphicsDevice, ReadOnlySpan<ShaderPart> shaderParts, int shaderPartCount);
 
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeShader(Shader shader);
@@ -84,4 +84,7 @@ internal unsafe static partial class PlatformServiceInterop
     
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_EndRenderPass(CommandList commandList);
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_SetShader(CommandList commandList, Shader shader);
 }

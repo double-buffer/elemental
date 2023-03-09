@@ -358,6 +358,8 @@ void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* comm
 	swapChain->WaitHandle = swapChain->DeviceObject->GetFrameLatencyWaitableObject();
     swapChain->RenderBufferCount = swapChainDesc.BufferCount;
     swapChain->Format = options->Format;
+    swapChain->Width = swapChainDesc.Width;
+    swapChain->Height = swapChainDesc.Height;
 
     CreateSwapChainBackBuffers(swapChain);
     return swapChain;
@@ -387,19 +389,18 @@ void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int widt
     }
 
     auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
+    swapChain->Width = width;
+    swapChain->Height = height;
 
-	auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
+    auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
     WaitForFenceOnCpu(fence);
     
     for (uint32_t i = 0; i < swapChain->RenderBufferCount; i++)
 	{
         swapChain->RenderBuffers[i]->DeviceObject.Reset();
+        swapChain->RenderBuffers[i] = nullptr;
     }
 	
-	D3D12_RESOURCE_DESC backBufferDesc;
-	backBufferDesc.Width = width;
-	backBufferDesc.Height = height;
-
 	AssertIfFailed(swapChain->DeviceObject->ResizeBuffers(swapChain->RenderBufferCount, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
     CreateSwapChainBackBuffers(swapChain);
 }
@@ -428,12 +429,51 @@ void Direct3D12GraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
 	}
 }
 
+void* Direct3D12GraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
+{
+    auto graphicsDevice = (Direct3D12GraphicsDevice*)graphicsDevicePointer;
+    auto shader = new Direct3D12Shader(graphicsDevice->GraphicsService, graphicsDevice);
+
+    for (int32_t i = 0; i < shaderPartCount; i++)
+    {
+        auto shaderPart = shaderParts[i];
+
+        // TODO: Do we really need ID3DBlob that lives in D3DCompile.h or can we use something else?
+        ComPtr<ID3DBlob> shaderBlob;
+        D3DCreateBlob(shaderPart.DataCount, shaderBlob.GetAddressOf());
+
+        auto shaderByteCode = shaderBlob->GetBufferPointer();
+        memcpy(shaderByteCode, shaderPart.DataPointer, shaderPart.DataCount);
+
+        switch (shaderPart.Stage)
+        {
+        case ShaderStage_MeshShader:
+	        AssertIfFailed(graphicsDevice->Device->CreateRootSignature(0, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), IID_PPV_ARGS(shader->RootSignature.GetAddressOf())));
+            shader->MeshShader = shaderBlob;
+            break;
+
+        case ShaderStage_PixelShader:
+            shader->PixelShader = shaderBlob;
+            break;
+        }
+    }
+
+    return shader;
+}
+
+void Direct3D12GraphicsService::FreeShader(void* shaderPointer)
+{
+    auto shader = (Direct3D12Shader*)shaderPointer;
+    delete shader;
+}
+
 void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
     auto graphicsDevice = commandList->GraphicsDevice;
 
     commandList->CurrentRenderPassDescriptor = *renderPassDescriptor;
+    commandList->IsRenderPassActive = true;
 
     D3D12_RENDER_PASS_RENDER_TARGET_DESC renderTargetDescList[4];
     uint32_t renderTargetDescCount = 0;
@@ -488,18 +528,21 @@ void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, Render
     }*/
 
     commandList->DeviceObject->BeginRenderPass(renderTargetDescCount, renderTargetDescList, depthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
-/*
+
+    // HACK: This is temporary code!
+    auto texture = (Direct3D12Texture*)renderPassDescriptor->RenderTarget0.Value.TexturePointer;
+
     D3D12_VIEWPORT viewport = {};
-    viewport.Width = (float)texture->ResourceDesc.Width;
-    viewport.Height = (float)texture->ResourceDesc.Height;
+    viewport.Width = (float)texture->Width;
+    viewport.Height = (float)texture->Height;
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
-    commandList->CommandListObject->RSSetViewports(1, &viewport);
+    commandList->DeviceObject->RSSetViewports(1, &viewport);
 
     D3D12_RECT scissorRect = {};
-    scissorRect.right = (long)texture->ResourceDesc.Width;
-    scissorRect.bottom = (long)texture->ResourceDesc.Height;
-    commandList->CommandListObject->RSSetScissorRects(1, &scissorRect);*/
+    scissorRect.right = (long)texture->Width;
+    scissorRect.bottom = (long)texture->Height;
+    commandList->DeviceObject->RSSetScissorRects(1, &scissorRect);
 }
     
 void Direct3D12GraphicsService::EndRenderPass(void* commandListPointer)
@@ -535,6 +578,30 @@ void Direct3D12GraphicsService::EndRenderPass(void* commandListPointer)
     }
 
     commandList->CurrentRenderPassDescriptor = {};
+    commandList->IsRenderPassActive = false;
+}
+    
+void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shaderPointer)
+{
+    auto commandList = (Direct3D12CommandList*)commandListPointer;
+    auto shader = (Direct3D12Shader*)shaderPointer;
+
+    if (commandList->IsRenderPassActive)
+    {
+        if (shader->PipelineState == nullptr)
+        {
+            // TODO: Check if we already have compiled the correct PSO
+            printf("CREATE PIPELINE STATE...\n");
+            shader->PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
+        }
+
+        assert(shader->PipelineState != nullptr);
+        commandList->DeviceObject->SetPipelineState(shader->PipelineState.Get());
+        commandList->DeviceObject->SetGraphicsRootSignature(shader->RootSignature.Get());
+
+        // HACK: Temporary test !
+        commandList->DeviceObject->DispatchMesh(1, 1, 1);
+    }
 }
    
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
@@ -709,6 +776,9 @@ void Direct3D12GraphicsService::CreateSwapChainBackBuffers(Direct3D12SwapChain* 
             backBufferTexture->DeviceObject = backBuffer;
             //backBufferTexture->ResourceState = D3D12_RESOURCE_STATE_PRESENT;
             backBufferTexture->IsPresentTexture = true;
+            backBufferTexture->Width = swapChain->Width;
+            backBufferTexture->Height = swapChain->Height;
+
             //backBufferTexture->ResourceDesc = CreateTextureResourceDescription(textureFormat, GraphicsTextureUsage::RenderTarget, width, height, 1, 1, 1);
 
 		    swapChain->RenderBuffers[i] = backBufferTexture;
@@ -783,6 +853,120 @@ void Direct3D12GraphicsService::InitRenderPassRenderTarget(Direct3D12CommandList
         renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[2] = clearColor.Z;
         renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[3] = clearColor.W;
     }
+}
+    
+ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor)
+{
+	ComPtr<ID3D12PipelineState> pipelineState;
+
+    D3D12_RT_FORMAT_ARRAY renderTargets = {};
+
+    renderTargets.NumRenderTargets = 1;
+    renderTargets.RTFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // TODO: Fill Correct Back Buffer Format
+   
+    DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
+
+    /*if (renderPassDescriptor.DepthTexturePointer.HasValue)
+    {
+        // TODO: Change that
+        depthFormat = DXGI_FORMAT_D32_FLOAT;
+    }*/
+
+    DXGI_SAMPLE_DESC sampleDesc = {};
+    sampleDesc.Count = 1;
+    sampleDesc.Quality = 0;
+
+    D3D12_RASTERIZER_DESC rasterizerState = {};
+    rasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    rasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+    rasterizerState.FrontCounterClockwise = false;
+    rasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+    rasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+    rasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+    rasterizerState.DepthClipEnable = true;
+    rasterizerState.MultisampleEnable = false;
+    rasterizerState.AntialiasedLineEnable = false;
+    rasterizerState.ForcedSampleCount = 0;
+    rasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+   /* 
+    D3D12_DEPTH_STENCIL_DESC depthStencilState = {};
+    
+    if (renderPassDescriptor.DepthBufferOperation != GraphicsDepthBufferOperation::DepthNone)
+    {
+        depthStencilState.DepthEnable = true;
+        depthStencilState.StencilEnable = false;
+
+        if (renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::ClearWrite ||
+            renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::Write)
+        {
+            depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        }
+
+        if (renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::CompareEqual)
+        {
+            depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
+        }
+
+        else
+        {
+            depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+        }
+    }
+*/
+    D3D12_BLEND_DESC blendState = {};
+    blendState.AlphaToCoverageEnable = false;
+    blendState.IndependentBlendEnable = false;
+/*
+    if (renderPassDescriptor.RenderTarget1BlendOperation.HasValue)
+    {
+        auto blendOperation = renderPassDescriptor.RenderTarget1BlendOperation.Value;
+        blendState.RenderTarget[0] = InitBlendState(blendOperation);
+    }
+
+    else
+    {*/
+    blendState.RenderTarget[0] = {
+        false,
+        false,
+        D3D12_BLEND_ONE,
+        D3D12_BLEND_ZERO,
+        D3D12_BLEND_OP_ADD,
+        D3D12_BLEND_ONE,
+        D3D12_BLEND_ZERO,
+        D3D12_BLEND_OP_ADD,
+        D3D12_LOGIC_OP_NOOP,
+        D3D12_COLOR_WRITE_ENABLE_ALL,
+    }; // InitBlendState(GraphicsBlendOperation::None);
+    //}
+
+    //D3D12_PRIMITIVE_TOPOLOGY_TYPE topologyType = renderPassDescriptor.PrimitiveType == GraphicsPrimitiveType::Triangle ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE : D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+
+    D3D12_PIPELINE_STATE_STREAM_DESC psoStream = {};
+    GraphicsPso psoDesc = {};
+    
+    psoDesc.RootSignature = shader->RootSignature.Get();
+
+    /*if (shader->AmplificationShaderMethod != nullptr)
+    {
+        psoDesc.AS = { shader->AmplificationShaderMethod->GetBufferPointer(), shader->AmplificationShaderMethod->GetBufferSize() };
+    }*/
+
+    psoDesc.MS = { shader->MeshShader->GetBufferPointer(), shader->MeshShader->GetBufferSize() };
+    psoDesc.PS = { shader->PixelShader->GetBufferPointer(), shader->PixelShader->GetBufferSize() };
+    psoDesc.RenderTargets = renderTargets;
+    psoDesc.SampleDesc = sampleDesc;
+    psoDesc.RasterizerState = rasterizerState;
+    psoDesc.DepthStencilFormat = depthFormat;
+    //psoDesc.DepthStencilState = depthStencilState;
+    psoDesc.BlendState = blendState;
+
+    psoStream.SizeInBytes = sizeof(GraphicsPso);
+    psoStream.pPipelineStateSubobjectStream = &psoDesc;
+
+    AssertIfFailed(shader->GraphicsDevice->Device->CreatePipelineState(&psoStream, IID_PPV_ARGS(pipelineState.GetAddressOf())));
+
+    return pipelineState;
 }
 
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)
