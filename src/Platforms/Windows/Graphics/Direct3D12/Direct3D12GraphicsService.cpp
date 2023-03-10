@@ -584,16 +584,35 @@ void Direct3D12GraphicsService::EndRenderPass(void* commandListPointer)
 void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shaderPointer)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
+    auto graphicsDevice = commandList->GraphicsDevice;
     auto shader = (Direct3D12Shader*)shaderPointer;
 
     if (commandList->IsRenderPassActive)
     {
+        auto renderPassDescriptor = &commandList->CurrentRenderPassDescriptor;
+        auto hash = ComputeRenderPipelineStateHash(shader, renderPassDescriptor);
+
+        printf("Hash %d\n", hash);
+
+        if (!graphicsDevice->PipelineStates.ContainsKey(hash))
+        {
+            printf("NOKEY\n");
+        }
+        else
+        {
+            printf("KEY\n");
+        }
+
         if (shader->PipelineState == nullptr)
         {
             // TODO: Check if we already have compiled the correct PSO
             // TODO: Hash the parameters
             // TODO: Do a lookup in the hashlist
             // TODO: Otherwise create the pipeline state (with the hardware cache if configured)
+            // TODO: Async compilation with mutlithread support. (Reserve a slot in the cache, and return the pipelinestate cache object)
+            // TODO: Have a separate CompileShader function that will launch the async work.
+            // TODO: Have a separate GetShaderStatus method
+            // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
             printf("CREATE PIPELINE STATE...\n");
             shader->PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
         }
@@ -608,6 +627,7 @@ void Direct3D12GraphicsService::DispatchMesh(void* commandListPointer, uint32_t 
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
 
+    // TODO: Check if the current shader on the command list is already is already compiled 
     if (!commandList->IsRenderPassActive)
     {
         return;
@@ -865,6 +885,11 @@ void Direct3D12GraphicsService::InitRenderPassRenderTarget(Direct3D12CommandList
         renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[2] = clearColor.Z;
         renderPassRenderTargetDesc->BeginningAccess.Clear.ClearValue.Color[3] = clearColor.W;
     }
+}
+    
+uint64_t Direct3D12GraphicsService::ComputeRenderPipelineStateHash(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor)
+{
+    return 13;
 }
     
 ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor)

@@ -183,6 +183,11 @@ public interface IGraphicsService
     /// <param name="commandList">Command list.</param>
     void EndRenderPass(CommandList commandList);
 
+    // TODO: void CompileRenderShader(Shader shader, in RenderPassDescriptor renderPassDescriptor);
+    // TODO: ShaderCompilationStatus GetRenderShaderCompilationStatus(Shader shader, in RenderPassDescriptor renderPassDescriptor);
+    // TODO: GetShaderCompilationStatusList(....)
+
+    // TODO: Add a parameter wait for compilation dedault = true
     /// <summary>
     /// Sets the specified <see cref="Shader" /> to the specified <see cref="CommandList" />.
     /// </summary>
