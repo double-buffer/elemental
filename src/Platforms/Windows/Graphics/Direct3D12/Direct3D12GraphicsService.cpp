@@ -990,6 +990,8 @@ ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState
     }*/
 
     psoDesc.MS = { shader->MeshShader->GetBufferPointer(), shader->MeshShader->GetBufferSize() };
+
+    // TODO: Check if the pixel shader is set, it can be null and it is ok
     psoDesc.PS = { shader->PixelShader->GetBufferPointer(), shader->PixelShader->GetBufferSize() };
     psoDesc.RenderTargets = renderTargets;
     psoDesc.SampleDesc = sampleDesc;

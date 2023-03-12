@@ -1,13 +1,11 @@
 import Metal
 
-public class MetalObject<T: AnyObject, TMetal> {
-    public init(_ metalDevice: MTLDevice, _ deviceObject : TMetal) {
-        self.metalDevice = metalDevice
-        self.deviceObject = deviceObject
+public class MetalObject<T: AnyObject> {
+    public init(_ graphicsDevice: MetalGraphicsDevice) {
+        self.graphicsDevice = graphicsDevice
     }
     
-    public let metalDevice: MTLDevice
-    public let deviceObject: TMetal
+    public let graphicsDevice: MetalGraphicsDevice
 
     public func toPointer() -> UnsafeMutableRawPointer {
         return Unmanaged.passRetained(self).toOpaque()

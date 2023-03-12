@@ -1,13 +1,15 @@
 import Atomics
 import Metal
 
-public class MetalCommandQueue : MetalObject<MetalCommandQueue, MTLCommandQueue> {
-    public init(_ metalDevice: MTLDevice, _ metalCommandQueue : MTLCommandQueue, _ fence: MTLSharedEvent) {
+public class MetalCommandQueue : MetalObject<MetalCommandQueue> {
+    public init(_ graphicsDevice: MetalGraphicsDevice, _ metalCommandQueue : MTLCommandQueue, _ fence: MTLSharedEvent) {
+        self.deviceObject = metalCommandQueue
         self.fence = fence
         self.fenceValue = ManagedAtomic<UInt64>(0)
-        super.init(metalDevice, metalCommandQueue)
+        super.init(graphicsDevice)
     }
     
-    let fence: MTLSharedEvent
-    let fenceValue: ManagedAtomic<UInt64>
+    public let deviceObject: MTLCommandQueue
+    public let fence: MTLSharedEvent
+    public let fenceValue: ManagedAtomic<UInt64>
 }

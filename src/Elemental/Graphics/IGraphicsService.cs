@@ -126,6 +126,9 @@ public interface IGraphicsService
     /// <param name="swapChain">SwapChain to free.</param>
     void FreeSwapChain(SwapChain swapChain);
 
+    // TODO: Label function
+    //void SetSwapChainLabel(SwapChain swapChain, string label);
+
     /// <summary>
     /// Resizes the specified <see cref="SwapChain" />.
     /// </summary>
@@ -168,6 +171,9 @@ public interface IGraphicsService
     /// </summary>
     /// <param name="shader">Shader to free.</param>
     void FreeShader(Shader shader);
+
+    // TODO: Label function
+    //void SetShaderLabel(Shader shader, string label);
 
     /// <summary>
     /// Begins a new render pass on the specified <see cref="CommandList" />.

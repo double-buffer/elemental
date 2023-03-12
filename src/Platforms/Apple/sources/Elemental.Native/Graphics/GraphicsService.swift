@@ -84,7 +84,7 @@ public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer, type: Co
             return nil
         }
 
-        let commandQueue = MetalCommandQueue(graphicsDevice.metalDevice, metalCommandQueue, fence)
+        let commandQueue = MetalCommandQueue(graphicsDevice, metalCommandQueue, fence)
         return commandQueue.toPointer()
     }
 }
@@ -113,7 +113,7 @@ public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMu
             return nil
         }
 
-        let commandList = MetalCommandList(commandQueue.metalDevice, metalCommandBuffer)
+        let commandList = MetalCommandList(commandQueue.graphicsDevice, metalCommandBuffer)
         return commandList.toPointer()
     }
 }
@@ -212,7 +212,14 @@ public func waitForFenceOnCpu(fence: Fence) {
 @_cdecl("Native_ResetCommandAllocation")
 public func resetCommandAllocation(graphicsDevicePointer: UnsafeRawPointer) {
 }
-    
+
+@_cdecl("Native_FreeTexture")
+public func freeTexture(texturePointer: UnsafeRawPointer) {
+    autoreleasepool {
+        MetalTexture.release(texturePointer)
+    }
+}
+
 @_cdecl("Native_CreateSwapChain")
 public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer: UnsafeRawPointer, optionsPointer: UnsafePointer<SwapChainOptions>) -> UnsafeMutableRawPointer? {
     autoreleasepool {
@@ -242,7 +249,7 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
         }
 
         let metalLayer = metalView.metalLayer
-        metalLayer.device = commandQueue.metalDevice
+        metalLayer.device = commandQueue.graphicsDevice.metalDevice
         metalLayer.pixelFormat = options.Format == SwapChainFormat_HighDynamicRange ? .rgba16Float : .bgra8Unorm_srgb
         metalLayer.framebufferOnly = true
         metalLayer.allowsNextDrawableTimeout = true
@@ -252,7 +259,7 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
 
         let presentSemaphore = DispatchSemaphore.init(value: Int(options.MaximumFrameLatency));
 
-        let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer, commandQueue, presentSemaphore)
+        let swapChain = MetalSwapChain(commandQueue.graphicsDevice, metalLayer, commandQueue, presentSemaphore)
         return swapChain.toPointer()
     }
 }
@@ -282,7 +289,7 @@ public func getSwapChainBackBufferTexture(swapChainPointer: UnsafeRawPointer) ->
             return nil
         }
         
-        let texture = MetalTexture(swapChain.metalDevice, backBufferDrawable.texture)
+        let texture = MetalTexture(swapChain.graphicsDevice, backBufferDrawable.texture)
         texture.isPresentTexture = true
 
         return texture.toPointer()
@@ -341,10 +348,42 @@ public func waitForSwapChainOnCpu(swapChainPointer: UnsafeRawPointer) {
     }
 }
 
-@_cdecl("Native_FreeTexture")
-public func freeTexture(texturePointer: UnsafeRawPointer) {
+@_cdecl("Native_CreateShader")
+public func createShader(graphicsDevicePointer: UnsafeRawPointer, shaderParts: UnsafePointer<ShaderPart>, shaderPartCount: Int) -> UnsafeMutableRawPointer? {
     autoreleasepool {
-        MetalTexture.release(texturePointer)
+        let graphicsDevice = MetalGraphicsDevice.fromPointer(graphicsDevicePointer)
+        let shader = MetalShader(graphicsDevice)
+
+        for i in 0..<shaderPartCount {
+            let shaderPart = shaderParts[i]
+            let dispatchData = DispatchData(bytes: UnsafeRawBufferPointer(start: shaderPart.DataPointer, count: Int(shaderPart.DataCount)))
+            let defaultLibrary = try! graphicsDevice.metalDevice.makeLibrary(data: dispatchData as __DispatchData)
+
+            // HACK: Find a solution here! For the moment we hardcode the function name
+
+            switch shaderPart.Stage {
+                case ShaderStage_MeshShader:
+                    let shaderFunction = defaultLibrary.makeFunction(name: "MeshMain")
+                    shader.meshShader = shaderFunction
+                    
+                case ShaderStage_PixelShader:
+                    let shaderFunction = defaultLibrary.makeFunction(name: "PixelMain")
+                    shader.pixelShader = shaderFunction
+
+                default:
+                    print("createShader: Unknown shader part")
+                    return nil
+            }
+        }
+        
+        return shader.toPointer()
+    }
+}
+
+@_cdecl("Native_FreeShader")
+public func freeShader(shaderPointer: UnsafeRawPointer) {
+    autoreleasepool {
+        MetalShader.release(shaderPointer)
     }
 }
     
@@ -362,6 +401,10 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
 
         // BUG: There is a memory leak when encoding more than one render pass with drawable
         let renderPassDescriptor = renderPassDescriptorPointer.pointee
+        
+        commandList.isRenderPassActive = true
+        commandList.currentRenderPassDescriptor = renderPassDescriptor
+
         let metalRenderPassDescriptor = MTLRenderPassDescriptor()
 
         if (renderPassDescriptor.RenderTarget0.HasValue) {
@@ -423,12 +466,52 @@ public func endRenderPass(commandListPointer: UnsafeRawPointer) {
         let commandList = MetalCommandList.fromPointer(commandListPointer)
 
         guard let commandEncoder = commandList.commandEncoder else {
-            print("error")
+            print("endRenderPass: Command encoder is nil")
             return
         }
         
         commandEncoder.endEncoding()
         commandList.commandEncoder = nil
+        commandList.isRenderPassActive = false
+        commandList.currentRenderPassDescriptor = nil
+    }
+}
+
+@_cdecl("Native_SetShader")
+public func setShader(commandListPointer: UnsafeRawPointer, shaderPointer: UnsafeRawPointer) {
+    autoreleasepool {
+        let commandList = MetalCommandList.fromPointer(commandListPointer)
+        let shader = MetalShader.fromPointer(shaderPointer)
+
+        if (commandList.isRenderPassActive) {
+            if (shader.currentRenderPipelineState == nil) {
+                shader.currentRenderPipelineState = createRenderPipelineState(shader, commandList.currentRenderPassDescriptor!)
+            }
+        }
+
+        guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
+            return
+        }
+
+        renderCommandEncoder.setRenderPipelineState(shader.currentRenderPipelineState!)
+    }
+}
+
+@_cdecl("Native_DispatchMesh")
+public func dispatchMesh(commandListPointer: UnsafeRawPointer, threadGroupCountX: UInt32, threadGroupCountY: UInt32, threadGroupCountZ: UInt32) {
+    autoreleasepool {
+        let commandList = MetalCommandList.fromPointer(commandListPointer)
+
+        guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
+            print("dispatchMesh: Command encoder is not a render command encoder")
+            return
+        }
+
+        // TODO: Review that
+        renderCommandEncoder.drawMeshThreadgroups(MTLSizeMake(Int(threadGroupCountX), Int(threadGroupCountY), Int(threadGroupCountZ)),
+    threadsPerObjectThreadgroup: MTLSizeMake(32, 1, 1),
+    threadsPerMeshThreadgroup: MTLSizeMake(32, 1, 1))
+
     }
 }
 
@@ -466,6 +549,60 @@ private func initRenderPassColorDescriptor(_ descriptor: MTLRenderPassColorAttac
             descriptor.clearColor = MTLClearColor.init(red: Double(clearColor.X), green: Double(clearColor.Y), blue: Double(clearColor.Z), alpha: Double(clearColor.W))
         }
     }
+}
+public func createRenderPipelineState(_ shader: MetalShader, _ renderPassDescriptor: RenderPassDescriptor) -> MTLRenderPipelineState {
+    print("CREATE PSO")
+
+    let pipelineStateDescriptor = MTLMeshRenderPipelineDescriptor()
+
+    pipelineStateDescriptor.meshFunction = shader.meshShader
+    pipelineStateDescriptor.fragmentFunction = shader.pixelShader
+
+    //pipelineStateDescriptor.supportIndirectCommandBuffers = true
+    //pipelineStateDescriptor.sampleCount = (metalRenderPassDescriptor.MultiSampleCount.HasValue == 1) ? Int(metalRenderPassDescriptor.MultiSampleCount.Value) : 1
+
+    // TODO: Use the correct render target format
+    if (renderPassDescriptor.RenderTarget0.HasValue) {
+        pipelineStateDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm_srgb
+    }
+
+/*
+    if (metalRenderPassDescriptor.RenderTarget2TextureFormat.HasValue == 1) {
+        pipelineStateDescriptor.colorAttachments[1].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget2TextureFormat.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget3TextureFormat.HasValue == 1) {
+        pipelineStateDescriptor.colorAttachments[2].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget3TextureFormat.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget4TextureFormat.HasValue == 1) {
+        pipelineStateDescriptor.colorAttachments[3].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget4TextureFormat.Value)
+    }
+
+    if (metalRenderPassDescriptor.DepthTexturePointer.HasValue == 1) {
+        pipelineStateDescriptor.depthAttachmentPixelFormat = .depth32Float
+    } 
+
+    if (metalRenderPassDescriptor.RenderTarget1BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[0]!, metalRenderPassDescriptor.RenderTarget1BlendOperation.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget2BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[1]!, metalRenderPassDescriptor.RenderTarget2BlendOperation.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget3BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[2]!, metalRenderPassDescriptor.RenderTarget3BlendOperation.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget4BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[3]!, metalRenderPassDescriptor.RenderTarget4BlendOperation.Value)
+    }*/
+
+    let options = MTLPipelineOption()
+
+        let pipelineState = try! shader.graphicsDevice.metalDevice.makeRenderPipelineState(descriptor: pipelineStateDescriptor, options: options)
+        return pipelineState.0
 }
 
 private func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {
