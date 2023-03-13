@@ -61,7 +61,15 @@ using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
     new ShaderPart { Stage = ShaderStage.PixelShader, Data = pixelShaderData }
 });
 
+using var shader2 = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
+{
+    new ShaderPart { Stage = ShaderStage.MeshShader, Data = meshShaderData },
+    new ShaderPart { Stage = ShaderStage.PixelShader, Data = pixelShaderData }
+});
+
 var stopWatch = new Stopwatch();
+var currentRotationX = 0.0f;
+var currentRotationY = 0.0f;
 
 applicationService.RunApplication(application, (status) =>
 {
@@ -101,6 +109,15 @@ applicationService.RunApplication(application, (status) =>
     });
 
     graphicsService.SetShader(commandList, shader);
+
+    // TODO: Compute real delta time
+    var deltaTime = 1.0f / 60.0f;
+    //currentRotationX += 0.5f * deltaTime;
+    currentRotationY += 0.5f * deltaTime;
+
+    var shaderParameters = new ShaderParameters() { RotationX = currentRotationX, RotationY = currentRotationY };
+    graphicsService.SetShaderConstants(commandList, 0, ref shaderParameters);
+
     graphicsService.DispatchMesh(commandList, 1, 1, 1);
 
     graphicsService.EndRenderPass(commandList);
@@ -115,3 +132,9 @@ applicationService.RunApplication(application, (status) =>
     //Console.WriteLine($"Present swapchain {stopWatch.Elapsed.TotalMilliseconds}");
     return true;
 });
+
+record struct ShaderParameters
+{
+    public float RotationX { get; set; }
+    public float RotationY { get; set; }
+}

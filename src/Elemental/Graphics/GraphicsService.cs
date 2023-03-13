@@ -34,4 +34,11 @@ public sealed partial class GraphicsService
 
         return CreateShaderImplementation(graphicsDevice, shaderParts);
     }
+    
+    /// <inheritdoc cref="IGraphicsService" />
+    public void SetShaderConstants<T>(CommandList commandList, uint slot, ref T value) where T : struct
+    {
+        var byteData = MemoryMarshal.Cast<T, byte>(MemoryMarshal.CreateReadOnlySpan(ref value, 1));
+        SetShaderConstants(commandList, slot, byteData);
+    }
 }

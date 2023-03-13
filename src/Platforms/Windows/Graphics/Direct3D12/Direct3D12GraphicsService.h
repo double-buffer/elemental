@@ -58,6 +58,8 @@ public:
     void EndRenderPass(void* commandListPointer) override;
     
     void SetShader(void* commandListPointer, void* shaderPointer) override;
+    void SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount) override;
+
     void DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) override;
 
 private:

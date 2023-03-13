@@ -580,7 +580,7 @@ void Direct3D12GraphicsService::EndRenderPass(void* commandListPointer)
     commandList->CurrentRenderPassDescriptor = {};
     commandList->IsRenderPassActive = false;
 }
-    
+
 void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shaderPointer)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
@@ -589,37 +589,45 @@ void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shader
 
     if (commandList->IsRenderPassActive)
     {
+        // TODO: Hash the parameters
+        // TODO: Async compilation with mutlithread support. (Reserve a slot in the cache, and return the pipelinestate cache object)
+        // TODO: Have a separate CompileShader function that will launch the async work.
+        // TODO: Have a separate GetShaderStatus method
+        // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
         auto renderPassDescriptor = &commandList->CurrentRenderPassDescriptor;
         auto hash = ComputeRenderPipelineStateHash(shader, renderPassDescriptor);
 
-        printf("Hash %d\n", hash);
-
+        // TODO: This is not thread-safe!
+        // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
-            printf("NOKEY\n");
-        }
-        else
-        {
-            printf("KEY\n");
+            printf("Create PipelineState for shader %d...\n", hash);
+            auto pipelineStateCacheItem = PipelineStateCacheItem();
+            pipelineStateCacheItem.PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
+
+            graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
         }
 
-        if (shader->PipelineState == nullptr)
-        {
-            // TODO: Check if we already have compiled the correct PSO
-            // TODO: Hash the parameters
-            // TODO: Do a lookup in the hashlist
-            // TODO: Otherwise create the pipeline state (with the hardware cache if configured)
-            // TODO: Async compilation with mutlithread support. (Reserve a slot in the cache, and return the pipelinestate cache object)
-            // TODO: Have a separate CompileShader function that will launch the async work.
-            // TODO: Have a separate GetShaderStatus method
-            // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
-            printf("CREATE PIPELINE STATE...\n");
-            shader->PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
-        }
+        auto pipelineState = graphicsDevice->PipelineStates[hash].PipelineState;
+        assert(pipelineState != nullptr);
 
-        assert(shader->PipelineState != nullptr);
-        commandList->DeviceObject->SetPipelineState(shader->PipelineState.Get());
+        commandList->DeviceObject->SetPipelineState(pipelineState.Get());
         commandList->DeviceObject->SetGraphicsRootSignature(shader->RootSignature.Get());
+    }
+}
+    
+void Direct3D12GraphicsService::SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
+{
+    if (constantValueCount == 0)
+    {
+        return;
+    }
+
+    auto commandList = (Direct3D12CommandList*)commandListPointer;
+
+    if (commandList->IsRenderPassActive)
+    {
+        commandList->DeviceObject->SetGraphicsRoot32BitConstants(slot, constantValueCount / 4, constantValues, 0);
     }
 }
     
@@ -627,7 +635,7 @@ void Direct3D12GraphicsService::DispatchMesh(void* commandListPointer, uint32_t 
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
 
-    // TODO: Check if the current shader on the command list is already is already compiled 
+    // TODO: Check if the current shader on the command list is already compiled 
     if (!commandList->IsRenderPassActive)
     {
         return;
@@ -889,7 +897,15 @@ void Direct3D12GraphicsService::InitRenderPassRenderTarget(Direct3D12CommandList
     
 uint64_t Direct3D12GraphicsService::ComputeRenderPipelineStateHash(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
-    return 13;
+    // TODO: For the moment the hash of the shader is base on the pointer
+    // Maybe we should base it on the hash of each shader parts data? 
+    // This would prevent creating duplicate PSO if 2 shaders contains the same parts (it looks like an edge case)
+    // but this would add more processing to generate the hash and this function is perf critical
+
+    // TODO: Hash other render pass parameters
+    // TODO: Use FarmHash64? https://github.com/TommasoBelluzzo/FastHashes/tree/master
+
+    return (uint64_t)shader;
 }
     
 ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor)
@@ -915,7 +931,7 @@ ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState
 
     D3D12_RASTERIZER_DESC rasterizerState = {};
     rasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-    rasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+    rasterizerState.CullMode = D3D12_CULL_MODE_NONE; // D3D12_CULL_MODE_BACK;
     rasterizerState.FrontCounterClockwise = false;
     rasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
     rasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;

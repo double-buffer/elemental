@@ -769,6 +769,11 @@ void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPoin
 
 }
 
+void VulkanGraphicsService::SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
+{
+
+}
+
 void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
 

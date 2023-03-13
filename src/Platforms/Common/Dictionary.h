@@ -25,6 +25,16 @@ public:
         return _map.count(key) != 0;
     }
 
+    void Add(TKey key, TValue value)
+    {
+        _map[key] = value;
+    }
+
+    TValue& operator[](TKey key)
+    {
+        return _map[key];
+    }
+
 private:
     std::map<TKey, TValue> _map;
 };

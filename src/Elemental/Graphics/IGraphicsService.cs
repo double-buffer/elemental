@@ -202,6 +202,27 @@ public interface IGraphicsService
     void SetShader(CommandList commandList, Shader shader);
 
     /// <summary>
+    /// Set constant values for the currently bound <see cref="Shader" />. 
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="slot">Slot of the constant defined at the shader level.</param>
+    /// <param name="value">
+    /// Constant values as a C# value type. Please note that this data needs to aligned to 32bits.
+    /// </param>
+    [PlatformMethodIgnore]
+    void SetShaderConstants<T>(CommandList commandList, uint slot, ref T value) where T : struct;
+
+    /// <summary>
+    /// Set constant values for the currently bound <see cref="Shader" />. 
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="slot">Slot of the constant defined at the shader level.</param>
+    /// <param name="constantValues">
+    /// Constant values as raw data. Please note that this data needs to aligned to 32bits.
+    /// </param>
+    void SetShaderConstants(CommandList commandList, uint slot, ReadOnlySpan<byte> constantValues);
+
+    /// <summary>
     /// Dispatchs a mesh by using a MeshShader.
     /// </summary>
     /// <param name="commandList">Command list to use.</param>

@@ -213,6 +213,12 @@ DllExport void Native_SetShader(void* commandListPointer, void* shaderPointer)
     graphicsService->SetShader(commandListPointer, shaderPointer);
 }
     
+DllExport void Native_SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
+{
+    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
+    graphicsService->SetShaderConstants(commandListPointer, slot, constantValues, constantValueCount);
+}
+    
 DllExport void Native_DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
     auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
