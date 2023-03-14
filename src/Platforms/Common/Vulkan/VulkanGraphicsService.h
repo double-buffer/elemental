@@ -17,6 +17,7 @@ struct VulkanGraphicsDevice;
 #include "VulkanBaseGraphicsObject.h"
 #include "VulkanCommandQueue.h"
 #include "VulkanCommandList.h"
+#include "VulkanShader.h"
 #include "VulkanTexture.h"
 #include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
@@ -80,6 +81,9 @@ private:
     Fence CreateCommandQueueFence(VulkanCommandQueue* commandQueue);
 
     void CreateSwapChainBackBuffers(VulkanSwapChain* swapChain, int32_t width, int32_t height);
+    
+    uint64_t ComputeRenderPipelineStateHash(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor);
+    VulkanPipelineStateCacheItem CreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor);
 
     void TransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer = false);
 };

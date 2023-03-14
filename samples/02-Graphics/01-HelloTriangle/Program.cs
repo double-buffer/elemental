@@ -34,7 +34,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new GraphicsDeviceOptions
 {
-    //DeviceId = selectedGraphicsDevice.DeviceId
+    DeviceId = selectedGraphicsDevice.DeviceId
 });
 
 using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
@@ -52,16 +52,17 @@ var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
-var meshShaderData = File.ReadAllBytes("TriangleMS.bin");
-var pixelShaderData = File.ReadAllBytes("TrianglePS.bin");
+var shaderExtension = ".bin";
+
+if (selectedGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
+{
+    shaderExtension = ".vulkan.bin";
+}
+
+var meshShaderData = File.ReadAllBytes($"TriangleMS{shaderExtension}");
+var pixelShaderData = File.ReadAllBytes($"TrianglePS{shaderExtension}");
 
 using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
-{
-    new ShaderPart { Stage = ShaderStage.MeshShader, Data = meshShaderData },
-    new ShaderPart { Stage = ShaderStage.PixelShader, Data = pixelShaderData }
-});
-
-using var shader2 = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
 {
     new ShaderPart { Stage = ShaderStage.MeshShader, Data = meshShaderData },
     new ShaderPart { Stage = ShaderStage.PixelShader, Data = pixelShaderData }
