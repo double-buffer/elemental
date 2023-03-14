@@ -7,6 +7,4 @@ public class MetalShader : MetalObject<MetalShader> {
 
     public var meshShader: MTLFunction?
     public var pixelShader: MTLFunction?
-
-    public var currentRenderPipelineState: MTLRenderPipelineState?
 }

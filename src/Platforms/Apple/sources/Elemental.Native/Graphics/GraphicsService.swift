@@ -481,19 +481,50 @@ public func endRenderPass(commandListPointer: UnsafeRawPointer) {
 public func setShader(commandListPointer: UnsafeRawPointer, shaderPointer: UnsafeRawPointer) {
     autoreleasepool {
         let commandList = MetalCommandList.fromPointer(commandListPointer)
+        let graphicsDevice = commandList.graphicsDevice
         let shader = MetalShader.fromPointer(shaderPointer)
 
+        // TODO: This method is not thread-safe!
         if (commandList.isRenderPassActive) {
-            if (shader.currentRenderPipelineState == nil) {
-                shader.currentRenderPipelineState = createRenderPipelineState(shader, commandList.currentRenderPassDescriptor!)
+            // TODO: Hash the parameters
+            // TODO: Async compilation with mutlithread support. (Reserve a slot in the cache, and return the pipelinestate cache object)
+            // TODO: Have a separate CompileShader function that will launch the async work.
+            // TODO: Have a separate GetShaderStatus method
+            // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
+            guard let renderPassDescriptor = commandList.currentRenderPassDescriptor else {
+                return
             }
-        }
 
-        guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
-            return
-        }
+            let hash = computeRenderPipelineStateHash(shader, renderPassDescriptor)
 
-        renderCommandEncoder.setRenderPipelineState(shader.currentRenderPipelineState!)
+            if (graphicsDevice.pipelineStates[hash] == nil) {
+                print("Create PipelineState for shader \(hash)...")
+                let pipelineState = createRenderPipelineState(shader, renderPassDescriptor)
+                graphicsDevice.pipelineStates[hash] = PipelineStateCacheItem(pipelineState)
+            }
+
+            guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
+                return
+            }
+
+            let pipelineState = graphicsDevice.pipelineStates[hash]!.pipelineState;
+            renderCommandEncoder.setRenderPipelineState(pipelineState)
+        }
+    }
+}
+    
+@_cdecl("Native_SetShaderConstants")
+public func setShaderConstants(commandListPointer: UnsafeRawPointer, slot: UInt32, constantValues: UnsafeRawPointer, constantValueCount: Int) {
+    autoreleasepool {
+        let commandList = MetalCommandList.fromPointer(commandListPointer)
+
+        if (commandList.isRenderPassActive) {
+            guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
+                return
+            }
+
+            renderCommandEncoder.setMeshBytes(constantValues, length: constantValueCount, index: Int(slot))
+        }
     }
 }
 
@@ -550,9 +581,13 @@ private func initRenderPassColorDescriptor(_ descriptor: MTLRenderPassColorAttac
         }
     }
 }
-public func createRenderPipelineState(_ shader: MetalShader, _ renderPassDescriptor: RenderPassDescriptor) -> MTLRenderPipelineState {
-    print("CREATE PSO")
 
+public func computeRenderPipelineStateHash(_ shader: MetalShader, _ renderPassDescriptor: RenderPassDescriptor) -> UInt64 {
+    let shaderAddress = Int(bitPattern: shader.toPointerUnretained())
+    return UInt64(shaderAddress)
+}
+
+public func createRenderPipelineState(_ shader: MetalShader, _ renderPassDescriptor: RenderPassDescriptor) -> MTLRenderPipelineState {
     let pipelineStateDescriptor = MTLMeshRenderPipelineDescriptor()
 
     pipelineStateDescriptor.meshFunction = shader.meshShader
