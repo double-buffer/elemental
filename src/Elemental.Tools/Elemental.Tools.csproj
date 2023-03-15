@@ -9,5 +9,26 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  
+  <Target Name="GetShaderCompilers" BeforeTargets="CoreCompile">
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+      <PowerShellCommand>powershell</PowerShellCommand>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+      <PowerShellCommand>pwsh</PowerShellCommand>
+    </PropertyGroup>
+    <Exec Condition="!Exists('../../external/shader-compilers')" Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File ../../external/GetShaderCompilers.ps1" />
+  </Target>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <Content Include="../../external/shader-compilers/dxc/bin/x64/dxcompiler.dll">
+      <TargetPath>ShaderCompilers/dxcompiler.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../external/shader-compilers/dxc/bin/x64/dxil.dll">
+      <TargetPath>ShaderCompilers/dxil.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>
