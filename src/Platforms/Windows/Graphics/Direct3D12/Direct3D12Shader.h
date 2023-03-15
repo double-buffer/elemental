@@ -9,7 +9,9 @@ struct Direct3D12Shader : Direct3D12BaseGraphicsObject
     }
 
     ComPtr<ID3D12RootSignature> RootSignature = nullptr;
-    ComPtr<ID3DBlob> MeshShader = nullptr;
-    ComPtr<ID3DBlob> PixelShader = nullptr;
+
+    BinaryContainer AmplificationShader;
+    BinaryContainer MeshShader;
+    BinaryContainer PixelShader;
 };
 

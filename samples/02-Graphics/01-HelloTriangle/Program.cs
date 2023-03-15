@@ -2,6 +2,7 @@
 using System.Numerics;
 using Elemental;
 using Elemental.Graphics;
+using Elemental.Tools;
 
 var applicationService = new NativeApplicationService();
 using var application = applicationService.CreateApplication("Hello Window");
@@ -28,7 +29,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
     if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
     {
-        selectedGraphicsDevice = availableGraphicsDevice;
+        //selectedGraphicsDevice = availableGraphicsDevice;
     }
 
     Console.WriteLine($"{availableGraphicsDevice}");
@@ -53,6 +54,9 @@ using var swapChain = graphicsService.CreateSwapChain(window, commandQueue, new 
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
+
+//var shaderCompiler = (IShaderCompiler)null!;
+//shaderCompiler.CompileShader("Triangle.hlsl");
 
 var shaderExtension = ".bin";
 

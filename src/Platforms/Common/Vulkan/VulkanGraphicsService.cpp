@@ -720,16 +720,22 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
         VkShaderModule shaderModule = nullptr;
         AssertIfFailed(vkCreateShaderModule(graphicsDevice->Device, &createInfo, 0, &shaderModule));
 
+        // TODO Create the pipeline layout here?
         switch (shaderPart.Stage)
         {
-            // TODO Create the pipeline layout here?
+        case ShaderStage_AmplificationShader:
+            shader->AmplificationShader = shaderModule;
+            memcpy(shader->AmplificationShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
+            break;
         case ShaderStage_MeshShader:
             //AssertIfFailed(graphicsDevice->Device->CreateRootSignature(0, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), IID_PPV_ARGS(shader->RootSignature.GetAddressOf())));
             shader->MeshShader = shaderModule;
+            memcpy(shader->MeshShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
             break;
 
         case ShaderStage_PixelShader:
             shader->PixelShader = shaderModule;
+            memcpy(shader->PixelShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
             break;
         }
     }
@@ -1090,23 +1096,28 @@ VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(Vu
     auto graphicsDevice = shader->GraphicsDevice;
 
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-
-    // TODO: We have the same problem in Apple Metal, we hardcode the name of the shaders entry point for now
-    // Maybe we need to add the name in the shader part object?
-
     uint32_t stagesCount = 2;
 
     VkPipelineShaderStageCreateInfo stages[3] = {};
     stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stages[0].stage = VK_SHADER_STAGE_MESH_BIT_EXT;
     stages[0].module = shader->MeshShader;
-    stages[0].pName = "MeshMain";
+    stages[0].pName = shader->MeshShaderEntryPoint;
 
     stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     stages[1].module = shader->PixelShader;
-    stages[1].pName = "PixelMain";
-
+    stages[1].pName = shader->PixelShaderEntryPoint;
+    
+    if (shader->AmplificationShader != nullptr)
+    {
+        stages[2].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stages[2].stage = VK_SHADER_STAGE_TASK_BIT_EXT;
+        stages[2].module = shader->AmplificationShader;
+        stages[2].pName = shader->AmplificationShaderEntryPoint;
+        stagesCount++;
+    }
+    
     createInfo.stageCount = stagesCount;
     createInfo.pStages = stages;
 

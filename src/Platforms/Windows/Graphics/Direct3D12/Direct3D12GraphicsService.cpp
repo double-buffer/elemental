@@ -438,24 +438,19 @@ void* Direct3D12GraphicsService::CreateShader(void* graphicsDevicePointer, Shade
     {
         auto shaderPart = shaderParts[i];
 
-        // TODO: Do we really need ID3DBlob that lives in D3DCompile.h or can we use something else?
-        // Maybe just storing a byte array would be enough here.
-
-        ComPtr<ID3DBlob> shaderBlob;
-        D3DCreateBlob(shaderPart.DataCount, shaderBlob.GetAddressOf());
-
-        auto shaderByteCode = shaderBlob->GetBufferPointer();
-        memcpy(shaderByteCode, shaderPart.DataPointer, shaderPart.DataCount);
-
         switch (shaderPart.Stage)
         {
+        case ShaderStage_AmplificationShader:
+            shader->AmplificationShader.SetData(shaderPart.DataPointer, shaderPart.DataCount);
+            break;
+
         case ShaderStage_MeshShader:
-            AssertIfFailed(graphicsDevice->Device->CreateRootSignature(0, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), IID_PPV_ARGS(shader->RootSignature.GetAddressOf())));
-            shader->MeshShader = shaderBlob;
+            AssertIfFailed(graphicsDevice->Device->CreateRootSignature(0, shaderPart.DataPointer, shaderPart.DataCount, IID_PPV_ARGS(shader->RootSignature.GetAddressOf())));
+            shader->MeshShader.SetData(shaderPart.DataPointer, shaderPart.DataCount);
             break;
 
         case ShaderStage_PixelShader:
-            shader->PixelShader = shaderBlob;
+            shader->PixelShader.SetData(shaderPart.DataPointer, shaderPart.DataCount);
             break;
         }
     }
@@ -941,6 +936,8 @@ ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState
     rasterizerState.DepthClipEnable = true;
     rasterizerState.MultisampleEnable = false;
     rasterizerState.AntialiasedLineEnable = false;
+
+    // TODO: Check those 2
     rasterizerState.ForcedSampleCount = 0;
     rasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
@@ -995,22 +992,23 @@ ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState
     }; // InitBlendState(GraphicsBlendOperation::None);
     //}
 
-    //D3D12_PRIMITIVE_TOPOLOGY_TYPE topologyType = renderPassDescriptor.PrimitiveType == GraphicsPrimitiveType::Triangle ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE : D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-
     D3D12_PIPELINE_STATE_STREAM_DESC psoStream = {};
     GraphicsPso psoDesc = {};
     
     psoDesc.RootSignature = shader->RootSignature.Get();
 
-    /*if (shader->AmplificationShaderMethod != nullptr)
+    if (!shader->AmplificationShader.IsEmpty())
     {
-        psoDesc.AS = { shader->AmplificationShaderMethod->GetBufferPointer(), shader->AmplificationShaderMethod->GetBufferSize() };
-    }*/
+        psoDesc.AS = { shader->AmplificationShader.GetBufferPointer(), shader->AmplificationShader.GetBufferSize() };
+    }
 
-    psoDesc.MS = { shader->MeshShader->GetBufferPointer(), shader->MeshShader->GetBufferSize() };
+    psoDesc.MS = { shader->MeshShader.GetBufferPointer(), shader->MeshShader.GetBufferSize() };
 
-    // TODO: Check if the pixel shader is set, it can be null and it is ok
-    psoDesc.PS = { shader->PixelShader->GetBufferPointer(), shader->PixelShader->GetBufferSize() };
+    if (!shader->PixelShader.IsEmpty())
+    {
+        psoDesc.PS = { shader->PixelShader.GetBufferPointer(), shader->PixelShader.GetBufferSize() };
+    }
+
     psoDesc.RenderTargets = renderTargets;
     psoDesc.SampleDesc = sampleDesc;
     psoDesc.RasterizerState = rasterizerState;
