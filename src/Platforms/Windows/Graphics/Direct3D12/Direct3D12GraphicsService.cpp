@@ -439,6 +439,8 @@ void* Direct3D12GraphicsService::CreateShader(void* graphicsDevicePointer, Shade
         auto shaderPart = shaderParts[i];
 
         // TODO: Do we really need ID3DBlob that lives in D3DCompile.h or can we use something else?
+        // Maybe just storing a byte array would be enough here.
+
         ComPtr<ID3DBlob> shaderBlob;
         D3DCreateBlob(shaderPart.DataCount, shaderBlob.GetAddressOf());
 

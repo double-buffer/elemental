@@ -125,13 +125,15 @@ struct SwapChainOptions
 
 enum ShaderStage
 {
-    ShaderStage_MeshShader = 1,
-    ShaderStage_PixelShader = 2
+    ShaderStage_AmplificationShader = 1,
+    ShaderStage_MeshShader = 2,
+    ShaderStage_PixelShader = 3
 };
 
 struct ShaderPart
 {
     enum ShaderStage Stage;
+    uint8_t* EntryPoint;
     void* DataPointer;
     int32_t DataCount;
 };

@@ -11,12 +11,17 @@ public enum ShaderStage
     None = 0,
 
     /// <summary>
+    /// Amplification shader stage.
+    /// </summary>
+    AmplificationShader = 1,
+
+    /// <summary>
     /// Mesh shader stage.
     /// </summary>
-    MeshShader = 1,
+    MeshShader = 2,
 
     /// <summary>
     /// Pixel shader stage.
     /// </summary>
-    PixelShader = 2
+    PixelShader = 3
 }

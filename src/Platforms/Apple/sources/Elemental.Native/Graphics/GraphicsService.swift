@@ -358,16 +358,16 @@ public func createShader(graphicsDevicePointer: UnsafeRawPointer, shaderParts: U
             let shaderPart = shaderParts[i]
             let dispatchData = DispatchData(bytes: UnsafeRawBufferPointer(start: shaderPart.DataPointer, count: Int(shaderPart.DataCount)))
             let defaultLibrary = try! graphicsDevice.metalDevice.makeLibrary(data: dispatchData as __DispatchData)
-
-            // HACK: Find a solution here! For the moment we hardcode the function name
-
+            let shaderFunction = defaultLibrary.makeFunction(name: String(cString: shaderPart.EntryPoint))
+            
             switch shaderPart.Stage {
+                case ShaderStage_AmplificationShader:
+                    shader.amplificationShader = shaderFunction
+
                 case ShaderStage_MeshShader:
-                    let shaderFunction = defaultLibrary.makeFunction(name: "MeshMain")
                     shader.meshShader = shaderFunction
                     
                 case ShaderStage_PixelShader:
-                    let shaderFunction = defaultLibrary.makeFunction(name: "PixelMain")
                     shader.pixelShader = shaderFunction
 
                 default:
@@ -509,6 +509,7 @@ public func setShader(commandListPointer: UnsafeRawPointer, shaderPointer: Unsaf
 
             let pipelineState = graphicsDevice.pipelineStates[hash]!.pipelineState;
             renderCommandEncoder.setRenderPipelineState(pipelineState)
+            commandList.currentShader = shader
         }
     }
 }
@@ -522,8 +523,22 @@ public func setShaderConstants(commandListPointer: UnsafeRawPointer, slot: UInt3
             guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
                 return
             }
+            
+            guard let currentShader = commandList.currentShader else {
+                return
+            }
 
-            renderCommandEncoder.setMeshBytes(constantValues, length: constantValueCount, index: Int(slot))
+            if (currentShader.amplificationShader != nil) {
+                renderCommandEncoder.setObjectBytes(constantValues, length: constantValueCount, index: Int(slot))
+            }
+            
+            if (currentShader.meshShader != nil) {
+                renderCommandEncoder.setMeshBytes(constantValues, length: constantValueCount, index: Int(slot))
+            }
+
+            if (currentShader.pixelShader != nil) {
+                renderCommandEncoder.setFragmentBytes(constantValues, length: constantValueCount, index: Int(slot))
+            }
         }
     }
 }
@@ -590,8 +605,11 @@ public func computeRenderPipelineStateHash(_ shader: MetalShader, _ renderPassDe
 public func createRenderPipelineState(_ shader: MetalShader, _ renderPassDescriptor: RenderPassDescriptor) -> MTLRenderPipelineState {
     let pipelineStateDescriptor = MTLMeshRenderPipelineDescriptor()
 
+    pipelineStateDescriptor.objectFunction = shader.amplificationShader
     pipelineStateDescriptor.meshFunction = shader.meshShader
     pipelineStateDescriptor.fragmentFunction = shader.pixelShader
+
+    // TODO: Why is the triangle not back face culled by default?
 
     //pipelineStateDescriptor.supportIndirectCommandBuffers = true
     //pipelineStateDescriptor.sampleCount = (metalRenderPassDescriptor.MultiSampleCount.HasValue == 1) ? Int(metalRenderPassDescriptor.MultiSampleCount.Value) : 1

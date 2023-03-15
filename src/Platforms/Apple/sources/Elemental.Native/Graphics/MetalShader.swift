@@ -5,6 +5,7 @@ public class MetalShader : MetalObject<MetalShader> {
         super.init(graphicsDevice)
     }
 
+    public var amplificationShader: MTLFunction?
     public var meshShader: MTLFunction?
     public var pixelShader: MTLFunction?
 }
