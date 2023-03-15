@@ -13,6 +13,12 @@ public readonly record struct ShaderPart
     public required ShaderStage Stage { get; init; }
 
     /// <summary>
+    /// Gets or sets the entry point function name of the shader part.
+    /// </summary>
+    /// <value>Entry point function name.</value>
+    public required string EntryPoint { get; init; }
+
+    /// <summary>
     /// Gets or sets the compiled shader.
     /// The binary data is platform specific. It can be provided by 
     /// manually using the tools of the platform or by using Elemental.Tools.
@@ -27,6 +33,7 @@ internal static unsafe class ShaderPartMarshaller
     internal readonly struct ShaderPartUnmanaged
     {
         public ShaderStage Stage { get; init; }
+        public byte* EntryPoint { get; init; }
         public void* DataPointer { get; init; }
         public int DataCount { get; init; }
     }
@@ -41,6 +48,7 @@ internal static unsafe class ShaderPartMarshaller
         return new ShaderPartUnmanaged
         {
             Stage = managed.Stage,
+            EntryPoint = Utf8StringMarshaller.ConvertToUnmanaged(managed.EntryPoint),
             DataPointer = dataPointer,
             DataCount = managed.Data.Length
         };
@@ -53,6 +61,7 @@ internal static unsafe class ShaderPartMarshaller
 
     public static void Free(ShaderPartUnmanaged unmanaged)
     {
+        Utf8StringMarshaller.Free(unmanaged.EntryPoint);
         NativeMemory.Free(unmanaged.DataPointer);
     }
 }

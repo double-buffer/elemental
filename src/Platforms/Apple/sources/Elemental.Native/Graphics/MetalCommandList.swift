@@ -14,4 +14,5 @@ public class MetalCommandList : MetalObject<MetalCommandList> {
     public var commandEncoder: MTLCommandEncoder?
     public var isRenderPassActive: Bool
     public var currentRenderPassDescriptor: RenderPassDescriptor?
+    public var currentShader: MetalShader?
 }

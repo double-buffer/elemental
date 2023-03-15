@@ -66,8 +66,8 @@ var pixelShaderData = File.ReadAllBytes($"TrianglePS{shaderExtension}");
 
 using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
 {
-    new ShaderPart { Stage = ShaderStage.MeshShader, Data = meshShaderData },
-    new ShaderPart { Stage = ShaderStage.PixelShader, Data = pixelShaderData }
+    new ShaderPart { Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", Data = meshShaderData },
+    new ShaderPart { Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", Data = pixelShaderData }
 });
 
 var stopWatch = new Stopwatch();

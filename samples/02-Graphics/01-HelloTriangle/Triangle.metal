@@ -84,7 +84,7 @@ using AAPLTriangleMeshType = metal::mesh<VertexOutput, PrimitiveOutput, meshVert
 void MeshMain(AAPLTriangleMeshType output,
                                  uint32_t groupThreadId [[thread_index_in_threadgroup]],
                                  uint32_t groupId [[threadgroup_position_in_grid]],
-                                 device ShaderParameters &parameters [[buffer(0)]])
+                                 device const ShaderParameters &parameters [[buffer(0)]])
 {
 
 
