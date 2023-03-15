@@ -6,6 +6,8 @@ using Elemental.Graphics;
 var applicationService = new NativeApplicationService();
 using var application = applicationService.CreateApplication("Hello Window");
 
+//TODO: HelloTriangle should be minimal, do another sample to demonstrate the debug functionality
+
 using var window = applicationService.CreateWindow(application, new NativeWindowOptions
 {
     Title = "Hello Window!",

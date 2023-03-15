@@ -788,8 +788,6 @@ void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPass
         vkCmdSetViewport(commandList->DeviceObject, 0, 1, &viewport);
         vkCmdSetScissor(commandList->DeviceObject, 0, 1, &scissor);
     }
-
-    // TODO: We are not using render passes, will it works on tiled architecture GPUs on android?
 }
     
 void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
@@ -1089,8 +1087,6 @@ uint64_t VulkanGraphicsService::ComputeRenderPipelineStateHash(VulkanShader* sha
 
 VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
-    // TODO: Convert NV extension to the new shader
-
     auto graphicsDevice = shader->GraphicsDevice;
 
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
@@ -1152,6 +1148,14 @@ VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(Vu
     dynamicState.pDynamicStates = dynamicStates;
     createInfo.pDynamicState = &dynamicState;
 
+    VkFormat formats[] = {VK_FORMAT_B8G8R8A8_SRGB};
+
+    VkPipelineRenderingCreateInfo renderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+    renderingCreateInfo.colorAttachmentCount = 1; // TODO: Change that
+    renderingCreateInfo.pColorAttachmentFormats = formats;
+    createInfo.pNext = &renderingCreateInfo;
+
+    // TODO: Move that to the shader creation. It is a kind of rootdescriptor
     // HACK: Temporary code!
 	VkPipelineLayoutCreateInfo layoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	layoutCreateInfo.pSetLayouts = nullptr;
@@ -1170,8 +1174,6 @@ VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(Vu
 	VkPipelineLayout layout = nullptr;
 	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice->Device, &layoutCreateInfo, 0, &layout));
     createInfo.layout = layout;
-
-    //createInfo.renderPass = renderPass;
 
     VkPipeline pipelineState = nullptr;
     AssertIfFailed(vkCreateGraphicsPipelines(graphicsDevice->Device, nullptr, 1, &createInfo, 0, &pipelineState));
