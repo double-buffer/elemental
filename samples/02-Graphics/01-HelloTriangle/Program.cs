@@ -55,7 +55,9 @@ var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
-//var shaderCompiler = (IShaderCompiler)null!;
+var shaderCompiler = new ShaderCompiler();
+
+Console.WriteLine($"Can Compile Shader: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, ToolsGraphicsApi.Direct3D12)}");
 //shaderCompiler.CompileShader("Triangle.hlsl");
 
 var shaderExtension = ".bin";
