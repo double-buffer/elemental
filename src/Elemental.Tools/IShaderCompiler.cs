@@ -18,5 +18,6 @@ public interface IShaderCompiler
     /// Compiles the shader.
     /// </summary>
     /// <param name="shaderCode">Shader source code.</param>
-    void CompileShader(ReadOnlySpan<char> shaderCode);
+    /// <returns>Shader Compiler results object.</returns>
+    ShaderCompilerResult CompileShader(ReadOnlySpan<char> shaderCode);
 }

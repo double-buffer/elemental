@@ -50,9 +50,9 @@ public class ShaderCompiler : IShaderCompiler
     }
 
     /// <inheritdoc cref="IShaderCompiler" />
-    public void CompileShader(ReadOnlySpan<char> shaderCode)
+    public ShaderCompilerResult CompileShader(ReadOnlySpan<char> shaderCode)
     {
-
+        throw new NotImplementedException();
     }
 
     private void RegisterShaderCompilerProvider(IShaderCompilerProvider shaderCompilerProvider)
