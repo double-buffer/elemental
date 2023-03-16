@@ -15,4 +15,5 @@ public class MetalCommandList : MetalObject<MetalCommandList> {
     public var isRenderPassActive: Bool
     public var currentRenderPassDescriptor: RenderPassDescriptor?
     public var currentShader: MetalShader?
+    public var currentPipelineState: PipelineStateCacheItem?
 }

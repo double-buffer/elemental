@@ -484,7 +484,6 @@ public func setShader(commandListPointer: UnsafeRawPointer, shaderPointer: Unsaf
         let graphicsDevice = commandList.graphicsDevice
         let shader = MetalShader.fromPointer(shaderPointer)
 
-        // TODO: This method is not thread-safe!
         if (commandList.isRenderPassActive) {
             // TODO: Hash the parameters
             // TODO: Async compilation with mutlithread support. (Reserve a slot in the cache, and return the pipelinestate cache object)
@@ -495,6 +494,7 @@ public func setShader(commandListPointer: UnsafeRawPointer, shaderPointer: Unsaf
                 return
             }
 
+            // TODO: This method is not thread-safe!
             let hash = computeRenderPipelineStateHash(shader, renderPassDescriptor)
 
             if (graphicsDevice.pipelineStates[hash] == nil) {
@@ -507,9 +507,10 @@ public func setShader(commandListPointer: UnsafeRawPointer, shaderPointer: Unsaf
                 return
             }
 
-            let pipelineState = graphicsDevice.pipelineStates[hash]!.pipelineState;
-            renderCommandEncoder.setRenderPipelineState(pipelineState)
+            let pipelineState = graphicsDevice.pipelineStates[hash]!;
+            renderCommandEncoder.setRenderPipelineState(pipelineState.pipelineState)
             commandList.currentShader = shader
+            commandList.currentPipelineState = pipelineState
         }
     }
 }
@@ -553,7 +554,18 @@ public func dispatchMesh(commandListPointer: UnsafeRawPointer, threadGroupCountX
             return
         }
 
+        guard let pipelineState = commandList.currentPipelineState else {
+            print("dispatchMesh: No pipeline state bound.")
+            return
+        }
+
+        /*
+        let w = pipelineState.threadExecutionWidth
+        let h = (threadCountY > 1) ? computePipelineState.computePipelineState!.maxTotalThreadsPerThreadgroup / w : 1
+        let threadsPerGroup = MTLSizeMake(w, h, 1)*/
+
         // TODO: Review that
+        // In other APIs we declare the threads per group in the shader directly...
         renderCommandEncoder.drawMeshThreadgroups(MTLSizeMake(Int(threadGroupCountX), Int(threadGroupCountY), Int(threadGroupCountZ)),
     threadsPerObjectThreadgroup: MTLSizeMake(32, 1, 1),
     threadsPerMeshThreadgroup: MTLSizeMake(32, 1, 1))

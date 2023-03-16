@@ -57,7 +57,8 @@ Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
 var shaderCompiler = new ShaderCompiler();
 
-Console.WriteLine($"Can Compile Shader: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, ToolsGraphicsApi.Direct3D12)}");
+Console.WriteLine($"Can Compile Shader HLSL: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, ToolsGraphicsApi.Metal)}");
+Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(ShaderLanguage.Msl, ToolsGraphicsApi.Metal)}");
 //shaderCompiler.CompileShader("Triangle.hlsl");
 
 var shaderExtension = ".bin";
