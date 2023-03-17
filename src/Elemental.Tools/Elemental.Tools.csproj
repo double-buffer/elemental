@@ -29,15 +29,25 @@
       <TargetPath>ShaderCompilers/dxil.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="../../external/shader-compilers/dxc/bin/x64/dxc.exe">
+      <TargetPath>ShaderCompilers/dxc.exe</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
     <Content Include="../../external/shader-compilers/dxc/bin/x64/libdxcompiler.dylib">
-      <TargetPath>ShaderCompilers/libdxcompiler.dylib</TargetPath>
+      <TargetPath>ShaderCompilers/lib/libdxcompiler.dylib</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../external/shader-compilers/dxc/bin/x64/dxc">
+      <TargetPath>ShaderCompilers/dxc</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../external/shader-compilers/dxc/bin/x64/dxc-3.7">
+      <TargetPath>ShaderCompilers/dxc-3.7</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
-
 
 </Project>
