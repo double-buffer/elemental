@@ -22,7 +22,7 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
         }
         else if (OperatingSystem.IsMacOS())
         {
-            _dxcLibraryPath = Path.Combine(processPath, "ShaderCompilers", "libdxcompiler.dylib");
+            _dxcLibraryPath = Path.Combine(processPath, "ShaderCompilers", "lib", "libdxcompiler.dylib");
         }
     }
 
