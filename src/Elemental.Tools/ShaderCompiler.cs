@@ -73,7 +73,10 @@ public class ShaderCompiler : IShaderCompiler
             var logList = new List<ShaderCompilerLogEntry>();
             ReadOnlyMemory<byte>? currentShaderData = null;
 
-            foreach (var shaderCompilerProvider in shaderCompilerProviders.AsSpan(0, result))
+            var providers = shaderCompilerProviders.AsSpan(0, result);
+            providers.Reverse();
+
+            foreach (var shaderCompilerProvider in providers)
             {
                 var compilationResult = shaderCompilerProvider.CompileShader(currentShaderInput, shaderStage, entryPoint, shaderLanguage, graphicsApi);
                 logList.AddRange(compilationResult.LogEntries.ToArray());
