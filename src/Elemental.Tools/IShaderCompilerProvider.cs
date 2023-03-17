@@ -6,4 +6,5 @@ internal interface IShaderCompilerProvider
     ReadOnlySpan<ShaderLanguage> TargetShaderLanguages { get; }
 
     bool IsCompilerInstalled();
+    ShaderCompilerResult CompileShader(ReadOnlySpan<byte> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi);
 }

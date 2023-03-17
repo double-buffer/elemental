@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Text;
 
 namespace Elemental.Tools;
 
@@ -46,13 +47,63 @@ public class ShaderCompiler : IShaderCompiler
         var result = FindShaderCompilersChain(shaderCompilerProviders, 0, shaderLanguage, graphicsApiTargetShaderLanguage);
         ArrayPool<IShaderCompilerProvider>.Shared.Return(shaderCompilerProviders);
 
-        return result;
+        return result > 0;
     }
 
     /// <inheritdoc cref="IShaderCompiler" />
-    public ShaderCompilerResult CompileShader(ReadOnlySpan<char> shaderCode)
+    public ShaderCompilerResult CompileShader(ReadOnlySpan<char> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
     {
-        throw new NotImplementedException();
+        // TODO: Review the ToArray() usages
+
+        if (!_platformTargetLanguages.ContainsKey(graphicsApi))
+        {
+            throw new InvalidOperationException("Graphics API is not supported!");
+        }
+
+        var graphicsApiTargetShaderLanguage = _platformTargetLanguages[graphicsApi];
+
+        var shaderCompilerProviders = ArrayPool<IShaderCompilerProvider>.Shared.Rent(10);
+        var result = FindShaderCompilersChain(shaderCompilerProviders, 0, shaderLanguage, graphicsApiTargetShaderLanguage);
+
+        if (result > 0)
+        {
+            var currentShaderInput = Encoding.UTF8.GetBytes(shaderCode.ToString());
+
+            var isSuccess = false;
+            var logList = new List<ShaderCompilerLogEntry>();
+            ReadOnlyMemory<byte>? currentShaderData = null;
+
+            foreach (var shaderCompilerProvider in shaderCompilerProviders.AsSpan(0, result))
+            {
+                var compilationResult = shaderCompilerProvider.CompileShader(currentShaderInput, shaderStage, entryPoint, shaderLanguage, graphicsApi);
+                logList.AddRange(compilationResult.LogEntries.ToArray());
+
+                // TODO: Check errors
+                currentShaderData = compilationResult.ShaderData;
+                isSuccess = compilationResult.IsSuccess;
+            }
+
+            if (currentShaderData != null)
+            { 
+                return new ShaderCompilerResult
+                {
+                    IsSuccess = isSuccess,
+                    LogEntries = logList.ToArray(),
+                    ShaderData = currentShaderData.Value
+                };
+            }
+        }
+        
+        ArrayPool<IShaderCompilerProvider>.Shared.Return(shaderCompilerProviders);
+
+        return new ShaderCompilerResult
+        {
+            IsSuccess = false,
+            LogEntries = new ShaderCompilerLogEntry[]
+            {
+                new() { Type = ShaderCompilerLogEntryType.Error, Message = "Cannot find compatible shader compilers." }
+            }
+        };
     }
 
     private void RegisterShaderCompilerProvider(IShaderCompilerProvider shaderCompilerProvider)
@@ -63,24 +114,31 @@ public class ShaderCompiler : IShaderCompiler
         }
     }
 
-    private bool FindShaderCompilersChain(Span<IShaderCompilerProvider> shaderCompilers, int currentLevel, ShaderLanguage sourceLanguage, ShaderLanguage targetLanguage)
+    private int FindShaderCompilersChain(Span<IShaderCompilerProvider> shaderCompilers, int currentLevel, ShaderLanguage sourceLanguage, ShaderLanguage targetLanguage)
     {
         var compiler = FindShaderCompiler(targetLanguage);
 
         if (compiler == null)
         {
-            return false;
+            return 0;
         }
 
         shaderCompilers[currentLevel] = compiler;
 
         if (compiler.ShaderLanguage == sourceLanguage)
         {
-            return true;
+            return 1;
         }
         else
         {
-            return FindShaderCompilersChain(shaderCompilers, currentLevel + 1, sourceLanguage, compiler.ShaderLanguage);
+            var result = FindShaderCompilersChain(shaderCompilers, currentLevel + 1, sourceLanguage, compiler.ShaderLanguage);
+
+            if (result > 0)
+            {
+                return result + 1;
+            }
+
+            return 0;
         }
     }
 

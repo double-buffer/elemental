@@ -18,6 +18,10 @@ public interface IShaderCompiler
     /// Compiles the shader.
     /// </summary>
     /// <param name="shaderCode">Shader source code.</param>
+    /// <param name="shaderStage">Shader stage to compile.</param>
+    /// <param name="entryPoint">Entry point of the shader.</param>
+    /// <param name="shaderLanguage">Source shader language.</param>
+    /// <param name="graphicsApi">Target graphics API.</param>
     /// <returns>Shader Compiler results object.</returns>
-    ShaderCompilerResult CompileShader(ReadOnlySpan<char> shaderCode);
+    ShaderCompilerResult CompileShader(ReadOnlySpan<char> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi);
 }

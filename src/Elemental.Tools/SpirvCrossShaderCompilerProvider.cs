@@ -10,4 +10,9 @@ internal class SpirvCrossShaderCompilerProvider : IShaderCompilerProvider
         // HACK: Temporary code!
         return true;
     }
+    
+    public ShaderCompilerResult CompileShader(ReadOnlySpan<byte> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+    {
+        throw new NotImplementedException();
+    }
 }

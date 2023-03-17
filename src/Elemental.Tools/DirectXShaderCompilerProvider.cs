@@ -21,7 +21,7 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
     public unsafe bool IsCompilerInstalled()
     {
         // TODO: Change extension based on OS
-
+/*
         NativeLibrary.Load(_dxilLibraryPath);
 
         if (!DirectXShaderCompilerInterop.DxcCreateInstance(DirectXShaderCompilerInterop.CLSID_DxcCompiler, out IDxcCompiler compiler))
@@ -44,8 +44,13 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
         var outputString = Utf8StringMarshaller.ConvertToManaged((byte*)bufferPointer);
 
         Console.WriteLine($"Compiler Errors: {outputString}");
-
+*/
         return File.Exists(_dxcLibraryPath) && File.Exists(_dxilLibraryPath);
+    }
+
+    public ShaderCompilerResult CompileShader(ReadOnlySpan<byte> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+    {
+        throw new NotImplementedException();
     }
 
     private static string testData = """
@@ -149,8 +154,8 @@ void MeshMain(in uint groupId : SV_GroupID, in uint groupThreadId : SV_GroupThre
 
 internal unsafe class StringBlob : IDxcBlob
 {
-    private string _data;
-    private byte* _unmanagedData;
+    private readonly string _data;
+    private readonly byte* _unmanagedData;
 
     public StringBlob(string data)
     {
@@ -170,50 +175,50 @@ internal unsafe class StringBlob : IDxcBlob
 }
 
 [ComImport]
-    [Guid("8BA5FB08-5195-40e2-AC58-0D989C3A0102")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IDxcBlob
-    {
-        [PreserveSig]
-        unsafe char* GetBufferPointer();
-        [PreserveSig]
-        UInt32 GetBufferSize();
-    }
-
-    [ComImport]
-    [Guid("8BA5FB08-5195-40e2-AC58-0D989C3A0102")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IDxcBlobEncoding : IDxcBlob
-    {
-        System.UInt32 GetEncoding(out bool unknown, out UInt32 codePage);
-    }
+[Guid("8BA5FB08-5195-40e2-AC58-0D989C3A0102")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDxcBlob
+{
+    [PreserveSig]
+    unsafe char* GetBufferPointer();
+    [PreserveSig]
+    UInt32 GetBufferSize();
+}
 
 [ComImport]
-    [Guid("CEDB484A-D4E9-445A-B991-CA21CA157DC2")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IDxcOperationResult
-    {
-        Int32 GetStatus();
-        IDxcBlob GetResult();
-        IDxcBlobEncoding GetErrors();
-    }
+[Guid("8BA5FB08-5195-40e2-AC58-0D989C3A0102")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDxcBlobEncoding : IDxcBlob
+{
+    System.UInt32 GetEncoding(out bool unknown, out UInt32 codePage);
+}
 
-       [ComImport]
-    [Guid("7f61fc7d-950d-467f-b3e3-3c02fb49187c")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface IDxcIncludeHandler
-    {
-        IDxcBlob LoadSource(string fileName);
-    }
+[ComImport]
+[Guid("CEDB484A-D4E9-445A-B991-CA21CA157DC2")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDxcOperationResult
+{
+    Int32 GetStatus();
+    IDxcBlob GetResult();
+    IDxcBlobEncoding GetErrors();
+}
 
-      [StructLayout(LayoutKind.Sequential)]
-    internal struct DXCDefine
-    {
-        [MarshalAs(UnmanagedType.LPWStr)]
-        public string pName;
-        [MarshalAs(UnmanagedType.LPWStr)]
-        public string pValue;
-    }
+[ComImport]
+[Guid("7f61fc7d-950d-467f-b3e3-3c02fb49187c")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDxcIncludeHandler
+{
+    IDxcBlob LoadSource(string fileName);
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct DXCDefine
+{
+    [MarshalAs(UnmanagedType.LPWStr)]
+    public string pName;
+    [MarshalAs(UnmanagedType.LPWStr)]
+    public string pValue;
+}
 
 [ComImport]
 [Guid("8c210bf3-011f-4422-8d70-6f9acb8db617")]

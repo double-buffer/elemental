@@ -16,5 +16,16 @@
     <ProjectReference Include="..\..\..\src\Elemental\Elemental.csproj" />
     <ProjectReference Include="..\..\..\src\Elemental.Tools\Elemental.Tools.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="Triangle.metal">
+      <TargetPath>Triangle.metal</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Triangle.hlsl">
+      <TargetPath>Triangle.hlsl</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>

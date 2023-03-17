@@ -33,23 +33,47 @@ applicationService.SetWindowTitle(window, $"Hello Triangle! (GraphicsDevice: {gr
 using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
+// HACK: This is needed when we run the program from the root directory
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
 var shaderCompiler = new ShaderCompiler();
 
 Console.WriteLine($"Can Compile Shader HLSL: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");
 Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(ShaderLanguage.Msl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");
-//shaderCompiler.CompileShader("Triangle.hlsl");
 
-var shaderExtension = ".bin";
+// TODO: Do a batch compile function?
 
-if (selectedGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
+var shaderCode = File.ReadAllText("Triangle.hlsl");
+var shaderCodeMetal = File.ReadAllText("Triangle.metal");
+var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? ShaderLanguage.Msl : ShaderLanguage.Hlsl;
+
+var compilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ToolsShaderStage.MeshShader, "MeshMain", meshShaderSourceType, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
+
+foreach (var logEntry in compilationResult.LogEntries.Span)
 {
-    shaderExtension = ".vulkan.bin";
+    Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
 }
 
-var meshShaderData = File.ReadAllBytes($"TriangleMS{shaderExtension}");
-var pixelShaderData = File.ReadAllBytes($"TrianglePS{shaderExtension}");
+if (!compilationResult.IsSuccess)
+{
+    return;
+}
+
+var meshShaderData = compilationResult.ShaderData;
+
+compilationResult = shaderCompiler.CompileShader(shaderCode, ToolsShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
+
+foreach (var logEntry in compilationResult.LogEntries.Span)
+{
+    Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
+}
+
+if (!compilationResult.IsSuccess)
+{
+    return;
+}
+
+var pixelShaderData = compilationResult.ShaderData;
 
 using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
 {
