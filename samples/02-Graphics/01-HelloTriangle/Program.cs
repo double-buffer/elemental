@@ -86,6 +86,11 @@ var shaderParameters = new ShaderParameters();
 
 applicationService.RunApplication(application, (status) =>
 {
+    if (status.IsClosing)
+    {
+        return false;
+    }
+
     var renderSize = applicationService.GetWindowRenderSize(window);
 
     if (renderSize != currentRenderSize)

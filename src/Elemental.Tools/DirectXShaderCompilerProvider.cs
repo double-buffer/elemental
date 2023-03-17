@@ -25,150 +25,112 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
         }
     }
 
-    public unsafe bool IsCompilerInstalled()
+    public bool IsCompilerInstalled()
     {
-        // TODO: Change extension based on OS
-/*
-        NativeLibrary.Load(_dxilLibraryPath);
+        return _dxcLibraryPath != null && File.Exists(_dxcLibraryPath) && (_dxilLibraryPath == null || File.Exists(_dxilLibraryPath));
+    }
+
+    public unsafe ShaderCompilerResult CompileShader(ReadOnlySpan<byte> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+    {
+        if (_dxilLibraryPath != null)
+        {
+            NativeLibrary.Load(_dxilLibraryPath);
+        }
 
         if (!DirectXShaderCompilerInterop.DxcCreateInstance(DirectXShaderCompilerInterop.CLSID_DxcCompiler, out IDxcCompiler compiler))
         {
-            Console.WriteLine("ERRRRROOOOR");
-            return false;
+            return ShaderCompilerResult.CreateErrorResult("Cannot instantiate DirectX Shader Compiler.");
         }
 
-        var arguments = new string[]
+        var arguments = new List<string>()
         {
             "-HV 2021"
         };
 
-        var compileResult = compiler.Compile(new StringBlob(testData), "test.hlsl", "MeshMain", "ms_6_7", arguments, arguments.Length, null, 0, null);
+        if (graphicsApi != ToolsGraphicsApi.Direct3D12)
+        {
+            arguments.Add("-spirv");
+            arguments.Add("-fspv-target-env=vulkan1.3");
+        }
+        else
+        {
+            arguments.Add("-rootsig-define RootSignatureDef");
+        }
+
+        var shaderTarget = "ms_6_7";
+
+        if (shaderStage == ToolsShaderStage.AmplificationShader)
+        {
+            shaderTarget = "as_6_7";
+        }
+        else if (shaderStage == ToolsShaderStage.PixelShader)
+        {
+            shaderTarget = "ps_6_7";
+        }
+
+        var compileResult = compiler.Compile(new BinaryBlob(shaderCode), "SourceShader.hlsl", entryPoint, shaderTarget, arguments.ToArray(), arguments.Count, null, 0, null);
 
         var errors = compileResult.GetErrors();
-
         var bufferPointer = errors.GetBufferPointer();
-
         var outputString = Utf8StringMarshaller.ConvertToManaged((byte*)bufferPointer);
 
-        Console.WriteLine($"Compiler Errors: {outputString}");
-*/
-        return File.Exists(_dxcLibraryPath) && (_dxilLibraryPath == null || File.Exists(_dxilLibraryPath));
-    }
+        var dataResult = compileResult.GetResult();
+        var shaderData = new Span<byte>(dataResult.GetBufferPointer(), (int)dataResult.GetBufferSize());
 
-    public ShaderCompilerResult CompileShader(ReadOnlySpan<byte> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
-    {
-        throw new NotImplementedException();
-    }
+        var logList = new List<ShaderCompilerLogEntry>();
+        var currentLogType = ShaderCompilerLogEntryType.Error;
+        var hasErrors = false;
 
-    private static string testData = """
-struct ShaderParameters
-{
-    float RotationX;
-    float RotationY;
-};
+        if (outputString != null)
+        {
+            foreach (var line in outputString.Split('\n'))
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    continue;
+                }
 
-float3 rotate(float3 position, float pitch, float roll, float yaw) 
-{
-    float cosa = cos(yaw);
-    float sina = sin(yaw);
+                if (line.Contains("warning:"))
+                {
+                    currentLogType = ShaderCompilerLogEntryType.Warning;
+                }
+                else if (line.Contains("error:"))
+                {
+                    currentLogType = ShaderCompilerLogEntryType.Error;
+                    hasErrors = true;
+                }
 
-    float cosb = cos(pitch);
-    float sinb = sin(pitch);
+                logList.Add(new() { Type = currentLogType, Message = line });
+            }
+        }
 
-    float cosc = cos(roll);
-    float sinc = sin(roll);
-
-    float Axx = cosa*cosb;
-    float Axy = cosa*sinb*sinc - sina*cosc;
-    float Axz = cosa*sinb*cosc + sina*sinc;
-
-    float Ayx = sina*cosb;
-    float Ayy = sina*sinb*sinc + cosa*cosc;
-    float Ayz = sina*sinb*cosc - cosa*sinc;
-
-    float Azx = -sinb;
-    float Azy = cosb*sinc;
-    float Azz = cosb*cosc;
-
-    float px = position.x;
-    float py = position.y;
-    float pz = position.z;
-
-    float3 result;
-
-    result.x = Axx*px + Axy*py + Axz*pz;
-    result.y = Ayx*px + Ayy*py + Ayz*pz;
-    result.z = Azx*px + Azy*py + Azz*pz;
-
-    return result;
-}
-
-[[vk::push_constant]]
-ConstantBuffer<ShaderParameters> parameters : register(b0);
-
-struct VertexOutput
-{
-    float4 Position: SV_Position;
-    float4 Color: TEXCOORD0;
-};
-
-static float3 triangleVertices[] =
-{
-    float3(-0.5, 0.5, 0),
-    float3(0.5, 0.5, 0),
-    float3(-0.5, -0.5, 0)
-};
-
-static float4 triangleColors[] =
-{
-    float4(1.0, 0.0, 0, 1),
-    float4(0.0, 1.0, 0, 1),
-    float4(0.0, 0.0, 1, 1)
-};
-
-static uint3 rectangleIndices[] =
-{
-    uint3(0, 1, 2)
-};
-
-[OutputTopology("triangle")]
-[NumThreads(32, 1, 1)]
-void MeshMain(in uint groupId : SV_GroupID, in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[128], out indices uint3 indices[128])
-{
-    const uint meshVertexCount = 3;
-    const uint meshPrimitiveCount = 1;
-
-    SetMeshOutputCounts(meshVertexCount, meshPrimitiveCount);
-
-    if (groupThreadId < meshVertexCount)
-    {
-        float3 position = triangleVertices[groupThreadId];
-        
-        position = rotate(position, parameters.RotationY, parameters.RotationX, 0);
-        position.z = 0.5;
-
-        vertices[groupThreadId].Position = float4(position, 1);
-        vertices[groupThreadId].Color = triangleColors[groupThreadId];
-    }
-
-    if (groupThreadId < meshPrimitiveCount)
-    {
-        indices[groupThreadId] = rectangleIndices[groupThreadId];
+        return new ShaderCompilerResult
+        {
+            IsSuccess = !hasErrors,
+            LogEntries = logList.ToArray(),
+            ShaderData = shaderData.ToArray()
+        };
     }
 }
-""";
-}
 
-internal unsafe class StringBlob : IDxcBlob
+internal unsafe readonly struct BinaryBlob : IDxcBlob
 {
-    private readonly string _data;
-    private readonly byte* _unmanagedData;
+    private readonly void* _unmanagedData;
+    private readonly uint _dataSize;
 
-    public StringBlob(string data)
+    public BinaryBlob(ReadOnlySpan<byte> data)
     {
-        _data = data;
-        _unmanagedData = Utf8StringMarshaller.ConvertToUnmanaged(data);
+        _dataSize = (uint)data.Length;
+
+        _unmanagedData = NativeMemory.Alloc(_dataSize);
+
+        fixed (void* dataPointer = data)
+        {
+            NativeMemory.Copy(dataPointer, _unmanagedData, _dataSize);
+        }
     }
+
+    // TODO: Disposable and desctructor
 
     public unsafe char* GetBufferPointer()
     {
@@ -177,7 +139,7 @@ internal unsafe class StringBlob : IDxcBlob
 
     public uint GetBufferSize()
     {
-        return (uint)_data.Length;
+        return _dataSize;
     }
 }
 

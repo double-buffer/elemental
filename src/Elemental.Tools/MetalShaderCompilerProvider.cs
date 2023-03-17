@@ -47,14 +47,7 @@ internal class MetalShaderCompilerProvider : IShaderCompilerProvider
 
         if (process == null)
         {
-            return new ShaderCompilerResult
-            {
-                IsSuccess = false,
-                LogEntries = new ShaderCompilerLogEntry[]
-                {
-                    new() { Type = ShaderCompilerLogEntryType.Error, Message = "Cannot start Metal shader compiler process." }
-                }
-            };
+            return ShaderCompilerResult.CreateErrorResult("Cannot start Metal shader compiler process.");
         }
 
         process.WaitForExit();
@@ -102,14 +95,7 @@ internal class MetalShaderCompilerProvider : IShaderCompilerProvider
 
         if (process2 == null)
         {
-            return new ShaderCompilerResult
-            {
-                IsSuccess = false,
-                LogEntries = new ShaderCompilerLogEntry[]
-                {
-                    new() { Type = ShaderCompilerLogEntryType.Error, Message = "Cannot start Metal shader compiler process." }
-                }
-            };
+            return ShaderCompilerResult.CreateErrorResult("Cannot start Metal shader compiler process.");
         }
 
         process2.WaitForExit();
