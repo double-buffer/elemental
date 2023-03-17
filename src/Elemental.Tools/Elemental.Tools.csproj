@@ -20,6 +20,7 @@
     <Exec Condition="!Exists('../../external/shader-compilers')" Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File ../../external/GetShaderCompilers.ps1" />
   </Target>
 
+  <!-- REFACTOR the copying of the tools -->
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <Content Include="../../external/shader-compilers/dxc/bin/x64/dxcompiler.dll">
       <TargetPath>ShaderCompilers/dxcompiler.dll</TargetPath>

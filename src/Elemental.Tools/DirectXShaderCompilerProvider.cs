@@ -5,8 +5,7 @@ namespace Elemental.Tools;
 
 internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
 {
-    private readonly string _dxcLibraryPath;
-    private readonly string? _dxilLibraryPath;
+    private readonly string _dxcPath;
 
     public ShaderLanguage ShaderLanguage => ShaderLanguage.Hlsl;
     public ReadOnlySpan<ShaderLanguage> TargetShaderLanguages => new[] { ShaderLanguage.Dxil, ShaderLanguage.Spirv };
@@ -14,21 +13,21 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
     public DirectXShaderCompilerProvider()
     {
         var processPath = Path.GetDirectoryName(Environment.ProcessPath)!;
+        _dxcPath = string.Empty;
 
         if (OperatingSystem.IsWindows())
         {
-            _dxcLibraryPath = Path.Combine(processPath, "ShaderCompilers", "dxcompiler.dll");
-            _dxilLibraryPath = Path.Combine(processPath, "ShaderCompilers", "dxil.dll");
+            _dxcPath = Path.Combine(processPath, "ShaderCompilers", "dxc.exe");
         }
         else if (OperatingSystem.IsMacOS())
         {
-            _dxcLibraryPath = Path.Combine(processPath, "ShaderCompilers", "lib", "libdxcompiler.dylib");
+            _dxcPath = Path.Combine(processPath, "ShaderCompilers", "dxc");
         }
     }
 
     public bool IsCompilerInstalled()
     {
-        return _dxcLibraryPath != null && File.Exists(_dxcLibraryPath) && (_dxilLibraryPath == null || File.Exists(_dxilLibraryPath));
+        return File.Exists(_dxcPath);
     }
 
     public unsafe ShaderCompilerResult CompileShader(ReadOnlySpan<byte> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
@@ -66,7 +65,7 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
 
         using var process = Process.Start(new ProcessStartInfo 
         { 
-            FileName = "ShaderCompilers/dxc", 
+            FileName = _dxcPath, 
             Arguments = $"-T {shaderTarget} -E {entryPoint} -Fo {outputFilePath} {string.Join(' ', arguments.ToArray())} {inputFilePath}", 
             RedirectStandardError = true, 
             RedirectStandardOutput = true
