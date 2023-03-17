@@ -30,5 +30,14 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <Content Include="../../external/shader-compilers/dxc/bin/x64/libdxcompiler.dylib">
+      <TargetPath>ShaderCompilers/libdxcompiler.dylib</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+
 
 </Project>

@@ -5,7 +5,7 @@ namespace Elemental.Tools;
 internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
 {
     private readonly string _dxcLibraryPath;
-    private readonly string _dxilLibraryPath;
+    private readonly string? _dxilLibraryPath;
 
     public ShaderLanguage ShaderLanguage => ShaderLanguage.Hlsl;
     public ReadOnlySpan<ShaderLanguage> TargetShaderLanguages => new[] { ShaderLanguage.Dxil, ShaderLanguage.Spirv };
@@ -14,8 +14,15 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
     {
         var processPath = Path.GetDirectoryName(Environment.ProcessPath)!;
 
-        _dxcLibraryPath = Path.Combine(processPath, "ShaderCompilers", "dxcompiler.dll");
-        _dxilLibraryPath = Path.Combine(processPath, "ShaderCompilers", "dxil.dll");
+        if (OperatingSystem.IsWindows())
+        {
+            _dxcLibraryPath = Path.Combine(processPath, "ShaderCompilers", "dxcompiler.dll");
+            _dxilLibraryPath = Path.Combine(processPath, "ShaderCompilers", "dxil.dll");
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            _dxcLibraryPath = Path.Combine(processPath, "ShaderCompilers", "libdxcompiler.dylib");
+        }
     }
 
     public unsafe bool IsCompilerInstalled()
@@ -45,7 +52,7 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
 
         Console.WriteLine($"Compiler Errors: {outputString}");
 */
-        return File.Exists(_dxcLibraryPath) && File.Exists(_dxilLibraryPath);
+        return File.Exists(_dxcLibraryPath) && (_dxilLibraryPath == null || File.Exists(_dxilLibraryPath));
     }
 
     public ShaderCompilerResult CompileShader(ReadOnlySpan<byte> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
