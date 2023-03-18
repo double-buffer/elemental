@@ -21,7 +21,7 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
         }
         else if (OperatingSystem.IsMacOS())
         {
-            _dxcPath = Path.Combine(processPath, "ShaderCompilers", "dxc");
+            _dxcPath = Path.Combine(processPath, "ShaderCompilers", "bin", "dxc");
         }
     }
 
@@ -42,7 +42,12 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
             "-HV 2021"
         };
 
-        if (graphicsApi != ToolsGraphicsApi.Direct3D12)
+        // HACK: Remove that!
+        if (graphicsApi == ToolsGraphicsApi.Metal)
+        {
+            arguments.Add("-spirv");
+        }
+        else if (graphicsApi != ToolsGraphicsApi.Direct3D12)
         {
             arguments.Add("-spirv");
             arguments.Add("-fspv-target-env=vulkan1.3");
@@ -51,7 +56,6 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
         {
             arguments.Add("-rootsig-define RootSignatureDef");
         }
-
         var shaderTarget = "ms_6_7";
 
         if (shaderStage == ToolsShaderStage.AmplificationShader)

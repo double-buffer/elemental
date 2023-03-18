@@ -16,10 +16,18 @@ function Get-GithubRelease {
 
     Remove-Item -Path $pathExtract -Recurse -Force -ErrorAction SilentlyContinue
     
+    if (-not(Test-Path -Path $pathExtract)) {
+        mkdir $pathExtract > $null
+    }
+    
     if (-not($isTar)) {
         Expand-Archive -Path $pathZip -DestinationPath $pathExtract -Force
     } else {
-        . ./Expand-Tar -FileToExtract $pathZip -TargetFolder $pathExtract
+        if ($IsWindows) {
+            . ./Expand-Tar -FileToExtract $pathZip -TargetFolder $pathExtract
+        } else {
+            tar -xzvf $pathZip -C $pathExtract  
+        }
     }
     Remove-Item $pathZip -Force
 }
@@ -28,9 +36,16 @@ if (-not(Test-Path -Path "$PSScriptRoot/shader-compilers")) {
     mkdir $PSScriptRoot/shader-compilers > $null
 }
 
-# TODO: Check the OS and use other patterns
-Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
-Get-GithubRelease -repo "microsoft/DirectXShaderCompiler" -tag "v1.7.2212.1" -filenamePattern "dxc_*.zip" -pathExtract "$PSScriptRoot\shader-compilers\dxc\"
+$spirvCrossTag = "2021-01-15"
 
-Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
-Get-GithubRelease -repo "KhronosGroup/SPIRV-Cross" -tag "2021-01-15" -filenamePattern "spirv-cross-vs2017-64bit-*.gz" -isTar true -pathExtract "$PSScriptRoot\shader-compilers\spirv-cross\"
+if ($IsWindows) {
+    # TODO: Check the OS and use other patterns
+    Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
+    Get-GithubRelease -repo "microsoft/DirectXShaderCompiler" -tag "v1.7.2212.1" -filenamePattern "dxc_*.zip" -pathExtract "$PSScriptRoot\shader-compilers\dxc\"
+
+    Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
+    Get-GithubRelease -repo "KhronosGroup/SPIRV-Cross" -tag $spirvCrossTag -filenamePattern "spirv-cross-vs2017-64bit-*.gz" -isTar true -pathExtract "$PSScriptRoot\shader-compilers\spirv-cross\"
+} elseif ($IsMacOS) {
+    Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
+    Get-GithubRelease -repo "KhronosGroup/SPIRV-Cross" -tag $spirvCrossTag -filenamePattern "spirv-cross-clang-macos-64bit-*.tar.gz" -isTar true -pathExtract "$PSScriptRoot/shader-compilers/spirv-cross/"
+}

@@ -84,6 +84,7 @@ public class ShaderCompiler : IShaderCompiler
                 // TODO: Check errors
                 currentShaderData = compilationResult.ShaderData;
                 isSuccess = compilationResult.IsSuccess;
+                currentShaderInput = currentShaderData.Value.ToArray();
             }
 
             if (currentShaderData != null)

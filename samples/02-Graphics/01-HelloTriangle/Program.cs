@@ -44,9 +44,10 @@ Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(S
 // TODO: Do a batch compile function?
 
 var shaderCode = File.ReadAllText("Triangle.hlsl");
+
+// TODO: This is needed for Apple Metal because SPIRV-Cross doesn't yet support metal mesh shaders
 var shaderCodeMetal = File.ReadAllText("Triangle.metal");
 var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? ShaderLanguage.Msl : ShaderLanguage.Hlsl;
-
 var compilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ToolsShaderStage.MeshShader, "MeshMain", meshShaderSourceType, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
 
 foreach (var logEntry in compilationResult.LogEntries.Span)
