@@ -359,13 +359,39 @@ public func createShader(graphicsDevicePointer: UnsafeRawPointer, shaderParts: U
             let dispatchData = DispatchData(bytes: UnsafeRawBufferPointer(start: shaderPart.DataPointer, count: Int(shaderPart.DataCount)))
             let defaultLibrary = try! graphicsDevice.metalDevice.makeLibrary(data: dispatchData as __DispatchData)
             let shaderFunction = defaultLibrary.makeFunction(name: String(cString: shaderPart.EntryPoint))
+
+            var threadCountX = 0
+            var threadCountY = 0
+            var threadCountZ = 0
+            var threadCount: MTLSize? = nil
+
+            for j in 0..<Int(shaderPart.MetaDataCount) {
+                let metaData = shaderPart.MetaDataPointer[j]
+
+                switch metaData.Type {
+                    case ShaderPartMetaDataType_ThreadCountX:
+                        threadCountX = Int(metaData.Value)
+
+                    case ShaderPartMetaDataType_ThreadCountY:
+                        threadCountY = Int(metaData.Value)
+                    
+                    case ShaderPartMetaDataType_ThreadCountZ:
+                        threadCountZ = Int(metaData.Value)
+                    default:
+                        break
+                }
+            }
+            
+            threadCount = MTLSizeMake(threadCountX, threadCountY, threadCountZ)
             
             switch shaderPart.Stage {
                 case ShaderStage_AmplificationShader:
                     shader.amplificationShader = shaderFunction
+                    shader.amplificationThreadCount = threadCount
 
                 case ShaderStage_MeshShader:
                     shader.meshShader = shaderFunction
+                    shader.meshThreadCount = threadCount
                     
                 case ShaderStage_PixelShader:
                     shader.pixelShader = shaderFunction
@@ -558,18 +584,23 @@ public func dispatchMesh(commandListPointer: UnsafeRawPointer, threadGroupCountX
             print("dispatchMesh: No pipeline state bound.")
             return
         }
+        
+        guard let currentShader = commandList.currentShader else {
+            print("dispatchMesh: No shader bound.")
+            return
+        }
 
-        /*
-        let w = pipelineState.threadExecutionWidth
-        let h = (threadCountY > 1) ? computePipelineState.computePipelineState!.maxTotalThreadsPerThreadgroup / w : 1
-        let threadsPerGroup = MTLSizeMake(w, h, 1)*/
+        assert(currentShader.amplificationShader == nil || (currentShader.amplificationThreadCount!.width > 0 
+                                                         && currentShader.amplificationThreadCount!.height > 0 
+                                                         && currentShader.amplificationThreadCount!.depth > 0))
+                                                         
+        assert(currentShader.meshShader == nil || (currentShader.meshThreadCount!.width > 0 
+                                                && currentShader.meshThreadCount!.height > 0 
+                                                && currentShader.meshThreadCount!.depth > 0))
 
-        // TODO: Review that
-        // In other APIs we declare the threads per group in the shader directly...
         renderCommandEncoder.drawMeshThreadgroups(MTLSizeMake(Int(threadGroupCountX), Int(threadGroupCountY), Int(threadGroupCountZ)),
-    threadsPerObjectThreadgroup: MTLSizeMake(32, 1, 1),
-    threadsPerMeshThreadgroup: MTLSizeMake(32, 1, 1))
-
+                threadsPerObjectThreadgroup: currentShader.amplificationThreadCount != nil ? currentShader.amplificationThreadCount! : MTLSizeMake(32, 1, 1),
+                threadsPerMeshThreadgroup: currentShader.meshThreadCount != nil ? currentShader.meshThreadCount! : MTLSizeMake(32, 1, 1))
     }
 }
 

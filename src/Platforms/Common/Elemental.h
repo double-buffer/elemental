@@ -150,7 +150,7 @@ struct ShaderPart
     uint8_t* EntryPoint;
     void* DataPointer;
     int32_t DataCount;
-    ShaderPartMetaData* MetaDataPointer;
+    struct ShaderPartMetaData* MetaDataPointer;
     int32_t MetaDataCount;
 };
 

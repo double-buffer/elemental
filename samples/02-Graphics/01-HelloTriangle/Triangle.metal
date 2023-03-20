@@ -15,7 +15,6 @@ struct PrimitiveOutput
 
 struct ShaderParameters
 {
-    float RotationX;
     float RotationY;
 };
 
@@ -96,7 +95,7 @@ void MeshMain(AAPLTriangleMeshType output,
         
         float3 position = triangleVertices[groupThreadId];
         
-        position = rotate(position, parameters.RotationY, parameters.RotationX, 0);
+        position = rotate(position, parameters.RotationY, 0, 0);
         position.z = 0.5;
 
         vertexOutput.Position = float4(position, 1.0);

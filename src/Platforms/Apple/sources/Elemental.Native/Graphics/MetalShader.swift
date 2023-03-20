@@ -6,6 +6,8 @@ public class MetalShader : MetalObject<MetalShader> {
     }
 
     public var amplificationShader: MTLFunction?
+    public var amplificationThreadCount: MTLSize?
     public var meshShader: MTLFunction?
+    public var meshThreadCount: MTLSize?
     public var pixelShader: MTLFunction?
 }
