@@ -25,6 +25,8 @@ public readonly record struct ShaderPart
     /// </summary>
     /// <value>Compiled shader.</value>
     public required ReadOnlyMemory<byte> Data { get; init; }
+
+    public ReadOnlyMemory<ShaderPartMetaData> MetaData { get; init; }
 }
 
 [CustomMarshaller(typeof(ShaderPart), MarshalMode.Default, typeof(ShaderPartMarshaller))]
@@ -36,6 +38,8 @@ internal static unsafe class ShaderPartMarshaller
         public byte* EntryPoint { get; init; }
         public void* DataPointer { get; init; }
         public int DataCount { get; init; }
+        public ShaderPartMetaData* MetaDataPointer { get; init; }
+        public int MetaDataCount { get; init; }
     }
 
     public static ShaderPartUnmanaged ConvertToUnmanaged(ShaderPart managed)
@@ -44,13 +48,19 @@ internal static unsafe class ShaderPartMarshaller
         var dataPointer = NativeMemory.Alloc((nuint)managed.Data.Length);
         var dataSpan = new Span<byte>(dataPointer, managed.Data.Length);
         managed.Data.Span.CopyTo(dataSpan);
+        
+        var metaDataPointer = (ShaderPartMetaData*)NativeMemory.Alloc((nuint)(managed.MetaData.Length * Marshal.SizeOf<ShaderPartMetaData>()));
+        var metaDataSpan = new Span<ShaderPartMetaData>(metaDataPointer, managed.MetaData.Length);
+        managed.MetaData.Span.CopyTo(metaDataSpan);
 
         return new ShaderPartUnmanaged
         {
             Stage = managed.Stage,
             EntryPoint = Utf8StringMarshaller.ConvertToUnmanaged(managed.EntryPoint),
             DataPointer = dataPointer,
-            DataCount = managed.Data.Length
+            DataCount = managed.Data.Length,
+            MetaDataPointer = metaDataPointer,
+            MetaDataCount = managed.MetaData.Length
         };
     }
     
@@ -63,5 +73,6 @@ internal static unsafe class ShaderPartMarshaller
     {
         Utf8StringMarshaller.Free(unmanaged.EntryPoint);
         NativeMemory.Free(unmanaged.DataPointer);
+        NativeMemory.Free(unmanaged.MetaDataPointer);
     }
 }

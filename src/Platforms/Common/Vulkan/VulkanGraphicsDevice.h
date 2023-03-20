@@ -25,7 +25,6 @@ struct VulkanCommandPoolItem
 struct VulkanPipelineStateCacheItem
 {
     VkPipeline PipelineState;
-    VkPipelineLayout PipelineLayout;
 };
 
 struct VulkanGraphicsDevice : BaseGraphicsObject

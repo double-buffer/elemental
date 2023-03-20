@@ -728,7 +728,6 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
             memcpy(shader->AmplificationShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
             break;
         case ShaderStage_MeshShader:
-            //AssertIfFailed(graphicsDevice->Device->CreateRootSignature(0, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), IID_PPV_ARGS(shader->RootSignature.GetAddressOf())));
             shader->MeshShader = shaderModule;
             memcpy(shader->MeshShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
             break;
@@ -1168,6 +1167,7 @@ VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(Vu
 
     // TODO: Move that to the shader creation. It is a kind of rootdescriptor
     // HACK: Temporary code!
+    // BUG: 
 	VkPipelineLayoutCreateInfo layoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	layoutCreateInfo.pSetLayouts = nullptr;
 	layoutCreateInfo.setLayoutCount = 0;

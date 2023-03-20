@@ -19,7 +19,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
     if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
     {
-        //selectedGraphicsDevice = availableGraphicsDevice;
+        selectedGraphicsDevice = availableGraphicsDevice;
     }
 
     Console.WriteLine($"{availableGraphicsDevice}");
@@ -78,12 +78,33 @@ var pixelShaderData = compilationResult.ShaderData;
 
 using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
 {
-    new ShaderPart { Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", Data = meshShaderData },
-    new ShaderPart { Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", Data = pixelShaderData }
+    new ShaderPart 
+    { 
+        Stage = ShaderStage.MeshShader, 
+        EntryPoint = "MeshMain", 
+        Data = meshShaderData, 
+        MetaData = new ShaderPartMetaData[] 
+        { 
+            new ShaderPartMetaData { Type = ShaderPartMetaDataType.PushConstantsCount, Value = 1 }, 
+            new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountX, Value = 32 },
+            new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountY, Value = 1 },
+            new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountZ, Value = 1 } 
+        } 
+    },
+    new ShaderPart 
+    { 
+        Stage = ShaderStage.PixelShader, 
+        EntryPoint = "PixelMain", 
+        Data = pixelShaderData,
+        MetaData = new ShaderPartMetaData[] 
+        { 
+            new ShaderPartMetaData { Type = ShaderPartMetaDataType.PushConstantsCount, Value = 1 } 
+        }  
+    }
 });
 
 var stopWatch = new Stopwatch();
-var shaderParameters = new ShaderParameters();
+var rotationY = 0.0f;
 
 applicationService.RunApplication(application, (status) =>
 {
@@ -109,7 +130,7 @@ applicationService.RunApplication(application, (status) =>
 
     // TODO: Compute real delta time
     var deltaTime = 1.0f / 60.0f;
-    shaderParameters = shaderParameters with { RotationY = shaderParameters.RotationY + 0.5f * deltaTime };
+    rotationY += 0.5f * deltaTime;
 
     var commandList = graphicsService.CreateCommandList(commandQueue);
 
@@ -117,7 +138,7 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 1.0f, 1.0f, 1.0f) } });
 
     graphicsService.SetShader(commandList, shader);
-    graphicsService.SetShaderConstants(commandList, 0, ref shaderParameters);
+    graphicsService.SetShaderConstants(commandList, 0, ref rotationY);
     graphicsService.DispatchMesh(commandList, 1, 1, 1);
 
     graphicsService.EndRenderPass(commandList);
@@ -131,5 +152,3 @@ applicationService.RunApplication(application, (status) =>
     //Console.WriteLine($"Present swapchain {stopWatch.Elapsed.TotalMilliseconds}");
     return true;
 });
-
-readonly record struct ShaderParameters(float RotationX, float RotationY);

@@ -130,12 +130,28 @@ enum ShaderStage
     ShaderStage_PixelShader = 3
 };
 
+enum ShaderPartMetaDataType
+{
+    ShaderPartMetaDataType_PushConstantsCount,
+    ShaderPartMetaDataType_ThreadCountX,
+    ShaderPartMetaDataType_ThreadCountY,
+    ShaderPartMetaDataType_ThreadCountZ
+};
+
+struct ShaderPartMetaData
+{
+    enum ShaderPartMetaDataType Type;
+    uint32_t Value;
+};
+
 struct ShaderPart
 {
     enum ShaderStage Stage;
     uint8_t* EntryPoint;
     void* DataPointer;
     int32_t DataCount;
+    ShaderPartMetaData* MetaDataPointer;
+    int32_t MetaDataCount;
 };
 
 struct RenderPassRenderTarget
