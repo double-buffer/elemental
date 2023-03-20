@@ -1,6 +1,3 @@
-using System.Buffers;
-using System.Text;
-
 namespace Elemental.Tools;
 
 /// <inheritdoc cref="IShaderCompiler" />
@@ -8,7 +5,7 @@ public class ShaderCompiler : IShaderCompiler
 {
     private readonly List<IShaderCompilerProvider> _shaderCompilerProviders;
     
-    // TODO: Convert that to frozen dicitonary in .NET 8 :)
+    // TODO: Convert that to frozen dictionary in .NET 8 :)
     private readonly Dictionary<ToolsGraphicsApi, ShaderLanguage> _platformTargetLanguages;
 
     /// <summary>
@@ -81,21 +78,24 @@ public class ShaderCompiler : IShaderCompiler
                 var compilationResult = shaderCompilerProvider.CompileShader(currentShaderInput, shaderStage, entryPoint, shaderLanguage, graphicsApi);
                 logList.AddRange(compilationResult.LogEntries.ToArray());
 
-                // TODO: Check errors
-                currentShaderData = compilationResult.ShaderData;
                 isSuccess = compilationResult.IsSuccess;
+                
+                if (!isSuccess)
+                {
+                    currentShaderData = null;
+                    break;
+                }
+
+                currentShaderData = compilationResult.ShaderData;
                 currentShaderInput = currentShaderData.Value.ToArray();
             }
 
-            if (currentShaderData != null)
-            { 
-                return new ShaderCompilerResult
-                {
-                    IsSuccess = isSuccess,
-                    LogEntries = logList.ToArray(),
-                    ShaderData = currentShaderData.Value
-                };
-            }
+            return new ShaderCompilerResult
+            {
+                IsSuccess = isSuccess,
+                LogEntries = logList.ToArray(),
+                ShaderData = currentShaderData ?? Array.Empty<byte>()
+            };
         }
         
         ArrayPool<IShaderCompilerProvider>.Shared.Return(shaderCompilerProviders);

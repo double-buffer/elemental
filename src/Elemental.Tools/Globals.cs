@@ -1,6 +1,6 @@
+global using System.Buffers;
+global using System.Diagnostics;
 global using System.IO;
-global using System.Numerics;
-global using System.Runtime.InteropServices;
-global using System.Runtime.InteropServices.Marshalling;
+global using System.Text;
 
 [assembly:System.Runtime.CompilerServices.DisableRuntimeMarshalling]

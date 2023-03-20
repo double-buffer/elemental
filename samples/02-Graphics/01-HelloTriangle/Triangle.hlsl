@@ -107,16 +107,7 @@ void MeshMain(in uint groupId : SV_GroupID, in uint groupThreadId : SV_GroupThre
     }
 }
 
-struct PixelOutput
+float4 PixelMain(const VertexOutput input) : SV_Target0
 {
-    float4 Color: SV_TARGET0;
-};
-
-PixelOutput PixelMain(const VertexOutput input)
-{
-    PixelOutput output = (PixelOutput)0;
-
-    output.Color = input.Color;
-    
-    return output; 
+    return input.Color; 
 }

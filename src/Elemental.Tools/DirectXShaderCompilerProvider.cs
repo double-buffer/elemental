@@ -1,6 +1,3 @@
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-
 namespace Elemental.Tools;
 
 internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
@@ -42,12 +39,7 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
             "-HV 2021"
         };
 
-        // HACK: Remove that!
-        if (graphicsApi == ToolsGraphicsApi.Metal)
-        {
-            arguments.Add("-spirv");
-        }
-        else if (graphicsApi != ToolsGraphicsApi.Direct3D12)
+        if (graphicsApi != ToolsGraphicsApi.Direct3D12)
         {
             arguments.Add("-spirv");
             arguments.Add("-fspv-target-env=vulkan1.3");

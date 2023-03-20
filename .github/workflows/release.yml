@@ -18,6 +18,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
     - name: Configure MSBuild
       uses: microsoft/setup-msbuild@v1.1

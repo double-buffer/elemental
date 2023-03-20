@@ -6,7 +6,7 @@ using namespace metal;
 struct VertexOutput
 {
     float4 Position [[position]];
-    float4 Color;
+    float4 Color [[user(locn0)]];
 };
 
 struct PrimitiveOutput
@@ -115,19 +115,4 @@ void MeshMain(AAPLTriangleMeshType output,
         output.set_index(i+1, rectangleIndices[i+1]);
         output.set_index(i+2, rectangleIndices[i+2]);
     }  
-}
-
-
-struct PixelOutput
-{
-    float4 Color [[color(0)]];
-};
-
-fragment PixelOutput PixelMain(VertexOutput input [[stage_in]])
-{
-    PixelOutput output {};
-
-    output.Color = input.Color;
-    
-    return output; 
 }

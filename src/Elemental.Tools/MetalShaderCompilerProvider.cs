@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace Elemental.Tools;
 
 // TODO: It would be gread in the future to be able to have a standalone install on MacOS :/

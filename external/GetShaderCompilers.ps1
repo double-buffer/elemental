@@ -36,7 +36,7 @@ if (-not(Test-Path -Path "$PSScriptRoot/shader-compilers")) {
     mkdir $PSScriptRoot/shader-compilers > $null
 }
 
-$spirvCrossTag = "2021-01-15"
+$shaderCompilersBinTag = "v2023-03-19"
 
 if ($IsWindows) {
     # TODO: Check the OS and use other patterns
@@ -44,8 +44,11 @@ if ($IsWindows) {
     Get-GithubRelease -repo "microsoft/DirectXShaderCompiler" -tag "v1.7.2212.1" -filenamePattern "dxc_*.zip" -pathExtract "$PSScriptRoot\shader-compilers\dxc\"
 
     Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
-    Get-GithubRelease -repo "KhronosGroup/SPIRV-Cross" -tag $spirvCrossTag -filenamePattern "spirv-cross-vs2017-64bit-*.gz" -isTar true -pathExtract "$PSScriptRoot\shader-compilers\spirv-cross\"
+    Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "windows_spirv-cross_*_x64.zip" -pathExtract "$PSScriptRoot\shader-compilers\spirv-cross\"
 } elseif ($IsMacOS) {
+    Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
+    Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag "v2023-03-19" -filenamePattern "macos_dxc_*.zip" -pathExtract "$PSScriptRoot\shader-compilers\dxc\"
+
     Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
-    Get-GithubRelease -repo "KhronosGroup/SPIRV-Cross" -tag $spirvCrossTag -filenamePattern "spirv-cross-clang-macos-64bit-*.tar.gz" -isTar true -pathExtract "$PSScriptRoot/shader-compilers/spirv-cross/"
+    Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "macos_spirv-cross_*_x64.zip" -pathExtract "$PSScriptRoot/shader-compilers/spirv-cross/"
 }

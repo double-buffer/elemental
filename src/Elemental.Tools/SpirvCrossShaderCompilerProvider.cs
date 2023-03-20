@@ -62,15 +62,8 @@ internal class SpirvCrossShaderCompilerProvider : IShaderCompilerProvider
 
         while ((line = process.StandardError.ReadLine()) != null)
         {
-            if (line.Contains("warning:"))
-            {
-                currentLogType = ShaderCompilerLogEntryType.Warning;
-            }
-            else if (line.Contains("error:"))
-            {
-                currentLogType = ShaderCompilerLogEntryType.Error;
-                hasErrors = true;
-            }
+            currentLogType = ShaderCompilerLogEntryType.Error;
+            hasErrors = true;
 
             logList.Add(new() { Type = currentLogType, Message = line });
         }
