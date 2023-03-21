@@ -284,6 +284,11 @@ void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     VulkanCommandPoolItem* item;
 
+    for (uint32_t i = 0; i < graphicsDevice->PipelineStates.Count(); i++)
+    {
+        vkDestroyPipeline(graphicsDevice->Device, graphicsDevice->PipelineStates[(int32_t)i].PipelineState, nullptr);
+    }
+
     for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
     {
         graphicsDevice->DirectCommandPool.GetCurrentItemPointerAndMove(&item);
@@ -292,14 +297,14 @@ void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
         {
             vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
         }
-        
+
         graphicsDevice->ComputeCommandPool.GetCurrentItemPointerAndMove(&item);
 
         if (item->CommandPool != nullptr)
         {
             vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
         }
-        
+
         graphicsDevice->CopyCommandPool.GetCurrentItemPointerAndMove(&item);
 
         if (item->CommandPool != nullptr)
@@ -709,24 +714,40 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     auto shader = new VulkanShader(graphicsDevice->GraphicsService, graphicsDevice);
 
+    auto pushConstantCount = 0u;
+    
     for (int32_t i = 0; i < shaderPartCount; i++)
     {
         auto shaderPart = shaderParts[i];
-        
-        VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+
+        if (pushConstantCount == 0)
+        {
+            for (int32_t j = 0; j < shaderPart.MetaDataCount; j++)
+            {
+                auto metaData = shaderPart.MetaDataPointer[j];
+
+                if (metaData.Type == ShaderPartMetaDataType_PushConstantsCount)
+                {
+                    pushConstantCount = metaData.Value;
+                    break;
+                }
+            }
+        }
+
+        VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
         createInfo.codeSize = shaderPart.DataCount;
         createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderPart.DataPointer);
 
         VkShaderModule shaderModule = nullptr;
         AssertIfFailed(vkCreateShaderModule(graphicsDevice->Device, &createInfo, 0, &shaderModule));
 
-        // TODO Create the pipeline layout here?
         switch (shaderPart.Stage)
         {
         case ShaderStage_AmplificationShader:
             shader->AmplificationShader = shaderModule;
             memcpy(shader->AmplificationShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
             break;
+
         case ShaderStage_MeshShader:
             shader->MeshShader = shaderModule;
             memcpy(shader->MeshShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
@@ -739,6 +760,20 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
         }
     }
 
+	VkPipelineLayoutCreateInfo layoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	layoutCreateInfo.pSetLayouts = nullptr;
+	layoutCreateInfo.setLayoutCount = 0;
+
+	VkPushConstantRange push_constant;
+	push_constant.offset = 0;
+	push_constant.size = pushConstantCount * sizeof(uint32_t);
+	push_constant.stageFlags = VK_SHADER_STAGE_ALL;
+
+	layoutCreateInfo.pPushConstantRanges = &push_constant;
+	layoutCreateInfo.pushConstantRangeCount = 1;
+
+	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice->Device, &layoutCreateInfo, 0, &shader->PipelineLayout));
+
     return shader;
 }
 
@@ -746,6 +781,16 @@ void VulkanGraphicsService::FreeShader(void* shaderPointer)
 {
     auto shader = (VulkanShader*)shaderPointer;
     auto graphicsDevice = (VulkanGraphicsDevice*)shader->GraphicsDevice;
+
+    if (shader->PipelineLayout != nullptr)
+    {
+        vkDestroyPipelineLayout(graphicsDevice->Device, shader->PipelineLayout, nullptr);
+    }
+
+    if (shader->AmplificationShader != nullptr)
+    {
+        vkDestroyShaderModule(graphicsDevice->Device, shader->AmplificationShader, nullptr);
+    }
 
     if (shader->MeshShader != nullptr)
     {
@@ -847,16 +892,17 @@ void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPoin
 
         vkCmdBindPipeline(commandList->DeviceObject, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineState->PipelineState);
         commandList->CurrentPipelineState = pipelineState;
+        commandList->CurrentShader = shader;
     }
 }
 
 void VulkanGraphicsService::SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
-    assert(commandList->CurrentPipelineState != nullptr);
+    assert(commandList->CurrentShader != nullptr);
 
     // TODO: There seems that there was a memory leak in the old engine. Check that again!
-    vkCmdPushConstants(commandList->DeviceObject, commandList->CurrentPipelineState->PipelineLayout, VK_SHADER_STAGE_ALL, 0, constantValueCount, constantValues);
+    vkCmdPushConstants(commandList->DeviceObject, commandList->CurrentShader->PipelineLayout, VK_SHADER_STAGE_ALL, 0, constantValueCount, constantValues);
 }
 
 void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
@@ -1164,34 +1210,13 @@ VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(Vu
     renderingCreateInfo.colorAttachmentCount = 1; // TODO: Change that
     renderingCreateInfo.pColorAttachmentFormats = formats;
     createInfo.pNext = &renderingCreateInfo;
-
-    // TODO: Move that to the shader creation. It is a kind of rootdescriptor
-    // HACK: Temporary code!
-    // BUG: 
-	VkPipelineLayoutCreateInfo layoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	layoutCreateInfo.pSetLayouts = nullptr;
-	layoutCreateInfo.setLayoutCount = 0;
-
-    // HACK: We cannot hardcode the push constants here
-	VkPushConstantRange push_constant;
-	push_constant.offset = 0;
-	push_constant.size = 2 * sizeof(uint32_t);
-	push_constant.stageFlags = VK_SHADER_STAGE_ALL;
-
-	layoutCreateInfo.pPushConstantRanges = &push_constant;
-	layoutCreateInfo.pushConstantRangeCount = 1;
-
-    // HACK: We need to store this an delete it later
-	VkPipelineLayout layout = nullptr;
-	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice->Device, &layoutCreateInfo, 0, &layout));
-    createInfo.layout = layout;
+    createInfo.layout = shader->PipelineLayout;
 
     VkPipeline pipelineState = nullptr;
     AssertIfFailed(vkCreateGraphicsPipelines(graphicsDevice->Device, nullptr, 1, &createInfo, 0, &pipelineState));
 
     VulkanPipelineStateCacheItem cacheItem = {};
     cacheItem.PipelineState = pipelineState;
-    cacheItem.PipelineLayout = layout;
 
     return cacheItem;
 }

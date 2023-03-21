@@ -35,6 +35,18 @@ public:
         return _map[key];
     }
 
+    TValue& operator[](int32_t index)
+    {
+        auto iterator = _map.begin();
+        std::advance(iterator, index);
+        return iterator->second;
+    }
+
+    uint32_t Count()
+    {
+        return _map.size();
+    }
+
 private:
     std::map<TKey, TValue> _map;
 };

@@ -2,6 +2,7 @@
 
 struct VulkanCommandPoolItem;
 struct VulkanPipelineStateCacheItem;
+struct VulkanShader;
 
 struct VulkanCommandList : VulkanBaseGraphicsObject
 {
@@ -11,6 +12,7 @@ struct VulkanCommandList : VulkanBaseGraphicsObject
         IsRenderPassActive = false;
         CommandPoolItem = nullptr;
         CurrentPipelineState = nullptr;
+        CurrentShader = nullptr;
     }
 
     VkCommandBuffer DeviceObject;
@@ -20,4 +22,5 @@ struct VulkanCommandList : VulkanBaseGraphicsObject
     VulkanCommandPoolItem* CommandPoolItem;
     RenderPassDescriptor CurrentRenderPassDescriptor;
     VulkanPipelineStateCacheItem* CurrentPipelineState;
+    VulkanShader* CurrentShader;
 };

@@ -15,6 +15,5 @@ struct VulkanShader : VulkanBaseGraphicsObject
     VkShaderModule PixelShader = nullptr;
     char PixelShaderEntryPoint[255];
     
-    // TODO:
     VkPipelineLayout PipelineLayout;
 };
