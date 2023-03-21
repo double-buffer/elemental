@@ -15,6 +15,7 @@ using var window = applicationService.CreateWindow(application);
 var availableGraphicsDevices = graphicsService.GetAvailableGraphicsDevices();
 var selectedGraphicsDevice = availableGraphicsDevices[0];
 
+// TODO: Do a separate sample to showcase the use of Native + Vulkan with 2 windows (if available)
 foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
     if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
@@ -88,7 +89,7 @@ using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
         }
     },
     new ShaderPart 
-    { 
+    {
         Stage = (ShaderStage)pixelShaderCompilationResult.Stage, 
         EntryPoint = pixelShaderCompilationResult.EntryPoint, 
         Data = pixelShaderCompilationResult.ShaderData,
