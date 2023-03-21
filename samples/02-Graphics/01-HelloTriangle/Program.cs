@@ -48,54 +48,50 @@ var shaderCode = File.ReadAllText("Triangle.hlsl");
 // TODO: This is needed for Apple Metal because SPIRV-Cross doesn't yet support metal mesh shaders
 var shaderCodeMetal = File.ReadAllText("Triangle.metal");
 var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? ShaderLanguage.Msl : ShaderLanguage.Hlsl;
-var compilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ToolsShaderStage.MeshShader, "MeshMain", meshShaderSourceType, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
+var meshShaderCompilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ToolsShaderStage.MeshShader, "MeshMain", meshShaderSourceType, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
 
-foreach (var logEntry in compilationResult.LogEntries.Span)
+foreach (var logEntry in meshShaderCompilationResult.LogEntries.Span)
 {
     Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
 }
 
-if (!compilationResult.IsSuccess)
+if (!meshShaderCompilationResult.IsSuccess)
 {
     return;
 }
 
-var meshShaderData = compilationResult.ShaderData;
+var pixelShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ToolsShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
 
-compilationResult = shaderCompiler.CompileShader(shaderCode, ToolsShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
-
-foreach (var logEntry in compilationResult.LogEntries.Span)
+foreach (var logEntry in pixelShaderCompilationResult.LogEntries.Span)
 {
     Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
 }
 
-if (!compilationResult.IsSuccess)
+if (!pixelShaderCompilationResult.IsSuccess)
 {
     return;
 }
-
-var pixelShaderData = compilationResult.ShaderData;
 
 using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
 {
     new ShaderPart 
     { 
-        Stage = ShaderStage.MeshShader, 
-        EntryPoint = "MeshMain", 
-        Data = meshShaderData, 
+        Stage = (ShaderStage)meshShaderCompilationResult.Stage, 
+        EntryPoint = meshShaderCompilationResult.EntryPoint, 
+        Data = meshShaderCompilationResult.ShaderData, 
         MetaData = new ShaderPartMetaData[] 
-        { 
+        {
             new ShaderPartMetaData { Type = ShaderPartMetaDataType.PushConstantsCount, Value = 1 }, 
             new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountX, Value = 32 },
             new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountY, Value = 1 },
             new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountZ, Value = 1 } 
-        } 
+        }
     },
     new ShaderPart 
     { 
-        Stage = ShaderStage.PixelShader, 
-        EntryPoint = "PixelMain", 
-        Data = pixelShaderData,
+        Stage = (ShaderStage)pixelShaderCompilationResult.Stage, 
+        EntryPoint = pixelShaderCompilationResult.EntryPoint, 
+        Data = pixelShaderCompilationResult.ShaderData,
         MetaData = new ShaderPartMetaData[] 
         { 
             new ShaderPartMetaData { Type = ShaderPartMetaDataType.PushConstantsCount, Value = 1 } 

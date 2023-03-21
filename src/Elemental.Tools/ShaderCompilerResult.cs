@@ -12,22 +12,36 @@ public readonly record struct ShaderCompilerResult
     public required bool IsSuccess { get; init; }
 
     /// <summary>
+    /// Gets the stage to which the shader compiler was compiled.
+    /// </summary>
+    /// <value>Shader stage.</value>
+    public required ToolsShaderStage Stage { get; init; }
+
+    /// <summary>
+    /// Gets the entry point that was used to compile the shader.
+    /// </summary>
+    /// <value>Entry point name.</value>
+    public required string EntryPoint { get; init; }
+
+    /// <summary>
     /// Gets the compiled shader data.
     /// </summary>
     /// <value>Compiled shader data.</value>
     public ReadOnlyMemory<byte> ShaderData { get; init; }
-    
+
     /// <summary>
     /// Gets the log entries associated with the compilation.
     /// </summary>
     /// <value>Log entries of the compilation.</value>
     public ReadOnlyMemory<ShaderCompilerLogEntry> LogEntries { get; init; }
 
-    internal static ShaderCompilerResult CreateErrorResult(string message)
+    internal static ShaderCompilerResult CreateErrorResult(ToolsShaderStage stage, string entryPoint, string message)
     {
         return new ShaderCompilerResult
         {
             IsSuccess = false,
+            Stage = stage,
+            EntryPoint = entryPoint,
             LogEntries = new ShaderCompilerLogEntry[]
             {
                 new() { Type = ShaderCompilerLogEntryType.Error, Message = message }

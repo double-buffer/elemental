@@ -26,6 +26,12 @@ public readonly record struct ShaderPart
     /// <value>Compiled shader.</value>
     public required ReadOnlyMemory<byte> Data { get; init; }
 
+    /// <summary>
+    /// Gets or sets meta data associated with the shader part. This metadata will
+    /// be used by the different platforms to complete the pipeline creation if 
+    /// some informations are missing.
+    /// </summary>
+    /// <value>List of metadata values.</value>
     public ReadOnlyMemory<ShaderPartMetaData> MetaData { get; init; }
 }
 

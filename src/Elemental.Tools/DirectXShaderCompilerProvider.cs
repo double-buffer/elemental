@@ -46,8 +46,10 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
         }
         else
         {
+            // HACK: For the moment we hard code the root signature def
             arguments.Add("-rootsig-define RootSignatureDef");
         }
+
         var shaderTarget = "ms_6_7";
 
         if (shaderStage == ToolsShaderStage.AmplificationShader)
@@ -69,7 +71,7 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
 
         if (process == null)
         {
-            return ShaderCompilerResult.CreateErrorResult("Cannot start Metal shader compiler process.");
+            return ShaderCompilerResult.CreateErrorResult(shaderStage, entryPoint, "Cannot start Metal shader compiler process.");
         }
 
         process.WaitForExit();
@@ -106,6 +108,8 @@ internal class DirectXShaderCompilerProvider : IShaderCompilerProvider
         return new ShaderCompilerResult
         {
             IsSuccess = !hasErrors,
+            Stage = shaderStage,
+            EntryPoint = entryPoint,
             LogEntries = logList.ToArray(),
             ShaderData = shaderBytecode
         };

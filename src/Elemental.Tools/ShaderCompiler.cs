@@ -93,21 +93,16 @@ public class ShaderCompiler : IShaderCompiler
             return new ShaderCompilerResult
             {
                 IsSuccess = isSuccess,
+                Stage = shaderStage,
+                EntryPoint = entryPoint,
                 LogEntries = logList.ToArray(),
                 ShaderData = currentShaderData ?? Array.Empty<byte>()
             };
         }
         
+        // BUG: We don't return the array when we succeed. Refactor the code here.
         ArrayPool<IShaderCompilerProvider>.Shared.Return(shaderCompilerProviders);
-
-        return new ShaderCompilerResult
-        {
-            IsSuccess = false,
-            LogEntries = new ShaderCompilerLogEntry[]
-            {
-                new() { Type = ShaderCompilerLogEntryType.Error, Message = "Cannot find compatible shader compilers." }
-            }
-        };
+        return ShaderCompilerResult.CreateErrorResult(shaderStage, entryPoint, "Cannont find compatible shader compilers.");
     }
 
     private void RegisterShaderCompilerProvider(IShaderCompilerProvider shaderCompilerProvider)

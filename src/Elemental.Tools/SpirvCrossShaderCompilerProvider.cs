@@ -51,7 +51,7 @@ internal class SpirvCrossShaderCompilerProvider : IShaderCompilerProvider
 
         if (process == null)
         {
-            return ShaderCompilerResult.CreateErrorResult("Cannot start SPIRV-Cross shader compiler process.");
+            return ShaderCompilerResult.CreateErrorResult(shaderStage, entryPoint, "Cannot start SPIRV-Cross shader compiler process.");
         }
 
         process.WaitForExit();
@@ -81,6 +81,8 @@ internal class SpirvCrossShaderCompilerProvider : IShaderCompilerProvider
         return new ShaderCompilerResult
         {
             IsSuccess = !hasErrors,
+            Stage = shaderStage,
+            EntryPoint = entryPoint,
             LogEntries = logList.ToArray(),
             ShaderData = shaderBytecode
         };
