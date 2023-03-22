@@ -20,7 +20,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
     if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
     {
-        selectedGraphicsDevice = availableGraphicsDevice;
+        //selectedGraphicsDevice = availableGraphicsDevice;
     }
 
     Console.WriteLine($"{availableGraphicsDevice}");
@@ -38,6 +38,7 @@ var currentRenderSize = applicationService.GetWindowRenderSize(window);
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
 var shaderCompiler = new ShaderCompiler();
+shaderCompiler.Hello();
 
 Console.WriteLine($"Can Compile Shader HLSL: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");
 Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(ShaderLanguage.Msl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");

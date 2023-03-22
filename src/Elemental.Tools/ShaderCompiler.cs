@@ -1,7 +1,7 @@
 namespace Elemental.Tools;
 
 /// <inheritdoc cref="IShaderCompiler" />
-public class ShaderCompiler : IShaderCompiler
+public sealed partial class ShaderCompiler
 {
     private readonly List<IShaderCompilerProvider> _shaderCompilerProviders;
     

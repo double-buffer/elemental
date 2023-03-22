@@ -10,6 +10,10 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   
+  <ItemGroup>
+    <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  
   <Target Name="GetShaderCompilers" BeforeTargets="CoreCompile">
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
       <PowerShellCommand>powershell</PowerShellCommand>
@@ -19,9 +23,30 @@
     </PropertyGroup>
     <Exec Condition="!Exists('../../external/shader-compilers')" Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File ../../external/GetShaderCompilers.ps1" />
   </Target>
+  
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <BuildScript>$(MSBuildProjectDirectory)/../Elemental.Tools.Native/Build.ps1</BuildScript>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+      <PowerShellCommand>powershell</PowerShellCommand>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+      <PowerShellCommand>pwsh</PowerShellCommand>
+    </PropertyGroup>
+    <Exec Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File $(BuildScript) -outputDirectory $(OutputPath) -configuration $(Configuration.ToLower())" />
+  </Target>
 
   <!-- REFACTOR the copying of the tools -->
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <Content Include="$(OutputPath)/Elemental.Tools.Native.dll">
+      <TargetPath>Elemental.Tools.Native.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(OutputPath)/Elemental.Tools.Native.pdb">
+      <TargetPath>Elemental.Tools.Native.pdb</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="../../external/shader-compilers/dxc/bin/x64/dxcompiler.dll">
       <TargetPath>ShaderCompilers/dxcompiler.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
