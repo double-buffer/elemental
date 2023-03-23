@@ -6,27 +6,32 @@ namespace Elemental.Tools;
 public enum ShaderLanguage
 {
     /// <summary>
+    /// Unknown Shader Language.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// DirectX Shader Language.
     /// </summary>
-    Hlsl,
+    Hlsl = 1,
 
     /// <summary>
     /// Metal Shader Language.
     /// </summary>
-    Msl,
-    
+    Msl = 2,
+
     /// <summary>
     /// DirectX shader bytecode.
     /// </summary>
-    Dxil,
-    
+    Dxil = 3,
+
     /// <summary>
     /// Vulkan shader bytecode.
     /// </summary>
-    Spirv,
-    
+    Spirv = 4,
+
     /// <summary>
     /// Metal shader bytecode.
     /// </summary>
-    MetalIR
+    MetalIR = 5
 }

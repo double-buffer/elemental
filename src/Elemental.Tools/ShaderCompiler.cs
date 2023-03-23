@@ -11,7 +11,7 @@ public sealed partial class ShaderCompiler
     /// <summary>
     /// Default constructor.
     /// </summary>
-    public ShaderCompiler()
+    /*public ShaderCompiler()
     {
         _shaderCompilerProviders = new List<IShaderCompilerProvider>();
         _platformTargetLanguages = new()
@@ -45,11 +45,12 @@ public sealed partial class ShaderCompiler
         ArrayPool<IShaderCompilerProvider>.Shared.Return(shaderCompilerProviders);
 
         return result > 0;
-    }
+    }*/
 
     /// <inheritdoc cref="IShaderCompiler" />
     public ShaderCompilerResult CompileShader(ReadOnlySpan<char> shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
     {
+        /*
         // TODO: Review the ToArray() usages
 
         if (!_platformTargetLanguages.ContainsKey(graphicsApi))
@@ -101,8 +102,8 @@ public sealed partial class ShaderCompiler
         }
         
         // BUG: We don't return the array when we succeed. Refactor the code here.
-        ArrayPool<IShaderCompilerProvider>.Shared.Return(shaderCompilerProviders);
-        return ShaderCompilerResult.CreateErrorResult(shaderStage, entryPoint, "Cannont find compatible shader compilers.");
+        ArrayPool<IShaderCompilerProvider>.Shared.Return(shaderCompilerProviders);*/
+        return ShaderCompilerResult.CreateErrorResult(shaderStage, entryPoint, "Cannot find compatible shader compilers.");
     }
 
     private void RegisterShaderCompilerProvider(IShaderCompilerProvider shaderCompilerProvider)

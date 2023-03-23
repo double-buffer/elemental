@@ -3,11 +3,9 @@ namespace Elemental.Tools;
 /// <summary>
 /// Manages the compilation of shader source code to a target API language.
 /// </summary>
-[PlatformService] 
+[PlatformService(InitMethod = nameof(PlatformServiceInterop.Native_InitShaderCompiler), DisposeMethod = nameof(PlatformServiceInterop.Native_FreeShaderCompiler))] 
 public interface IShaderCompiler
 {
-    void Hello();
-
     /// <summary>
     /// Checks if the compiler can compile the specified <see cref="ShaderLanguage" /> to the
     /// specified <see cref="ToolsGraphicsApi" />.
@@ -15,7 +13,6 @@ public interface IShaderCompiler
     /// <param name="shaderLanguage">Source shader language.</param>
     /// <param name="graphicsApi">Target graphics API.</param>
     /// <returns>True if the compiler can do the compilation; Otherwise, False.</returns>
-    [PlatformMethodIgnore] 
     bool CanCompileShader(ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi);
 
     /// <summary>

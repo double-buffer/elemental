@@ -1,5 +1,7 @@
 param ($outputDirectory, $Configuration)
 
+# TODO: Use cmake?
+
 function RegisterVisualStudioEnvironment
 {
     $registeredVisualStudioVersion = Get-Content -Path Env:VisualStudioVersion -ErrorAction SilentlyContinue
@@ -86,9 +88,9 @@ try
         RegisterVisualStudioEnvironment
 
         if ($Configuration -eq "Debug") {
-            cl.exe /nologo /DDEBUG /D_DEBUG /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /Zi /EHsc /Yc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll
+            cl.exe /nologo /DDEBUG /D_DEBUG /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /DEBUG /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
         } else {
-            cl.exe /nologo /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /O2 /Zi /EHsc /Yc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll
+            cl.exe /nologo /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /O2 /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
         }
     }
 }
