@@ -73,21 +73,28 @@ try
         Push-Location ./../Elemental.Tools.Native
     }
 
-    RegisterVisualStudioEnvironment
-
-    if ($Configuration -eq "Debug") {
-        cl.exe /nologo /DDEBUG /D_DEBUG /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /Zi /EHsc /Yc "UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll
-    } else {
-        cl.exe /nologo /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /O2 /Zi /EHsc /Yc "UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll
+    if (-not(Test-Path -Path ./obj)) {
+        mkdir ./obj > $null
     }
+        
+    Push-Location ./obj/
 
-    if (-Not $?) {
-        Pop-Location
-        Exit 1
+    if ($IsMacOS) {
+        # TODO: Release mode
+        clang -dynamiclib -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
+    } else {
+        RegisterVisualStudioEnvironment
+
+        if ($Configuration -eq "Debug") {
+            cl.exe /nologo /DDEBUG /D_DEBUG /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /Zi /EHsc /Yc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll
+        } else {
+            cl.exe /nologo /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /O2 /Zi /EHsc /Yc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll
+        }
     }
 }
 
 finally
 {
+    Pop-Location
     Pop-Location
 }

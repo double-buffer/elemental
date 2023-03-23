@@ -41,8 +41,7 @@ internal unsafe class DirectXShaderCompilerProvider : IShaderCompilerProvider
         
         var arguments = new List<string>()
         {
-            "-HV 2021",
-            $"-Fre {reflectionFilePath}"
+            "-HV 2021"
         };
 
         if (graphicsApi != ToolsGraphicsApi.Direct3D12)
