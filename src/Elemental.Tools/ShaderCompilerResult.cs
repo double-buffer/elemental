@@ -3,6 +3,7 @@ namespace Elemental.Tools;
 /// <summary>
 /// Structure that represents a shader compiler result.
 /// </summary>
+[NativeMarshalling(typeof(ShaderCompilerResultMarshaller))]
 public readonly record struct ShaderCompilerResult
 {
     /// <summary>
@@ -34,18 +35,75 @@ public readonly record struct ShaderCompilerResult
     /// </summary>
     /// <value>Log entries of the compilation.</value>
     public ReadOnlyMemory<ShaderCompilerLogEntry> LogEntries { get; init; }
+}
 
-    internal static ShaderCompilerResult CreateErrorResult(ToolsShaderStage stage, string entryPoint, string message)
+[CustomMarshaller(typeof(ShaderCompilerResult), MarshalMode.Default, typeof(ShaderCompilerResultMarshaller))]
+internal static unsafe class ShaderCompilerResultMarshaller
+{
+    internal readonly struct ShaderCompilerLogEntryUnmanaged
     {
+        public ShaderCompilerLogEntryType Type { get; init; }
+        public byte* Message { get; init; }
+    }
+
+    internal readonly struct ShaderCompilerResultUnmanaged
+    {
+        public bool IsSuccess { get; init; }
+        public ToolsShaderStage Stage { get; init; }
+        public byte* EntryPoint { get; init; }
+        public void* ShaderDataPointer { get; init; }
+        public int ShaderDataCount { get; init; }
+        public ShaderCompilerLogEntryUnmanaged* LogEntryPointer { get; init; }
+        public int LogEntryCount { get; init; }
+    }
+
+    public static ShaderCompilerResultUnmanaged ConvertToUnmanaged(ShaderCompilerResult managed)
+    {
+        throw new NotImplementedException();
+    }
+    
+    public static ShaderCompilerResult ConvertToManaged(ShaderCompilerResultUnmanaged unmanaged)
+    {
+        // TODO: Can we avoid the copy here?
+        var shaderData = unmanaged.ShaderDataPointer != null ? new byte[unmanaged.ShaderDataCount] : Array.Empty<byte>();
+        var sourceShaderDataSpan = new Span<byte>(unmanaged.ShaderDataPointer, unmanaged.ShaderDataCount);
+        sourceShaderDataSpan.CopyTo(shaderData);
+        
+        var logEntries = unmanaged.LogEntryPointer != null ? new ShaderCompilerLogEntry[unmanaged.LogEntryCount] : Array.Empty<ShaderCompilerLogEntry>();
+        var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, unmanaged.LogEntryCount);
+
+        for (var i = 0; i < unmanaged.LogEntryCount; i++)
+        {
+            var sourceLogEntry = sourceLogEntriesSpan[i];
+
+            logEntries[i] = new ShaderCompilerLogEntry
+            {
+                Type = sourceLogEntry.Type,
+                Message = Utf8StringMarshaller.ConvertToManaged(sourceLogEntry.Message) ?? string.Empty
+            };
+        }
+
         return new ShaderCompilerResult
         {
-            IsSuccess = false,
-            Stage = stage,
-            EntryPoint = entryPoint,
-            LogEntries = new ShaderCompilerLogEntry[]
-            {
-                new() { Type = ShaderCompilerLogEntryType.Error, Message = message }
-            }
+            IsSuccess = unmanaged.IsSuccess,
+            Stage = unmanaged.Stage,
+            EntryPoint = Utf8StringMarshaller.ConvertToManaged(unmanaged.EntryPoint) ?? string.Empty,
+            ShaderData = shaderData,
+            LogEntries = logEntries
         };
+    }
+
+    public static void Free(ShaderCompilerResultUnmanaged unmanaged)
+    {
+        var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, unmanaged.LogEntryCount);
+
+        for (var i = 0; i < unmanaged.LogEntryCount; i++)
+        {
+            var sourceLogEntry = sourceLogEntriesSpan[i];
+            PlatformServiceInterop.Native_FreeNativePointer((nint)sourceLogEntry.Message);
+        }
+
+        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.ShaderDataPointer);
+        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.LogEntryPointer);
     }
 }

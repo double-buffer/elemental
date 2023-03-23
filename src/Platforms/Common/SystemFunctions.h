@@ -10,7 +10,6 @@ std::wstring ConvertUtf8ToWString(unsigned char* source)
 	return destination;
 }
 
-// TODO: Find a way to delete the produced string
 unsigned char* ConvertWStringToUtf8(const std::wstring &source)
 {
     char *destination = new char[source.length() + 1];

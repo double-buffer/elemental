@@ -8,15 +8,15 @@ public enum ShaderCompilerLogEntryType
     /// <summary>
     /// Message log type.
     /// </summary>
-    Message,
+    Message = 0,
     
     /// <summary>
     /// Warning log type.
     /// </summary>
-    Warning,
+    Warning = 1,
     
     /// <summary>
     /// Error log type.
     /// </summary>
-    Error
+    Error = 2
 }

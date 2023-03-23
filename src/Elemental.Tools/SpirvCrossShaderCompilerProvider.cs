@@ -1,7 +1,7 @@
 using System.Diagnostics;
 
 namespace Elemental.Tools;
-
+/*
 internal class SpirvCrossShaderCompilerProvider : IShaderCompilerProvider
 {
     private readonly string _spirvCrossPath;
@@ -87,4 +87,4 @@ internal class SpirvCrossShaderCompilerProvider : IShaderCompilerProvider
             ShaderData = shaderBytecode
         };
     }
-}
+}*/

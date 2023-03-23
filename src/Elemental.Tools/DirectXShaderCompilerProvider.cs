@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Elemental.Tools;
-
+/*
 internal unsafe class DirectXShaderCompilerProvider : IShaderCompilerProvider
 {
     private readonly string _dxcPath;
@@ -120,4 +120,4 @@ internal unsafe class DirectXShaderCompilerProvider : IShaderCompilerProvider
             ShaderData = shaderBytecode
         };
     }
-}
+}*/

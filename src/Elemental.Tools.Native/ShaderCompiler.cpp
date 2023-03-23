@@ -73,6 +73,11 @@ int FindShaderCompilersChain(ShaderCompilerProvider** shaderCompilers, int32_t c
     }
 }
 
+DllExport void Native_FreeNativePointer(void* nativePointer)
+{
+    delete nativePointer;
+}
+
 DllExport void Native_InitShaderCompiler()
 {
     _platformTargetLanguages[ToolsGraphicsApi_Direct3D12] = ShaderLanguage_Dxil;
@@ -102,4 +107,9 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, ToolsGraph
     ShaderCompilerProvider* shaderCompilerProviders[10];
     auto result = FindShaderCompilersChain(shaderCompilerProviders, 0, shaderLanguage, graphicsApiTargetShaderLanguage);
     return result > 0;
+}
+    
+DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+{
+    return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"This is a test..."));
 }

@@ -2,7 +2,7 @@ namespace Elemental.Tools;
 
 // TODO: It would be gread in the future to be able to have a standalone install on MacOS :/
 // With a library instead of an executable
-
+/*
 internal class MetalShaderCompilerProvider : IShaderCompilerProvider
 {
     public ShaderLanguage ShaderLanguage => ShaderLanguage.Msl;
@@ -127,4 +127,4 @@ internal class MetalShaderCompilerProvider : IShaderCompilerProvider
             ShaderData = shaderBytecode
         };
     }
-}
+}*/
