@@ -129,15 +129,13 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsSh
     if (result > 0)
     {
         auto isSuccess = false;
-        auto logList = new std::vector<ShaderCompilerLogEntry>();
+        auto logList = std::vector<ShaderCompilerLogEntry>();
 
         uint8_t* currentShaderData = nullptr;
         uint32_t currentShaderDataCount = 0;
 
         uint8_t* currentShaderInput = shaderCode;
         uint32_t currentShaderInputSize = strlen((char*)shaderCode);
-
-        printf("ShaderInputSize: %d\n", currentShaderInputSize);
 
         for (int32_t i = result - 1; i >= 0; i--)
         {
@@ -147,7 +145,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsSh
 
             for (uint32_t j = 0; j < compilationResult.LogEntryCount; j++)
             {
-                logList->push_back(compilationResult.LogEntries[j]);
+                logList.push_back(compilationResult.LogEntries[j]);
             }
             
             isSuccess = compilationResult.IsSuccess;
@@ -158,6 +156,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsSh
                 break;
             }
 
+            // BUG: We need to delete output data of intermediate results
             currentShaderData = compilationResult.ShaderData;
             currentShaderDataCount = compilationResult.ShaderDataCount;
 
@@ -165,13 +164,16 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsSh
             currentShaderInputSize = currentShaderDataCount;
         }
 
+        auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
+        memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
+        
         ShaderCompilerResult result = {};
 
         result.IsSuccess = isSuccess;
         result.Stage = shaderStage;
         result.EntryPoint = entryPoint;
-        result.LogEntries = logList->data();
-        result.LogEntryCount = logList->size();
+        result.LogEntries = logEntriesData;
+        result.LogEntryCount = logList.size();
         result.ShaderData = currentShaderData;
         result.ShaderDataCount = currentShaderDataCount;
 

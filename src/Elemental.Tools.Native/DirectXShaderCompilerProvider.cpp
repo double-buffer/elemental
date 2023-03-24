@@ -142,37 +142,30 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     if (pErrors && pErrors->GetStringLength() > 0)
     {
         auto errorContent = ConvertUtf8ToWString((uint8_t*)pErrors->GetBufferPointer()); // std::wstring((wchar_t*)pErrors->GetBufferPointer(), pErrors->GetStringLength());
-        std::wstring line;
         auto currentLogType = ShaderCompilerLogEntryType_Error;
 
-        // TODO: Process lines
+        auto lines = splitString(errorContent, L"\n");
+        std::wstring line;
 
-        ShaderCompilerLogEntry logEntry = {};
-        logEntry.Type = ShaderCompilerLogEntryType_Error;
-        logEntry.Message = ConvertWStringToUtf8(errorContent);
-        //logList.push_back(logEntry);
-
-/*
-    while ((line = process.StandardError.ReadLine()) != null)
-    {
-        if (line.Contains("warning:"))
+        for (int32_t i = 0; i < lines.size(); i++)
         {
-            currentLogType = ShaderCompilerLogEntryType.Warning;
-        }
-        else if (line.Contains("error:"))
-        {
-            currentLogType = ShaderCompilerLogEntryType.Error;
-            hasErrors = true;
-        }
+            line = lines[i];
 
-        auto logEntry = CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8());
-        logList.Add(new() { Type = currentLogType, Message = line });
-    }
-    
-    while ((line = process.StandardOutput.ReadLine()) != null)
-    {
-        logList.Add(new() { Type = ShaderCompilerLogEntryType.Message, Message = line });
-    }*/
+            if (line.find(L"warning:", 0) != -1)
+            {
+                currentLogType = ShaderCompilerLogEntryType_Warning;
+            }
+            else if (line.find(L"error:", 0) != -1)
+            {
+                currentLogType = ShaderCompilerLogEntryType_Error;
+                hasErrors = true;
+            }
+            
+            ShaderCompilerLogEntry logEntry = {};
+            logEntry.Type = currentLogType;
+            logEntry.Message = ConvertWStringToUtf8(line);
+            logList.push_back(logEntry);
+        }
     }
 
     ComPtr<IDxcBlob> shaderByteCode;
@@ -181,6 +174,9 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
     memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
 
+    auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
+    memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
+
     ShaderCompilerResult result = {};
 
     result.IsSuccess = !hasErrors;
@@ -188,7 +184,7 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     result.EntryPoint = entryPoint;
     result.ShaderData = outputShaderData;
     result.ShaderDataCount = shaderByteCode->GetBufferSize();
-    result.LogEntries = logList.data();
+    result.LogEntries = logEntriesData;
     result.LogEntryCount = logList.size();
 
     return result;

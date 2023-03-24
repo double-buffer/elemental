@@ -14,6 +14,7 @@ using namespace Microsoft::WRL;
 #include <stdio.h>
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 #define AssertIfFailed(result) assert(!FAILED(result))
 
@@ -53,3 +54,25 @@ uint8_t* ConvertWStringToUtf8(const std::wstring &source)
     return (uint8_t*)output_buffer;
 }
 #endif
+
+
+std::vector<std::wstring> splitString(std::wstring w, std::wstring tokenizerStr) 
+{
+
+    std::vector<std::wstring> result;
+    long tokeninzerLength = tokenizerStr.length();
+    long position = 0;
+    long findIndex = w.find(tokenizerStr, position);
+
+    while (findIndex != -1)
+    {
+        std::wstring str = w.substr(position, findIndex - position);
+        result.push_back(str);
+        position = findIndex + tokeninzerLength;
+        findIndex = w.find(tokenizerStr, position);
+    }
+
+    result.push_back(w.substr(position, w.length() - position));
+
+    return result;
+}
