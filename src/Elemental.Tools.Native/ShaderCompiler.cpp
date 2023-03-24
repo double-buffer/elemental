@@ -164,14 +164,16 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsSh
             currentShaderInput = currentShaderData;
             currentShaderInputSize = currentShaderDataCount;
         }
-        
+
         ShaderCompilerResult result = {};
 
-        result.IsSuccess = false;
+        result.IsSuccess = isSuccess;
         result.Stage = shaderStage;
         result.EntryPoint = entryPoint;
         result.LogEntries = logList->data();
         result.LogEntryCount = logList->size();
+        result.ShaderData = currentShaderData;
+        result.ShaderDataCount = currentShaderDataCount;
 
         return result;
     } 

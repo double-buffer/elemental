@@ -102,7 +102,7 @@ internal static unsafe class ShaderCompilerResultMarshaller
             var sourceLogEntry = sourceLogEntriesSpan[i];
             PlatformServiceInterop.Native_FreeNativePointer((nint)sourceLogEntry.Message);
         }
-
+        
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.ShaderDataPointer);
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.LogEntryPointer);
     }

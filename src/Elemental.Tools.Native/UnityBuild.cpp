@@ -1,4 +1,4 @@
 #include "DirectXShaderCompilerProvider.cpp"
-#include "SpirvCrossShaderCompilerProvider.h"
-#include "MetalShaderCompilerProvider.h"
+#include "SpirvCrossShaderCompilerProvider.cpp"
+#include "MetalShaderCompilerProvider.cpp"
 #include "ShaderCompiler.cpp"

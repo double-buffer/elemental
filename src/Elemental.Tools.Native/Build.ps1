@@ -87,6 +87,8 @@ try
     } else {
         RegisterVisualStudioEnvironment
 
+        #TODO: Put the directxshader include real include path. For the moment, it takes the windows SDK header
+
         if ($Configuration -eq "Debug") {
             cl.exe /nologo /DUNICODE /D_UNICODE /DDEBUG /D_DEBUG /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /DEBUG /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
         } else {

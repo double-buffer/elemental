@@ -3,17 +3,20 @@
 #if _WINDOWS
 #define DllExport extern "C" __declspec(dllexport)
 #include <windows.h>
+#include <wrl/client.h>
+using namespace Microsoft::WRL;
 #else
 #define DllExport extern "C" __attribute__((visibility("default"))) 
 #include <iconv.h>
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string>
 
+#define AssertIfFailed(result) assert(!FAILED(result))
 
-// TODO: Move that to SystemFunctions.h
 #if _WINDOWS
 uint8_t* ConvertWStringToUtf8(const std::wstring &source)
 {
@@ -22,6 +25,16 @@ uint8_t* ConvertWStringToUtf8(const std::wstring &source)
     WideCharToMultiByte(65001, 0, source.c_str(), -1, destination, (int)source.length(), NULL, NULL);
 
     return (uint8_t*)destination;
+}
+
+std::wstring ConvertUtf8ToWString(uint8_t* source)
+{
+    auto stringLength = std::string((char*)source).length();
+    std::wstring destination;
+    destination.resize(stringLength + 1);
+    MultiByteToWideChar(CP_UTF8, 0, (char*)source, -1, (wchar_t*)destination.c_str(), (int)(stringLength + 1));
+
+	return destination;
 }
 #else
 uint8_t* ConvertWStringToUtf8(const std::wstring &source)
