@@ -1,6 +1,8 @@
 #include "ElementalTools.h"
 #include "ShaderCompilerProvider.h"
 #include "DirectXShaderCompilerProvider.h"
+#include "SpirvCrossShaderCompilerProvider.h"
+#include "MetalShaderCompilerProvider.h"
 
 // TODO: Do we keep std datastructures? Perf is not critical in the tools
 #include <vector>
@@ -75,7 +77,7 @@ int FindShaderCompilersChain(ShaderCompilerProvider** shaderCompilers, int32_t c
 
 DllExport void Native_FreeNativePointer(void* nativePointer)
 {
-    delete nativePointer;
+    free(nativePointer);
 }
 
 DllExport void Native_InitShaderCompiler()
@@ -85,6 +87,8 @@ DllExport void Native_InitShaderCompiler()
     _platformTargetLanguages[ToolsGraphicsApi_Metal] = ShaderLanguage_MetalIR;
 
     RegisterShaderCompilerProvider((ShaderCompilerProvider*)new DirectXShaderCompilerProvider());
+    RegisterShaderCompilerProvider((ShaderCompilerProvider*)new SpirvCrossShaderCompilerProvider());
+    RegisterShaderCompilerProvider((ShaderCompilerProvider*)new MetalShaderCompilerProvider());
 }
     
 DllExport void Native_FreeShaderCompiler()
@@ -111,5 +115,66 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, ToolsGraph
     
 DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
 {
-    return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"This is a test..."));
+    // TODO: Review STD structures 
+    if (!_platformTargetLanguages.count(graphicsApi))
+    {
+        return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"Graphics API is not supported!"));
+    }
+
+    auto graphicsApiTargetShaderLanguage = _platformTargetLanguages[graphicsApi];
+
+    ShaderCompilerProvider* shaderCompilerProviders[10];
+    auto result = FindShaderCompilersChain(shaderCompilerProviders, 0, shaderLanguage, graphicsApiTargetShaderLanguage);
+
+    if (result > 0)
+    {
+        auto isSuccess = false;
+        auto logList = new std::vector<ShaderCompilerLogEntry>();
+
+        uint8_t* currentShaderData = nullptr;
+        uint32_t currentShaderDataCount = 0;
+
+        uint8_t* currentShaderInput = shaderCode;
+        uint32_t currentShaderInputSize = strlen((char*)shaderCode);
+
+        printf("ShaderInputSize: %d\n", currentShaderInputSize);
+
+        for (int32_t i = result - 1; i >= 0; i--)
+        {
+            auto shaderCompilerProvider = shaderCompilerProviders[i];
+
+            auto compilationResult = shaderCompilerProvider->CompileShader(currentShaderInput, currentShaderInputSize, shaderStage, entryPoint, shaderLanguage, graphicsApi);
+
+            for (uint32_t j = 0; j < compilationResult.LogEntryCount; j++)
+            {
+                logList->push_back(compilationResult.LogEntries[j]);
+            }
+            
+            isSuccess = compilationResult.IsSuccess;
+            
+            if (!isSuccess)
+            {
+                currentShaderData = nullptr;
+                break;
+            }
+
+            currentShaderData = compilationResult.ShaderData;
+            currentShaderDataCount = compilationResult.ShaderDataCount;
+
+            currentShaderInput = currentShaderData;
+            currentShaderInputSize = currentShaderDataCount;
+        }
+        
+        ShaderCompilerResult result = {};
+
+        result.IsSuccess = false;
+        result.Stage = shaderStage;
+        result.EntryPoint = entryPoint;
+        result.LogEntries = logList->data();
+        result.LogEntryCount = logList->size();
+
+        return result;
+    } 
+        
+    return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"Cannot find compatible shader compilers toolchain."));
 }

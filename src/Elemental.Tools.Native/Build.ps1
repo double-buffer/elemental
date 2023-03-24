@@ -83,7 +83,7 @@ try
 
     if ($IsMacOS) {
         # TODO: Release mode
-        clang -dynamiclib -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
+        clang -std=c++17 -lc++ -liconv -dynamiclib -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
     } else {
         RegisterVisualStudioEnvironment
 

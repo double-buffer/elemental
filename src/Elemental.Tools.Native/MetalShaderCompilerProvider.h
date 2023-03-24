@@ -2,10 +2,10 @@
 #include "ElementalTools.h"
 #include "ShaderCompilerProvider.h"
 
-class DirectXShaderCompilerProvider : ShaderCompilerProvider
+class MetalShaderCompilerProvider : ShaderCompilerProvider
 {
 public:
-    DirectXShaderCompilerProvider() {};
+    MetalShaderCompilerProvider() {};
 
     ShaderLanguage GetShaderLanguage() override;
     void GetTargetShaderLanguages(ShaderLanguage* targetLanguages, int* targetLanguagesCount) override;

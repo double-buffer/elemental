@@ -1,24 +1,6 @@
 #pragma once
 
-#if _WINDOWS
-#define DllExport extern "C" __declspec(dllexport)
-#include <windows.h>
-#else
-#define DllExport extern "C" __attribute__((visibility("default"))) 
-#endif
-
-#include <stdio.h>
-#include <stdint.h>
-#include <string>
-
-uint8_t* ConvertWStringToUtf8(const std::wstring &source)
-{
-    char *destination = new char[source.length() + 1];
-    destination[source.length()] = '\0';
-    WideCharToMultiByte(CP_ACP, 0, source.c_str(), -1, destination, (int)source.length(), NULL, NULL);
-
-    return (uint8_t*)destination;
-}
+#include "SystemFunctions.h"
 
 enum ToolsGraphicsApi
 {
