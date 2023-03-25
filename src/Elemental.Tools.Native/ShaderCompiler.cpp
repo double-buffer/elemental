@@ -153,6 +153,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsSh
             if (!isSuccess)
             {
                 currentShaderData = nullptr;
+                currentShaderDataCount = 0;
                 break;
             }
 

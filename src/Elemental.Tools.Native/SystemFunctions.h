@@ -7,12 +7,15 @@
 using namespace Microsoft::WRL;
 #else
 #define DllExport extern "C" __attribute__((visibility("default"))) 
+#define ComPtr CComPtr
 #include <iconv.h>
 #endif
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <locale>
+#include <codecvt>
 #include <string>
 #include <vector>
 
@@ -53,12 +56,23 @@ uint8_t* ConvertWStringToUtf8(const std::wstring &source)
 
     return (uint8_t*)output_buffer;
 }
-#endif
 
+// TODO: This seems to be the thing to do, convert the other functions
+std::wstring ConvertUtf8ToWString(const uint8_t* source)
+{
+    iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
+    
+    auto inputString = std::string((char*)source);
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    auto outputString = converter.from_bytes(inputString);
+    
+    return outputString;
+}
+
+#endif
 
 std::vector<std::wstring> splitString(std::wstring w, std::wstring tokenizerStr) 
 {
-
     std::vector<std::wstring> result;
     long tokeninzerLength = tokenizerStr.length();
     long position = 0;

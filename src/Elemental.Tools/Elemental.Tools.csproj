@@ -63,11 +63,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="../../external/shader-compilers/dxc/lib/libdxcompiler.dylib">
-      <TargetPath>ShaderCompilers/lib/libdxcompiler.dylib</TargetPath>
+      <TargetPath>libdxcompiler.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="../../external/shader-compilers/spirv-cross/lib/libspirv-cross-c-shared.dylib">
-      <TargetPath>ShaderCompilers/lib/libspirv-cross-c-shared.dylib</TargetPath>
+      <TargetPath>libspirv-cross-c-shared.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

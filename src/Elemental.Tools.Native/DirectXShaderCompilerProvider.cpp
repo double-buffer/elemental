@@ -6,9 +6,9 @@ DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
 #ifdef _WINDOWS
     const wchar_t* dllName = L"./dxcompiler.dll";
 #elif __APPLE__
-    const wchar_t* dllName = L"libdxcompiler.dylib";
+    const char* dllName = "./libdxcompiler.dylib";
 #else
-    const wchar_t* dllName = L"libdxcompiler.so";
+    const wchar_t* dllName = L"./libdxcompiler.so";
 #endif
     const char* functionName = "DxcCreateInstance";
 
@@ -23,7 +23,7 @@ DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
         #ifdef _WINDOWS
                 _createInstanceFunc = (DxcCreateInstanceProc)::GetProcAddress(_dxcompilerDll, functionName);
 #else
-                _createInstanceFunc = (DxcCreateInstanceProc)::dlsym(m_dxcompilerDll, functionName);
+                _createInstanceFunc = (DxcCreateInstanceProc)::dlsym(_dxcompilerDll, functionName);
 #endif
     }
 }
@@ -62,16 +62,15 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     assert(_createInstanceFunc != nullptr);
 
     ComPtr<IDxcCompiler3> compiler;
-    AssertIfFailed(_createInstanceFunc(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), reinterpret_cast<void**>(compiler.GetAddressOf())));
+    AssertIfFailed(_createInstanceFunc(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), reinterpret_cast<void**>(&compiler)));
 
     ComPtr<IDxcUtils> dxcUtils;
-    AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(dxcUtils.GetAddressOf())));
+    AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
 
     ComPtr<IDxcBlobEncoding> sourceBlob;
-    AssertIfFailed(dxcUtils->CreateBlob(shaderCode, shaderCodeSize, CP_UTF8, sourceBlob.GetAddressOf()));
+    AssertIfFailed(dxcUtils->CreateBlob(shaderCode, shaderCodeSize, CP_UTF8, &sourceBlob));
 
-    std::vector<LPCWSTR> arguments;
-
+    std::vector<const wchar_t*> arguments;
     arguments.push_back(L"-HV 2021");
 
     //-E for the entry point (eg. PSMain)
@@ -131,13 +130,15 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     sourceBuffer.Encoding = 0;
 
     ComPtr<IDxcResult> compileResult;
-    AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(compileResult.GetAddressOf())));
+    AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&compileResult)));
 
     auto logList = std::vector<ShaderCompilerLogEntry>();
     auto hasErrors = false;
 
+    auto numOutputs = compileResult->GetNumOutputs();
+
     ComPtr<IDxcBlobUtf8> pErrors;
-    compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(pErrors.GetAddressOf()), nullptr);
+    AssertIfFailed(compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr));
 
     if (pErrors && pErrors->GetStringLength() > 0)
     {
@@ -169,7 +170,7 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     }
 
     ComPtr<IDxcBlob> shaderByteCode;
-    AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(shaderByteCode.GetAddressOf()), nullptr));
+    AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
     
     auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
     memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());

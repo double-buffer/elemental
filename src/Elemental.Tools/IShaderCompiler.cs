@@ -25,5 +25,6 @@ public interface IShaderCompiler
     /// <param name="graphicsApi">Target graphics API.</param>
     /// <returns>Shader Compiler results object.</returns>
     // TODO: Add options for debug code generation 
+    // TODO: Add options to support specialization
     ShaderCompilerResult CompileShader(string shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi);
 }

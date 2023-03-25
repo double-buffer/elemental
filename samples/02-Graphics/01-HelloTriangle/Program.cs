@@ -37,7 +37,7 @@ var currentRenderSize = applicationService.GetWindowRenderSize(window);
 // HACK: This is needed when we run the program from the root directory
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
-var shaderCompiler = new ShaderCompiler();
+using var shaderCompiler = new ShaderCompiler();
 
 Console.WriteLine($"Can Compile Shader HLSL: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");
 Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(ShaderLanguage.Msl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");
