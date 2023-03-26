@@ -11,6 +11,7 @@ using namespace Microsoft::WRL;
 #include <iconv.h>
 #endif
 
+// TODO: Cleanup includes
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -18,6 +19,9 @@ using namespace Microsoft::WRL;
 #include <codecvt>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <cstdlib>
+#include <unistd.h>
 
 #define AssertIfFailed(result) assert(!FAILED(result))
 
@@ -39,6 +43,15 @@ std::wstring ConvertUtf8ToWString(uint8_t* source)
     MultiByteToWideChar(CP_UTF8, 0, (char*)source, -1, (wchar_t*)destination.c_str(), (int)(stringLength + 1));
 
 	return destination;
+}
+std::string GenerateTempFilename() 
+{
+    char temp[MAX_PATH];
+    DWORD dwRetVal = GetTempFileName(TEXT("."), TEXT("mytempfile"), 0, temp);
+    if (dwRetVal != 0) {
+        return std::string(temp);
+    }
+    return "";
 }
 #else
 uint8_t* ConvertWStringToUtf8(const std::wstring &source)
@@ -69,6 +82,16 @@ std::wstring ConvertUtf8ToWString(const uint8_t* source)
     return outputString;
 }
 
+std::string GenerateTempFilename() 
+{
+    char temp[] = "/tmp/tempfileXXXXXX";
+    int fd = mkstemp(temp);
+    if (fd != -1) {
+        close(fd);
+        return std::string(temp);
+    }
+    return "";
+}
 #endif
 
 std::vector<std::wstring> splitString(std::wstring w, std::wstring tokenizerStr) 
@@ -88,5 +111,51 @@ std::vector<std::wstring> splitString(std::wstring w, std::wstring tokenizerStr)
 
     result.push_back(w.substr(position, w.length() - position));
 
+    return result;
+}
+
+void WriteBytesToFile(const std::string& filename, const uint8_t* data, int32_t dataCount) 
+{
+    FILE* outFile = fopen(filename.c_str(), "wb");
+    fwrite(data, sizeof(uint8_t), dataCount, outFile);
+    fclose(outFile);
+}
+
+void ReadBytesFromFile(const std::string& filename, uint8_t** outputData, int32_t* dataSize)
+{
+    FILE* inFile = fopen(filename.c_str(), "rb");
+
+    if (!inFile) 
+    {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    std::fseek(inFile, 0, SEEK_END);
+    std::size_t fileSize = std::ftell(inFile);
+    std::rewind(inFile);
+
+    *outputData = new uint8_t[fileSize];
+    std::size_t bytesRead = std::fread(*outputData, sizeof(uint8_t), fileSize, inFile);
+
+    assert(bytesRead == fileSize);
+    std::fclose(inFile);
+
+    *dataSize = fileSize;
+}
+
+std::string ExecuteProcess(const std::string cmd) 
+{
+    char buffer[128];
+    std::string result = "";
+
+    FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
+    assert(pipe);
+
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) 
+    {
+        result += buffer;
+    }
+
+    pclose(pipe);
     return result;
 }
