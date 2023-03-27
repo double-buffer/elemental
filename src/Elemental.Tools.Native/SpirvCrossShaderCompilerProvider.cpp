@@ -17,8 +17,8 @@ bool SpirvCrossShaderCompilerProvider::IsCompilerInstalled()
 {
     printf("teeeest\n");
     spvc_context context = nullptr;
-    auto result = spvc_context_create(&context);
-    return result == SPVC_SUCCESS;
+    //auto result = spvc_context_create(&context);
+    return false; // result == SPVC_SUCCESS;
 }
     
 ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)

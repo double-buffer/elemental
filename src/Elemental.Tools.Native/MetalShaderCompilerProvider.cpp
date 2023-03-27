@@ -21,6 +21,10 @@ bool MetalShaderCompilerProvider::IsCompilerInstalled()
     
 ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
 {
+    #ifdef _WINDOWS
+    // TODO: Implement windows version
+    return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"This is a test from Metal Shader Compiler..."));
+    #else
     auto inputFilePath = GenerateTempFilename() + ".metal";
     auto airFilePath = GenerateTempFilename();
     auto outputFilePath = GenerateTempFilename();
@@ -149,4 +153,5 @@ ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderC
     result.LogEntryCount = logList.size();
 
     return result;
+    #endif
 }

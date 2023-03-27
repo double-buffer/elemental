@@ -5,10 +5,14 @@
 #include <windows.h>
 #include <wrl/client.h>
 using namespace Microsoft::WRL;
+
+#define popen _popen
+#define pclose _pclose
 #else
 #define DllExport extern "C" __attribute__((visibility("default"))) 
 #define ComPtr CComPtr
 #include <iconv.h>
+#include <unistd.h>
 #endif
 
 // TODO: Cleanup includes
@@ -21,7 +25,6 @@ using namespace Microsoft::WRL;
 #include <vector>
 #include <iostream>
 #include <cstdlib>
-#include <unistd.h>
 
 #define AssertIfFailed(result) assert(!FAILED(result))
 
@@ -44,14 +47,17 @@ std::wstring ConvertUtf8ToWString(uint8_t* source)
 
 	return destination;
 }
-std::string GenerateTempFilename() 
+std::wstring GenerateTempFilename() 
 {
-    char temp[MAX_PATH];
-    DWORD dwRetVal = GetTempFileName(TEXT("."), TEXT("mytempfile"), 0, temp);
+    wchar_t temp[MAX_PATH];
+
+    // TODO: Get users temp directory
+
+    DWORD dwRetVal = GetTempFileName(L".", L"tempfile", 0, temp);
     if (dwRetVal != 0) {
-        return std::string(temp);
+        return std::wstring(temp);
     }
-    return "";
+    return L"";
 }
 #else
 uint8_t* ConvertWStringToUtf8(const std::wstring &source)

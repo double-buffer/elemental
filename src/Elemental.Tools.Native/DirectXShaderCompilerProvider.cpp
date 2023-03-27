@@ -62,7 +62,7 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     assert(_createInstanceFunc != nullptr);
 
     ComPtr<IDxcCompiler3> compiler;
-    AssertIfFailed(_createInstanceFunc(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), reinterpret_cast<void**>(&compiler)));
+    AssertIfFailed(_createInstanceFunc(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
 
     ComPtr<IDxcUtils> dxcUtils;
     AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
