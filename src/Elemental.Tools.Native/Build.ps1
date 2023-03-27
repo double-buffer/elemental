@@ -83,16 +83,16 @@ try
 
     if ($IsMacOS) {
         # TODO: Release mode
-        clang -std=c++17 -lc++ -fms-extensions -g -liconv -dynamiclib -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/spirv_cross/ -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
+        clang -std=c++17 -lc++ -fms-extensions -g -liconv -dynamiclib -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/ -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
     } else {
         RegisterVisualStudioEnvironment
 
         #TODO: Put the directxshader include real include path. For the moment, it takes the windows SDK header
 
         if ($Configuration -eq "Debug") {
-            cl.exe /nologo /DUNICODE /D_UNICODE /DDEBUG /D_DEBUG /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/spirv_cross/ /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /DEBUG /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
+            cl.exe /nologo /DUNICODE /D_UNICODE /DDEBUG /D_DEBUG /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/ /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /DEBUG /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
         } else {
-            cl.exe /nologo /DUNICODE /D_UNICODE /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17  -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/ /O2 /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
+            cl.exe /nologo /DUNICODE /D_UNICODE /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17  -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/ /O2 /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
         }
     }
 }

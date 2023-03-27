@@ -28,7 +28,7 @@ if (-not(Test-Path -Path "$PSScriptRoot/shader-compilers")) {
     mkdir $PSScriptRoot/shader-compilers > $null
 }
 
-$shaderCompilersBinTag = "v2023-03-19"
+$shaderCompilersBinTag = "v2023-03-27"
 
 if ($IsMacOS) {
     Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
