@@ -67,6 +67,9 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     ComPtr<IDxcUtils> dxcUtils;
     AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
 
+    ComPtr<IDxcContainerReflection> containerReflection;
+    AssertIfFailed(_createInstanceFunc(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection)));
+
     ComPtr<IDxcBlobEncoding> sourceBlob;
     AssertIfFailed(dxcUtils->CreateBlob(shaderCode, shaderCodeSize, CP_UTF8, &sourceBlob));
 
@@ -168,10 +171,67 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
             logList.push_back(logEntry);
         }
     }
-
+    
     ComPtr<IDxcBlob> shaderByteCode;
     AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
-    
+
+    ComPtr<IDxcBlob> shaderReflectionBlob;
+    AssertIfFailed(compileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
+
+    DxcBuffer reflectionBuffer;
+    reflectionBuffer.Ptr = shaderReflectionBlob->GetBufferPointer();
+    reflectionBuffer.Size = shaderReflectionBlob->GetBufferSize();
+    reflectionBuffer.Encoding = 0;
+
+    ComPtr<ID3D12ShaderReflection> shaderReflection;
+    AssertIfFailed(dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
+
+    // TODO: Implement on unix, this should be possible, see https://github.com/microsoft/DirectXShaderCompiler/pull/4810
+    uint32_t threadCountX, threadCountY, threadCountZ;
+    shaderReflection->GetThreadGroupSize(&threadCountX, &threadCountY, &threadCountZ);
+
+    printf("ref: %d\n", threadCountX);
+
+    IDxcBlob* rootSignatureBlob;
+    AssertIfFailed(containerReflection->Load(shaderByteCode.Get()));
+
+    uint32_t partCount = 0;
+    containerReflection->GetPartCount(&partCount);
+
+    for (uint32_t i = 0; i < partCount; i++)
+    {
+        uint32_t partKind = 0;
+        AssertIfFailed(containerReflection->GetPartKind(i, &partKind));
+
+        if (partKind == DXC_PART_ROOT_SIGNATURE)
+        {
+            AssertIfFailed(containerReflection->GetPartContent(i, &rootSignatureBlob));
+        }
+    }
+
+    auto* desc = (DxilVersionedRootSignatureDesc*)rootSignatureBlob->GetBufferPointer();
+
+    // check the version of the root signature format
+    if (desc->Version == DxilRootSignatureVersion::Version_1)
+    {
+        printf("Version 1\n");
+    }
+    else if (desc->Version == DxilRootSignatureVersion::Version_1_0)
+    {
+        printf("Version 1.0\n");
+    }
+    else if (desc->Version == DxilRootSignatureVersion::Version_1_1)
+    {
+        printf("Version 1.1\n");
+    }
+    else
+    {
+        printf("Not supported\n");
+    }
+
+    auto pushConstantCount = desc->Desc_1_1.Parameter0.Constants.Num32BitValues;
+    printf("PushContants: %d\n", pushConstantCount);
+
     auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
     memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
 
