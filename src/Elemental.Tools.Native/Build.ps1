@@ -83,7 +83,7 @@ try
 
     if ($IsMacOS) {
         # TODO: Release mode
-        clang -std=c++17 -lc++ -fms-extensions -g -liconv -dynamiclib -I../../../external/shader-compilers/dxc/include/dxc/ -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
+        clang -std=c++17 -lc++ -fms-extensions -g -liconv -dynamiclib -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/spirv_cross/ -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
     } else {
         RegisterVisualStudioEnvironment
 

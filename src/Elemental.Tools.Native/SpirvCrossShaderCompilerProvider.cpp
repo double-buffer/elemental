@@ -15,7 +15,10 @@ void SpirvCrossShaderCompilerProvider::GetTargetShaderLanguages(ShaderLanguage* 
 
 bool SpirvCrossShaderCompilerProvider::IsCompilerInstalled()
 {
-    return true;
+    printf("teeeest\n");
+    spvc_context context = nullptr;
+    auto result = spvc_context_create(&context);
+    return result == SPVC_SUCCESS;
 }
     
 ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
