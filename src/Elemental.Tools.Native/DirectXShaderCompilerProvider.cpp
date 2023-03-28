@@ -1,8 +1,8 @@
 #include "DirectXShaderCompilerProvider.h"
-#include <vector>
 
 DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
 {
+    // TODO: Add system functions for that
 #ifdef _WINDOWS
     const wchar_t* dllName = L"./dxcompiler.dll";
 #elif __APPLE__
@@ -73,6 +73,7 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     ComPtr<IDxcBlobEncoding> sourceBlob;
     AssertIfFailed(dxcUtils->CreateBlob(shaderCode, shaderCodeSize, CP_UTF8, &sourceBlob));
 
+    // TODO: Use utils function to build parameters
     std::vector<const wchar_t*> arguments;
     arguments.push_back(L"-HV 2021");
 
@@ -97,16 +98,9 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     arguments.push_back(L"-T");
     arguments.push_back(shaderTarget);
     
-    if (graphicsApi != ToolsGraphicsApi_Direct3D12)
-    {
-        arguments.push_back(L"-spirv");
-        arguments.push_back(L"-fspv-target-env=vulkan1.3");
-    }
-    else
-    {
-        // HACK: For the moment we hard code the root signature def
-        arguments.push_back(L"-rootsig-define RootSignatureDef");
-    }
+    // HACK: For the moment we hard code the root signature def
+    arguments.push_back(L"-rootsig-define RootSignatureDef");
+    
             
     // TODO: Additional options to be considered
     // Pass a parameter for debug and release mode
@@ -133,7 +127,22 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     sourceBuffer.Encoding = 0;
 
     ComPtr<IDxcResult> compileResult;
-    AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&compileResult)));
+    ComPtr<IDxcResult> dxilCompileResult;
+    AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&dxilCompileResult)));
+    
+    if (graphicsApi != ToolsGraphicsApi_Direct3D12)
+    {
+        arguments.push_back(L"-spirv");
+        arguments.push_back(L"-fspv-target-env=vulkan1.3");
+    
+        AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&compileResult)));
+    }
+    else
+    {
+        compileResult = dxilCompileResult;
+    }
+
+    // TODO: compile to SPIRV
 
     auto logList = std::vector<ShaderCompilerLogEntry>();
     auto hasErrors = false;
@@ -176,7 +185,7 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
 
     ComPtr<IDxcBlob> shaderReflectionBlob;
-    AssertIfFailed(compileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
+    AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
 
     DxcBuffer reflectionBuffer;
     reflectionBuffer.Ptr = shaderReflectionBlob->GetBufferPointer();
@@ -190,10 +199,13 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     uint32_t threadCountX, threadCountY, threadCountZ;
     shaderReflection->GetThreadGroupSize(&threadCountX, &threadCountY, &threadCountZ);
 
-    printf("ref: %d\n", threadCountX);
+    printf("ThreadCountX: %d\n", threadCountX);
+
+    ComPtr<IDxcBlob> dxilShaderByteCode;
+    AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&dxilShaderByteCode), nullptr));
 
     IDxcBlob* rootSignatureBlob;
-    AssertIfFailed(containerReflection->Load(shaderByteCode.Get()));
+    AssertIfFailed(containerReflection->Load(dxilShaderByteCode));
 
     uint32_t partCount = 0;
     containerReflection->GetPartCount(&partCount);

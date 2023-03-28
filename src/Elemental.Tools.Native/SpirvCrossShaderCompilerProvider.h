@@ -2,7 +2,8 @@
 #include "ElementalTools.h"
 #include "ShaderCompilerProvider.h"
 
-#include "spirv_cross_c.h"
+#include "spirv_msl.hpp"
+
 
 class SpirvCrossShaderCompilerProvider : ShaderCompilerProvider
 {

@@ -11,6 +11,7 @@ using namespace Microsoft::WRL;
 #else
 #define DllExport extern "C" __attribute__((visibility("default"))) 
 #define ComPtr CComPtr
+#undef _WIN32
 #include <iconv.h>
 #include <unistd.h>
 #endif
@@ -19,6 +20,7 @@ using namespace Microsoft::WRL;
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+
 #include <locale>
 #include <codecvt>
 #include <string>

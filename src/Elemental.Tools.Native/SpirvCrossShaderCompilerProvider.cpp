@@ -15,13 +15,32 @@ void SpirvCrossShaderCompilerProvider::GetTargetShaderLanguages(ShaderLanguage* 
 
 bool SpirvCrossShaderCompilerProvider::IsCompilerInstalled()
 {
-    printf("teeeest\n");
-    spvc_context context = nullptr;
-    //auto result = spvc_context_create(&context);
-    return false; // result == SPVC_SUCCESS;
+    return true;
 }
     
 ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
 {
-    return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"This is a test from SPIRV Cross..."));
+    spirv_cross::CompilerMSL compiler((uint32_t*)shaderCode, shaderCodeSize / 4);
+
+    spirv_cross::CompilerMSL::Options options;
+    options.set_msl_version(3, 0, 0);
+
+    compiler.set_msl_options(options);
+    auto metalCode = compiler.compile();
+
+    // TODO: Check for errors
+    auto outputShaderData = new uint8_t[metalCode.length()];
+    memcpy(outputShaderData, metalCode.c_str(), metalCode.length());
+
+    ShaderCompilerResult result = {};
+
+    result.IsSuccess = true;
+    result.Stage = shaderStage;
+    result.EntryPoint = entryPoint;
+    result.ShaderData = outputShaderData;
+    result.ShaderDataCount = metalCode.length();
+    result.LogEntries = nullptr;
+    result.LogEntryCount = 0;
+
+    return result;
 }

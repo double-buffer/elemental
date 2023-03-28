@@ -16,7 +16,9 @@ public func freeGraphicsService() {
 @_cdecl("Native_GetAvailableGraphicsDevices")
 public func getAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePointer<GraphicsDeviceInfo>, graphicsDeviceCount: UnsafeMutablePointer<Int>) {
     autoreleasepool {
-        let devices = MTLCopyAllDevices()
+        var devices = MTLCopyAllDevices()
+        devices.sort(by: sortingClosure)
+
         var i = 0
 
         for device in devices {
@@ -34,17 +36,14 @@ public func createGraphicsDevice(optionsPointer: UnsafePointer<GraphicsDeviceOpt
         var initMetalDevice: MTLDevice? = nil
         let options = optionsPointer.pointee
 
-        if (options.DeviceId != 0) {
-            let devices = MTLCopyAllDevices()
-            
-            for device in devices {
-                if (options.DeviceId == device.registryID) {
-                    initMetalDevice = device
-                    break
-                }
+        var devices = MTLCopyAllDevices()
+        devices.sort(by: sortingClosure)
+        
+        for device in devices {
+            if (options.DeviceId == device.registryID || options.DeviceId == 0) {
+                initMetalDevice = device
+                break
             }
-        } else {
-            initMetalDevice = MTLCreateSystemDefaultDevice()
         }
 
         guard let metalDevice = initMetalDevice else {
@@ -708,4 +707,18 @@ private func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {
     let result = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: count)
     _ = result.initialize(from: utf8)
     return result.baseAddress!
+}
+
+let sortingClosure: (_ graphicsDeviceInfo: MTLDevice, _ graphicsDeviceInfo: MTLDevice) -> Bool = { device1, device2 in
+    if device1.location == .external && device2.location != .external {
+        return true // device1 is external, device2 is not
+    } else if device1.location != .external && device2.location == .external {
+        return false // device2 is external, device1 is not
+    } else if device1.location == .slot && device2.location != .slot {
+        return true // device1 is slot, device2 is not
+    } else if device1.location != .slot && device2.location == .slot {
+        return false // device2 is slot, device1 is not
+    } else {
+        return device1.recommendedMaxWorkingSetSize > device2.recommendedMaxWorkingSetSize
+    }
 }
