@@ -39,8 +39,8 @@ Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
 using var shaderCompiler = new ShaderCompiler();
 
-Console.WriteLine($"Can Compile Shader HLSL: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");
-Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(ShaderLanguage.Msl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi)}");
+Console.WriteLine($"Can Compile Shader HLSL: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, selectedGraphicsDevice.GraphicsApi)}");
+Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(ShaderLanguage.Msl, selectedGraphicsDevice.GraphicsApi)}");
 
 // TODO: Do a batch compile function?
 
@@ -49,7 +49,7 @@ var shaderCode = File.ReadAllText("Triangle.hlsl");
 // TODO: This is needed for Apple Metal because SPIRV-Cross doesn't yet support metal mesh shaders
 var shaderCodeMetal = File.ReadAllText("Triangle.metal");
 var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? ShaderLanguage.Msl : ShaderLanguage.Hlsl;
-var meshShaderCompilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ToolsShaderStage.MeshShader, "MeshMain", meshShaderSourceType, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
+var meshShaderCompilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ShaderStage.MeshShader, "MeshMain", meshShaderSourceType, selectedGraphicsDevice.GraphicsApi);
 
 foreach (var logEntry in meshShaderCompilationResult.LogEntries.Span)
 {
@@ -61,7 +61,7 @@ if (!meshShaderCompilationResult.IsSuccess)
     return;
 }
 
-var pixelShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ToolsShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
+var pixelShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, selectedGraphicsDevice.GraphicsApi);
 
 foreach (var logEntry in pixelShaderCompilationResult.LogEntries.Span)
 {
@@ -77,25 +77,25 @@ using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
 {
     new ShaderPart 
     { 
-        Stage = (ShaderStage)meshShaderCompilationResult.Stage, 
+        Stage = meshShaderCompilationResult.Stage, 
         EntryPoint = meshShaderCompilationResult.EntryPoint, 
         Data = meshShaderCompilationResult.ShaderData, 
-        MetaData = new ShaderPartMetaData[] 
+        MetaData = new ShaderMetaData[] 
         {
-            new ShaderPartMetaData { Type = ShaderPartMetaDataType.PushConstantsCount, Value = 1 }, 
-            new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountX, Value = 32 },
-            new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountY, Value = 1 },
-            new ShaderPartMetaData { Type = ShaderPartMetaDataType.ThreadCountZ, Value = 1 } 
+            new ShaderMetaData { Type = ShaderMetaDataType.PushConstantsCount, Value = 1 }, 
+            new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountX, Value = 32 },
+            new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountY, Value = 1 },
+            new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountZ, Value = 1 } 
         }
     },
     new ShaderPart 
     {
-        Stage = (ShaderStage)pixelShaderCompilationResult.Stage, 
+        Stage = pixelShaderCompilationResult.Stage, 
         EntryPoint = pixelShaderCompilationResult.EntryPoint, 
         Data = pixelShaderCompilationResult.ShaderData,
-        MetaData = new ShaderPartMetaData[] 
+        MetaData = new ShaderMetaData[] 
         { 
-            new ShaderPartMetaData { Type = ShaderPartMetaDataType.PushConstantsCount, Value = 1 } 
+            new ShaderMetaData { Type = ShaderMetaDataType.PushConstantsCount, Value = 1 } 
         }  
     }
 });

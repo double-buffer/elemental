@@ -8,12 +8,12 @@ public interface IShaderCompiler
 {
     /// <summary>
     /// Checks if the compiler can compile the specified <see cref="ShaderLanguage" /> to the
-    /// specified <see cref="ToolsGraphicsApi" />.
+    /// specified <see cref="GraphicsApi" />.
     /// </summary>
     /// <param name="shaderLanguage">Source shader language.</param>
     /// <param name="graphicsApi">Target graphics API.</param>
     /// <returns>True if the compiler can do the compilation; Otherwise, False.</returns>
-    bool CanCompileShader(ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi);
+    bool CanCompileShader(ShaderLanguage shaderLanguage, GraphicsApi graphicsApi);
 
     /// <summary>
     /// Compiles the shader.
@@ -26,5 +26,5 @@ public interface IShaderCompiler
     /// <returns>Shader Compiler results object.</returns>
     // TODO: Add options for debug code generation 
     // TODO: Add options to support specialization
-    ShaderCompilerResult CompileShader(string shaderCode, ToolsShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi);
+    ShaderCompilerResult CompileShader(string shaderCode, ShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi);
 }

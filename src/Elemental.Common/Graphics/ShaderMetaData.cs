@@ -1,15 +1,15 @@
 namespace Elemental.Graphics;
 
 /// <summary>
-/// Struct that represent a meta data value for a <see cref="ShaderPart" />.
+/// Struct that represent a meta data value for a Shader.
 /// </summary>
-public readonly record struct ShaderPartMetaData
+public readonly record struct ShaderMetaData
 {
     /// <summary>
     /// Gets ot sets the of the meta data value.
     /// </summary>
     /// <value>Type of the meta data value.</value>
-    public required ShaderPartMetaDataType Type { get; init; }
+    public required ShaderMetaDataType Type { get; init; }
     
     /// <summary>
     /// Gets or sets the value of the meta data.

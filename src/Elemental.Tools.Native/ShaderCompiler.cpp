@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 std::vector<ShaderCompilerProvider*> _shaderCompilerProviders;
-std::unordered_map<ToolsGraphicsApi, ShaderLanguage> _platformTargetLanguages;
+std::unordered_map<GraphicsApi, ShaderLanguage> _platformTargetLanguages;
 
 void RegisterShaderCompilerProvider(ShaderCompilerProvider* shaderCompilerProvider)
 {
@@ -82,9 +82,9 @@ DllExport void Native_FreeNativePointer(void* nativePointer)
 
 DllExport void Native_InitShaderCompiler()
 {
-    _platformTargetLanguages[ToolsGraphicsApi_Direct3D12] = ShaderLanguage_Dxil;
-    _platformTargetLanguages[ToolsGraphicsApi_Vulkan] = ShaderLanguage_Spirv;
-    _platformTargetLanguages[ToolsGraphicsApi_Metal] = ShaderLanguage_MetalIR;
+    _platformTargetLanguages[GraphicsApi_Direct3D12] = ShaderLanguage_Dxil;
+    _platformTargetLanguages[GraphicsApi_Vulkan] = ShaderLanguage_Spirv;
+    _platformTargetLanguages[GraphicsApi_Metal] = ShaderLanguage_MetalIR;
 
     RegisterShaderCompilerProvider((ShaderCompilerProvider*)new DirectXShaderCompilerProvider());
     RegisterShaderCompilerProvider((ShaderCompilerProvider*)new SpirvCrossShaderCompilerProvider());
@@ -99,7 +99,7 @@ DllExport void Native_FreeShaderCompiler()
     }
 }
 
-DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
 {
     if (!_platformTargetLanguages.count(graphicsApi))
     {
@@ -113,7 +113,7 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, ToolsGraph
     return result > 0;
 }
     
-DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
 {
     // TODO: Review STD structures 
     if (!_platformTargetLanguages.count(graphicsApi))

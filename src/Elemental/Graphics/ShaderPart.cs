@@ -32,7 +32,7 @@ public readonly record struct ShaderPart
     /// some informations are missing.
     /// </summary>
     /// <value>List of metadata values.</value>
-    public ReadOnlyMemory<ShaderPartMetaData> MetaData { get; init; }
+    public ReadOnlyMemory<ShaderMetaData> MetaData { get; init; }
 }
 
 [CustomMarshaller(typeof(ShaderPart), MarshalMode.Default, typeof(ShaderPartMarshaller))]
@@ -44,7 +44,7 @@ internal static unsafe class ShaderPartMarshaller
         public byte* EntryPoint { get; init; }
         public void* DataPointer { get; init; }
         public int DataCount { get; init; }
-        public ShaderPartMetaData* MetaDataPointer { get; init; }
+        public ShaderMetaData* MetaDataPointer { get; init; }
         public int MetaDataCount { get; init; }
     }
 
@@ -55,8 +55,8 @@ internal static unsafe class ShaderPartMarshaller
         var dataSpan = new Span<byte>(dataPointer, managed.Data.Length);
         managed.Data.Span.CopyTo(dataSpan);
         
-        var metaDataPointer = (ShaderPartMetaData*)NativeMemory.Alloc((nuint)(managed.MetaData.Length * Marshal.SizeOf<ShaderPartMetaData>()));
-        var metaDataSpan = new Span<ShaderPartMetaData>(metaDataPointer, managed.MetaData.Length);
+        var metaDataPointer = (ShaderMetaData*)NativeMemory.Alloc((nuint)(managed.MetaData.Length * Marshal.SizeOf<ShaderMetaData>()));
+        var metaDataSpan = new Span<ShaderMetaData>(metaDataPointer, managed.MetaData.Length);
         managed.MetaData.Span.CopyTo(metaDataSpan);
 
         return new ShaderPartUnmanaged

@@ -20,7 +20,7 @@ bool MetalShaderCompilerProvider::IsCompilerInstalled()
     return !output.empty();
 }
     
-ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
 {
     #ifdef _WINDOWS
     // TODO: Implement windows version

@@ -1,7 +1,7 @@
 namespace Elemental.Graphics;
 
 /// <summary>
-/// Stage of a <see cref="Shader" />.
+/// Stage of a Shader.
 /// </summary>
 public enum ShaderStage
 {

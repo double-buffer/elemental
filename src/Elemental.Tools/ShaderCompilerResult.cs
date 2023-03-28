@@ -16,7 +16,7 @@ public readonly record struct ShaderCompilerResult
     /// Gets the stage to which the shader compiler was compiled.
     /// </summary>
     /// <value>Shader stage.</value>
-    public required ToolsShaderStage Stage { get; init; }
+    public required ShaderStage Stage { get; init; }
 
     /// <summary>
     /// Gets the entry point that was used to compile the shader.
@@ -49,7 +49,7 @@ internal static unsafe class ShaderCompilerResultMarshaller
     internal readonly struct ShaderCompilerResultUnmanaged
     {
         public bool IsSuccess { get; init; }
-        public ToolsShaderStage Stage { get; init; }
+        public ShaderStage Stage { get; init; }
         public byte* EntryPoint { get; init; }
         public void* ShaderDataPointer { get; init; }
         public int ShaderDataCount { get; init; }

@@ -18,8 +18,9 @@ bool SpirvCrossShaderCompilerProvider::IsCompilerInstalled()
     return true;
 }
     
-ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
 {
+    // TODO: Check target api
     spirv_cross::CompilerMSL compiler((uint32_t*)shaderCode, shaderCodeSize / 4);
 
     spirv_cross::CompilerMSL::Options options;

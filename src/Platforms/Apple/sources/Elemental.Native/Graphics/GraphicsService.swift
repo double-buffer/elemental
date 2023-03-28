@@ -368,13 +368,13 @@ public func createShader(graphicsDevicePointer: UnsafeRawPointer, shaderParts: U
                 let metaData = shaderPart.MetaDataPointer[j]
 
                 switch metaData.Type {
-                    case ShaderPartMetaDataType_ThreadCountX:
+                    case ShaderMetaDataType_ThreadCountX:
                         threadCountX = Int(metaData.Value)
 
-                    case ShaderPartMetaDataType_ThreadCountY:
+                    case ShaderMetaDataType_ThreadCountY:
                         threadCountY = Int(metaData.Value)
                     
-                    case ShaderPartMetaDataType_ThreadCountZ:
+                    case ShaderMetaDataType_ThreadCountZ:
                         threadCountZ = Int(metaData.Value)
                     default:
                         break

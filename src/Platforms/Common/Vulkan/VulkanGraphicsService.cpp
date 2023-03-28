@@ -726,7 +726,7 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
             {
                 auto metaData = shaderPart.MetaDataPointer[j];
 
-                if (metaData.Type == ShaderPartMetaDataType_PushConstantsCount)
+                if (metaData.Type == ShaderMetaDataType_PushConstantsCount)
                 {
                     pushConstantCount = metaData.Value;
                     break;

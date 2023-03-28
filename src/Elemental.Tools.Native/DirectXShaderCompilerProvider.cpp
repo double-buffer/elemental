@@ -57,7 +57,7 @@ bool DirectXShaderCompilerProvider::IsCompilerInstalled()
     return _createInstanceFunc != nullptr;
 }
     
-ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ToolsShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, ToolsGraphicsApi graphicsApi)
+ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
 {
     assert(_createInstanceFunc != nullptr);
 
@@ -84,11 +84,11 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     // TODO: Use defines
     auto shaderTarget = L"ms_6_7";
 
-    if (shaderStage == ToolsShaderStage_AmplificationShader)
+    if (shaderStage == ShaderStage_AmplificationShader)
     {
         shaderTarget = L"as_6_7";
     }
-    else if (shaderStage == ToolsShaderStage_PixelShader)
+    else if (shaderStage == ShaderStage_PixelShader)
     {
         shaderTarget = L"ps_6_7";
     }
@@ -128,7 +128,7 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     ComPtr<IDxcResult> dxilCompileResult;
     AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&dxilCompileResult)));
     
-    if (graphicsApi != ToolsGraphicsApi_Direct3D12)
+    if (graphicsApi != GraphicsApi_Direct3D12)
     {
         arguments.push_back(L"-spirv");
         arguments.push_back(L"-fspv-target-env=vulkan1.3");

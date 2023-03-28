@@ -3,7 +3,7 @@ namespace Elemental.Graphics;
 /// <summary>
 /// Enumerates the available shader part meta data.
 /// </summary>
-public enum ShaderPartMetaDataType
+public enum ShaderMetaDataType
 {
     /// <summary>
     /// Number of push constants the shader use.
