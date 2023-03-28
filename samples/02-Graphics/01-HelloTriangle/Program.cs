@@ -85,7 +85,7 @@ using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
         Stage = meshShaderCompilationResult.Stage, 
         EntryPoint = meshShaderCompilationResult.EntryPoint, 
         Data = meshShaderCompilationResult.ShaderData, 
-        MetaData = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? meshShaderCompilationResult.MetaData : new ShaderMetaData[] 
+        MetaData = selectedGraphicsDevice.GraphicsApi != GraphicsApi.Metal ? meshShaderCompilationResult.MetaData : new ShaderMetaData[] 
         {
             new ShaderMetaData { Type = ShaderMetaDataType.PushConstantsCount, Value = 1 }, 
             new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountX, Value = 32 },
