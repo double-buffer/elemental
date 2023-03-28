@@ -1,4 +1,4 @@
-#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=57, b0)"
+#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=1, b0)"
 
 struct ShaderParameters
 {

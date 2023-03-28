@@ -67,8 +67,6 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     ComPtr<IDxcUtils> dxcUtils;
     AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
 
-    ComPtr<IDxcContainerReflection> containerReflection;
-    AssertIfFailed(_createInstanceFunc(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection)));
 
     ComPtr<IDxcBlobEncoding> sourceBlob;
     AssertIfFailed(dxcUtils->CreateBlob(shaderCode, shaderCodeSize, CP_UTF8, &sourceBlob));
@@ -204,6 +202,9 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     ComPtr<IDxcBlob> dxilShaderByteCode;
     AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&dxilShaderByteCode), nullptr));
 
+    ComPtr<IDxcContainerReflection> containerReflection;
+    AssertIfFailed(_createInstanceFunc(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection)));
+
     IDxcBlob* rootSignatureBlob;
 
     #ifdef _WINDOWS
@@ -226,28 +227,24 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
         }
     }
 
-    auto* desc = (DxilVersionedRootSignatureDesc*)rootSignatureBlob->GetBufferPointer();
+    auto pointer = (uint8_t*)rootSignatureBlob->GetBufferPointer();
 
-    // check the version of the root signature format
-    if (desc->Version == DxilRootSignatureVersion::Version_1)
-    {
-        printf("Version 1\n");
-    }
-    else if (desc->Version == DxilRootSignatureVersion::Version_1_0)
-    {
-        printf("Version 1.0\n");
-    }
-    else if (desc->Version == DxilRootSignatureVersion::Version_1_1)
-    {
-        printf("Version 1.1\n");
-    }
-    else
-    {
-        printf("Not supported\n");
-    }
+    auto desc = (DxilContainerRootSignatureDesc*)pointer;
 
-    auto pushConstantCount = desc->Desc_1_1.Parameter0.Constants.Num32BitValues;
-    printf("PushContants: %d\n", pushConstantCount);
+    // TODO: Handle multiple parameters
+    for (int i = 0; i < desc->NumParameters; i++)
+    {
+        auto parameter = (DxilContainerRootParameter*)(pointer + desc->RootParametersOffset + i * sizeof(DxilContainerRootParameter));
+
+        if ((DxilRootParameterType)parameter->ParameterType == DxilRootParameterType::Constants32Bit)
+        {
+            auto payload = (DxilRootConstants*)(pointer + parameter->PayloadOffset);
+            auto pushConstantCount = payload->Num32BitValues;
+            printf("PushContants: %d\n", pushConstantCount);
+
+            break;
+        }
+    }
 
     auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
     memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());

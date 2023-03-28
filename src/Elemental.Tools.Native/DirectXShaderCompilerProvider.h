@@ -22,67 +22,7 @@ private:
     DxcCreateInstanceProc _createInstanceFunc = nullptr;
 };
 
-// Forward declarations.
-struct DxilDescriptorRange;
-struct DxilDescriptorRange1;
-struct DxilRootConstants;
-struct DxilRootDescriptor;
-struct DxilRootDescriptor1;
-struct DxilRootDescriptorTable;
-struct DxilRootDescriptorTable1;
-struct DxilRootParameter;
-struct DxilRootParameter1;
-struct DxilRootSignatureDesc;
-struct DxilRootSignatureDesc1;
-struct DxilStaticSamplerDesc;
-struct DxilVersionedRootSignatureDesc;
-
-// Constant values.
-static const uint32_t DxilDescriptorRangeOffsetAppend = 0xffffffff;
-static const uint32_t DxilSystemReservedRegisterSpaceValuesStart = 0xfffffff0;
-static const uint32_t DxilSystemReservedRegisterSpaceValuesEnd = 0xffffffff;
-#define DxilMipLodBiaxMax ( 15.99f )
-#define DxilMipLodBiaxMin ( -16.0f )
-#define DxilFloat32Max ( 3.402823466e+38f )
-static const uint32_t DxilMipLodFractionalBitCount = 8;
-static const uint32_t DxilMapAnisotropy = 16;
-
-// Enumerations and flags.
-enum class DxilComparisonFunc : unsigned{
-  Never = 1,
-  Less = 2,
-  Equal = 3,
-  LessEqual = 4,
-  Greater = 5,
-  NotEqual = 6,
-  GreaterEqual = 7,
-  Always = 8
-};
-enum class DxilDescriptorRangeFlags : unsigned {
-  None = 0,
-  DescriptorsVolatile = 0x1,
-  DataVolatile = 0x2,
-  DataStaticWhileSetAtExecute = 0x4,
-  DataStatic = 0x8,
-  DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
-  ValidFlags = 0x1000f,
-  ValidSamplerFlags = DescriptorsVolatile
-};
-enum class DxilDescriptorRangeType : unsigned {
-  SRV = 0,
-  UAV = 1,
-  CBV = 2,
-  Sampler = 3,
-  MaxValue = 3
-};
-enum class DxilRootDescriptorFlags : unsigned {
-  None = 0,
-  DataVolatile = 0x2,
-  DataStaticWhileSetAtExecute = 0x4,
-  DataStatic = 0x8,
-  ValidFlags = 0xe
-};
-enum class DxilRootSignatureVersion {
+enum class DxilRootSignatureVersion : uint32_t {
   Version_1 = 1,
   Version_1_0 = 1,
   Version_1_1 = 2
@@ -226,94 +166,8 @@ struct DxilContainerRootSignatureDesc
   uint32_t Flags;
 };
 
-struct DxilDescriptorRange {
-  DxilDescriptorRangeType RangeType;
-  uint32_t NumDescriptors;
-  uint32_t BaseShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t OffsetInDescriptorsFromTableStart;
-};
-struct DxilRootDescriptorTable {
-  uint32_t NumDescriptorRanges;
-  _Field_size_full_(NumDescriptorRanges)  DxilDescriptorRange *pDescriptorRanges;
-};
 struct DxilRootConstants {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
   uint32_t Num32BitValues;
-};
-struct DxilRootDescriptor {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-};
-struct DxilRootDescriptor1 {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  DxilRootDescriptorFlags Flags;
-};
-struct DxilRootParameter {
-  DxilRootParameterType ParameterType;
-  union {
-    DxilRootDescriptorTable DescriptorTable;
-    DxilRootConstants Constants;
-    DxilRootDescriptor Descriptor;
-  };
-  DxilShaderVisibility ShaderVisibility;
-};
-struct DxilDescriptorRange1 {
-  DxilDescriptorRangeType RangeType;
-  uint32_t NumDescriptors;
-  uint32_t BaseShaderRegister;
-  uint32_t RegisterSpace;
-  DxilDescriptorRangeFlags Flags;
-  uint32_t OffsetInDescriptorsFromTableStart;
-};
-struct DxilRootDescriptorTable1 {
-  uint32_t NumDescriptorRanges;
-  _Field_size_full_(NumDescriptorRanges)  DxilDescriptorRange1 *pDescriptorRanges;
-};
-struct DxilRootParameter1 {
-  DxilRootParameterType ParameterType;
-  union {
-    DxilRootDescriptorTable1 DescriptorTable;
-    DxilRootConstants Constants;
-    DxilRootDescriptor1 Descriptor;
-  };
-  DxilShaderVisibility ShaderVisibility;
-};
-struct DxilRootSignatureDesc {
-  uint32_t NumParameters;
-  _Field_size_full_(NumParameters) DxilRootParameter *pParameters;
-  uint32_t NumStaticSamplers;
-  _Field_size_full_(NumStaticSamplers) DxilStaticSamplerDesc *pStaticSamplers;
-  DxilRootSignatureFlags Flags;
-};
-struct DxilStaticSamplerDesc {
-  DxilFilter Filter;
-  DxilTextureAddressMode AddressU;
-  DxilTextureAddressMode AddressV;
-  DxilTextureAddressMode AddressW;
-  float MipLODBias;
-  uint32_t MaxAnisotropy;
-  DxilComparisonFunc ComparisonFunc;
-  DxilStaticBorderColor BorderColor;
-  float MinLOD;
-  float MaxLOD;
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  DxilShaderVisibility ShaderVisibility;
-};
-struct DxilRootSignatureDesc1 {
-  uint32_t NumParameters;
-  DxilRootParameter1 Parameter0;
-  uint32_t NumStaticSamplers;
-  _Field_size_full_(NumStaticSamplers) DxilStaticSamplerDesc *pStaticSamplers;
-  DxilRootSignatureFlags Flags;
-};
-struct DxilVersionedRootSignatureDesc {
-  DxilRootSignatureVersion Version;
-  union {
-    DxilRootSignatureDesc Desc_1_0;
-    DxilRootSignatureDesc1 Desc_1_1;
-  };
 };
