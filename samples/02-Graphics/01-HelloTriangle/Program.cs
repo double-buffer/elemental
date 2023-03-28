@@ -61,7 +61,7 @@ if (!meshShaderCompilationResult.IsSuccess)
     return;
 }
 
-var pixelShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ToolsShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, (ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
+var pixelShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ToolsShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, ToolsGraphicsApi.Metal);//(ToolsGraphicsApi)selectedGraphicsDevice.GraphicsApi);
 
 foreach (var logEntry in pixelShaderCompilationResult.LogEntries.Span)
 {

@@ -15,6 +15,7 @@ void MetalShaderCompilerProvider::GetTargetShaderLanguages(ShaderLanguage* targe
 
 bool MetalShaderCompilerProvider::IsCompilerInstalled()
 {
+    // TODO: Doesn't work on windows
     auto output = ExecuteProcess("xcrun -f metal");
     return !output.empty();
 }

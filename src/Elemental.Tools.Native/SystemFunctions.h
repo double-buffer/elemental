@@ -8,6 +8,7 @@ using namespace Microsoft::WRL;
 
 #define popen _popen
 #define pclose _pclose
+#undef min
 #else
 #define DllExport extern "C" __attribute__((visibility("default"))) 
 #define ComPtr CComPtr
@@ -17,6 +18,7 @@ using namespace Microsoft::WRL;
 #endif
 
 // TODO: Cleanup includes
+#include <ctype.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>

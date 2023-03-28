@@ -32,6 +32,8 @@ ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* sh
     auto outputShaderData = new uint8_t[metalCode.length()];
     memcpy(outputShaderData, metalCode.c_str(), metalCode.length());
 
+    printf("MetalCode: %s\n", metalCode.c_str());
+
     ShaderCompilerResult result = {};
 
     result.IsSuccess = true;

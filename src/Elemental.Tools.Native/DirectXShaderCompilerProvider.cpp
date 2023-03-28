@@ -205,7 +205,12 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&dxilShaderByteCode), nullptr));
 
     IDxcBlob* rootSignatureBlob;
+
+    #ifdef _WINDOWS
+    AssertIfFailed(containerReflection->Load(dxilShaderByteCode.Get()));
+    #else
     AssertIfFailed(containerReflection->Load(dxilShaderByteCode));
+    #endif
 
     uint32_t partCount = 0;
     containerReflection->GetPartCount(&partCount);
