@@ -115,6 +115,8 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsAp
     
 DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
 {
+    // TODO: Review memory management because we copy 2 times per level :(
+
     // TODO: Review STD structures 
     if (!_platformTargetLanguages.count(graphicsApi))
     {
@@ -130,6 +132,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
     {
         auto isSuccess = false;
         auto logList = std::vector<ShaderCompilerLogEntry>();
+        auto metaDataList = std::vector<ShaderMetaData>();
 
         uint8_t* currentShaderData = nullptr;
         uint32_t currentShaderDataCount = 0;
@@ -146,6 +149,11 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
             for (uint32_t j = 0; j < compilationResult.LogEntryCount; j++)
             {
                 logList.push_back(compilationResult.LogEntries[j]);
+            }
+            
+            for (uint32_t j = 0; j < compilationResult.MetaDataCount; j++)
+            {
+                metaDataList.push_back(compilationResult.MetaData[j]);
             }
             
             isSuccess = compilationResult.IsSuccess;
@@ -168,6 +176,9 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
         memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
         
+        auto metaDataListData = new ShaderMetaData[metaDataList.size()];
+        memcpy(metaDataListData, metaDataList.data(), metaDataList.size() * sizeof(ShaderMetaData));
+        
         ShaderCompilerResult result = {};
 
         result.IsSuccess = isSuccess;
@@ -177,6 +188,8 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         result.LogEntryCount = logList.size();
         result.ShaderData = currentShaderData;
         result.ShaderDataCount = currentShaderDataCount;
+        result.MetaData = metaDataListData;
+        result.MetaDataCount = metaDataList.size();
 
         return result;
     } 

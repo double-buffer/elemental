@@ -35,6 +35,12 @@ public readonly record struct ShaderCompilerResult
     /// </summary>
     /// <value>Log entries of the compilation.</value>
     public ReadOnlyMemory<ShaderCompilerLogEntry> LogEntries { get; init; }
+
+    /// <summary>
+    /// Gets the meta data values associated with the compilation.
+    /// </summary>
+    /// <value>Meta data values.</value>
+    public ReadOnlyMemory<ShaderMetaData> MetaData { get; init; }
 }
 
 [CustomMarshaller(typeof(ShaderCompilerResult), MarshalMode.Default, typeof(ShaderCompilerResultMarshaller))]
@@ -55,6 +61,8 @@ internal static unsafe class ShaderCompilerResultMarshaller
         public int ShaderDataCount { get; init; }
         public ShaderCompilerLogEntryUnmanaged* LogEntryPointer { get; init; }
         public int LogEntryCount { get; init; }
+        public ShaderMetaData* MetaDataPointer { get; init; }
+        public int MetaDataCount { get; init; }
     }
 
     public static ShaderCompilerResultUnmanaged ConvertToUnmanaged(ShaderCompilerResult managed)
@@ -71,6 +79,10 @@ internal static unsafe class ShaderCompilerResultMarshaller
         
         var logEntries = unmanaged.LogEntryPointer != null ? new ShaderCompilerLogEntry[unmanaged.LogEntryCount] : Array.Empty<ShaderCompilerLogEntry>();
         var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, unmanaged.LogEntryCount);
+
+        var shaderMetaData = unmanaged.MetaDataPointer != null ? new ShaderMetaData[unmanaged.MetaDataCount] : Array.Empty<ShaderMetaData>();
+        var sourceMetaDataSpan = new Span<ShaderMetaData>(unmanaged.MetaDataPointer, unmanaged.MetaDataCount);
+        sourceMetaDataSpan.CopyTo(shaderMetaData);
 
         for (var i = 0; i < unmanaged.LogEntryCount; i++)
         {
@@ -89,8 +101,9 @@ internal static unsafe class ShaderCompilerResultMarshaller
             Stage = unmanaged.Stage,
             EntryPoint = Utf8StringMarshaller.ConvertToManaged(unmanaged.EntryPoint) ?? string.Empty,
             ShaderData = shaderData,
-            LogEntries = logEntries
-        };
+            LogEntries = logEntries,
+            MetaData = shaderMetaData
+    };
     }
 
     public static void Free(ShaderCompilerResultUnmanaged unmanaged)
@@ -103,6 +116,7 @@ internal static unsafe class ShaderCompilerResultMarshaller
             PlatformServiceInterop.Native_FreeNativePointer((nint)sourceLogEntry.Message);
         }
         
+        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.MetaDataPointer);
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.ShaderDataPointer);
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.LogEntryPointer);
     }

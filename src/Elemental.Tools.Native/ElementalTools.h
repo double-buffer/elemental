@@ -34,6 +34,8 @@ struct ShaderCompilerResult
     int32_t ShaderDataCount;
     ShaderCompilerLogEntry* LogEntries;
     int32_t LogEntryCount;
+    ShaderMetaData* MetaData;
+    int32_t MetaDataCount;
 };
 
 ShaderCompilerResult CreateErrorResult(ShaderStage stage, uint8_t* entryPoint, uint8_t* message)

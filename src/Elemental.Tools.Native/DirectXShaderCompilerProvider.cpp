@@ -59,6 +59,8 @@ bool DirectXShaderCompilerProvider::IsCompilerInstalled()
     
 ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
 {
+    // HACK: Review all memory allocations: too much copy!
+
     assert(_createInstanceFunc != nullptr);
 
     ComPtr<IDxcCompiler3> compiler;
@@ -140,8 +142,6 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
         compileResult = dxilCompileResult;
     }
 
-    // TODO: compile to SPIRV
-
     auto logList = std::vector<ShaderCompilerLogEntry>();
     auto hasErrors = false;
 
@@ -182,6 +182,8 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     ComPtr<IDxcBlob> shaderByteCode;
     AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
 
+    std::vector<ShaderMetaData> metaDataList;
+
     ComPtr<IDxcBlob> shaderReflectionBlob;
     AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
 
@@ -193,11 +195,15 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     ComPtr<ID3D12ShaderReflection> shaderReflection;
     AssertIfFailed(dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
 
-    // TODO: Implement on unix, this should be possible, see https://github.com/microsoft/DirectXShaderCompiler/pull/4810
     uint32_t threadCountX, threadCountY, threadCountZ;
     shaderReflection->GetThreadGroupSize(&threadCountX, &threadCountY, &threadCountZ);
 
-    printf("ThreadCountX: %d\n", threadCountX);
+    if (threadCountX > 0 && threadCountY > 0 && threadCountZ > 0)
+    {
+        metaDataList.push_back({ ShaderMetaDataType_ThreadCountX, threadCountX });
+        metaDataList.push_back({ ShaderMetaDataType_ThreadCountY, threadCountY });
+        metaDataList.push_back({ ShaderMetaDataType_ThreadCountZ, threadCountZ });
+    }
 
     ComPtr<IDxcBlob> dxilShaderByteCode;
     AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&dxilShaderByteCode), nullptr));
@@ -240,8 +246,8 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
         {
             auto payload = (DxilRootConstants*)(pointer + parameter->PayloadOffset);
             auto pushConstantCount = payload->Num32BitValues;
-            printf("PushContants: %d\n", pushConstantCount);
-
+        
+            metaDataList.push_back({ ShaderMetaDataType_PushConstantsCount, pushConstantCount });
             break;
         }
     }
@@ -251,6 +257,9 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
 
     auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
     memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
+    
+    auto metaDataListData = new ShaderMetaData[metaDataList.size()];
+    memcpy(metaDataListData, metaDataList.data(), metaDataList.size() * sizeof(ShaderMetaData));
 
     ShaderCompilerResult result = {};
 
@@ -261,6 +270,8 @@ ShaderCompilerResult DirectXShaderCompilerProvider::CompileShader(uint8_t* shade
     result.ShaderDataCount = shaderByteCode->GetBufferSize();
     result.LogEntries = logEntriesData;
     result.LogEntryCount = logList.size();
+    result.MetaData = metaDataListData;
+    result.MetaDataCount = metaDataList.size();
 
     return result;
 }

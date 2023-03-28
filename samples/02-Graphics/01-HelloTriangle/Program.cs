@@ -20,7 +20,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
     if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
     {
-        //selectedGraphicsDevice = availableGraphicsDevice;
+        selectedGraphicsDevice = availableGraphicsDevice;
     }
 
     Console.WriteLine($"{availableGraphicsDevice}");
@@ -56,6 +56,11 @@ foreach (var logEntry in meshShaderCompilationResult.LogEntries.Span)
     Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
 }
 
+foreach (var metaData in meshShaderCompilationResult.MetaData.Span)
+{
+    Console.WriteLine($"{metaData}");
+}
+
 if (!meshShaderCompilationResult.IsSuccess)
 {
     return;
@@ -80,23 +85,14 @@ using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
         Stage = meshShaderCompilationResult.Stage, 
         EntryPoint = meshShaderCompilationResult.EntryPoint, 
         Data = meshShaderCompilationResult.ShaderData, 
-        MetaData = new ShaderMetaData[] 
-        {
-            new ShaderMetaData { Type = ShaderMetaDataType.PushConstantsCount, Value = 1 }, 
-            new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountX, Value = 32 },
-            new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountY, Value = 1 },
-            new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountZ, Value = 1 } 
-        }
+        MetaData = meshShaderCompilationResult.MetaData
     },
     new ShaderPart 
     {
         Stage = pixelShaderCompilationResult.Stage, 
         EntryPoint = pixelShaderCompilationResult.EntryPoint, 
         Data = pixelShaderCompilationResult.ShaderData,
-        MetaData = new ShaderMetaData[] 
-        { 
-            new ShaderMetaData { Type = ShaderMetaDataType.PushConstantsCount, Value = 1 } 
-        }  
+        MetaData = pixelShaderCompilationResult.MetaData
     }
 });
 

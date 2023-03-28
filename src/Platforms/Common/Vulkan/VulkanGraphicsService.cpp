@@ -764,13 +764,16 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
 	layoutCreateInfo.pSetLayouts = nullptr;
 	layoutCreateInfo.setLayoutCount = 0;
 
-	VkPushConstantRange push_constant;
-	push_constant.offset = 0;
-	push_constant.size = pushConstantCount * sizeof(uint32_t);
-	push_constant.stageFlags = VK_SHADER_STAGE_ALL;
+    if (pushConstantCount > 0)
+    {
+        VkPushConstantRange push_constant;
+        push_constant.offset = 0;
+        push_constant.size = pushConstantCount * sizeof(uint32_t);
+        push_constant.stageFlags = VK_SHADER_STAGE_ALL;
 
-	layoutCreateInfo.pPushConstantRanges = &push_constant;
-	layoutCreateInfo.pushConstantRangeCount = 1;
+        layoutCreateInfo.pPushConstantRanges = &push_constant;
+        layoutCreateInfo.pushConstantRangeCount = 1;
+    }
 
 	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice->Device, &layoutCreateInfo, 0, &shader->PipelineLayout));
 
