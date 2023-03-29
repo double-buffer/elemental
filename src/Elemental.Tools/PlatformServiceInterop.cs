@@ -20,4 +20,7 @@ internal static partial class PlatformServiceInterop
     
     [LibraryImport("Elemental.Tools.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial ShaderCompilerResult Native_CompileShader(string shaderCode, ShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, in ShaderCompilationOptions options);
+    
+    [LibraryImport("Elemental.Tools.Native")]
+    internal unsafe static partial void Native_CompileShaders(ReadOnlySpan<ShaderCompilerInput> inputs, int inputCount, GraphicsApi graphicsApi, in ShaderCompilationOptions options, ShaderCompilerResultMarshaller.ShaderCompilerResultUnmanaged* results, out int resultCount);
 }

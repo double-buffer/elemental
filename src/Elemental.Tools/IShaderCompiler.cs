@@ -25,4 +25,13 @@ public interface IShaderCompiler
     /// <param name="options">The compilation options to use for the shader.</param>
     /// <returns>A <see cref="ShaderCompilerResult"/> object representing the compiled shader.</returns>
     ShaderCompilerResult CompileShader(string shaderCode, ShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, in ShaderCompilationOptions options = default);
+
+    /// <summary>
+    /// Compiles an array of shader code into shader objects.
+    /// </summary>
+    /// <param name="inputs">An array of shader compiler inputs.</param>
+    /// <param name="graphicsApi">The graphics API to compile the shaders for.</param>
+    /// <param name="options">The compilation options to use for the shaders.</param>
+    /// <returns>An array of <see cref="ShaderCompilerResult"/> objects representing the compiled shaders.</returns>
+    ReadOnlySpan<ShaderCompilerResult> CompileShaders(ReadOnlySpan<ShaderCompilerInput> inputs, GraphicsApi graphicsApi, in ShaderCompilationOptions options = default);
 }

@@ -57,6 +57,14 @@ struct ShaderCompilationOptions
     bool DebugMode;
 };
 
+struct ShaderCompilerInput
+{
+    uint8_t* ShaderCode;
+    enum ShaderStage Stage;
+    uint8_t* EntryPoint;
+    ShaderLanguage ShaderLanguage;
+};
+
 struct ShaderCompilerResult
 {
     bool IsSuccess;

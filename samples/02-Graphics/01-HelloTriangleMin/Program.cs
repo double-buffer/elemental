@@ -11,10 +11,6 @@ using var window = applicationService.CreateWindow(application);
 
 using var graphicsDevice = graphicsService.CreateGraphicsDevice();
 using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
-
-var selectedGraphicsDevice = graphicsService.GetGraphicsDeviceInfo(graphicsDevice);
-applicationService.SetWindowTitle(window, $"Hello Triangle MIN! (GraphicsDevice: {selectedGraphicsDevice})");
-
 using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
@@ -22,17 +18,8 @@ var shaderCode =
     """
     #define RootSignatureDef "RootFlags(0)"
 
-    struct Vertex
-    {
-        float3 Position;
-        float4 Color;
-    };
-
-    struct VertexOutput
-    {
-        float4 Position: SV_Position;
-        float4 Color: TEXCOORD0;
-    };
+    struct Vertex { float3 Position; float4 Color; };
+    struct VertexOutput { float4 Position: SV_Position; float4 Color: TEXCOORD0; };
 
     static Vertex triangleVertices[] =
     {
@@ -69,31 +56,31 @@ var shaderCode =
 
 using var shaderCompiler = new ShaderCompiler();
 
-var meshShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ShaderStage.MeshShader, "MeshMain", ShaderLanguage.Hlsl, selectedGraphicsDevice.GraphicsApi);
-var pixelShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, selectedGraphicsDevice.GraphicsApi);
-
-using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
+var shaderInputs = new ShaderCompilerInput[]
 {
-    new ShaderPart 
+    new() { ShaderCode = shaderCode, Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", ShaderLanguage = ShaderLanguage.Hlsl },
+    new() { ShaderCode = shaderCode, Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", ShaderLanguage = ShaderLanguage.Hlsl }
+};
+
+var shaderCompilationResults = shaderCompiler.CompileShaders(shaderInputs, graphicsService.GetGraphicsDeviceInfo(graphicsDevice).GraphicsApi);
+var shaderParts = new ShaderPart[shaderCompilationResults.Length];
+
+for (var i = 0; i < shaderCompilationResults.Length; i++)
+{
+    shaderParts[i] = new() 
     { 
-        Stage = meshShaderCompilationResult.Stage, 
-        EntryPoint = meshShaderCompilationResult.EntryPoint, 
-        Data = meshShaderCompilationResult.ShaderData, 
-        MetaData = meshShaderCompilationResult.MetaData
-    },
-    new ShaderPart 
-    {
-        Stage = pixelShaderCompilationResult.Stage, 
-        EntryPoint = pixelShaderCompilationResult.EntryPoint, 
-        Data = pixelShaderCompilationResult.ShaderData,
-        MetaData = pixelShaderCompilationResult.MetaData
-    }
-});
+        Stage = shaderCompilationResults[i].Stage, 
+        EntryPoint = shaderCompilationResults[i].EntryPoint, 
+        Data = shaderCompilationResults[i].ShaderData, 
+        MetaData = shaderCompilationResults[i].MetaData
+    };
+}
+
+using var shader = graphicsService.CreateShader(graphicsDevice, shaderParts);
 
 applicationService.RunApplication(application, (status) =>
 {
-    if (status.IsClosing)
-        return false;
+    if (status.IsClosing) return false;
 
     var renderSize = applicationService.GetWindowRenderSize(window);
 
@@ -106,18 +93,14 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.WaitForSwapChainOnCpu(swapChain);
 
     var commandList = graphicsService.CreateCommandList(commandQueue);
-
     using var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
     graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 1.0f, 1.0f, 1.0f) } });
-
     graphicsService.SetShader(commandList, shader);
     graphicsService.DispatchMesh(commandList, 1, 1, 1);
-
     graphicsService.EndRenderPass(commandList);
     graphicsService.CommitCommandList(commandList);
     graphicsService.ExecuteCommandList(commandQueue, commandList);
 
     graphicsService.PresentSwapChain(swapChain);
-
     return true;
 });

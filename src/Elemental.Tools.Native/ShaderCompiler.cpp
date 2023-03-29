@@ -171,3 +171,14 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         
     return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"Cannot find compatible shader compilers toolchain."));
 }
+    
+DllExport void Native_CompileShaders(ShaderCompilerInput* inputs, int32_t inputCount, GraphicsApi graphicsApi, ShaderCompilationOptions* options, ShaderCompilerResult* results, int32_t* resultCount)
+{
+    *resultCount = inputCount;
+
+    for (int32_t i = 0; i < inputCount; i++)
+    {
+        auto input = inputs[i];
+        results[i] = Native_CompileShader(input.ShaderCode, input.Stage, input.EntryPoint, input.ShaderLanguage, graphicsApi, options);
+    }
+}

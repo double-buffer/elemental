@@ -42,68 +42,57 @@ using var shaderCompiler = new ShaderCompiler();
 Console.WriteLine($"Can Compile Shader HLSL: {shaderCompiler.CanCompileShader(ShaderLanguage.Hlsl, selectedGraphicsDevice.GraphicsApi)}");
 Console.WriteLine($"Can Compile Shader Metal: {shaderCompiler.CanCompileShader(ShaderLanguage.Msl, selectedGraphicsDevice.GraphicsApi)}");
 
-// TODO: Do a batch compile function?
-
 var shaderCode = File.ReadAllText("Triangle.hlsl");
 
 // TODO: This is needed for Apple Metal because SPIRV-Cross doesn't yet support metal mesh shaders
 var shaderCodeMetal = File.ReadAllText("Triangle.metal");
 
 var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? ShaderLanguage.Msl : ShaderLanguage.Hlsl;
-var meshShaderCompilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ShaderStage.MeshShader, "MeshMain", meshShaderSourceType, selectedGraphicsDevice.GraphicsApi);
 
-foreach (var logEntry in meshShaderCompilationResult.LogEntries.Span)
+var shaderInputs = new ShaderCompilerInput[]
 {
-    Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
-}
+    new() { ShaderCode = shaderCode, Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", ShaderLanguage = meshShaderSourceType },
+    new() { ShaderCode = shaderCode, Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", ShaderLanguage = ShaderLanguage.Hlsl }
+};
 
-foreach (var metaData in meshShaderCompilationResult.MetaData.Span)
+var shaderCompilationResults = shaderCompiler.CompileShaders(shaderInputs, selectedGraphicsDevice.GraphicsApi);
+
+// TODO: Avoid the array declaration
+var shaderParts = new ShaderPart[shaderCompilationResults.Length];
+
+for (var i = 0; i < shaderCompilationResults.Length; i++)
 {
-    Console.WriteLine($"{metaData}");
-}
+    var shaderCompilationResult = shaderCompilationResults[i];
 
-if (!meshShaderCompilationResult.IsSuccess)
-{
-    return;
-}
+    foreach (var logEntry in shaderCompilationResult.LogEntries.Span)
+    {
+        Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
+    }
 
-var pixelShaderCompilationResult = shaderCompiler.CompileShader(shaderCode, ShaderStage.PixelShader, "PixelMain", ShaderLanguage.Hlsl, selectedGraphicsDevice.GraphicsApi);
+    if (!shaderCompilationResult.IsSuccess)
+    {
+        return;
+    }
 
-foreach (var logEntry in pixelShaderCompilationResult.LogEntries.Span)
-{
-    Console.WriteLine($"{logEntry.Type}: {logEntry.Message}");
-}
-
-if (!pixelShaderCompilationResult.IsSuccess)
-{
-    return;
-}
-
-using var shader = graphicsService.CreateShader(graphicsDevice, new ShaderPart[]
-{
-    new ShaderPart 
-    { 
-        Stage = meshShaderCompilationResult.Stage, 
-        EntryPoint = meshShaderCompilationResult.EntryPoint, 
-        Data = meshShaderCompilationResult.ShaderData, 
-        MetaData = selectedGraphicsDevice.GraphicsApi != GraphicsApi.Metal ? meshShaderCompilationResult.MetaData : new ShaderMetaData[] 
+    shaderParts[i] = new()
+    {
+        Stage = shaderCompilationResult.Stage, 
+        EntryPoint = shaderCompilationResult.EntryPoint, 
+        Data = shaderCompilationResult.ShaderData, 
+        MetaData = selectedGraphicsDevice.GraphicsApi != GraphicsApi.Metal && shaderCompilationResult.Stage == ShaderStage.MeshShader ? shaderCompilationResult.MetaData : new ShaderMetaData[] 
         {
             new ShaderMetaData { Type = ShaderMetaDataType.PushConstantsCount, Value = 1 }, 
             new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountX, Value = 32 },
             new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountY, Value = 1 },
             new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountZ, Value = 1 } 
         }
-    },
-    new ShaderPart 
-    {
-        Stage = pixelShaderCompilationResult.Stage, 
-        EntryPoint = pixelShaderCompilationResult.EntryPoint, 
-        Data = pixelShaderCompilationResult.ShaderData,
-        MetaData = pixelShaderCompilationResult.MetaData
-    }
-});
+    };
+}
+
+using var shader = graphicsService.CreateShader(graphicsDevice, shaderParts);
 
 var stopWatch = new Stopwatch();
+var frameTimer = new Stopwatch();
 var rotationY = 0.0f;
 
 applicationService.RunApplication(application, (status) =>
@@ -128,9 +117,8 @@ applicationService.RunApplication(application, (status) =>
 
     //Console.WriteLine($"Wait for swapchain {stopWatch.Elapsed.TotalMilliseconds}");
 
-    // TODO: Compute real delta time
-    var deltaTime = 1.0f / 60.0f;
-    rotationY += 0.5f * deltaTime;
+    rotationY += (float)frameTimer.Elapsed.TotalSeconds;
+    frameTimer.Restart();
 
     var commandList = graphicsService.CreateCommandList(commandQueue);
 
