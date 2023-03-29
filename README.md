@@ -38,7 +38,7 @@ using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 var shaderCode = 
-    """
+    """csharp
     #define RootSignatureDef "RootFlags(0)"
 
     struct Vertex { float3 Position; float4 Color; };
