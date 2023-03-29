@@ -20,7 +20,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
     if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
     {
-        selectedGraphicsDevice = availableGraphicsDevice;
+        //selectedGraphicsDevice = availableGraphicsDevice;
     }
 
     Console.WriteLine($"{availableGraphicsDevice}");
@@ -48,6 +48,7 @@ var shaderCode = File.ReadAllText("Triangle.hlsl");
 
 // TODO: This is needed for Apple Metal because SPIRV-Cross doesn't yet support metal mesh shaders
 var shaderCodeMetal = File.ReadAllText("Triangle.metal");
+
 var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? ShaderLanguage.Msl : ShaderLanguage.Hlsl;
 var meshShaderCompilationResult = shaderCompiler.CompileShader(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, ShaderStage.MeshShader, "MeshMain", meshShaderSourceType, selectedGraphicsDevice.GraphicsApi);
 

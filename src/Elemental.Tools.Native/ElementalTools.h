@@ -2,6 +2,33 @@
 #include "SystemFunctions.h"
 #include "../Platforms/Common/ElementalCommon.h"
 
+template<typename T>
+struct Span
+{
+    Span()
+    {
+        Pointer = nullptr;
+        Length = 0;
+    }
+
+    Span(T* pointer, uint32_t length) : Pointer(pointer), Length(length)
+    {
+    }
+
+    T* Pointer;
+    uint32_t Length;
+
+    bool IsEmpty()
+    {
+        return Length == 0;
+    }
+
+    static Span<T> Empty()
+    {
+        return Span<T>();
+    }
+};
+
 enum ShaderLanguage
 {
     ShaderLanguage_Unknown = 0,
@@ -23,6 +50,11 @@ struct ShaderCompilerLogEntry
 {
     enum ShaderCompilerLogEntryType Type;
     uint8_t* Message;
+};
+
+struct ShaderCompilationOptions
+{
+    bool DebugMode;
 };
 
 struct ShaderCompilerResult

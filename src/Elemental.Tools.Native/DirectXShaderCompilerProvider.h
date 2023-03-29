@@ -15,7 +15,7 @@ public:
     void GetTargetShaderLanguages(ShaderLanguage* targetLanguages, int* targetLanguagesCount) override;
 
     bool IsCompilerInstalled() override;
-    ShaderCompilerResult CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi) override;
+    Span<uint8_t> CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options) override;
 
 private:
     HMODULE _dxcompilerDll = nullptr;

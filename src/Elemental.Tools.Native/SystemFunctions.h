@@ -27,6 +27,7 @@ using namespace Microsoft::WRL;
 #include <codecvt>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <iostream>
 #include <cstdlib>
 
@@ -104,7 +105,42 @@ std::string GenerateTempFilename()
 }
 #endif
 
-std::vector<std::wstring> splitString(std::wstring w, std::wstring tokenizerStr) 
+HMODULE SystemLoadLibrary(const std::string libraryName)
+{
+#ifdef _WINDOWS
+    const std::string libraryExtension = ".dll";
+#elif __APPLE__
+    const std::string libraryExtension = ".dylib";
+#else
+    const std::string libraryExtension = ".so";
+#endif
+
+#ifdef _WINDOWS
+    return LoadLibraryA((libraryName + libraryExtension).c_str());
+#else
+    return dlopen(("lib" + libraryName + libraryExtension).c_str(), RTLD_LAZY);
+#endif
+}
+
+void SystemFreeLibrary(HMODULE library)
+{
+#ifdef _WINDOWS
+    FreeLibrary(library);
+#else
+    dlclose(library);
+#endif
+}
+
+void* SystemGetFunctionExport(HMODULE library, std::string functionName)
+{
+#ifdef _WINDOWS
+    return GetProcAddress(library, functionName.c_str());
+#else
+    return dlsym(library, functionName.c_str());
+#endif
+}
+
+std::vector<std::wstring> SplitString(std::wstring w, std::wstring tokenizerStr) 
 {
     std::vector<std::wstring> result;
     long tokeninzerLength = tokenizerStr.length();

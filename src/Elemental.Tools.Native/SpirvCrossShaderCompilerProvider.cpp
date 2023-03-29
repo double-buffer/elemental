@@ -18,15 +18,15 @@ bool SpirvCrossShaderCompilerProvider::IsCompilerInstalled()
     return true;
 }
     
-ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
+Span<uint8_t> SpirvCrossShaderCompilerProvider::CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
     // TODO: Check target api
-    spirv_cross::CompilerMSL compiler((uint32_t*)shaderCode, shaderCodeSize / 4);
+    spirv_cross::CompilerMSL compiler((uint32_t*)shaderCode.Pointer, shaderCode.Length / 4);
 
-    spirv_cross::CompilerMSL::Options options;
-    options.set_msl_version(3, 0, 0);
+    spirv_cross::CompilerMSL::Options mslOptions;
+    mslOptions.set_msl_version(3, 0, 0);
 
-    compiler.set_msl_options(options);
+    compiler.set_msl_options(mslOptions);
     auto metalCode = compiler.compile();
 
     // TODO: Check for errors
@@ -34,16 +34,5 @@ ShaderCompilerResult SpirvCrossShaderCompilerProvider::CompileShader(uint8_t* sh
     memcpy(outputShaderData, metalCode.c_str(), metalCode.length());
 
     printf("MetalCode: %s\n", metalCode.c_str());
-
-    ShaderCompilerResult result = {};
-
-    result.IsSuccess = true;
-    result.Stage = shaderStage;
-    result.EntryPoint = entryPoint;
-    result.ShaderData = outputShaderData;
-    result.ShaderDataCount = metalCode.length();
-    result.LogEntries = nullptr;
-    result.LogEntryCount = 0;
-
-    return result;
+    return Span<uint8_t>(outputShaderData, metalCode.length());
 }

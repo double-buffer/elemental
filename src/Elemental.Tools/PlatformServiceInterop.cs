@@ -19,5 +19,5 @@ internal static partial class PlatformServiceInterop
     internal static partial bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsApi graphicsApi);
     
     [LibraryImport("Elemental.Tools.Native", StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial ShaderCompilerResult Native_CompileShader(string shaderCode, ShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi);
+    internal static partial ShaderCompilerResult Native_CompileShader(string shaderCode, ShaderStage shaderStage, string entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, in ShaderCompilationOptions options);
 }

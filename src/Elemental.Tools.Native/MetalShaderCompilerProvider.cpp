@@ -20,12 +20,12 @@ bool MetalShaderCompilerProvider::IsCompilerInstalled()
     return !output.empty();
 }
     
-ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderCode, uint32_t shaderCodeSize, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
+Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
-    #ifdef _WINDOWS
-    // TODO: Implement windows version
-    return CreateErrorResult(shaderStage, entryPoint, ConvertWStringToUtf8(L"This is a test from Metal Shader Compiler..."));
-    #else
+#ifdef _WINDOWS
+    logList.push_back({ShaderCompilerLogEntryType_Error, ConvertWStringToUtf8(L"Metal shader compiler is not supported on Windows.")});
+    return Span<uint8_t>::Empty();
+#else
     auto inputFilePath = GenerateTempFilename() + ".metal";
     auto airFilePath = GenerateTempFilename();
     auto outputFilePath = GenerateTempFilename();
@@ -38,9 +38,8 @@ ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderC
     auto output = ExecuteProcess(commandLine.c_str());
 
     auto outputWString = ConvertUtf8ToWString((uint8_t*)output.c_str());
-    auto lines = splitString(outputWString, L"\n");
+    auto lines = SplitString(outputWString, L"\n");
     
-    auto logList = std::vector<ShaderCompilerLogEntry>();
     auto hasErrors = false;
     auto currentLogType = ShaderCompilerLogEntryType_Error;
     std::wstring line;
@@ -87,7 +86,7 @@ ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderC
     output = ExecuteProcess(commandLine.c_str());
 
     outputWString = ConvertUtf8ToWString((uint8_t*)output.c_str());
-    lines = splitString(outputWString, L"\n");
+    lines = SplitString(outputWString, L"\n");
     
     currentLogType = ShaderCompilerLogEntryType_Error;
 
@@ -134,10 +133,7 @@ ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderC
     int32_t outputShaderDataSize;
 
     ReadBytesFromFile(outputFilePath, &outputShaderData, &outputShaderDataSize);
-    
-    auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
-    memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
-
+ 
     // TODO: Delete files
     //File.Delete(inputFilePath);
     //File.Delete(airFilePath);
@@ -150,8 +146,6 @@ ShaderCompilerResult MetalShaderCompilerProvider::CompileShader(uint8_t* shaderC
     result.EntryPoint = entryPoint;
     result.ShaderData = outputShaderData;
     result.ShaderDataCount = outputShaderDataSize;
-    result.LogEntries = logEntriesData;
-    result.LogEntryCount = logList.size();
 
     return result;
     #endif
