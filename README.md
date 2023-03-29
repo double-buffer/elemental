@@ -13,14 +13,14 @@ It currently runs on:
 
 Open a command line, create a new console project and add the Elemental NuGet package.
 
-```
+```powershell
 dotnet new console
 dotnet add package Elemental --prerelease
 ```
 
 Copy and paste this sample code to create an empty window and display its current render size in the title bar.
 
-```
+```csharp
 using System.Numerics;
 using Elemental;
 using Elemental.Graphics;
@@ -38,7 +38,7 @@ using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 var shaderCode = 
-    """csharp
+    """
     #define RootSignatureDef "RootFlags(0)"
 
     struct Vertex { float3 Position; float4 Color; };
@@ -131,7 +131,7 @@ applicationService.RunApplication(application, (status) =>
 
 For MacOS, put those lines into the csproj:
 
-```
+```xml
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <OutputPath>./bin/$(Configuration)/$(AssemblyName).app/Contents/MacOS</OutputPath>
