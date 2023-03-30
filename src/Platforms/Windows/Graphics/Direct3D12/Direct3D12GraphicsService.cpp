@@ -19,6 +19,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* opt
 
     UINT createFactoryFlags = 0;
 
+    // TODO: We will not publish sdk layers in the nuget package. So check if the DLL exists 
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));

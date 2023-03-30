@@ -39,19 +39,19 @@
     </Content>
     
     <Content Include="$(OutputPath)/D3D12/D3D12Core.dll">
-      <TargetPath>/D3D12/D3D12Core.dll</TargetPath>
+      <TargetPath>D3D12Core.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="$(OutputPath)/D3D12/D3D12Core.pdb">
-      <TargetPath>/D3D12/D3D12Core.pdb</TargetPath>
+      <TargetPath>D3D12Core.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="$(OutputPath)/D3D12/D3D12SDKLayers.dll">
-      <TargetPath>/D3D12/D3D12SDKLayers.dll</TargetPath>
+      <TargetPath>D3D12SDKLayers.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="$(OutputPath)/D3D12/D3D12SDKLayers.pdb">
-      <TargetPath>/D3D12/D3D12SDKLayers.pdb</TargetPath>
+      <TargetPath>D3D12SDKLayers.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   
