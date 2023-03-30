@@ -7,11 +7,6 @@ DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
     if (_dxcompilerDll != nullptr)
     {
         _createInstanceFunc = (DxcCreateInstanceProc)SystemGetFunctionExport(_dxcompilerDll, "DxcCreateInstance");
-        
-        if (_createInstanceFunc)
-        {
-            AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&_dxcUtils)));
-        }
     }
 }
 
@@ -165,7 +160,10 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
                 hasErrors = true;
             }
             
-            logList.push_back({ currentLogType, SystemConvertWStringToUtf8(line) });
+            if (line.length() > 0)
+            {
+                logList.push_back({ currentLogType, SystemConvertWStringToUtf8(line) });
+            }
         }
     }
 
@@ -174,6 +172,9 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
     
 void DirectXShaderCompilerProvider::ExtractMetaData(std::vector<ShaderMetaData>& metaDataList, ComPtr<IDxcResult> dxilCompileResult)
 {
+    ComPtr<IDxcUtils> dxcUtils;
+    AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
+    
     ComPtr<IDxcBlob> shaderReflectionBlob;
     AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
 
@@ -183,7 +184,7 @@ void DirectXShaderCompilerProvider::ExtractMetaData(std::vector<ShaderMetaData>&
     reflectionBuffer.Encoding = 0;
 
     ComPtr<ID3D12ShaderReflection> shaderReflection;
-    AssertIfFailed(_dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
+    AssertIfFailed(dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
 
     uint32_t threadCountX, threadCountY, threadCountZ;
     shaderReflection->GetThreadGroupSize(&threadCountX, &threadCountY, &threadCountZ);

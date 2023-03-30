@@ -153,7 +153,7 @@ void* SystemLoadLibrary(const std::string libraryName)
 void SystemFreeLibrary(void* library)
 {
 #ifdef _WINDOWS
-    FreeLibrary(library);
+    FreeLibrary((HMODULE)library);
 #else
     dlclose(library);
 #endif
@@ -162,7 +162,7 @@ void SystemFreeLibrary(void* library)
 void* SystemGetFunctionExport(void* library, std::string functionName)
 {
 #ifdef _WINDOWS
-    return GetProcAddress(library, functionName.c_str());
+    return GetProcAddress((HMODULE)library, functionName.c_str());
 #else
     return dlsym(library, functionName.c_str());
 #endif
