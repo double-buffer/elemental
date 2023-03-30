@@ -8,6 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <CompileNative>True</CompileNative>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +16,7 @@
     <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile">
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(CompileNative)' == 'True'">
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
       <PowerShellCommand>powershell</PowerShellCommand>
       <BuildScript>$(MSBuildProjectDirectory)/../Platforms/Windows/Build.ps1</BuildScript>
@@ -28,7 +29,7 @@
     <Exec Condition="$([MSBuild]::IsOSPlatform('OSX'))" Command="swift build --package-path $(MSBuildProjectDirectory)/../Platforms/Apple/ -c $(Configuration.ToLower())" />
   </Target>
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(CompileNative)' == 'True'">
     <Content Include="$(OutputPath)/Elemental.Native.dll">
       <TargetPath>Elemental.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -61,7 +62,7 @@
     </Content>-->
   </ItemGroup>   
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(CompileNative)' == 'True'">
     <Content Include="$(MSBuildProjectDirectory)/../Platforms/Apple/.build/$(Configuration)/libElemental.Native.dylib">
       <TargetPath>Elemental.Native.dylib</TargetPath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

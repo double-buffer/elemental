@@ -46,10 +46,7 @@ jobs:
       with:
         name: WindowsNativex64
         path: |
-            ./src/Platforms/Windows/bin/Elemental.Native.dll
-            ./src/Platforms/Windows/bin/D3D12Core.dll
-            ./src/Platforms/Windows/bin/D3D12SDKLayers.dll
-            ./src/Platforms/Windows/bin/vulkan-1.dll
+            ./src/Platforms/Windows/bin/*.dll
         
   build_macos_x64:
     runs-on: macos-latest
@@ -72,7 +69,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: MacOSNative
-        path: ./src/Platforms/Apple/bin/Elemental.Native.dylib
+        path: ./src/Platforms/Apple/bin/*.dylib
 
   build_dotnet:
     runs-on: windows-latest
@@ -94,7 +91,7 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet build ./src/Elemental -c Release -p:Version=${{ inputs.tag }} 
+        dotnet build ./src/Elemental -c Release -p:CompileNative="False" -p:Version=${{ inputs.tag }} 
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3

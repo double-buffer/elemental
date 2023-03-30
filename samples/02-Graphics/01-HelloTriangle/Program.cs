@@ -7,8 +7,7 @@ using Elemental.Tools;
 //TODO: HelloTriangle should be minimal, do another sample to demonstrate the debug functionality
 
 var applicationService = new NativeApplicationService();
-//using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = GraphicsDiagnostics.Debug });
-using var graphicsService = new GraphicsService();
+using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = GraphicsDiagnostics.Debug });
 
 using var application = applicationService.CreateApplication("Hello Window");
 using var window = applicationService.CreateWindow(application);
