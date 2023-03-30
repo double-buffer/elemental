@@ -30,7 +30,7 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     auto airFilePath = GenerateTempFilename();
     auto outputFilePath = GenerateTempFilename();
 
-    WriteBytesToFile(inputFilePath, shaderCode, shaderCodeSize);
+    WriteBytesToFile(inputFilePath, shaderCode.Pointer, shaderCode.Length);
 
     // TODO: Refactor all of that!
 
@@ -58,28 +58,20 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
             currentLogType = ShaderCompilerLogEntryType_Error;
             hasErrors = true;
         }
-        
-        ShaderCompilerLogEntry logEntry = {};
-        logEntry.Type = currentLogType;
-        logEntry.Message = ConvertWStringToUtf8(line);
-        logList.push_back(logEntry);
+
+        if (line.length() > 0)
+        { 
+            ShaderCompilerLogEntry logEntry = {};
+            logEntry.Type = currentLogType;
+            logEntry.Message = ConvertWStringToUtf8(line);
+            logList.push_back(logEntry);
+        }
     }
     
     if (hasErrors)
     {
-        auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
-        memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
-        
         // TODO: Delete files
-        ShaderCompilerResult result = {};
-
-        result.IsSuccess = !hasErrors;
-        result.Stage = shaderStage;
-        result.EntryPoint = entryPoint;
-        result.LogEntries = logEntriesData;
-        result.LogEntryCount = logList.size();
-
-        return result;
+        return Span<uint8_t>::Empty();
     }
     
     commandLine = "xcrun metallib " + airFilePath + " -o " + outputFilePath;
@@ -105,27 +97,19 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
             hasErrors = true;
         }
         
-        ShaderCompilerLogEntry logEntry = {};
-        logEntry.Type = currentLogType;
-        logEntry.Message = ConvertWStringToUtf8(line);
-        logList.push_back(logEntry);
+        if (line.length() > 0)
+        { 
+            ShaderCompilerLogEntry logEntry = {};
+            logEntry.Type = currentLogType;
+            logEntry.Message = ConvertWStringToUtf8(line);
+            logList.push_back(logEntry);
+        }
     }
     
     if (hasErrors)
     {
-        auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
-        memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
-        
         // TODO: Delete files
-        ShaderCompilerResult result = {};
-
-        result.IsSuccess = !hasErrors;
-        result.Stage = shaderStage;
-        result.EntryPoint = entryPoint;
-        result.LogEntries = logEntriesData;
-        result.LogEntryCount = logList.size();
-
-        return result;
+        return Span<uint8_t>::Empty();
     }
     
     // TODO: Read file
@@ -138,15 +122,7 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     //File.Delete(inputFilePath);
     //File.Delete(airFilePath);
     //File.Delete(outputFilePath);
-    
-    ShaderCompilerResult result = {};
-
-    result.IsSuccess = !hasErrors;
-    result.Stage = shaderStage;
-    result.EntryPoint = entryPoint;
-    result.ShaderData = outputShaderData;
-    result.ShaderDataCount = outputShaderDataSize;
-
-    return result;
+        
+    return Span<uint8_t>(outputShaderData, outputShaderDataSize);
     #endif
 }

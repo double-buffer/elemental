@@ -356,8 +356,10 @@ public func createShader(graphicsDevicePointer: UnsafeRawPointer, shaderParts: U
         for i in 0..<shaderPartCount {
             let shaderPart = shaderParts[i]
             let dispatchData = DispatchData(bytes: UnsafeRawBufferPointer(start: shaderPart.DataPointer, count: Int(shaderPart.DataCount)))
+
             let defaultLibrary = try! graphicsDevice.metalDevice.makeLibrary(data: dispatchData as __DispatchData)
             let shaderFunction = defaultLibrary.makeFunction(name: String(cString: shaderPart.EntryPoint))
+            assert(shaderFunction != nil, "ShaderFunction not found: \(String(cString: shaderPart.EntryPoint))")
 
             var threadCountX = 0
             var threadCountY = 0
@@ -576,11 +578,6 @@ public func dispatchMesh(commandListPointer: UnsafeRawPointer, threadGroupCountX
 
         guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
             print("dispatchMesh: Command encoder is not a render command encoder")
-            return
-        }
-
-        guard let pipelineState = commandList.currentPipelineState else {
-            print("dispatchMesh: No pipeline state bound.")
             return
         }
         

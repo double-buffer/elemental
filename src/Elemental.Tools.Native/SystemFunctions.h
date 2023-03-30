@@ -15,6 +15,7 @@ using namespace Microsoft::WRL;
 #undef _WIN32
 #include <iconv.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #endif
 
 // TODO: Cleanup includes
@@ -105,7 +106,7 @@ std::string GenerateTempFilename()
 }
 #endif
 
-HMODULE SystemLoadLibrary(const std::string libraryName)
+void* SystemLoadLibrary(const std::string libraryName)
 {
 #ifdef _WINDOWS
     const std::string libraryExtension = ".dll";
@@ -122,7 +123,7 @@ HMODULE SystemLoadLibrary(const std::string libraryName)
 #endif
 }
 
-void SystemFreeLibrary(HMODULE library)
+void SystemFreeLibrary(void* library)
 {
 #ifdef _WINDOWS
     FreeLibrary(library);
@@ -131,7 +132,7 @@ void SystemFreeLibrary(HMODULE library)
 #endif
 }
 
-void* SystemGetFunctionExport(HMODULE library, std::string functionName)
+void* SystemGetFunctionExport(void* library, std::string functionName)
 {
 #ifdef _WINDOWS
     return GetProcAddress(library, functionName.c_str());
@@ -167,6 +168,7 @@ void WriteBytesToFile(const std::string& filename, const uint8_t* data, int32_t 
     fclose(outFile);
 }
 
+// TODO: Return a span
 void ReadBytesFromFile(const std::string& filename, uint8_t** outputData, int32_t* dataSize)
 {
     FILE* inFile = fopen(filename.c_str(), "rb");

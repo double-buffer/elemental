@@ -51,7 +51,7 @@ var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Met
 
 var shaderInputs = new ShaderCompilerInput[]
 {
-    new() { ShaderCode = shaderCode, Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", ShaderLanguage = meshShaderSourceType },
+    new() { ShaderCode = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", ShaderLanguage = meshShaderSourceType },
     new() { ShaderCode = shaderCode, Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", ShaderLanguage = ShaderLanguage.Hlsl }
 };
 

@@ -62,7 +62,7 @@ struct ShaderCompilerInput
     uint8_t* ShaderCode;
     enum ShaderStage Stage;
     uint8_t* EntryPoint;
-    ShaderLanguage ShaderLanguage;
+    enum ShaderLanguage ShaderLanguage;
 };
 
 struct ShaderCompilerResult
@@ -72,9 +72,9 @@ struct ShaderCompilerResult
     uint8_t* EntryPoint;
     uint8_t* ShaderData;
     int32_t ShaderDataCount;
-    ShaderCompilerLogEntry* LogEntries;
+    struct ShaderCompilerLogEntry* LogEntries;
     int32_t LogEntryCount;
-    ShaderMetaData* MetaData;
+    struct ShaderMetaData* MetaData;
     int32_t MetaDataCount;
 };
 

@@ -116,6 +116,7 @@ internal static unsafe class ShaderCompilerResultMarshaller
             PlatformServiceInterop.Native_FreeNativePointer((nint)sourceLogEntry.Message);
         }
         
+        Utf8StringMarshaller.Free(unmanaged.EntryPoint);
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.MetaDataPointer);
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.ShaderDataPointer);
         PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.LogEntryPointer);

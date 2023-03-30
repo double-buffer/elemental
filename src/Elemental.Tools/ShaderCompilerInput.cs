@@ -57,6 +57,5 @@ internal static unsafe class ShaderCompilerInputMarshaller
     public static void Free(ShaderCompilerInputUnmanaged unmanaged)
     {
         Utf8StringMarshaller.Free(unmanaged.ShaderCodePointer);
-        Utf8StringMarshaller.Free(unmanaged.EntryPoint);
     }
 }
