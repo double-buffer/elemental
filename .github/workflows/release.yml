@@ -47,6 +47,12 @@ jobs:
       run: |
         $dllPath = Get-ChildItem -Path ./bin -Recurse -Include 'vulkan-1.dll' -File | Select-Object -First 1
         Write-Output "::set-output name=vulkan_dll_path::$dllPath"
+    
+    - name: Copy files
+      working-directory: ./src/Platforms/Windows
+      run: |
+        cp ./bin/D3D12/*.dll ./bin/
+        cp ${{ steps.set-vulkan-dll-path.outputs.vulkan_dll_path }} ./bin/
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
@@ -54,8 +60,6 @@ jobs:
         name: WindowsNativex64
         path: |
             ./src/Platforms/Windows/bin/*.dll
-            ./src/Platforms/Windows/bin/D3D12/*.dll
-            ${{ steps.set-vulkan-dll-path.outputs.vulkan_dll_path }}
         
   build_macos_x64:
     runs-on: macos-latest
