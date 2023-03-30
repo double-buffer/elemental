@@ -15,12 +15,10 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
-
     createInfo.pApplicationInfo = &appInfo;
 
     auto isSdkInstalled = SystemLoadLibrary("VkLayer_khronos_validation") != nullptr;
 
-    // TODO: Add a check to see if we have the dll
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
         printf("Vulkan Debug Mode\n");
@@ -73,12 +71,12 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
         
         createInfo.ppEnabledExtensionNames = extensions;
         createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
-    
+
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &_vulkanInstance));
     }
 
     volkLoadInstanceOnly(_vulkanInstance);
-    
+
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
         VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
@@ -565,7 +563,7 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
     AssertIfFailed(vkGetPhysicalDeviceSurfaceSupportKHR(graphicsDevice->PhysicalDevice, swapChain->CommandQueue->FamilyIndex, swapChain->WindowSurface, &isPresentSupported));
     assert(isPresentSupported == 1);
 
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
     AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceCapabilities));
 
     uint32_t surfaceFormatCount = 0;

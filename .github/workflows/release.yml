@@ -47,6 +47,7 @@ jobs:
         path: |
             ./src/Platforms/Windows/bin/Elemental.Native.dll
             ./src/Platforms/Windows/bin/D3D12Core.dll
+            ./src/Platforms/Windows/bin/D3D12SDKLayers.dll
             ./src/Platforms/Windows/bin/vulkan-1.dll
         
   build_macos_x64:
@@ -61,7 +62,9 @@ jobs:
 
     - name: Copy Binary
       working-directory: ./src/Platforms/Apple
-      run: mv ./.build/release/libElemental.Native.dylib ./build/Elemental.Native.dylib
+      run: |
+        cp ./.build/release/libElemental.Native.dylib ./build/
+        mv ./build/libElemental.Native.dylib ./build/Elemental.Native.dylib
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
