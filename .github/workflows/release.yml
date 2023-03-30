@@ -60,6 +60,10 @@ jobs:
       working-directory: ./src/Platforms/Apple
       run: swift build --package-path . -c release
 
+    - name: Copy Binary
+      working-directory: ./src/Platforms/Apple
+      run: cp ./.build/release/libElemental.Native.dylib ./build/Elemental.Native.dylib
+
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
