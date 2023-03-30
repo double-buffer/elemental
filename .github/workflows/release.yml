@@ -33,6 +33,7 @@ jobs:
     - name: Download Vulkan Loader
       working-directory: ./src/Platforms/Windows
       run: |
+        mkdir ./tmp/
         curl -L -o ./tmp/vulkan-loader.zip https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip
 
     - name: Extract Vulkan Loader
@@ -63,6 +64,7 @@ jobs:
     - name: Copy Binary
       working-directory: ./src/Platforms/Apple
       run: |
+        mkdir ./build/
         cp ./.build/release/libElemental.Native.dylib ./build/
         mv ./build/libElemental.Native.dylib ./build/Elemental.Native.dylib
 
@@ -77,6 +79,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v3
