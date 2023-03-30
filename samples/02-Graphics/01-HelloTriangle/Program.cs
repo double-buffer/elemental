@@ -79,7 +79,7 @@ for (var i = 0; i < shaderCompilationResults.Length; i++)
         Stage = shaderCompilationResult.Stage, 
         EntryPoint = shaderCompilationResult.EntryPoint, 
         Data = shaderCompilationResult.ShaderData, 
-        MetaData = selectedGraphicsDevice.GraphicsApi != GraphicsApi.Metal && shaderCompilationResult.Stage == ShaderStage.MeshShader ? shaderCompilationResult.MetaData : new ShaderMetaData[] 
+        MetaData = !(selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal && shaderCompilationResult.Stage == ShaderStage.MeshShader) ? shaderCompilationResult.MetaData : new ShaderMetaData[] 
         {
             new ShaderMetaData { Type = ShaderMetaDataType.PushConstantsCount, Value = 1 }, 
             new ShaderMetaData { Type = ShaderMetaDataType.ThreadCountX, Value = 32 },

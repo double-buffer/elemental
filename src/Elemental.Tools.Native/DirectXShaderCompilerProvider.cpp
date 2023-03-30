@@ -7,6 +7,11 @@ DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
     if (_dxcompilerDll != nullptr)
     {
         _createInstanceFunc = (DxcCreateInstanceProc)SystemGetFunctionExport(_dxcompilerDll, "DxcCreateInstance");
+        
+        if (_createInstanceFunc)
+        {
+            AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&_dxcUtils)));
+        }
     }
 }
 
@@ -37,18 +42,10 @@ bool DirectXShaderCompilerProvider::IsCompilerInstalled()
     
 Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
-    // HACK: Review all memory allocations: too much copy!
-
     assert(_createInstanceFunc != nullptr);
 
     ComPtr<IDxcCompiler3> compiler;
     AssertIfFailed(_createInstanceFunc(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-
-    ComPtr<IDxcUtils> dxcUtils;
-    AssertIfFailed(_createInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
-
-    ComPtr<IDxcBlobEncoding> sourceBlob;
-    AssertIfFailed(dxcUtils->CreateBlob(shaderCode.Pointer, shaderCode.Length, CP_UTF8, &sourceBlob));
 
     // TODO: Use utils function to build parameters
     std::vector<const wchar_t*> arguments;
@@ -57,7 +54,7 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     //-E for the entry point (eg. PSMain)
     arguments.push_back(L"-E");
     
-    auto entryPointString = ConvertUtf8ToWString(entryPoint);
+    auto entryPointString = SystemConvertUtf8ToWString(entryPoint);
     arguments.push_back(entryPointString.c_str());
 
     // TODO: Use defines
@@ -99,14 +96,15 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     }*/
 
     DxcBuffer sourceBuffer;
-    sourceBuffer.Ptr = sourceBlob->GetBufferPointer();
-    sourceBuffer.Size = sourceBlob->GetBufferSize();
+    sourceBuffer.Ptr = shaderCode.Pointer;
+    sourceBuffer.Size = shaderCode.Length;
     sourceBuffer.Encoding = 0;
 
-    ComPtr<IDxcResult> compileResult;
     ComPtr<IDxcResult> dxilCompileResult;
     AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&dxilCompileResult)));
     
+    ComPtr<IDxcResult> compileResult;
+
     if (graphicsApi != GraphicsApi_Direct3D12)
     {
         arguments.push_back(L"-spirv");
@@ -119,6 +117,21 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
         compileResult = dxilCompileResult;
     }
 
+    auto hasErrors = ProcessLogOutput(logList, compileResult);
+    
+    ComPtr<IDxcBlob> shaderByteCode;
+    AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
+
+    ExtractMetaData(metaDataList, dxilCompileResult);
+
+    auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
+    memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
+
+    return Span<uint8_t>(outputShaderData, shaderByteCode->GetBufferSize());
+}
+
+bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
+{
     auto hasErrors = false;
     auto numOutputs = compileResult->GetNumOutputs();
 
@@ -127,10 +140,10 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
 
     if (pErrors && pErrors->GetStringLength() > 0)
     {
-        auto errorContent = ConvertUtf8ToWString((uint8_t*)pErrors->GetBufferPointer()); // std::wstring((wchar_t*)pErrors->GetBufferPointer(), pErrors->GetStringLength());
+        auto errorContent = SystemConvertUtf8ToWString((uint8_t*)pErrors->GetBufferPointer());
         auto currentLogType = ShaderCompilerLogEntryType_Error;
 
-        auto lines = SplitString(errorContent, L"\n");
+        auto lines = SystemSplitString(errorContent, L"\n");
         std::wstring line;
 
         for (int32_t i = 0; i < lines.size(); i++)
@@ -152,16 +165,15 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
                 hasErrors = true;
             }
             
-            ShaderCompilerLogEntry logEntry = {};
-            logEntry.Type = currentLogType;
-            logEntry.Message = ConvertWStringToUtf8(line);
-            logList.push_back(logEntry);
+            logList.push_back({ currentLogType, SystemConvertWStringToUtf8(line) });
         }
     }
-    
-    ComPtr<IDxcBlob> shaderByteCode;
-    AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
 
+    return hasErrors;
+}
+    
+void DirectXShaderCompilerProvider::ExtractMetaData(std::vector<ShaderMetaData>& metaDataList, ComPtr<IDxcResult> dxilCompileResult)
+{
     ComPtr<IDxcBlob> shaderReflectionBlob;
     AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
 
@@ -171,7 +183,7 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     reflectionBuffer.Encoding = 0;
 
     ComPtr<ID3D12ShaderReflection> shaderReflection;
-    AssertIfFailed(dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
+    AssertIfFailed(_dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
 
     uint32_t threadCountX, threadCountY, threadCountZ;
     shaderReflection->GetThreadGroupSize(&threadCountX, &threadCountY, &threadCountZ);
@@ -229,9 +241,4 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
             break;
         }
     }
-
-    auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
-    memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
-
-    return Span<uint8_t>(outputShaderData, shaderByteCode->GetBufferSize());
 }

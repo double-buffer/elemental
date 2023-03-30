@@ -35,7 +35,7 @@ using namespace Microsoft::WRL;
 #define AssertIfFailed(result) assert(!FAILED(result))
 
 #if _WINDOWS
-uint8_t* ConvertWStringToUtf8(const std::wstring &source)
+uint8_t* SystemConvertWStringToUtf8(const std::wstring &source)
 {
     char *destination = new char[source.length() + 1];
     destination[source.length()] = '\0';
@@ -44,7 +44,7 @@ uint8_t* ConvertWStringToUtf8(const std::wstring &source)
     return (uint8_t*)destination;
 }
 
-std::wstring ConvertUtf8ToWString(uint8_t* source)
+std::wstring SystemConvertUtf8ToWString(uint8_t* source)
 {
     auto stringLength = std::string((char*)source).length();
     std::wstring destination;
@@ -53,7 +53,7 @@ std::wstring ConvertUtf8ToWString(uint8_t* source)
 
 	return destination;
 }
-std::wstring GenerateTempFilename() 
+std::wstring SystemGenerateTempFilename() 
 {
     wchar_t temp[MAX_PATH];
 
@@ -66,7 +66,7 @@ std::wstring GenerateTempFilename()
     return L"";
 }
 #else
-uint8_t* ConvertWStringToUtf8(const std::wstring &source)
+uint8_t* SystemConvertWStringToUtf8(const std::wstring &source)
 {
     iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
 
@@ -83,7 +83,7 @@ uint8_t* ConvertWStringToUtf8(const std::wstring &source)
 }
 
 // TODO: This seems to be the thing to do, convert the other functions
-std::wstring ConvertUtf8ToWString(const uint8_t* source)
+std::wstring SystemConvertUtf8ToWString(const uint8_t* source)
 {
     iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
     
@@ -94,7 +94,7 @@ std::wstring ConvertUtf8ToWString(const uint8_t* source)
     return outputString;
 }
 
-std::string GenerateTempFilename() 
+std::string SystemGenerateTempFilename() 
 {
     char temp[] = "/tmp/tempfileXXXXXX";
     int fd = mkstemp(temp);
@@ -105,6 +105,33 @@ std::string GenerateTempFilename()
     return "";
 }
 #endif
+
+template<typename T>
+struct Span
+{
+    Span()
+    {
+        Pointer = nullptr;
+        Length = 0;
+    }
+
+    Span(T* pointer, uint32_t length) : Pointer(pointer), Length(length)
+    {
+    }
+
+    T* Pointer;
+    uint32_t Length;
+
+    bool IsEmpty()
+    {
+        return Length == 0;
+    }
+
+    static Span<T> Empty()
+    {
+        return Span<T>();
+    }
+};
 
 void* SystemLoadLibrary(const std::string libraryName)
 {
@@ -141,7 +168,7 @@ void* SystemGetFunctionExport(void* library, std::string functionName)
 #endif
 }
 
-std::vector<std::wstring> SplitString(std::wstring w, std::wstring tokenizerStr) 
+std::vector<std::wstring> SystemSplitString(std::wstring w, std::wstring tokenizerStr) 
 {
     std::vector<std::wstring> result;
     long tokeninzerLength = tokenizerStr.length();
@@ -161,15 +188,14 @@ std::vector<std::wstring> SplitString(std::wstring w, std::wstring tokenizerStr)
     return result;
 }
 
-void WriteBytesToFile(const std::string& filename, const uint8_t* data, int32_t dataCount) 
+void SystemWriteBytesToFile(const std::string& filename, Span<uint8_t> data) 
 {
     FILE* outFile = fopen(filename.c_str(), "wb");
-    fwrite(data, sizeof(uint8_t), dataCount, outFile);
+    fwrite(data.Pointer, sizeof(uint8_t), data.Length, outFile);
     fclose(outFile);
 }
 
-// TODO: Return a span
-void ReadBytesFromFile(const std::string& filename, uint8_t** outputData, int32_t* dataSize)
+Span<uint8_t> SystemReadBytesFromFile(const std::string& filename)
 {
     FILE* inFile = fopen(filename.c_str(), "rb");
 
@@ -182,16 +208,21 @@ void ReadBytesFromFile(const std::string& filename, uint8_t** outputData, int32_
     std::size_t fileSize = std::ftell(inFile);
     std::rewind(inFile);
 
-    *outputData = new uint8_t[fileSize];
-    std::size_t bytesRead = std::fread(*outputData, sizeof(uint8_t), fileSize, inFile);
+    auto outputData = new uint8_t[fileSize];
+    std::size_t bytesRead = std::fread(outputData, sizeof(uint8_t), fileSize, inFile);
 
     assert(bytesRead == fileSize);
     std::fclose(inFile);
 
-    *dataSize = fileSize;
+    return Span<uint8_t>(outputData, fileSize);
 }
 
-std::string ExecuteProcess(const std::string cmd) 
+void SystemDeleteFile(const std::string& filename)
+{
+   remove(filename.c_str()); 
+}
+
+std::string SystemExecuteProcess(const std::string cmd) 
 {
     char buffer[128];
     std::string result = "";
@@ -207,3 +238,5 @@ std::string ExecuteProcess(const std::string cmd)
     pclose(pipe);
     return result;
 }
+
+// TODO: Write system allocate/free functions so we can track if we have memory leak in the interop layer
