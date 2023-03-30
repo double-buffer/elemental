@@ -41,12 +41,22 @@ jobs:
       run: |
         unzip ./tmp/vulkan-loader.zip -d ./bin/
 
+    - name: Set Vulkan DLL Path
+      id: set-vulkan-dll-path
+      run: |
+        dll_path=./bin/*/x86/vulkan-1.dll
+        dll_path=($dll_path)
+        dll_path=${dll_path[0]}
+        echo "::set-output name=vulkan_dll_path::$dll_path"
+
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
         name: WindowsNativex64
         path: |
             ./src/Platforms/Windows/bin/*.dll
+            ./src/Platforms/Windows/bin/D3D12/*.dll
+            ${{ steps.set-vulkan-dll-path.outputs.vulkan_dll_path }}
         
   build_macos_x64:
     runs-on: macos-latest
@@ -69,7 +79,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: MacOSNative
-        path: ./src/Platforms/Apple/bin/*.dylib
+        path: ./src/Platforms/Apple/build/*.dylib
 
   build_dotnet:
     runs-on: windows-latest
