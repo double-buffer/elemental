@@ -43,11 +43,10 @@ jobs:
 
     - name: Set Vulkan DLL Path
       id: set-vulkan-dll-path
+      shell: powershell
       run: |
-        dll_path=./bin/*/x86/vulkan-1.dll
-        dll_path=($dll_path)
-        dll_path=${dll_path[0]}
-        echo "::set-output name=vulkan_dll_path::$dll_path"
+        $dllPath = Get-ChildItem -Path ./bin -Recurse -Include 'vulkan-1.dll' -File | Select-Object -First 1
+        Write-Output "::set-output name=vulkan_dll_path::$dllPath"
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
