@@ -6,6 +6,7 @@
 #include <codecvt>
 
 #include <assert.h>
+#include <io.h>
 
 #define D3D12SDKVersion 608
 #define D3D12SDKPath u8".\\"
@@ -39,3 +40,4 @@ struct WindowsEvent
 };
 
 using namespace Microsoft::WRL;
+

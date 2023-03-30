@@ -24,7 +24,7 @@ jobs:
     - name: Configure MSBuild
       uses: microsoft/setup-msbuild@v1.1
       with:
-        vs-version: '[17.5)'
+        vs-version: '[17.0,17.5)'
         msbuild-architecture: x64
 
     - name: Build Windows Platform
@@ -62,7 +62,7 @@ jobs:
 
     - name: Copy Binary
       working-directory: ./src/Platforms/Apple
-      run: cp ./.build/release/libElemental.Native.dylib ./build/Elemental.Native.dylib
+      run: mv ./.build/release/libElemental.Native.dylib ./build/Elemental.Native.dylib
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
@@ -84,7 +84,7 @@ jobs:
     - name: Configure MSBuild
       uses: microsoft/setup-msbuild@v1.1
       with:
-        vs-version: '[17.5)'
+        vs-version: '[17.0,17.5)'
         msbuild-architecture: x64
 
     - name: Build Library

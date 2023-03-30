@@ -18,10 +18,12 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* opt
     AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, D3D12SDKPath));
 
     UINT createFactoryFlags = 0;
-
-    // TODO: We will not publish sdk layers in the nuget package. So check if the DLL exists 
-    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    bool sdkLayerExists = _waccess((SystemGetExecutableFolderPath() + L".\\D3D12SDKLayers.dll").c_str(), 0) == 0;
+ 
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && sdkLayerExists)
     {
+        printf("DirectX12 Debug Mode\n");
+
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
         if (_debugInterface)

@@ -18,8 +18,13 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
 
     createInfo.pApplicationInfo = &appInfo;
 
-    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    auto isSdkInstalled = SystemLoadLibrary("VkLayer_khronos_validation") != nullptr;
+
+    // TODO: Add a check to see if we have the dll
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
+        printf("Vulkan Debug Mode\n");
+
         const char* layers[] =
         {
             "VK_LAYER_KHRONOS_validation"
@@ -74,7 +79,7 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
 
     volkLoadInstanceOnly(_vulkanInstance);
     
-    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
         VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
         createInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
