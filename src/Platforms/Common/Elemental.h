@@ -2,23 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
-
-struct Vector4
-{
-    float X, Y, Z, W;
-};
-
-struct NullableVector4
-{
-    bool HasValue;
-    struct Vector4 Value;
-};
-
-struct NullablePointer
-{
-    bool HasValue;
-    void* Value;
-};
+#include "ElementalCommon.h"
 
 enum NativeApplicationStatusFlags
 {
@@ -56,14 +40,6 @@ struct NativeWindowSize
     int32_t Height;
     float_t UIScale;
     enum NativeWindowState WindowState;
-};
-
-enum GraphicsApi
-{
-    GraphicsApi_Unknown = 0,
-    GraphicsApi_Direct3D12 = 1,
-    GraphicsApi_Vulkan = 2,
-    GraphicsApi_Metal = 3
 };
 
 struct GraphicsDeviceInfo
@@ -121,6 +97,16 @@ struct SwapChainOptions
     int32_t Height;
     enum SwapChainFormat Format;
     int32_t MaximumFrameLatency;
+};
+
+struct ShaderPart
+{
+    enum ShaderStage Stage;
+    uint8_t* EntryPoint;
+    void* DataPointer;
+    int32_t DataCount;
+    struct ShaderMetaData* MetaDataPointer;
+    int32_t MetaDataCount;
 };
 
 struct RenderPassRenderTarget

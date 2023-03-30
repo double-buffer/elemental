@@ -1,0 +1,3 @@
+codesign -s - -v -f --entitlements src/Platforms/Apple/Debug.plist samples/02-Graphics/01-HelloTriangle/bin/Debug/HelloTriangle.app
+
+https://developer.apple.com/forums/thread/681687

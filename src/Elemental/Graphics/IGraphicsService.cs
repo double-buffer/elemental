@@ -126,6 +126,9 @@ public interface IGraphicsService
     /// <param name="swapChain">SwapChain to free.</param>
     void FreeSwapChain(SwapChain swapChain);
 
+    // TODO: Label function
+    //void SetSwapChainLabel(SwapChain swapChain, string label);
+
     /// <summary>
     /// Resizes the specified <see cref="SwapChain" />.
     /// </summary>
@@ -155,6 +158,24 @@ public interface IGraphicsService
     void WaitForSwapChainOnCpu(SwapChain swapChain);
 
     /// <summary>
+    /// Creates a shader from one or more <see cref="ShaderPart" />
+    /// </summary>
+    /// <param name="graphicsDevice">Graphics device to use.</param>
+    /// <param name="shaderParts">List of shader parts.</param>
+    /// <returns>Shader handle.</returns>
+    [PlatformMethodOverride] 
+    Shader CreateShader(GraphicsDevice graphicsDevice, ReadOnlySpan<ShaderPart> shaderParts);
+
+    /// <summary>
+    /// Frees the specified <see cref="Shader" />.
+    /// </summary>
+    /// <param name="shader">Shader to free.</param>
+    void FreeShader(Shader shader);
+
+    // TODO: Label function
+    //void SetShaderLabel(Shader shader, string label);
+
+    /// <summary>
     /// Begins a new render pass on the specified <see cref="CommandList" />.
     /// </summary>
     /// <param name="commandList">Command list.</param>
@@ -167,4 +188,46 @@ public interface IGraphicsService
     /// </summary>
     /// <param name="commandList">Command list.</param>
     void EndRenderPass(CommandList commandList);
+
+    // TODO: void CompileRenderShader(Shader shader, in RenderPassDescriptor renderPassDescriptor);
+    // TODO: ShaderCompilationStatus GetRenderShaderCompilationStatus(Shader shader, in RenderPassDescriptor renderPassDescriptor);
+    // TODO: GetShaderCompilationStatusList(....)
+
+    // TODO: Add a parameter wait for compilation dedault = true
+    /// <summary>
+    /// Sets the specified <see cref="Shader" /> to the specified <see cref="CommandList" />.
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="shader">Shader to set.</param>
+    void SetShader(CommandList commandList, Shader shader);
+
+    /// <summary>
+    /// Set constant values for the currently bound <see cref="Shader" />. 
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="slot">Slot of the constant defined at the shader level.</param>
+    /// <param name="value">
+    /// Constant values as a C# value type. Please note that this data needs to aligned to 32bits.
+    /// </param>
+    [PlatformMethodIgnore]
+    void SetShaderConstants<T>(CommandList commandList, uint slot, ref T value) where T : struct;
+
+    /// <summary>
+    /// Set constant values for the currently bound <see cref="Shader" />. 
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="slot">Slot of the constant defined at the shader level.</param>
+    /// <param name="constantValues">
+    /// Constant values as raw data. Please note that this data needs to aligned to 32bits.
+    /// </param>
+    void SetShaderConstants(CommandList commandList, uint slot, ReadOnlySpan<byte> constantValues);
+
+    /// <summary>
+    /// Dispatchs a mesh by using a MeshShader.
+    /// </summary>
+    /// <param name="commandList">Command list to use.</param>
+    /// <param name="threadGroupCountX">Number of thread groups for X.</param>
+    /// <param name="threadGroupCountY">Number of thread groups for Y.</param>
+    /// <param name="threadGroupCountZ">Number of thread groups for Z.</param>
+    void DispatchMesh(CommandList commandList, uint threadGroupCountX, uint threadGroupCountY, uint threadGroupCountZ);
 }

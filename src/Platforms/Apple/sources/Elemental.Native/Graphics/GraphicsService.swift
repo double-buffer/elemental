@@ -16,7 +16,9 @@ public func freeGraphicsService() {
 @_cdecl("Native_GetAvailableGraphicsDevices")
 public func getAvailableGraphicsDevices(graphicsDevices: UnsafeMutablePointer<GraphicsDeviceInfo>, graphicsDeviceCount: UnsafeMutablePointer<Int>) {
     autoreleasepool {
-        let devices = MTLCopyAllDevices()
+        var devices = MTLCopyAllDevices()
+        devices.sort(by: sortingClosure)
+
         var i = 0
 
         for device in devices {
@@ -34,17 +36,14 @@ public func createGraphicsDevice(optionsPointer: UnsafePointer<GraphicsDeviceOpt
         var initMetalDevice: MTLDevice? = nil
         let options = optionsPointer.pointee
 
-        if (options.DeviceId != 0) {
-            let devices = MTLCopyAllDevices()
-            
-            for device in devices {
-                if (options.DeviceId == device.registryID) {
-                    initMetalDevice = device
-                    break
-                }
+        var devices = MTLCopyAllDevices()
+        devices.sort(by: sortingClosure)
+        
+        for device in devices {
+            if (options.DeviceId == device.registryID || options.DeviceId == 0) {
+                initMetalDevice = device
+                break
             }
-        } else {
-            initMetalDevice = MTLCreateSystemDefaultDevice()
         }
 
         guard let metalDevice = initMetalDevice else {
@@ -84,7 +83,7 @@ public func createCommandQueue(graphicsDevicePointer: UnsafeRawPointer, type: Co
             return nil
         }
 
-        let commandQueue = MetalCommandQueue(graphicsDevice.metalDevice, metalCommandQueue, fence)
+        let commandQueue = MetalCommandQueue(graphicsDevice, metalCommandQueue, fence)
         return commandQueue.toPointer()
     }
 }
@@ -113,7 +112,7 @@ public func createCommandList(commandQueuePointer: UnsafeRawPointer) -> UnsafeMu
             return nil
         }
 
-        let commandList = MetalCommandList(commandQueue.metalDevice, metalCommandBuffer)
+        let commandList = MetalCommandList(commandQueue.graphicsDevice, metalCommandBuffer)
         return commandList.toPointer()
     }
 }
@@ -212,7 +211,14 @@ public func waitForFenceOnCpu(fence: Fence) {
 @_cdecl("Native_ResetCommandAllocation")
 public func resetCommandAllocation(graphicsDevicePointer: UnsafeRawPointer) {
 }
-    
+
+@_cdecl("Native_FreeTexture")
+public func freeTexture(texturePointer: UnsafeRawPointer) {
+    autoreleasepool {
+        MetalTexture.release(texturePointer)
+    }
+}
+
 @_cdecl("Native_CreateSwapChain")
 public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer: UnsafeRawPointer, optionsPointer: UnsafePointer<SwapChainOptions>) -> UnsafeMutableRawPointer? {
     autoreleasepool {
@@ -242,7 +248,7 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
         }
 
         let metalLayer = metalView.metalLayer
-        metalLayer.device = commandQueue.metalDevice
+        metalLayer.device = commandQueue.graphicsDevice.metalDevice
         metalLayer.pixelFormat = options.Format == SwapChainFormat_HighDynamicRange ? .rgba16Float : .bgra8Unorm_srgb
         metalLayer.framebufferOnly = true
         metalLayer.allowsNextDrawableTimeout = true
@@ -252,7 +258,7 @@ public func createSwapChain(windowPointer: UnsafeRawPointer, commandQueuePointer
 
         let presentSemaphore = DispatchSemaphore.init(value: Int(options.MaximumFrameLatency));
 
-        let swapChain = MetalSwapChain(commandQueue.metalDevice, metalLayer, commandQueue, presentSemaphore)
+        let swapChain = MetalSwapChain(commandQueue.graphicsDevice, metalLayer, commandQueue, presentSemaphore)
         return swapChain.toPointer()
     }
 }
@@ -282,7 +288,7 @@ public func getSwapChainBackBufferTexture(swapChainPointer: UnsafeRawPointer) ->
             return nil
         }
         
-        let texture = MetalTexture(swapChain.metalDevice, backBufferDrawable.texture)
+        let texture = MetalTexture(swapChain.graphicsDevice, backBufferDrawable.texture)
         texture.isPresentTexture = true
 
         return texture.toPointer()
@@ -341,10 +347,70 @@ public func waitForSwapChainOnCpu(swapChainPointer: UnsafeRawPointer) {
     }
 }
 
-@_cdecl("Native_FreeTexture")
-public func freeTexture(texturePointer: UnsafeRawPointer) {
+@_cdecl("Native_CreateShader")
+public func createShader(graphicsDevicePointer: UnsafeRawPointer, shaderParts: UnsafePointer<ShaderPart>, shaderPartCount: Int) -> UnsafeMutableRawPointer? {
     autoreleasepool {
-        MetalTexture.release(texturePointer)
+        let graphicsDevice = MetalGraphicsDevice.fromPointer(graphicsDevicePointer)
+        let shader = MetalShader(graphicsDevice)
+
+        for i in 0..<shaderPartCount {
+            let shaderPart = shaderParts[i]
+            let dispatchData = DispatchData(bytes: UnsafeRawBufferPointer(start: shaderPart.DataPointer, count: Int(shaderPart.DataCount)))
+
+            let defaultLibrary = try! graphicsDevice.metalDevice.makeLibrary(data: dispatchData as __DispatchData)
+            let shaderFunction = defaultLibrary.makeFunction(name: String(cString: shaderPart.EntryPoint))
+            assert(shaderFunction != nil, "ShaderFunction not found: \(String(cString: shaderPart.EntryPoint))")
+
+            var threadCountX = 0
+            var threadCountY = 0
+            var threadCountZ = 0
+            var threadCount: MTLSize? = nil
+
+            for j in 0..<Int(shaderPart.MetaDataCount) {
+                let metaData = shaderPart.MetaDataPointer[j]
+
+                switch metaData.Type {
+                    case ShaderMetaDataType_ThreadCountX:
+                        threadCountX = Int(metaData.Value)
+
+                    case ShaderMetaDataType_ThreadCountY:
+                        threadCountY = Int(metaData.Value)
+                    
+                    case ShaderMetaDataType_ThreadCountZ:
+                        threadCountZ = Int(metaData.Value)
+                    default:
+                        break
+                }
+            }
+            
+            threadCount = MTLSizeMake(threadCountX, threadCountY, threadCountZ)
+            
+            switch shaderPart.Stage {
+                case ShaderStage_AmplificationShader:
+                    shader.amplificationShader = shaderFunction
+                    shader.amplificationThreadCount = threadCount
+
+                case ShaderStage_MeshShader:
+                    shader.meshShader = shaderFunction
+                    shader.meshThreadCount = threadCount
+                    
+                case ShaderStage_PixelShader:
+                    shader.pixelShader = shaderFunction
+
+                default:
+                    print("createShader: Unknown shader part")
+                    return nil
+            }
+        }
+        
+        return shader.toPointer()
+    }
+}
+
+@_cdecl("Native_FreeShader")
+public func freeShader(shaderPointer: UnsafeRawPointer) {
+    autoreleasepool {
+        MetalShader.release(shaderPointer)
     }
 }
     
@@ -362,6 +428,10 @@ public func beginRenderPass(commandListPointer: UnsafeRawPointer, renderPassDesc
 
         // BUG: There is a memory leak when encoding more than one render pass with drawable
         let renderPassDescriptor = renderPassDescriptorPointer.pointee
+        
+        commandList.isRenderPassActive = true
+        commandList.currentRenderPassDescriptor = renderPassDescriptor
+
         let metalRenderPassDescriptor = MTLRenderPassDescriptor()
 
         if (renderPassDescriptor.RenderTarget0.HasValue) {
@@ -423,12 +493,110 @@ public func endRenderPass(commandListPointer: UnsafeRawPointer) {
         let commandList = MetalCommandList.fromPointer(commandListPointer)
 
         guard let commandEncoder = commandList.commandEncoder else {
-            print("error")
+            print("endRenderPass: Command encoder is nil")
             return
         }
         
         commandEncoder.endEncoding()
         commandList.commandEncoder = nil
+        commandList.isRenderPassActive = false
+        commandList.currentRenderPassDescriptor = nil
+    }
+}
+
+@_cdecl("Native_SetShader")
+public func setShader(commandListPointer: UnsafeRawPointer, shaderPointer: UnsafeRawPointer) {
+    autoreleasepool {
+        let commandList = MetalCommandList.fromPointer(commandListPointer)
+        let graphicsDevice = commandList.graphicsDevice
+        let shader = MetalShader.fromPointer(shaderPointer)
+
+        if (commandList.isRenderPassActive) {
+            // TODO: Hash the parameters
+            // TODO: Async compilation with mutlithread support. (Reserve a slot in the cache, and return the pipelinestate cache object)
+            // TODO: Have a separate CompileShader function that will launch the async work.
+            // TODO: Have a separate GetShaderStatus method
+            // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
+            guard let renderPassDescriptor = commandList.currentRenderPassDescriptor else {
+                return
+            }
+
+            // TODO: This method is not thread-safe!
+            let hash = computeRenderPipelineStateHash(shader, renderPassDescriptor)
+
+            if (graphicsDevice.pipelineStates[hash] == nil) {
+                print("Create PipelineState for shader \(hash)...")
+                let pipelineState = createRenderPipelineState(shader, renderPassDescriptor)
+                graphicsDevice.pipelineStates[hash] = PipelineStateCacheItem(pipelineState)
+            }
+
+            guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
+                return
+            }
+
+            let pipelineState = graphicsDevice.pipelineStates[hash]!;
+            renderCommandEncoder.setRenderPipelineState(pipelineState.pipelineState)
+            commandList.currentShader = shader
+            commandList.currentPipelineState = pipelineState
+        }
+    }
+}
+    
+@_cdecl("Native_SetShaderConstants")
+public func setShaderConstants(commandListPointer: UnsafeRawPointer, slot: UInt32, constantValues: UnsafeRawPointer, constantValueCount: Int) {
+    autoreleasepool {
+        let commandList = MetalCommandList.fromPointer(commandListPointer)
+
+        if (commandList.isRenderPassActive) {
+            guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
+                return
+            }
+            
+            guard let currentShader = commandList.currentShader else {
+                return
+            }
+
+            if (currentShader.amplificationShader != nil) {
+                renderCommandEncoder.setObjectBytes(constantValues, length: constantValueCount, index: Int(slot))
+            }
+            
+            if (currentShader.meshShader != nil) {
+                renderCommandEncoder.setMeshBytes(constantValues, length: constantValueCount, index: Int(slot))
+            }
+
+            if (currentShader.pixelShader != nil) {
+                renderCommandEncoder.setFragmentBytes(constantValues, length: constantValueCount, index: Int(slot))
+            }
+        }
+    }
+}
+
+@_cdecl("Native_DispatchMesh")
+public func dispatchMesh(commandListPointer: UnsafeRawPointer, threadGroupCountX: UInt32, threadGroupCountY: UInt32, threadGroupCountZ: UInt32) {
+    autoreleasepool {
+        let commandList = MetalCommandList.fromPointer(commandListPointer)
+
+        guard let renderCommandEncoder = commandList.commandEncoder as? MTLRenderCommandEncoder else {
+            print("dispatchMesh: Command encoder is not a render command encoder")
+            return
+        }
+        
+        guard let currentShader = commandList.currentShader else {
+            print("dispatchMesh: No shader bound.")
+            return
+        }
+
+        assert(currentShader.amplificationShader == nil || (currentShader.amplificationThreadCount!.width > 0 
+                                                         && currentShader.amplificationThreadCount!.height > 0 
+                                                         && currentShader.amplificationThreadCount!.depth > 0))
+                                                         
+        assert(currentShader.meshShader == nil || (currentShader.meshThreadCount!.width > 0 
+                                                && currentShader.meshThreadCount!.height > 0 
+                                                && currentShader.meshThreadCount!.depth > 0))
+
+        renderCommandEncoder.drawMeshThreadgroups(MTLSizeMake(Int(threadGroupCountX), Int(threadGroupCountY), Int(threadGroupCountZ)),
+                threadsPerObjectThreadgroup: currentShader.amplificationThreadCount != nil ? currentShader.amplificationThreadCount! : MTLSizeMake(32, 1, 1),
+                threadsPerMeshThreadgroup: currentShader.meshThreadCount != nil ? currentShader.meshThreadCount! : MTLSizeMake(32, 1, 1))
     }
 }
 
@@ -468,6 +636,67 @@ private func initRenderPassColorDescriptor(_ descriptor: MTLRenderPassColorAttac
     }
 }
 
+public func computeRenderPipelineStateHash(_ shader: MetalShader, _ renderPassDescriptor: RenderPassDescriptor) -> UInt64 {
+    let shaderAddress = Int(bitPattern: shader.toPointerUnretained())
+    return UInt64(shaderAddress)
+}
+
+public func createRenderPipelineState(_ shader: MetalShader, _ renderPassDescriptor: RenderPassDescriptor) -> MTLRenderPipelineState {
+    let pipelineStateDescriptor = MTLMeshRenderPipelineDescriptor()
+
+    pipelineStateDescriptor.objectFunction = shader.amplificationShader
+    pipelineStateDescriptor.meshFunction = shader.meshShader
+    pipelineStateDescriptor.fragmentFunction = shader.pixelShader
+
+    // TODO: Why is the triangle not back face culled by default?
+
+    //pipelineStateDescriptor.supportIndirectCommandBuffers = true
+    //pipelineStateDescriptor.sampleCount = (metalRenderPassDescriptor.MultiSampleCount.HasValue == 1) ? Int(metalRenderPassDescriptor.MultiSampleCount.Value) : 1
+
+    // TODO: Use the correct render target format
+    if (renderPassDescriptor.RenderTarget0.HasValue) {
+        pipelineStateDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm_srgb
+    }
+
+/*
+    if (metalRenderPassDescriptor.RenderTarget2TextureFormat.HasValue == 1) {
+        pipelineStateDescriptor.colorAttachments[1].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget2TextureFormat.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget3TextureFormat.HasValue == 1) {
+        pipelineStateDescriptor.colorAttachments[2].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget3TextureFormat.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget4TextureFormat.HasValue == 1) {
+        pipelineStateDescriptor.colorAttachments[3].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget4TextureFormat.Value)
+    }
+
+    if (metalRenderPassDescriptor.DepthTexturePointer.HasValue == 1) {
+        pipelineStateDescriptor.depthAttachmentPixelFormat = .depth32Float
+    } 
+
+    if (metalRenderPassDescriptor.RenderTarget1BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[0]!, metalRenderPassDescriptor.RenderTarget1BlendOperation.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget2BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[1]!, metalRenderPassDescriptor.RenderTarget2BlendOperation.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget3BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[2]!, metalRenderPassDescriptor.RenderTarget3BlendOperation.Value)
+    }
+
+    if (metalRenderPassDescriptor.RenderTarget4BlendOperation.HasValue == 1) {
+        initBlendState(pipelineStateDescriptor.colorAttachments[3]!, metalRenderPassDescriptor.RenderTarget4BlendOperation.Value)
+    }*/
+
+    let options = MTLPipelineOption()
+
+        let pipelineState = try! shader.graphicsDevice.metalDevice.makeRenderPipelineState(descriptor: pipelineStateDescriptor, options: options)
+        return pipelineState.0
+}
+
 private func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {
     var utf8 = Array(str.utf8)
     utf8.append(0)  // adds null character
@@ -475,4 +704,18 @@ private func convertString(from str: String) -> UnsafeMutablePointer<UInt8> {
     let result = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: count)
     _ = result.initialize(from: utf8)
     return result.baseAddress!
+}
+
+let sortingClosure: (_ graphicsDeviceInfo: MTLDevice, _ graphicsDeviceInfo: MTLDevice) -> Bool = { device1, device2 in
+    if device1.location == .external && device2.location != .external {
+        return true // device1 is external, device2 is not
+    } else if device1.location != .external && device2.location == .external {
+        return false // device2 is external, device1 is not
+    } else if device1.location == .slot && device2.location != .slot {
+        return true // device1 is slot, device2 is not
+    } else if device1.location != .slot && device2.location == .slot {
+        return false // device2 is slot, device1 is not
+    } else {
+        return device1.recommendedMaxWorkingSetSize > device2.recommendedMaxWorkingSetSize
+    }
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "WindowsCommon.h"
 #include "../../../Common/CircularList.h"
+#include "../../../Common/Dictionary.h"
 
 struct CommandAllocatorPoolItem
 {
@@ -20,6 +21,11 @@ struct CommandListPoolItem
             delete CommandList;
         }
     }
+};
+
+struct PipelineStateCacheItem
+{
+    ComPtr<ID3D12PipelineState> PipelineState;
 };
 
 struct Direct3D12GraphicsDevice : BaseGraphicsObject
@@ -47,7 +53,9 @@ struct Direct3D12GraphicsDevice : BaseGraphicsObject
     CircularList<CommandListPoolItem> DirectCommandListsPool;
     CircularList<CommandListPoolItem> ComputeCommandListsPool;
     CircularList<CommandListPoolItem> CopyCommandListsPool;
-    
+
+    Dictionary<uint64_t, PipelineStateCacheItem> PipelineStates;
+
     // HACK: This is temporary, will be refactored later!
     ComPtr<ID3D12DescriptorHeap> RtvDescriptorHeap;
     uint32_t RtvDescriptorHandleSize;

@@ -27,3 +27,4 @@ bld/
 [Ll]ogs/
 .build/
 .swiftpm/
+external/shader-compilers/

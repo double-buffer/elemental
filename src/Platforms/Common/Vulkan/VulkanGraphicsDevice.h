@@ -22,6 +22,11 @@ struct VulkanCommandPoolItem
     bool IsInUse;
 };
 
+struct VulkanPipelineStateCacheItem
+{
+    VkPipeline PipelineState;
+};
+
 struct VulkanGraphicsDevice : BaseGraphicsObject
 {
     VulkanGraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService),
@@ -45,6 +50,8 @@ struct VulkanGraphicsDevice : BaseGraphicsObject
     CircularList<VulkanCommandPoolItem> ComputeCommandPool;
     CircularList<VulkanCommandPoolItem> CopyCommandPool;
     uint64_t CommandPoolGeneration = 0;
+    
+    Dictionary<uint64_t, VulkanPipelineStateCacheItem> PipelineStates;
 };
 
 struct VulkanDeviceCommandPools

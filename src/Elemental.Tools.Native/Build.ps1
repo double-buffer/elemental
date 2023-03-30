@@ -1,0 +1,104 @@
+param ($outputDirectory, $Configuration)
+
+# TODO: Use cmake?
+
+function RegisterVisualStudioEnvironment
+{
+    $registeredVisualStudioVersion = Get-Content -Path Env:VisualStudioVersion -ErrorAction SilentlyContinue
+    Write-Output $registeredVisualStudioVersion
+
+    if (-not($registeredVisualStudioVersion -eq "17.0") -And -not($registeredVisualStudioVersion -eq "17.5"))
+    {
+        Write-Output "[93mRegistering Visual Studio Environment...[0m"
+
+        # TODO: Do something better here
+        $vsPath = ""
+        $vs2019ComPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+        $vs2019ProfPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat"
+        $vs2019EntPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        $vs2019PreviewPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\Preview\VC\Auxiliary\Build\vcvars64.bat"
+        $vs2022PreviewPath = "C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Auxiliary\Build\vcvars64.bat"
+        
+        if (Test-Path -Path $vs2019ComPath)
+        {
+            $vsPath = $vs2019ComPath
+        }
+
+        if (Test-Path -Path $vs2019ProfPath)
+        {
+            $vsPath = $vs2019ProfPath
+        }
+
+        if (Test-Path -Path $vs2019EntPath)
+        {
+            $vsPath = $vs2019EntPath
+        }
+
+        if (Test-Path -Path $vs2019PreviewPath)
+        {
+            $vsPath = $vs2019PreviewPath
+        }
+
+        if (Test-Path -Path $vs2022PreviewPath)
+        {
+            $vsPath = $vs2022PreviewPath
+        }
+
+        $batchCommand = "`"$vsPath`" > nul & set"
+
+        cmd /c $batchCommand | Foreach-Object {
+            $p, $v = $_.split('=')
+            Set-Item -path env:$p -value $v
+        }
+    }
+}
+
+function ShowErrorMessage
+{
+    Write-Output "[91mError: Build has failed![0m"
+}
+
+try
+{
+    Write-Output "[93mCompiling Tools Native ($configuration)...[0m"
+
+    if (-not(Test-Path -Path $outputDirectory)) {
+        mkdir $outputDirectory > $null
+    }
+
+    $outputDirectory = Resolve-Path $outputDirectory
+
+    $currentDirectory = (Get-Item -Path .).BaseName
+    Write-Output $currentDirectory
+    
+    if (-not($currentDirectory -eq "Elemental.Tools.Native")) {
+        Push-Location ./../Elemental.Tools.Native
+    }
+
+    if (-not(Test-Path -Path ./obj)) {
+        mkdir ./obj > $null
+    }
+        
+    Push-Location ./obj/
+
+    if ($IsMacOS) {
+        # TODO: Release mode
+        clang -std=c++17 -lc++ -fms-extensions -g -liconv -lspirv-cross-core -lspirv-cross-cpp -lspirv-cross-msl -lspirv-cross-glsl -lspirv-cross-reflect -lspirv-cross-util -L../../../external/shader-compilers/spirv-cross/lib/  -dynamiclib -I../Interop/ -I../../../external/DirectX-Headers/include/directx/ -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/ -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
+    } else {
+        RegisterVisualStudioEnvironment
+
+        #TODO: Put the directxshader include real include path. For the moment, it takes the windows SDK header
+
+        if ($Configuration -eq "Debug") {
+            cl.exe /MD /nologo /DUNICODE /D_UNICODE /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17 -I../../../external/shader-compilers/dxc/inc/dxc/ -I../../../external/shader-compilers/spirv-cross/include/ /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /DEBUG /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO /LIBPATH:../../../external/shader-compilers/spirv-cross/lib/lib/ uuid.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib spirv-cross-msl.lib spirv-cross-glsl.lib spirv-cross-util.lib spirv-cross-core.lib spirv-cross-reflect.lib spirv-cross-cpp.lib
+        } else {
+            cl.exe /nologo /DUNICODE /D_UNICODE /D_WINDOWS /D_USRDLL /D_WINDLL /std:c++17  -I../../../external/shader-compilers/dxc/inc/dxc/ -I../../../external/shader-compilers/spirv-cross/include/ /O2 /Zi /EHsc "../UnityBuild.cpp" /link /DLL /OUT:$outputDirectory/Elemental.Tools.Native.dll /SUBSYSTEM:WINDOWS /MAP /OPT:ref /INCREMENTAL:NO /WINMD:NO /NOLOGO uuid.lib libcmt.lib libvcruntimed.lib libucrtd.lib kernel32.lib user32.lib gdi32.lib ole32.lib advapi32.lib Winmm.lib
+        }
+    }
+}
+
+finally
+{
+    Pop-Location
+    Pop-Location
+}

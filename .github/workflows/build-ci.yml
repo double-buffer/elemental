@@ -10,6 +10,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
     - name: Configure MSBuild
       uses: microsoft/setup-msbuild@v1.1
@@ -27,6 +29,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    # TODO: Change that, we use native swift packages now
     - name: Build MacOS Platform
       working-directory: ./src/Platforms/MacOS
       run: pwsh ./Build.ps1 -outputDirectory ./bin/ -configuration Release

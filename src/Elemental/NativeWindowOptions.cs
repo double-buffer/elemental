@@ -11,7 +11,7 @@ public readonly record struct NativeWindowOptions
     /// </summary>
     public NativeWindowOptions()
     {
-        Title = "Window Title";
+        Title = "Elemental Window";
         Width = 1280;
         Height = 720;
         WindowState = NativeWindowState.Normal;

@@ -39,7 +39,7 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
         };
         
         createInfo.ppEnabledExtensionNames = extensions;
-	    createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+        createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
         VkValidationFeatureEnableEXT enabledValidationFeatures[] =
         {
@@ -67,7 +67,7 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
         };
         
         createInfo.ppEnabledExtensionNames = extensions;
-	    createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+        createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
     
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &_vulkanInstance));
     }
@@ -210,18 +210,17 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_KHR_PRESENT_ID_EXTENSION_NAME,
         VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
-        VK_NV_MESH_SHADER_EXTENSION_NAME,
-        VK_NV_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME
+        VK_EXT_MESH_SHADER_EXTENSION_NAME
     };
 
     createInfo.ppEnabledExtensionNames = extensions;
     createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
     VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-	features.features.multiDrawIndirect = true;
-	features.features.pipelineStatisticsQuery = true;
-	features.features.shaderInt16 = true;
-	features.features.shaderInt64 = true;
+    features.features.multiDrawIndirect = true;
+    features.features.pipelineStatisticsQuery = true;
+    features.features.shaderInt16 = true;
+    features.features.shaderInt64 = true;
 
     VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     features12.timelineSemaphore = true;
@@ -247,16 +246,16 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     features13.synchronization2 = true;
     features13.dynamicRendering = true;
 
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
+    meshFeatures.meshShader = true;
+    meshFeatures.taskShader = true;
+    meshFeatures.meshShaderQueries = true;
+
     VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
     presentIdFeatures.presentId = true;
     
     VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR };
     presentWaitFeatures.presentWait = true;
-
-    // TODO: Replace that with standard extension but it doesn't seems to work for now :/
-    VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV };
-    meshFeatures.meshShader = true;
-    meshFeatures.taskShader = true;
 
     createInfo.pNext = &features;
     features.pNext = &features12;
@@ -285,6 +284,11 @@ void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     VulkanCommandPoolItem* item;
 
+    for (uint32_t i = 0; i < graphicsDevice->PipelineStates.Count(); i++)
+    {
+        vkDestroyPipeline(graphicsDevice->Device, graphicsDevice->PipelineStates[(int32_t)i].PipelineState, nullptr);
+    }
+
     for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
     {
         graphicsDevice->DirectCommandPool.GetCurrentItemPointerAndMove(&item);
@@ -293,14 +297,14 @@ void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
         {
             vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
         }
-        
+
         graphicsDevice->ComputeCommandPool.GetCurrentItemPointerAndMove(&item);
 
         if (item->CommandPool != nullptr)
         {
             vkDestroyCommandPool(graphicsDevice->Device, item->CommandPool, nullptr);
         }
-        
+
         graphicsDevice->CopyCommandPool.GetCurrentItemPointerAndMove(&item);
 
         if (item->CommandPool != nullptr)
@@ -432,28 +436,28 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
     uint64_t waitSemaphoreValues[MAX_VULKAN_COMMAND_BUFFERS];
 
     for (int32_t i = 0; i < fenceToWaitCount; i++)
-	{
-		auto fenceToWait = fencesToWait[i];
-		auto commandQueueToWait = (VulkanCommandQueue*)fenceToWait.CommandQueuePointer;
+    {
+        auto fenceToWait = fencesToWait[i];
+        auto commandQueueToWait = (VulkanCommandQueue*)fenceToWait.CommandQueuePointer;
 
         waitSemaphores[i] = commandQueueToWait->TimelineSemaphore;
         waitSemaphoreValues[i] = commandQueueToWait->FenceValue;
         submitStageMasks[i] = (commandQueue->CommandQueueType == CommandQueueType_Compute) ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-	}
+    }
 
     VkCommandBuffer vulkanCommandBuffers[MAX_VULKAN_COMMAND_BUFFERS];
 
     for (int32_t i = 0; i < commandListCount; i++)
-	{
-		auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
+    {
+        auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
         vulkanCommandBuffers[i] = vulkanCommandList->DeviceObject;
-	}
+    }
     
     auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
 
     VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
     timelineInfo.waitSemaphoreValueCount = fenceToWaitCount;
-    timelineInfo.pWaitSemaphoreValues = waitSemaphoreValues;
+    timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
     timelineInfo.signalSemaphoreValueCount = 1;
     timelineInfo.pSignalSemaphoreValues = &fenceValue;
 
@@ -470,14 +474,14 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
     AssertIfFailed(vkQueueSubmit(commandQueue->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
 
     for (int32_t i = 0; i < commandListCount; i++)
-	{
-		auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
+    {
+        auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
 
         if (vulkanCommandList->IsFromCommandPool)
         {
             UpdateCommandPoolFence(vulkanCommandList, fenceValue);
         }
-	}
+    }
 
     auto fence = Fence();
     fence.CommandQueuePointer = commandQueue;
@@ -499,7 +503,7 @@ void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
     }
 
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
-	{
+    {
         printf("Wait for fence on CPU...\n");
 
         VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
@@ -595,14 +599,14 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
     CreateSwapChainBackBuffers(swapChain, swapChainCreateInfo.imageExtent.width, swapChainCreateInfo.imageExtent.height);
 
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-	AssertIfFailed(vkCreateFence(graphicsDevice->Device, &fenceCreateInfo, 0, &swapChain->BackBufferAcquireFence ));
+    AssertIfFailed(vkCreateFence(graphicsDevice->Device, &fenceCreateInfo, 0, &swapChain->BackBufferAcquireFence ));
 
     return swapChain;
 }
 
 void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
 {
-	auto swapChain = (VulkanSwapChain*)swapChainPointer;
+    auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
 
     vkDestroyFence(graphicsDevice->Device, swapChain->BackBufferAcquireFence, nullptr);
@@ -629,7 +633,7 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
 
-	auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
+    auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
     WaitForFenceOnCpu(fence);
 
     swapChain->CurrentPresentId = 0;
@@ -674,6 +678,7 @@ void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.waitSemaphoreCount = 0;
+    presentInfo.pWaitSemaphores = nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &swapChain->DeviceObject;
     presentInfo.pImageIndices = &swapChain->CurrentImageIndex;
@@ -691,9 +696,10 @@ void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
 
-    if (swapChain->CurrentPresentId > 0)
+    // BUG: This method is not working correctly for now because present is blocking the CPU thread
+    if (swapChain->CurrentPresentId >= swapChain->MaximumFrameLatency)
     {
-        auto presentId = max(0, (int32_t)swapChain->CurrentPresentId - (int32_t)swapChain->MaximumFrameLatency);
+        auto presentId = swapChain->CurrentPresentId - swapChain->MaximumFrameLatency;
         AssertIfFailed(vkWaitForPresentKHR(graphicsDevice->Device, swapChain->DeviceObject, presentId, UINT64_MAX));
     }
 
@@ -703,12 +709,110 @@ void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
     vkResetFences(swapChain->GraphicsDevice->Device, 1, &swapChain->BackBufferAcquireFence);
 }
 
+void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
+{
+    auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
+    auto shader = new VulkanShader(graphicsDevice->GraphicsService, graphicsDevice);
+
+    auto pushConstantCount = 0u;
+    
+    for (int32_t i = 0; i < shaderPartCount; i++)
+    {
+        auto shaderPart = shaderParts[i];
+
+        if (pushConstantCount == 0)
+        {
+            for (int32_t j = 0; j < shaderPart.MetaDataCount; j++)
+            {
+                auto metaData = shaderPart.MetaDataPointer[j];
+
+                if (metaData.Type == ShaderMetaDataType_PushConstantsCount)
+                {
+                    pushConstantCount = metaData.Value;
+                    break;
+                }
+            }
+        }
+
+        VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+        createInfo.codeSize = shaderPart.DataCount;
+        createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderPart.DataPointer);
+
+        VkShaderModule shaderModule = nullptr;
+        AssertIfFailed(vkCreateShaderModule(graphicsDevice->Device, &createInfo, 0, &shaderModule));
+
+        switch (shaderPart.Stage)
+        {
+        case ShaderStage_AmplificationShader:
+            shader->AmplificationShader = shaderModule;
+            memcpy(shader->AmplificationShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
+            break;
+
+        case ShaderStage_MeshShader:
+            shader->MeshShader = shaderModule;
+            memcpy(shader->MeshShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
+            break;
+
+        case ShaderStage_PixelShader:
+            shader->PixelShader = shaderModule;
+            memcpy(shader->PixelShaderEntryPoint, shaderPart.EntryPoint, strlen((char*)shaderPart.EntryPoint) + 1);
+            break;
+        }
+    }
+
+	VkPipelineLayoutCreateInfo layoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	layoutCreateInfo.pSetLayouts = nullptr;
+	layoutCreateInfo.setLayoutCount = 0;
+
+    if (pushConstantCount > 0)
+    {
+        VkPushConstantRange push_constant;
+        push_constant.offset = 0;
+        push_constant.size = pushConstantCount * sizeof(uint32_t);
+        push_constant.stageFlags = VK_SHADER_STAGE_ALL;
+
+        layoutCreateInfo.pPushConstantRanges = &push_constant;
+        layoutCreateInfo.pushConstantRangeCount = 1;
+    }
+
+	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice->Device, &layoutCreateInfo, 0, &shader->PipelineLayout));
+
+    return shader;
+}
+
+void VulkanGraphicsService::FreeShader(void* shaderPointer)
+{
+    auto shader = (VulkanShader*)shaderPointer;
+    auto graphicsDevice = (VulkanGraphicsDevice*)shader->GraphicsDevice;
+
+    if (shader->PipelineLayout != nullptr)
+    {
+        vkDestroyPipelineLayout(graphicsDevice->Device, shader->PipelineLayout, nullptr);
+    }
+
+    if (shader->AmplificationShader != nullptr)
+    {
+        vkDestroyShaderModule(graphicsDevice->Device, shader->AmplificationShader, nullptr);
+    }
+
+    if (shader->MeshShader != nullptr)
+    {
+        vkDestroyShaderModule(graphicsDevice->Device, shader->MeshShader, nullptr);
+    }
+
+    if (shader->PixelShader != nullptr)
+    {
+        vkDestroyShaderModule(graphicsDevice->Device, shader->PixelShader, nullptr);
+    }
+}
+
 void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
 
     commandList->CurrentRenderPassDescriptor = *renderPassDescriptor;
-    
+    commandList->IsRenderPassActive = true;
+
     if (renderPassDescriptor->RenderTarget0.HasValue)
     {
         auto texture = (VulkanTexture*)commandList->CurrentRenderPassDescriptor.RenderTarget0.Value.TexturePointer;
@@ -732,13 +836,11 @@ void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPass
         vkCmdBeginRendering(commandList->DeviceObject, &passInfo);
 
         VkViewport viewport = { 0, float(texture->Height), float(texture->Width), -float(texture->Height), 0, 1 };
-        VkRect2D scissor = { {0, 0}, {uint32_t(texture->Height), uint32_t(texture->Height)} };
+        VkRect2D scissor = { {0, 0}, {uint32_t(texture->Width), uint32_t(texture->Height)} };
 
         vkCmdSetViewport(commandList->DeviceObject, 0, 1, &viewport);
         vkCmdSetScissor(commandList->DeviceObject, 0, 1, &scissor);
     }
-
-    // TODO: We are not using render passes, will it works on tiled architecture GPUs on android?
 }
     
 void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
@@ -758,6 +860,62 @@ void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
     }
     
     commandList->CurrentRenderPassDescriptor = {};
+    commandList->IsRenderPassActive = false;
+}
+
+void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPointer)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    auto graphicsDevice = commandList->GraphicsDevice;
+    auto shader = (VulkanShader*)shaderPointer;
+
+    if (commandList->IsRenderPassActive)
+    {
+        // TODO: Hash the parameters
+        // TODO: Async compilation with mutlithread support. (Reserve a slot in the cache, and return the pipelinestate cache object)
+        // TODO: Have a separate CompileShader function that will launch the async work.
+        // TODO: Have a separate GetShaderStatus method
+        // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
+
+        auto renderPassDescriptor = &commandList->CurrentRenderPassDescriptor;
+        auto hash = ComputeRenderPipelineStateHash(shader, renderPassDescriptor);
+
+        // TODO: This is not thread-safe!
+        // TODO: We should have a kind of GetOrAdd method 
+        if (!graphicsDevice->PipelineStates.ContainsKey(hash))
+        {
+            printf("Create PipelineState for shader %d...\n", hash);
+            auto pipelineStateCacheItem = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
+
+            graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
+        }
+
+        auto pipelineState = &graphicsDevice->PipelineStates[hash];
+        assert(pipelineState->PipelineState != nullptr);
+
+        vkCmdBindPipeline(commandList->DeviceObject, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineState->PipelineState);
+        commandList->CurrentPipelineState = pipelineState;
+        commandList->CurrentShader = shader;
+    }
+}
+
+void VulkanGraphicsService::SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+    assert(commandList->CurrentShader != nullptr);
+
+    // TODO: There seems that there was a memory leak in the old engine. Check that again!
+    vkCmdPushConstants(commandList->DeviceObject, commandList->CurrentShader->PipelineLayout, VK_SHADER_STAGE_ALL, 0, constantValueCount, constantValues);
+}
+
+void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
+    auto commandList = (VulkanCommandList*)commandListPointer;
+
+    if (commandList->IsRenderPassActive)
+    {
+        vkCmdDrawMeshTasksEXT(commandList->DeviceObject, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+    }
 }
    
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
@@ -938,8 +1096,8 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
 
     uint32_t swapchainImageCount = 0;
     VkImage swapchainImages[3];
-	AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, nullptr));
-	AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, swapchainImages));
+    AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, nullptr));
+    AssertIfFailed(vkGetSwapchainImagesKHR(graphicsDevice->Device, swapChain->DeviceObject, &swapchainImageCount, swapchainImages));
 
     auto format = swapChain->Format == SwapChainFormat_HighDynamicRange ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_B8G8R8A8_SRGB;
 
@@ -968,9 +1126,107 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
     }
 }
 
+uint64_t VulkanGraphicsService::ComputeRenderPipelineStateHash(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
+{
+    // TODO: For the moment the hash of the shader is base on the pointer
+    // Maybe we should base it on the hash of each shader parts data? 
+    // This would prevent creating duplicate PSO if 2 shaders contains the same parts (it looks like an edge case)
+    // but this would add more processing to generate the hash and this function is perf critical
+
+    // TODO: Hash other render pass parameters
+    // TODO: Use FarmHash64? https://github.com/TommasoBelluzzo/FastHashes/tree/master
+
+    return (uint64_t)shader;
+}
+
+VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
+{
+    auto graphicsDevice = shader->GraphicsDevice;
+
+    VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    uint32_t stagesCount = 2;
+
+    VkPipelineShaderStageCreateInfo stages[3] = {};
+    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stages[0].stage = VK_SHADER_STAGE_MESH_BIT_EXT;
+    stages[0].module = shader->MeshShader;
+    stages[0].pName = shader->MeshShaderEntryPoint;
+
+    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    stages[1].module = shader->PixelShader;
+    stages[1].pName = shader->PixelShaderEntryPoint;
+    
+    if (shader->AmplificationShader != nullptr)
+    {
+        stages[2].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stages[2].stage = VK_SHADER_STAGE_TASK_BIT_EXT;
+        stages[2].module = shader->AmplificationShader;
+        stages[2].pName = shader->AmplificationShaderEntryPoint;
+        stagesCount++;
+    }
+    
+    createInfo.stageCount = stagesCount;
+    createInfo.pStages = stages;
+
+    VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
+    createInfo.pViewportState = &viewportState;
+
+    VkPipelineRasterizationStateCreateInfo rasterizationState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    rasterizationState.lineWidth = 1.0f;
+    rasterizationState.cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_BACK_BIT;
+    rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    createInfo.pRasterizationState = &rasterizationState;
+
+    VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    createInfo.pMultisampleState = &multisampleState;
+
+    VkPipelineDepthStencilStateCreateInfo depthStencilState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    createInfo.pDepthStencilState = &depthStencilState;
+
+    // TODO: To Refactor!    
+    VkPipelineColorBlendAttachmentState renderTargetBlendState = {
+				false,
+				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
+				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
+				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+			};
+
+    VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    colorBlendState.attachmentCount = 1;
+    colorBlendState.pAttachments = &renderTargetBlendState;
+    createInfo.pColorBlendState = &colorBlendState;
+
+    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+    VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    dynamicState.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
+    dynamicState.pDynamicStates = dynamicStates;
+    createInfo.pDynamicState = &dynamicState;
+
+    VkFormat formats[] = {VK_FORMAT_B8G8R8A8_SRGB};
+
+    VkPipelineRenderingCreateInfo renderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+    renderingCreateInfo.colorAttachmentCount = 1; // TODO: Change that
+    renderingCreateInfo.pColorAttachmentFormats = formats;
+    createInfo.pNext = &renderingCreateInfo;
+    createInfo.layout = shader->PipelineLayout;
+
+    VkPipeline pipelineState = nullptr;
+    AssertIfFailed(vkCreateGraphicsPipelines(graphicsDevice->Device, nullptr, 1, &createInfo, 0, &pipelineState));
+
+    VulkanPipelineStateCacheItem cacheItem = {};
+    cacheItem.PipelineState = pipelineState;
+
+    return cacheItem;
+}
+
 void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer)
 {
-	// TODO: Handle texture accesses, currently we only handle the image layout
+    // TODO: Handle texture accesses, currently we only handle the image layout
     // TODO: Use VkImageMemoryBarrier2. What are the differences?
 
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -999,38 +1255,38 @@ void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandL
 
 static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
-	// This silences warnings like "For optimal performance image layout should be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL instead of GENERAL."
-	// We'll assume other performance warnings are also not useful.
-	// if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
+    // This silences warnings like "For optimal performance image layout should be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL instead of GENERAL."
+    // We'll assume other performance warnings are also not useful.
+    // if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
     // {
-	// 	return VK_FALSE;
+    // 	return VK_FALSE;
     // }
 
-	const char* type = "[93mVULKAN INFO";
+    const char* type = "[93mVULKAN INFO";
 
-	if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
         type = "[91mVULKAN ERROR";
     }
 
     else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
     {
-	    type = "[93mVULKAN WARNING";
+        type = "[93mVULKAN WARNING";
     }
 
-	char message[4096];
-	snprintf(message, 4096, "%s: %s[0m\n", type, pMessage);
+    char message[4096];
+    snprintf(message, 4096, "%s: %s[0m\n", type, pMessage);
 
-	printf("%s", message);
+    printf("%s", message);
 
 #ifdef _WIN32
-	OutputDebugStringA(message);
+    OutputDebugStringA(message);
 #endif
 
-	if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
-		assert(!"Vulkan validation error encountered!");
+        assert(!"Vulkan validation error encountered!");
     }
 
-	return VK_FALSE;
+    return VK_FALSE;
 }

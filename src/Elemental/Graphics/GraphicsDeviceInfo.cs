@@ -40,6 +40,8 @@ public readonly record struct GraphicsDeviceInfo
     /// </summary>
     /// <value>available GPU memory in bytes of the <see cref="GraphicsDevice" />.</value>
     public ulong AvailableMemory { get; init; }
+
+    // TODO: Return maximum caps to task/mesh/compute/texture etc.
 }
 
 [CustomMarshaller(typeof(GraphicsDeviceInfo), MarshalMode.Default, typeof(GraphicsDeviceInfoMarshaller))]
