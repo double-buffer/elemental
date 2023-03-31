@@ -41,7 +41,7 @@ jobs:
       with:
         name: ElementalToolsNativex64
         path: |
-            ./src/Elemental.Tools/bin/*.dll
+            ./src/Elemental.Tools.Native/bin/*.dll
         
   build_tools_dotnet:
     runs-on: windows-latest
