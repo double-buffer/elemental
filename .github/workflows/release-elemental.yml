@@ -167,7 +167,7 @@ jobs:
     - name: Upload Nuget package
       uses: actions/upload-artifact@v3
       with:
-        name: nuget
+        name: Elemental.${{ inputs.tag }}
         path: ./publish/Elemental/build/*.nupkg
 
     - name: Delete Windows Native x64

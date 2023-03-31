@@ -8,6 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <CompileNative>True</CompileNative>
   </PropertyGroup>
   
   <ItemGroup>
@@ -15,7 +16,7 @@
     <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   
-  <Target Name="GetShaderCompilers" BeforeTargets="CoreCompile">
+  <Target Name="GetShaderCompilers" BeforeTargets="CoreCompile" Condition="'$(CompileNative)' == 'True'">
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
       <PowerShellCommand>powershell</PowerShellCommand>
     </PropertyGroup>
@@ -25,7 +26,7 @@
     <Exec Condition="!Exists('../../external/shader-compilers')" Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File ../../external/GetShaderCompilers.ps1" />
   </Target>
   
-  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile">
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(CompileNative)' == 'True'">
     <PropertyGroup>
       <BuildScript>$(MSBuildProjectDirectory)/../Elemental.Tools.Native/Build.ps1</BuildScript>
     </PropertyGroup>
