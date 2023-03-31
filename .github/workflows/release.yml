@@ -132,19 +132,19 @@ jobs:
       uses: actions/download-artifact@master
       with:
         name: WindowsNativex64
-        path: ./publish/runtimes/win-x64
+        path: ./publish/Elemental/runtimes/win-x64
           
     - name: Download MacOS Native
       uses: actions/download-artifact@master
       with:
         name: MacOSNative
-        path: ./publish/runtimes/osx
+        path: ./publish/Elemental/runtimes/osx
           
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
       with:
         name: DotnetBinaries
-        path: ./publish/lib/net7.0
+        path: ./publish/Elemental/lib/net7.0
 
     - name: Replace tokens in nuspec file
       uses: datamonsters/replace-action@master
