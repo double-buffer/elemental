@@ -1,0 +1,54 @@
+name: Build Elemental Tools Native
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
+
+jobs:
+  build_tools_native:
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform }}-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        msbuild-architecture: x64
+        
+    - name: Get Shader Compilers
+      working-directory: ./external
+      shell: powershell
+      run: ./GetShaderCompilers.ps1
+
+    - name: Build Windows Platform
+      working-directory: ./src/Elemental.Tools.Native
+      shell: powershell
+      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Copy files Windows
+      if: inputs.platform == 'windows'
+      working-directory: ./src/Elemental.Tools.Native
+      run: |
+        cp ../../external/shader-compilers/dxc/bin/x64/*.dll ./bin/
+        
+    - name: Copy files MacOS
+      if: inputs.platform == 'macos'
+      working-directory: ./src/Elemental.Tools.Native
+      run: |
+        cp ../../external/shader-compilers/dxc/lib/*.dylib ./bin/
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
+        path: |
+            ./src/Elemental.Tools.Native/bin/*.dll
