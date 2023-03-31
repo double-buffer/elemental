@@ -11,8 +11,8 @@ on:
         type: string
 
 jobs:
-  build_tools_native_windows:
-    runs-on: windows-latest
+  build_tools_native:
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform }}-latest
 
     steps:
     - uses: actions/checkout@v3
@@ -20,48 +20,36 @@ jobs:
         submodules: recursive
 
     - name: Configure MSBuild
+      if: inputs.platform == 'windows'
       uses: microsoft/setup-msbuild@v1.1
       with:
         msbuild-architecture: x64
-
+        
     - name: Get Shader Compilers
-      run: ./external/GetShaderCompilers.ps1
+      working-directory: ./external
+      shell: powershell
+      run: ./GetShaderCompilers.ps1
 
     - name: Build Windows Platform
-      run: ./src/Elemental.Tools.Native/Build.ps1 -outputDirectory ./bin/ -configuration Release
+      working-directory: ./src/Elemental.Tools.Native
+      shell: powershell
+      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
 
     - name: Copy files Windows
+      if: inputs.platform == 'windows'
+      working-directory: ./src/Elemental.Tools.Native
       run: |
         cp ../../external/shader-compilers/dxc/bin/x64/*.dll ./bin/
-
-    - name: Upload Binaries
-      uses: actions/upload-artifact@v3
-      with:
-        name: ElementalToolsNative_windows_x64
-        path: |
-            ./src/Elemental.Tools.Native/bin/*.dll
-
-  build_tools_native_macos:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-
-    - name: Get Shader Compilers
-      run: ./external/GetShaderCompilers.sh
-
-    - name: Build MacOS Platform
-      run: ./src/Elemental.Tools.Native/Build.sh -outputDirectory ./bin/ -configuration Release
-
+        
     - name: Copy files MacOS
+      if: inputs.platform == 'macos'
+      working-directory: ./src/Elemental.Tools.Native
       run: |
         cp ../../external/shader-compilers/dxc/lib/*.dylib ./bin/
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
-        name: ElementalToolsNative_macos_x64
+        name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
         path: |
-            ./src/Elemental.Tools.Native/bin/*.dylib
+            ./src/Elemental.Tools.Native/bin/*.dll
