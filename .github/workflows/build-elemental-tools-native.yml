@@ -55,12 +55,21 @@ jobs:
       run: |
         cp ../../external/shader-compilers/dxc/lib/*.dylib ./bin/
 
-    - name: Upload Binaries
+    - name: Upload Binaries Windows
+      if: inputs.platform == 'windows'
       uses: actions/upload-artifact@v3
       with:
         name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
         path: |
-            ./src/Elemental.Tools.Native/bin/*
+            ./src/Elemental.Tools.Native/bin/*.dll
+            
+    - name: Upload Binaries MacOS
+      if: inputs.platform == 'macos'
+      uses: actions/upload-artifact@v3
+      with:
+        name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
+        path: |
+            ./src/Elemental.Tools.Native/bin/*.dylib
 
     - name: Save Dependencies to Cache
       if: steps.cache-dependencies.outputs.cache-hit != 'true'
