@@ -147,7 +147,7 @@ jobs:
     - name: Replace tokens in nuspec file
       uses: datamonsters/replace-action@master
       with:
-        files: "./publish/Elemental.nuspec"
+        files: "./publish/Elemental/Elemental.nuspec"
         replacements: '#VERSION#=${{ inputs.tag }},#COMMIT#=e1c65e4524cd70ee6e22abe33e6cb6ec73938cb3'
 
     - name: Nuget pack
@@ -159,7 +159,7 @@ jobs:
 
     - name: Push Nuget Package
       if: ${{ inputs.publish-nuget == true }}
-      run: dotnet nuget push ./publish/build/Elemental.${{ inputs.tag }}.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{ secrets.NUGET_APIKEY }}
+      run: dotnet nuget push ./publish/Elemental/build/Elemental.${{ inputs.tag }}.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{ secrets.NUGET_APIKEY }}
           
     - name: Upload Nuget package
       uses: actions/upload-artifact@v3
