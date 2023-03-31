@@ -68,10 +68,6 @@
       <TargetPath>libdxcompiler.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="../../external/shader-compilers/spirv-cross/lib/libspirv-cross-c-shared.dylib">
-      <TargetPath>libspirv-cross-c-shared.dylib</TargetPath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

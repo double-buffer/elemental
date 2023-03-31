@@ -1,4 +1,4 @@
-name: Release Elemental
+name: Release Elemental Tools
 
 on:
   workflow_call:
@@ -14,35 +14,17 @@ on:
         type: boolean
 
 jobs:
-  build_tools_windows_x64:
-    runs-on: windows-latest
+  build_tools_native:
+    strategy:
+      matrix:
+        platform: [windows]
+        architecture: [x64]
+    uses: ./.github/workflows/build-elemental-tools-native.yml
+    name: 'build-elemental-tools-${{ matrix.platform }}-${{ matrix.architecture }}'
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
 
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-
-    - name: Configure MSBuild
-      uses: microsoft/setup-msbuild@v1.1
-      with:
-        msbuild-architecture: x64
-        
-    - name: Get Shader Compilers
-      working-directory: ./external
-      shell: powershell
-      run: ./GetShaderCompilers.ps1
-
-    - name: Build Windows Platform
-      working-directory: ./src/Elemental.Tools.Native
-      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
-
-    - name: Upload Binaries
-      uses: actions/upload-artifact@v3
-      with:
-        name: ElementalToolsNativex64
-        path: |
-            ./src/Elemental.Tools.Native/bin/*.dll
-        
   build_tools_dotnet:
     runs-on: windows-latest
 
@@ -69,14 +51,13 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ElementalToolsDotnet
-
         path: |
           ./src/Elemental.Tools/bin/Release/net7.0/Elemental.Tools.dll
           ./src/Elemental.Tools/bin/Release/net7.0/Elemental.Tools.xml
           
   build_nuget:
     runs-on: windows-latest
-    needs: [build_tools_windows_x64, build_tools_dotnet]
+    needs: [build_tools_native, build_tools_dotnet]
 
     steps:
     - uses: actions/checkout@v3
@@ -89,7 +70,7 @@ jobs:
     - name: Download Windows Native x64
       uses: actions/download-artifact@master
       with:
-        name: ElementalToolsNativex64
+        name: ElementalToolsNative_windows_x64
         path: ./publish/Elemental.Tools/runtimes/win-x64
           
     - name: Download Dotnet Binaries
@@ -118,7 +99,7 @@ jobs:
     - name: Upload Nuget package
       uses: actions/upload-artifact@v3
       with:
-        name: Elemental.${{ inputs.tag }}
+        name: Elemental.Tool.${{ inputs.tag }}
         path: ./publish/Elemental.Tools/build/*.nupkg
 
     - name: Delete Windows Native x64
