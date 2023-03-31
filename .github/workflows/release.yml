@@ -46,7 +46,7 @@ jobs:
       working-directory: ./src/Platforms/Windows
       run: |
         $dllPath = Get-ChildItem -Path ./bin -Recurse -Include 'vulkan-1.dll' -File | Select-Object -First 1
-        Write-Output echo "vulkan_dll_path=$dllPath" >> $GITHUB_OUTPUT
+        Write-Output "vulkan_dll_path=$dllPath" >> $GITHUB_OUTPUT
     
     - name: Copy files
       working-directory: ./src/Platforms/Windows
