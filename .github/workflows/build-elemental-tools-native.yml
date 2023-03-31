@@ -52,4 +52,4 @@ jobs:
       with:
         name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
         path: |
-            ./src/Elemental.Tools.Native/bin/*.dll
+            ./src/Elemental.Tools.Native/bin/*
