@@ -116,6 +116,8 @@ jobs:
         path: |
           ./src/Elemental/bin/Release/net7.0/Elemental.dll
           ./src/Elemental/bin/Release/net7.0/Elemental.xml
+          ./src/Elemental/bin/Release/net7.0/Elemental.Common.dll
+          ./src/Elemental/bin/Release/net7.0/Elemental.Common.xml
           
   build_nuget:
     runs-on: windows-latest
