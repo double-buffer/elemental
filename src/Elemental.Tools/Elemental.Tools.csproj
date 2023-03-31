@@ -40,7 +40,7 @@
   </Target>
 
   <!-- REFACTOR the copying of the tools -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(CompileNative)' == 'True'">
     <Content Include="$(OutputPath)/Elemental.Tools.Native.dll">
       <TargetPath>Elemental.Tools.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -59,7 +59,7 @@
     </Content>
   </ItemGroup>
   
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(CompileNative)' == 'True'">
     <Content Include="$(OutputPath)/Elemental.Tools.Native.dylib">
       <TargetPath>Elemental.Tools.Native.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
