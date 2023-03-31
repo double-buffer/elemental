@@ -44,15 +44,17 @@ jobs:
     - name: Set Vulkan DLL Path
       id: set-vulkan-dll-path
       working-directory: ./src/Platforms/Windows
+      shell: bash
       run: |
-        $dllPath = Get-ChildItem -Path ./bin -Recurse -Include 'vulkan-1.dll' -File | Select-Object -First 1
-        $GITHUB_OUTPUT = Write-Output "vulkan_dll_path=$dllPath"
-    
+        dllPath=$(find ./bin -name vulkan-1.dll -type f -print -quit)
+        echo "vulkan_dll_path=$dllPath" >> $GITHUB_ENV
+
     - name: Copy files
       working-directory: ./src/Platforms/Windows
+      shell: bash
       run: |
         cp ./bin/D3D12/*.dll ./bin/
-        cp ${{ steps.set-vulkan-dll-path.outputs.vulkan_dll_path }} ./bin/
+        cp ${{ env.vulkan_dll_path }} ./bin/
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
