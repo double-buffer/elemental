@@ -26,6 +26,7 @@ jobs:
         path: |
           external/shader-compilers
         key: ${{ runner.os }}-deps-${{ inputs.platform }}-${{ inputs.architecture }}
+        ttl: 86400 # 1 day in seconds
 
     - name: Configure MSBuild
       if: inputs.platform == 'windows'
@@ -78,3 +79,4 @@ jobs:
         path: |
           external/shader-compilers
         key: ${{ runner.os }}-deps-${{ inputs.platform }}-${{ inputs.architecture }}
+        ttl: 86400 # 1 day in seconds
