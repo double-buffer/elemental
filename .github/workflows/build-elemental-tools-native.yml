@@ -19,6 +19,14 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Restore Dependencies
+      uses: actions/cache@v2
+      id: cache-dependencies
+      with:
+        path: |
+          external/shader-compilers
+        key: ${{ runner.os }}-deps-${{ inputs.platform }}-${{ inputs.architecture }}
+
     - name: Configure MSBuild
       if: inputs.platform == 'windows'
       uses: microsoft/setup-msbuild@v1.1
@@ -53,3 +61,11 @@ jobs:
         name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
         path: |
             ./src/Elemental.Tools.Native/bin/*
+
+    - name: Save Dependencies to Cache
+      if: steps.cache-dependencies.outputs.cache-hit != 'true'
+      uses: actions/cache@v2
+      with:
+        path: |
+          external/shader-compilers
+        key: ${{ runner.os }}-deps-${{ inputs.platform }}-${{ inputs.architecture }}
