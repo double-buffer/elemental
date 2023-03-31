@@ -46,7 +46,7 @@ jobs:
       working-directory: ./src/Platforms/Windows
       run: |
         $dllPath = Get-ChildItem -Path ./bin -Recurse -Include 'vulkan-1.dll' -File | Select-Object -First 1
-        Write-Output "::set-output name=vulkan_dll_path::$dllPath"
+        Write-Output echo "vulkan_dll_path=$dllPath" >> $GITHUB_OUTPUT
     
     - name: Copy files
       working-directory: ./src/Platforms/Windows
@@ -148,7 +148,7 @@ jobs:
       uses: datamonsters/replace-action@master
       with:
         files: "./publish/Elemental/Elemental.nuspec"
-        replacements: '#VERSION#=${{ inputs.tag }},#COMMIT#=e1c65e4524cd70ee6e22abe33e6cb6ec73938cb3'
+        replacements: '#VERSION#=${{ inputs.tag }},#COMMIT#=${{ github.sha }}'
 
     - name: Nuget pack
       working-directory: ./publish/Elemental
