@@ -157,9 +157,6 @@ jobs:
       working-directory: ./publish/Elemental
       run: nuget.exe pack -OutputDirectory build
 
-    # TODO: Create tag
-    # TODO: Create Release
-
     - name: Push Nuget Package
       if: ${{ inputs.publish-nuget == true }}
       run: dotnet nuget push ./publish/Elemental/build/Elemental.${{ inputs.tag }}.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{ secrets.NUGET_APIKEY }}

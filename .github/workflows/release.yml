@@ -27,3 +27,7 @@ jobs:
     with:
       tag: ${{ inputs.tag }}
       publish-nuget: ${{ inputs.publish-nuget }}
+
+    # TODO: Create tag
+    # TODO: Create Release
+

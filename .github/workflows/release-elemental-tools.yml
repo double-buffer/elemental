@@ -17,7 +17,7 @@ jobs:
   build_tools_native:
     strategy:
       matrix:
-        platform: [windows]
+        platform: [windows, macos]
         architecture: [x64]
     uses: ./.github/workflows/build-elemental-tools-native.yml
     name: 'build-elemental-tools-${{ matrix.platform }}-${{ matrix.architecture }}'
@@ -72,6 +72,12 @@ jobs:
       with:
         name: ElementalToolsNative_windows_x64
         path: ./publish/Elemental.Tools/runtimes/win-x64
+        
+    - name: Download MacOS Native x64
+      uses: actions/download-artifact@master
+      with:
+        name: ElementalToolsNative_macos_x64
+        path: ./publish/Elemental.Tools/runtimes/osx-x64
           
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
@@ -89,9 +95,6 @@ jobs:
       working-directory: ./publish/Elemental.Tools
       run: nuget.exe pack -OutputDirectory build
 
-    # TODO: Create tag
-    # TODO: Create Release
-
     - name: Push Nuget Package
       if: ${{ inputs.publish-nuget == true }}
       run: dotnet nuget push ./publish/Elemental.Tools/build/Elemental.Tools.${{ inputs.tag }}.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{ secrets.NUGET_APIKEY }}
@@ -105,7 +108,12 @@ jobs:
     - name: Delete Windows Native x64
       uses: geekyeggo/delete-artifact@v2
       with:
-          name: ElementalToolsNativex64
+          name: ElementalToolsNative_windows_x64
+          
+    - name: Delete MacOS Native x64
+      uses: geekyeggo/delete-artifact@v2
+      with:
+          name: ElementalToolsNative_macos_x64
 
     - name: Delete Dotnet Binaries
       uses: geekyeggo/delete-artifact@v2
