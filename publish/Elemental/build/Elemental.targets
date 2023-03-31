@@ -10,7 +10,7 @@
       <TargetPath>D3D12Core.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildThisFileDirectory)/../runtimes/win-x64/D3D12SDKLayers.dll">
+    <Content Condition="'$(Configuration)'=='Debug'" Include="$(MSBuildThisFileDirectory)/../runtimes/win-x64/D3D12SDKLayers.dll">
       <TargetPath>D3D12SDKLayers.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
