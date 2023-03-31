@@ -40,22 +40,22 @@ function Get-GithubRelease {
 # Create the output directory if it does not exist
 if (-not(Test-Path -Path "$PSScriptRoot/shader-compilers")) {
     mkdir $PSScriptRoot/shader-compilers > $null
-}
 
-# Define the version of the shader compilers to download
-$shaderCompilersBinTag = "v2023-03-27"
+    # Define the version of the shader compilers to download
+    $shaderCompilersBinTag = "v2023-03-27"
 
-# Download the DirectX Shader Compiler and SPIRV-Cross Shader Compiler based on the operating system
-if ($IsMacOS) {
-    Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
-    Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "macos_dxc_*.zip" -pathExtract "$PSScriptRoot/shader-compilers/dxc/"
+    # Download the DirectX Shader Compiler and SPIRV-Cross Shader Compiler based on the operating system
+    if ($IsMacOS) {
+        Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
+        Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "macos_dxc_*.zip" -pathExtract "$PSScriptRoot/shader-compilers/dxc/"
 
-    Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
-    Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "macos_spirv-cross_*_x64.zip" -pathExtract "$PSScriptRoot/shader-compilers/spirv-cross/"
-} else {
-    Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
-    Get-GithubRelease -repo "microsoft/DirectXShaderCompiler" -tag "v1.7.2212.1" -filenamePattern "dxc_*.zip" -pathExtract "$PSScriptRoot\shader-compilers\dxc\"
+        Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
+        Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "macos_spirv-cross_*_x64.zip" -pathExtract "$PSScriptRoot/shader-compilers/spirv-cross/"
+    } else {
+        Write-Output "[93mDownloading DirectX Shader Compiler...[0m"
+        Get-GithubRelease -repo "microsoft/DirectXShaderCompiler" -tag "v1.7.2212.1" -filenamePattern "dxc_*.zip" -pathExtract "$PSScriptRoot\shader-compilers\dxc\"
 
-    Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
-    Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "windows_spirv-cross_*_x64.zip" -pathExtract "$PSScriptRoot\shader-compilers\spirv-cross\"
+        Write-Output "[93mDownloading SPIRV-Cross Shader Compiler...[0m"
+        Get-GithubRelease -repo "double-buffer/shader-compilers-bin" -tag $shaderCompilersBinTag -filenamePattern "windows_spirv-cross_*_x64.zip" -pathExtract "$PSScriptRoot\shader-compilers\spirv-cross\"
+    }
 }
