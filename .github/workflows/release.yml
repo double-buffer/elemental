@@ -17,6 +17,7 @@ jobs:
   release-elemental:
     uses: ./.github/workflows/release-elemental.yml
     name: 'release-elemental'
+    secrets: inherit
     with:
       tag: ${{ inputs.tag }}
       publish-nuget: ${{ inputs.publish-nuget }}
@@ -24,6 +25,7 @@ jobs:
   release-elemental-tools:
     uses: ./.github/workflows/release-elemental-tools.yml
     name: 'release-elemental-tools'
+    secrets: inherit
     with:
       tag: ${{ inputs.tag }}
       publish-nuget: ${{ inputs.publish-nuget }}

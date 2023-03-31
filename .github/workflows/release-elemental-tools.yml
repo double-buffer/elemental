@@ -12,6 +12,9 @@ on:
         required: true
         default: false
         type: boolean
+    secrets:
+      NUGET_APIKEY:
+        required: true
 
 jobs:
   build_tools_native:
