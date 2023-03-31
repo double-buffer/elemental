@@ -151,7 +151,7 @@ jobs:
         replacements: '#VERSION#=${{ inputs.tag }},#COMMIT#=e1c65e4524cd70ee6e22abe33e6cb6ec73938cb3'
 
     - name: Nuget pack
-      working-directory: ./publish
+      working-directory: ./publish/Elemental
       run: nuget.exe pack -OutputDirectory build
 
     # TODO: Create tag
