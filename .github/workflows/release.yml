@@ -23,7 +23,7 @@ jobs:
 
   release-elemental-tools:
     uses: ./.github/workflows/release-elemental-tools.yml
-    name: 'release-elemental'
+    name: 'release-elemental-tools'
     with:
       tag: ${{ inputs.tag }}
       publish-nuget: ${{ inputs.publish-nuget }}
