@@ -18,9 +18,12 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* opt
     AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, D3D12SDKPath));
 
     UINT createFactoryFlags = 0;
-
-    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    bool sdkLayerExists = _waccess((SystemGetExecutableFolderPath() + L".\\D3D12SDKLayers.dll").c_str(), 0) == 0;
+ 
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && sdkLayerExists)
     {
+        printf("DirectX12 Debug Mode\n");
+
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
         if (_debugInterface)
@@ -51,7 +54,7 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
 
     for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.ReleaseAndGetAddressOf())); i++)
     {
-        DXGI_ADAPTER_DESC3 adapterDescription;
+        DXGI_ADAPTER_DESC3 adapterDescription = {};
         AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
         
         if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0)
@@ -89,7 +92,7 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
 void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
     ComPtr<IDXGIAdapter4> graphicsAdapter;
-    DXGI_ADAPTER_DESC3 adapterDescription;
+    DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;
 
     for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)

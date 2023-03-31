@@ -15,11 +15,14 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
-
     createInfo.pApplicationInfo = &appInfo;
 
-    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+    auto isSdkInstalled = SystemLoadLibrary("VkLayer_khronos_validation") != nullptr;
+
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
+        printf("Vulkan Debug Mode\n");
+
         const char* layers[] =
         {
             "VK_LAYER_KHRONOS_validation"
@@ -68,13 +71,13 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
         
         createInfo.ppEnabledExtensionNames = extensions;
         createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
-    
+
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &_vulkanInstance));
     }
 
     volkLoadInstanceOnly(_vulkanInstance);
-    
-    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug)
+
+    if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
         VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
         createInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
@@ -560,7 +563,7 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
     AssertIfFailed(vkGetPhysicalDeviceSurfaceSupportKHR(graphicsDevice->PhysicalDevice, swapChain->CommandQueue->FamilyIndex, swapChain->WindowSurface, &isPresentSupported));
     assert(isPresentSupported == 1);
 
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
     AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceCapabilities));
 
     uint32_t surfaceFormatCount = 0;
@@ -764,16 +767,13 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
 	layoutCreateInfo.pSetLayouts = nullptr;
 	layoutCreateInfo.setLayoutCount = 0;
 
-    if (pushConstantCount > 0)
-    {
-        VkPushConstantRange push_constant;
-        push_constant.offset = 0;
-        push_constant.size = pushConstantCount * sizeof(uint32_t);
-        push_constant.stageFlags = VK_SHADER_STAGE_ALL;
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = pushConstantCount * 4;
+    push_constant.stageFlags = VK_SHADER_STAGE_ALL;
 
-        layoutCreateInfo.pPushConstantRanges = &push_constant;
-        layoutCreateInfo.pushConstantRangeCount = 1;
-    }
+    layoutCreateInfo.pPushConstantRanges = &push_constant;
+    layoutCreateInfo.pushConstantRangeCount = 1;
 
 	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice->Device, &layoutCreateInfo, 0, &shader->PipelineLayout));
 

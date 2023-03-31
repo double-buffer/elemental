@@ -6,9 +6,10 @@
 #include <codecvt>
 
 #include <assert.h>
+#include <io.h>
 
 #define D3D12SDKVersion 608
-#define D3D12SDKPath u8".\\D3D12\\"
+#define D3D12SDKPath u8".\\"
 
 #include <ShellScalingAPI.h>
 #include <Windows.h>
@@ -25,8 +26,11 @@
 #include <dxgi1_5.h>
 #endif
 
-
+#ifdef _DEBUG
 #define AssertIfFailed(result) assert(!FAILED(result))
+#else
+#define AssertIfFailed(result) result
+#endif
 
 #define DllExport extern "C" __declspec(dllexport)
 
@@ -39,3 +43,4 @@ struct WindowsEvent
 };
 
 using namespace Microsoft::WRL;
+
