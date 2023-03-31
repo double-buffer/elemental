@@ -1,4 +1,8 @@
-# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) [![NuGet](https://img.shields.io/nuget/v/Elemental.svg)](https://www.nuget.org/packages/Elemental/)
+# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) [![NuGet](https://img.shields.io/nuget/dt/Elemental.svg)](https://www.nuget.org/packages/Elemental/)
+
+Elemental: [![NuGet](https://img.shields.io/nuget/v/Elemental.svg)](https://www.nuget.org/packages/Elemental/) 
+
+Elemental Tools: [![NuGet](https://img.shields.io/nuget/v/Elemental.Tools.svg)](https://www.nuget.org/packages/Elemental.Tools/)
 
 ## 📖 Purpose
 
@@ -11,11 +15,16 @@ It currently runs on:
 
 ## 🚀 Getting Started
 
+This getting started exemple, displays a colored triangle using a mesh shader.
+
+![](/samples/screenshots/GettingStarted.png)
+
 Open a command line, create a new console project and add the Elemental NuGet package.
 
 ```powershell
 dotnet new console
 dotnet add package Elemental --prerelease
+dotnet add package Elemental.Tools --prerelease
 ```
 
 Copy and paste this sample code to create an empty window and display its current render size in the title bar.
@@ -144,4 +153,8 @@ Run the app using on any supported platform. (Currently Windows and MacOS)
 dotnet run
 ```
 
-You will find more examples in the [samples folder](samples/README.md).
+Warning: Please note that that for the moment this getting started code will not run on MacOS. It is because SPIRV-Cross doesn't support yet Metal Mesh Shader. 
+
+In the near future, it will work on MacOS too. For a work around see the sample HelloTriangle that use a metal shader for the mesh shader.
+
+You will find more examples in the [samples folder](samples).
