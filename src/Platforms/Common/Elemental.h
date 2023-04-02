@@ -128,3 +128,38 @@ struct RenderPassDescriptor
     struct NullableRenderPassRenderTarget RenderTarget2;
     struct NullableRenderPassRenderTarget RenderTarget3;
 };
+
+struct InputState
+{
+    void* DataPointer;
+    int32_t DataSize;
+    void* InputObjectsPointer;
+    int32_t InputObjectsSize;
+};
+
+enum InputObjectKey : uint8_t
+{
+    Gamepad1LeftStickX,
+    Gamepad1LeftStickY,
+    Gamepad1Button1,
+    Gamepad1Button2,
+};
+
+enum InputObjectType : uint8_t
+{
+    InputObjectType_Digital,
+    InputObjectType_Analog
+};
+
+struct InputObjectValueAddress
+{
+    int32_t Offset;
+    int32_t BitPosition;
+};
+
+struct InputObject
+{
+    enum InputObjectType Type;
+    struct InputObjectValueAddress Value;
+    struct InputObjectValueAddress PreviousValue;
+};

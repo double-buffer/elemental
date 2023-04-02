@@ -312,7 +312,7 @@ public class PlatformServiceGenerator : IIncrementalGenerator
         var result = GenerateReferenceType(item);
         var typeName = ((INamedTypeSymbol)item.Type).ToString();
 
-        if (item.RefKind != RefKind.None && !(!isMethodDefinition && item.HasExplicitDefaultValue && item.ExplicitDefaultValue == null))
+        if (item.RefKind == RefKind.In && (isMethodDefinition || !item.HasExplicitDefaultValue || item.ExplicitDefaultValue != null))
         {
             result += item.RefKind.ToString().ToLower() + " ";
         }
