@@ -3,33 +3,13 @@
 #include <stdlib.h>
 #include "Elemental.h"
 
-#define PackedStruct __attribute__((__packed__))
-
-enum HidGamepadVendor: uint32_t 
-{
-    HidGamepadVendor_Microsoft = 0x045E,
-    HidGamepadVendor_Sony = 0x054C
-};
-
-enum HidGamepadProduct: uint32_t 
-{
-    HidGamepadProduct_XboxOneWireless = 0x02FD,
-    HidGamepadProduct_DualShock4 = 0x5C4
-};
-
-// HID report struct for Xbox One Wireless Gamepad
-struct PackedStruct XboxOneWirelessGamepadReport 
-{
-    uint8_t Padding;
-    uint16_t LeftStickX;
-    uint16_t LeftStickY;
-    uint16_t RightStickX;
-    uint16_t RightStickY;
-    uint16_t LeftTrigger;
-    uint16_t RightTrigger;
-    uint8_t Dpad;
-    uint32_t Buttons;
-};
+#ifdef _WINDOWS
+#define PackedStruct __pragma(pack(push, 1)) struct
+#define PackedStructEnd __pragma(pack(pop))
+#else
+#define PackedStruct struct __attribute__((__packed__))
+#define PackedStructEnd
+#endif
 
 float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
 {
@@ -42,6 +22,39 @@ void SetInputObjectAnalogValue(struct InputState inputState, enum InputObjectKey
     ((float*)inputState.DataPointer)[inputObject.Value.Offset] = value;
 }
 
+//---------------------------------------------------------------------------------------------------------------
+// Vendor specific gamepad code
+//---------------------------------------------------------------------------------------------------------------
+
+enum HidGamepadVendor: uint32_t 
+{
+    HidGamepadVendor_Microsoft = 0x045E,
+    HidGamepadVendor_Sony = 0x054C
+};
+
+enum HidGamepadProduct: uint32_t 
+{
+    HidGamepadProduct_XboxOneWireless = 0x02FD,
+    HidGamepadProduct_XboxOneWireless2 = 0x02E0,
+    HidGamepadProduct_DualShock4 = 0x5C4
+};
+
+
+// TODO: https://github.com/libsdl-org/SDL/issues/3075
+PackedStruct XboxOneWirelessGamepadReport 
+{
+    uint8_t Padding;
+    uint16_t LeftStickX;
+    uint16_t LeftStickY;
+    uint16_t RightStickX;
+    uint16_t RightStickY;
+    uint16_t LeftTrigger;
+    uint16_t RightTrigger;
+    uint8_t Dpad;
+    uint32_t Buttons;
+};
+PackedStructEnd
+
 void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
 {
     struct XboxOneWirelessGamepadReport* inputData = (struct XboxOneWirelessGamepadReport*)reportData;
@@ -49,6 +62,26 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputSta
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535.0f));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, NormalizeInputSigned(inputData->LeftStickY, 65535.0f));
 }
+
+//---------------------------------------------------------------------------------------------------------------
+// Vendor gamepad dispatcher
+//---------------------------------------------------------------------------------------------------------------
+
+typedef void (*ConvertHidInputDeviceDataFuncPtr)(struct InputState inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);
+
+ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t vendorId, uint32_t productId)
+{
+    if (vendorId == HidGamepadVendor_Microsoft && (productId == HidGamepadProduct_XboxOneWireless || productId == HidGamepadProduct_XboxOneWireless2))
+    {
+        return &ConvertHidInputDeviceData_XboxOneWirelessGamepad;
+    }
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------------------------------------------
+// Input state memory management
+//---------------------------------------------------------------------------------------------------------------
 
 static uint32_t* globalInputStateData = 0;
 static int32_t globalInputStateDataSize = 0;
@@ -93,16 +126,4 @@ void FreeInputState(struct InputState inputState)
 {
     free(inputState.DataPointer);
     free(inputState.InputObjectsPointer);
-}
-
-typedef void (*ConvertHidInputDeviceDataFuncPtr)(struct InputState inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);
-
-ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t vendorId, uint32_t productId)
-{
-    if (vendorId == HidGamepadVendor_Microsoft && productId == HidGamepadProduct_XboxOneWireless)
-    {
-        return &ConvertHidInputDeviceData_XboxOneWirelessGamepad;
-    }
-
-    return 0;
 }

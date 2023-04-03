@@ -44,3 +44,14 @@ struct WindowsEvent
 
 using namespace Microsoft::WRL;
 
+#include <initguid.h>
+#include <setupapi.h>
+#include <hidsdi.h>
+#include <hidclass.h>
+#include <cfgmgr32.h>
+#include <dbt.h>
+
+// TODO: should we use OneCoreUAP.lib ?
+#pragma comment(lib, "hid.lib")
+#pragma comment(lib, "Cfgmgr32.lib")
+#pragma comment(lib, "SetupAPI") 

@@ -112,14 +112,14 @@ applicationService.RunApplication(application, (status) =>
 
     foreach (var state in inputState.InputStateDataFloat)
     {
-        Console.Write($"{state} ");
+        //Console.Write($"{state} ");
     }
     
-    Console.WriteLine();
+    //Console.WriteLine();
     
     foreach (var inputObject in inputState.InputObjects)
     {
-        Console.WriteLine($"{inputObject} ");
+        //Console.WriteLine($"{inputObject} ");
     }
 
     //rotationY += (float)frameTimer.Elapsed.TotalSeconds;
