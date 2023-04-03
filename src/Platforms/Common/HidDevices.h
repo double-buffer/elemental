@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <stdlib.h>
 #include "Elemental.h"
 
 #define PackedStruct __attribute__((__packed__))
@@ -30,6 +31,11 @@ struct PackedStruct XboxOneWirelessGamepadReport
     uint32_t Buttons;
 };
 
+float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
+{
+    return ((float)value / maxValue) * 2.0f - 1.0f;
+}
+
 void SetInputObjectAnalogValue(struct InputState inputState, enum InputObjectKey inputObjectKey, float value) 
 {
     struct InputObject inputObject = ((struct InputObject*)inputState.InputObjectsPointer)[inputObjectKey];
@@ -40,7 +46,53 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputSta
 {
     struct XboxOneWirelessGamepadReport* inputData = (struct XboxOneWirelessGamepadReport*)reportData;
 
-    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, ((float)inputData->LeftStickX / 65535.0f) * 2.0f - 1.0f);
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535.0f));
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, NormalizeInputSigned(inputData->LeftStickY, 65535.0f));
+}
+
+static uint32_t* globalInputStateData = 0;
+static int32_t globalInputStateDataSize = 0;
+static int32_t inputStateCurrentAllocatedIndex = 0;
+static struct InputObject* globalInputObjects = 0;
+static int32_t globalInputObjectsSize = 0;
+
+void CreateInputObject(enum InputObjectKey inputObjectKey, enum InputObjectType inputObjectType)
+{
+    globalInputObjects[inputObjectKey].Type = inputObjectType;
+    globalInputObjects[inputObjectKey].Value.Offset = inputStateCurrentAllocatedIndex++;
+}
+
+void InitGamepad(int32_t gamePadIndex)
+{
+    CreateInputObject(Gamepad1LeftStickX, InputObjectType_Analog);
+    CreateInputObject(Gamepad1LeftStickY, InputObjectType_Analog);
+}
+
+struct InputState InitInputState()
+{
+    globalInputObjectsSize = InputObjectKey_MaxValue + 1;
+    globalInputObjects = (struct InputObject*)calloc(globalInputObjectsSize, sizeof(struct InputObject));
+    
+    // TODO: Refine that for now we allocate the maximum amout of data
+    // TODO: Do a 2 pass approach
+    globalInputStateDataSize = globalInputObjectsSize;
+    globalInputStateData = (uint32_t*)calloc(globalInputStateDataSize, sizeof(uint32_t));
+
+    InitGamepad(0);
+
+    struct InputState result;
+    result.DataPointer = globalInputStateData;
+    result.DataSize = globalInputStateDataSize;
+    result.InputObjectsPointer = globalInputObjects;
+    result.InputObjectsSize = globalInputObjectsSize;
+
+    return result;
+}
+
+void FreeInputState(struct InputState inputState)
+{
+    free(inputState.DataPointer);
+    free(inputState.InputObjectsPointer);
 }
 
 typedef void (*ConvertHidInputDeviceDataFuncPtr)(struct InputState inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);

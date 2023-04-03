@@ -143,6 +143,7 @@ enum InputObjectKey : uint8_t
     Gamepad1LeftStickY,
     Gamepad1Button1,
     Gamepad1Button2,
+    InputObjectKey_MaxValue = Gamepad1Button2
 };
 
 enum InputObjectType : uint8_t

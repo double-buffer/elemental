@@ -4,28 +4,10 @@ import IOKit.hid
 import NativeElemental
 import HidDevices
 
-// TODO: Make sure it is thread safe!
 var hidInputDevices: [HidInputDevice] = []
-var inputStateData: UnsafeMutablePointer<UInt32>? = nil
-var inputStateCurrentAllocatedIndex = 0
-var inputObjects: UnsafeMutablePointer<InputObject>? = nil
+var inputState: InputState? = nil
 
-func createInputObject(_ inputObjectKey: InputObjectKey, _ inputObjectType: InputObjectType) {
-    guard let inputObjectsLocal = inputObjects else {
-        print("Error: Input object not initialized.")
-        return
-    }
-
-    inputObjectsLocal[Int(inputObjectKey.rawValue)].Type = inputObjectType
-}
-
-func initGamepad(gamePadIndex: Int) {
-    // TODO: We need to reuse data when disconnedt/reconnect
-    createInputObject(Gamepad1LeftStickX, InputObjectType_Analog)
-}
-
-
-
+// TODO: This works only on MacOS
 let checkInputDevicesThread = Thread {
     let hidManager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
     let deviceDictionary = [kIOHIDPrimaryUsagePageKey: kHIDPage_GenericDesktop, kIOHIDPrimaryUsageKey: kHIDUsage_GD_GamePad] as CFDictionary
@@ -66,8 +48,6 @@ func handle_DeviceMatchingCallback(context: UnsafeMutableRawPointer?, result: IO
         let hidInputDevice = HidInputDevice(hidInputDevices.count, device, inputRawReportSize: reportSize, inputDataConvertFunction: convertHidInputDeviceDataFunction)
         hidInputDevices.append(hidInputDevice)
 
-        initGamepad(gamePadIndex: hidInputDevice.deviceId)
-
         let context = UnsafeMutableRawPointer(Unmanaged.passUnretained(hidInputDevice).toOpaque())
         IOHIDDeviceRegisterInputReportCallback(device, hidInputDevice.inputRawReport, hidInputDevice.inputRawReportSize, handle_InputReportCallback, context)
     }
@@ -75,9 +55,8 @@ func handle_DeviceMatchingCallback(context: UnsafeMutableRawPointer?, result: IO
 
 func handle_DeviceRemovalCallback(context: UnsafeMutableRawPointer?, result: IOReturn, sender: UnsafeMutableRawPointer?, device: IOHIDDevice) {
     // Handle the device removal event here
+    // TODO: Call a reset function from the C Lib
     print("Device removed")
-
-    // TODO: use a dictionary instead of an array
 }
 
 func handle_InputReportCallback(context: UnsafeMutableRawPointer?, result: IOReturn, sender: UnsafeMutableRawPointer?, reportType: IOHIDReportType, reportID: UInt32, report: UnsafeMutablePointer<UInt8>, reportLength: CFIndex) {
@@ -88,16 +67,14 @@ func handle_InputReportCallback(context: UnsafeMutableRawPointer?, result: IORet
     guard let context = context else {
         return
     }
-    guard let data = inputStateData else {
-        print("Warning inputStateData is not initialized")
+    
+    guard let localInputState = inputState else {
+        print("Input state was not initialized correctly.")
         return
     }
-        
-    // TODO: Refactor
-    let inputState = InputState(DataPointer: data, DataSize: 10, InputObjectsPointer: inputObjects!, InputObjectsSize: 4)
 
     let hidInputDevice = Unmanaged<HidInputDevice>.fromOpaque(context).takeUnretainedValue()
-    hidInputDevice.inputDataConvertFunction(inputState, Int32(hidInputDevice.deviceId), report, UInt32(reportLength))
+    hidInputDevice.inputDataConvertFunction(localInputState, Int32(hidInputDevice.deviceId), report, UInt32(reportLength))
     
     // DEBUG
     print(report.withMemoryRebound(to: XboxOneWirelessGamepadReport.self, capacity: 1) { $0.pointee })
@@ -105,30 +82,28 @@ func handle_InputReportCallback(context: UnsafeMutableRawPointer?, result: IORet
 
 @_cdecl("Native_InitInputsService")
 public func initInputsService() {
-    inputStateData = UnsafeMutablePointer<UInt32>.allocate(capacity: 10)
-    inputStateData!.initialize(repeating: 0, count: 10)
+    inputState = InitInputState()
     
-    inputObjects = UnsafeMutablePointer<InputObject>.allocate(capacity: 4)
-    inputObjects!.initialize(repeating: InputObject(), count: 4)
-    
-    // TODO: This works only on MacOS
     checkInputDevicesThread.start()
 }
 
 @_cdecl("Native_FreeInputsService")
 public func freeInputsService() {
     // TODO: clean thread?
-    // TODO: FreeResources
+    guard let localInputState = inputState else {
+        print("Input state was not initialized correctly.")
+        return
+    }
 
-    inputStateData?.deallocate()
+    FreeInputState(localInputState)
 }
 
 @_cdecl("Native_GetInputState")
 public func getInputState(application: UnsafeMutableRawPointer?) -> InputState {
-    guard let data = inputStateData else {
-        print("Warning inputStateData is not initialized")
-        return InputState(DataPointer: inputStateData, DataSize: 0, InputObjectsPointer: inputObjects, InputObjectsSize: 0)
-    }
-
-    return InputState(DataPointer: data, DataSize: 10, InputObjectsPointer: inputObjects!, InputObjectsSize: 4)
+    guard let localInputState = inputState else {
+        print("Input state was not initialized correctly.")
+        return InputState(DataPointer: nil, DataSize: 0, InputObjectsPointer: nil, InputObjectsSize: 0)
+    }    
+    
+    return localInputState
 }
