@@ -110,7 +110,9 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.WaitForSwapChainOnCpu(swapChain);
     var inputState = inputsService.GetInputState(application);
 
-    foreach (var state in inputState.InputStateDataFloat)
+    Console.WriteLine($"GamePad LeftX: {inputState.Gamepad.LeftStickX.Value}");
+
+    foreach (var state in inputState.InputStateData)
     {
         //Console.Write($"{state} ");
     }
@@ -122,7 +124,7 @@ applicationService.RunApplication(application, (status) =>
         //Console.WriteLine($"{inputObject} ");
     }
 
-    //rotationY += (float)frameTimer.Elapsed.TotalSeconds;
+    rotationY += inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds;
     frameTimer.Restart();
 
     var commandList = graphicsService.CreateCommandList(commandQueue);

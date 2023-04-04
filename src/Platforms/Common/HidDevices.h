@@ -22,6 +22,12 @@ void SetInputObjectAnalogValue(struct InputState inputState, enum InputObjectKey
     ((float*)inputState.DataPointer)[inputObject.Value.Offset] = value;
 }
 
+void SetInputObjectDigitalValue(struct InputState inputState, enum InputObjectKey inputObjectKey, bool value) 
+{
+    struct InputObject inputObject = ((struct InputObject*)inputState.InputObjectsPointer)[inputObjectKey];
+    ((uint32_t*)inputState.DataPointer)[inputObject.Value.Offset] |= value << inputObject.Value.BitPosition;
+}
+
 //---------------------------------------------------------------------------------------------------------------
 // Vendor specific gamepad code
 //---------------------------------------------------------------------------------------------------------------
@@ -61,6 +67,8 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputSta
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535.0f));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, NormalizeInputSigned(inputData->LeftStickY, 65535.0f));
+    SetInputObjectDigitalValue(inputState, Gamepad1Button1, true);
+    SetInputObjectDigitalValue(inputState, Gamepad1Button2, true);
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -86,19 +94,43 @@ ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t ve
 static uint32_t* globalInputStateData = 0;
 static int32_t globalInputStateDataSize = 0;
 static int32_t inputStateCurrentAllocatedIndex = 0;
+static uint8_t inputStateCurrentAllocatedBitPosition = 0;
+static bool currentAllocationBits = false;
 static struct InputObject* globalInputObjects = 0;
 static int32_t globalInputObjectsSize = 0;
 
 void CreateInputObject(enum InputObjectKey inputObjectKey, enum InputObjectType inputObjectType)
 {
     globalInputObjects[inputObjectKey].Type = inputObjectType;
-    globalInputObjects[inputObjectKey].Value.Offset = inputStateCurrentAllocatedIndex++;
+
+    if (inputObjectType == InputObjectType_Analog)
+    {
+        globalInputObjects[inputObjectKey].Value.Offset = inputStateCurrentAllocatedIndex++;
+        globalInputObjects[inputObjectKey].Value.BitPosition = 0;
+        currentAllocationBits = false;
+    }
+    else 
+    {
+        if (!currentAllocationBits || inputStateCurrentAllocatedBitPosition == 32)
+        {
+            inputStateCurrentAllocatedBitPosition = 0;
+        }
+
+        globalInputObjects[inputObjectKey].Value.Offset = inputStateCurrentAllocatedIndex;
+        globalInputObjects[inputObjectKey].Value.BitPosition = inputStateCurrentAllocatedBitPosition++;
+        currentAllocationBits = true;
+    }
+
 }
 
 void InitGamepad(int32_t gamePadIndex)
 {
     CreateInputObject(Gamepad1LeftStickX, InputObjectType_Analog);
     CreateInputObject(Gamepad1LeftStickY, InputObjectType_Analog);
+    CreateInputObject(Gamepad1RightStickX, InputObjectType_Analog);
+    CreateInputObject(Gamepad1RightStickY, InputObjectType_Analog);
+    CreateInputObject(Gamepad1Button1, InputObjectType_Digital);
+    CreateInputObject(Gamepad1Button2, InputObjectType_Digital);
 }
 
 struct InputState InitInputState()
