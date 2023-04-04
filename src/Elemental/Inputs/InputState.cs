@@ -71,7 +71,7 @@ public readonly record struct InputObjectValueAddress
 public readonly record struct InputObject
 {
     public required InputObjectType Type { get; init; }
-    internal InputObjectValueAddress Value { get; init; }
+    public InputObjectValueAddress Value { get; init; }
     internal InputObjectValueAddress PreviousValue { get; init; }
 
 }
@@ -97,8 +97,12 @@ public readonly ref struct InputObjectValue
             {
                 return _inputState.InputStateDataFloat[inputObject.Value.Offset];
             }
-
-            return 0;
+            else
+            {
+                var rawValue = _inputState.InputStateData[inputObject.Value.Offset];
+                var mask = 1 << inputObject.Value.BitPosition;
+                return (rawValue & mask) != 0 ? 1.0f : 0.0f;
+            }
         }
     }
     
@@ -119,4 +123,9 @@ public readonly ref struct Gamepad
     }
 
     public InputObjectValue LeftStickX => new InputObjectValue(_inputState, InputObjectKey.Gamepad1LeftStickX);
+    public InputObjectValue LeftStickY => new InputObjectValue(_inputState, InputObjectKey.Gamepad1LeftStickY);
+    
+    // TODO: Chagne button name
+    public InputObjectValue Button1 => new InputObjectValue(_inputState, InputObjectKey.Gamepad1Button1);
+    public InputObjectValue Button2 => new InputObjectValue(_inputState, InputObjectKey.Gamepad1Button2);
 }

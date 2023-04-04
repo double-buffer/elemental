@@ -31,7 +31,7 @@ using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, Comm
 
 applicationService.SetWindowTitle(window, $"Hello Inputs! (GraphicsDevice: {graphicsService.GetGraphicsDeviceInfo(graphicsDevice)})");
 
-using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
+using var swapChain = graphicsService.CreateSwapChain(window, commandQueue, new() { MaximumFrameLatency = 1 });
 var currentRenderSize = applicationService.GetWindowRenderSize(window);
 
 // HACK: This is needed when we run the program from the root directory
@@ -89,7 +89,10 @@ for (var i = 0; i < shaderCompilationResults.Length; i++)
 using var shader = graphicsService.CreateShader(graphicsDevice, shaderParts);
 
 var frameTimer = new Stopwatch();
-var rotationY = 0.0f;
+var shaderParameters = new ShaderParameters()
+{
+    AspectRatio = (float)currentRenderSize.Width / currentRenderSize.Height
+};
 
 applicationService.RunApplication(application, (status) =>
 {
@@ -105,26 +108,38 @@ applicationService.RunApplication(application, (status) =>
         Console.WriteLine($"Resize SwapChain to: {renderSize}");
         graphicsService.ResizeSwapChain(swapChain, renderSize.Width, renderSize.Height);
         currentRenderSize = renderSize;
+
+        shaderParameters = shaderParameters with
+        {
+            AspectRatio = (float)currentRenderSize.Width / currentRenderSize.Height
+        };
     }
 
     graphicsService.WaitForSwapChainOnCpu(swapChain);
     var inputState = inputsService.GetInputState(application);
 
-    Console.WriteLine($"GamePad LeftX: {inputState.Gamepad.LeftStickX.Value}");
+    //Console.WriteLine($"GamePad LeftX: {inputState.Gamepad.LeftStickX.Value}");
 
     foreach (var state in inputState.InputStateData)
     {
         //Console.Write($"{state} ");
     }
-    
+
     //Console.WriteLine();
-    
+
     foreach (var inputObject in inputState.InputObjects)
     {
         //Console.WriteLine($"{inputObject} ");
     }
 
-    rotationY += inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds;
+    shaderParameters = shaderParameters with
+    {
+        RotationX = shaderParameters.RotationX + -inputState.Gamepad.LeftStickY.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
+        RotationY = shaderParameters.RotationY + inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds
+    };
+
+    Console.WriteLine($"Button1: {inputState.Gamepad.Button1.Value}, Button2: {inputState.Gamepad.Button2.Value}");
+
     frameTimer.Restart();
 
     var commandList = graphicsService.CreateCommandList(commandQueue);
@@ -133,7 +148,7 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 1.0f, 1.0f, 1.0f) } });
 
     graphicsService.SetShader(commandList, shader);
-    graphicsService.SetShaderConstants(commandList, 0, ref rotationY);
+    graphicsService.SetShaderConstants(commandList, 0, ref shaderParameters);
     graphicsService.DispatchMesh(commandList, 1, 1, 1);
 
     graphicsService.EndRenderPass(commandList);
@@ -143,3 +158,11 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.PresentSwapChain(swapChain);
     return true;
 });
+
+readonly record struct ShaderParameters
+{
+    public float RotationX { get; init; }
+    public float RotationY { get; init; }
+    public float RotationZ { get; init; }
+    public float AspectRatio { get; init; }
+}

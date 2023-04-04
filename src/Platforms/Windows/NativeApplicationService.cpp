@@ -7,6 +7,7 @@
 
 // HACK: Remove that
 #include <map>
+HWND globalMainWindow;
 
 void ProcessMessages(Win32Application* application);
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
@@ -122,6 +123,9 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     nativeWindow->WindowPlacement = windowPlacement;
 
     Native_SetWindowState(nativeWindow, options.WindowState);
+
+    // HACK
+    globalMainWindow = window;
 
     return nativeWindow;
 }
@@ -303,6 +307,7 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 
         break;
     }
+
 	case WM_CLOSE:
 	case WM_DESTROY:
 	{

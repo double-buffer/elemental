@@ -2,6 +2,9 @@
 #include "../../Common/Elemental.h"
 #include "../../Common/SystemFunctions.h"
 #include "../../Common/HidDevices.h"
+#include "HidInputDevice.h"
+
+#include <vector>
 
 #define GAMEPAD_USAGE_PAGE 0x01
 #define GAMEPAD_USAGE_ID   0x05
@@ -9,7 +12,8 @@
 static InputState globalInputState;
 static HCMNOTIFICATION globalNotificationHandle = nullptr;
 
-HANDLE tempHidDevice;
+// TODO: Review data structure
+std::vector<HidInputDevice> globalHidInputDevices;
 
 void RegisterHidDevice(HANDLE hidDevice)
 {
@@ -56,8 +60,23 @@ void RegisterHidDevice(HANDLE hidDevice)
         return;
     }
 
-    // HACK: To remove
-    tempHidDevice = hidDevice;
+    HidInputDevice hidInputDevice = {};
+    hidInputDevice.Device = hidDevice;
+    hidInputDevice.DeviceId = globalHidInputDevices.size();
+    hidInputDevice.Event = CreateEvent(nullptr, true, false, nullptr);
+    hidInputDevice.InputDataConvertFunction = convertHidInputDeviceDataFunctionPointer;
+    
+    OVERLAPPED overlapped = {};
+    overlapped.hEvent = hidInputDevice.Event;
+    hidInputDevice.Overlapped = overlapped;
+
+    hidInputDevice.ReadBufferSizeInBytes = 1024;
+    hidInputDevice.ReadBuffer = new uint8_t[hidInputDevice.ReadBufferSizeInBytes];
+    ZeroMemory(hidInputDevice.ReadBuffer, hidInputDevice.ReadBufferSizeInBytes);
+            
+    ReadFile(hidInputDevice.Device, hidInputDevice.ReadBuffer, hidInputDevice.ReadBufferSizeInBytes, nullptr, &hidInputDevice.Overlapped);
+
+    globalHidInputDevices.push_back(hidInputDevice);
 }
 
 uint32_t HidDevice_NotificationCallback(HCMNOTIFICATION handle, void* context, CM_NOTIFY_ACTION action, PCM_NOTIFY_EVENT_DATA eventData, uint32_t eventDataSize)
@@ -76,6 +95,8 @@ uint32_t HidDevice_NotificationCallback(HCMNOTIFICATION handle, void* context, C
     else
     {
         printf("Disconnected...\n");
+
+        // TODO: Unregister device, free memory, etc...
     }
 
     return ERROR_SUCCESS;
@@ -83,63 +104,34 @@ uint32_t HidDevice_NotificationCallback(HCMNOTIFICATION handle, void* context, C
 
 DWORD WINAPI InputThread(LPVOID lpParam)
 {
-    auto event = CreateEvent(NULL, TRUE, FALSE, NULL);
-    OVERLAPPED overlapped = {};
-    overlapped.hEvent = event;
+    // TODO: We should get a copy of the device list here at each iteration
+    // otherwise this could cause some multi threading issues
 
-    BYTE readBuffer[1024];
-    ZeroMemory(readBuffer, 1024);
-    DWORD bytesRead;
-    DWORD result;
+    HANDLE eventsToWait[32];
 
     while (true) 
     {
-        printf("Loop\n");
+        auto inputDevicesCount = globalHidInputDevices.size();
+        assert(inputDevicesCount <= 32);
 
-        ReadFile(tempHidDevice, readBuffer, sizeof(readBuffer), &bytesRead, &overlapped);
+        for (int32_t i = 0; i < inputDevicesCount; i++)
+        {
+            eventsToWait[i] = globalHidInputDevices[i].Event;
+        }
 
-        auto waitResult = WaitForMultipleObjects(1, &event, FALSE, INFINITE);
+        auto waitResult = WaitForMultipleObjects(inputDevicesCount, eventsToWait, false, INFINITE);
 
         if (waitResult >= WAIT_OBJECT_0 && waitResult == WAIT_OBJECT_0)
-        { 
-            if (GetOverlappedResult(tempHidDevice, &overlapped, &bytesRead, true))
+        {
+            int deviceIndex = waitResult - WAIT_OBJECT_0;
+            auto hidInputDevice = globalHidInputDevices[deviceIndex];
+
+            ReadFile(hidInputDevice.Device, hidInputDevice.ReadBuffer, hidInputDevice.ReadBufferSizeInBytes, nullptr, &hidInputDevice.Overlapped);
+
+            DWORD bytesRead = 0;
+            if (GetOverlappedResult(hidInputDevice.Device, &hidInputDevice.Overlapped, &bytesRead, true))
             {
-                // BUG: There seems to be one byte missing buttons are not aligned
-                struct XboxOneWirelessGamepadReport* inputData = (struct XboxOneWirelessGamepadReport*)(readBuffer);
-
-                printf("%d %d\n", inputData->LeftStickX, inputData->Buttons);
-
-                int currentIndex = 0;
-                printf("%d ", readBuffer[currentIndex]);
-                currentIndex ++;
-
-                printf("%d ", *(uint16_t*)(&readBuffer[currentIndex]));
-                currentIndex += 2;
-                
-                printf("%d ", *(uint16_t*)(&readBuffer[currentIndex]));
-                currentIndex += 2;
-                
-                printf("%d ", *(uint16_t*)(&readBuffer[currentIndex]));
-                currentIndex += 2;
-                
-                printf("%d ", *(uint16_t*)(&readBuffer[currentIndex]));
-                currentIndex += 2;
-                
-                printf("%d ", *(uint16_t*)(&readBuffer[currentIndex]));
-                currentIndex += 2;
-                
-                printf("%d ", *(uint16_t*)(&readBuffer[currentIndex]));
-                currentIndex += 2;
-
-                printf("%d ", readBuffer[currentIndex]);
-                currentIndex ++;
-                
-                printf("%d ", *(uint16_t*)(&readBuffer[currentIndex]));
-                currentIndex += 2;
-
-                printf("\n");
-
-                ConvertHidInputDeviceData_XboxOneWirelessGamepad(globalInputState, 0, readBuffer, bytesRead);
+                ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(globalInputState, 0, hidInputDevice.ReadBuffer, bytesRead);
             }
         }
     }

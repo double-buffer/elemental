@@ -1,8 +1,11 @@
-#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=1, b0)"
+#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=4, b0)"
 
 struct ShaderParameters
 {
+    float RotationX;
     float RotationY;
+    float RotationZ;
+    float AspectRatio;
 };
 
 [[vk::push_constant]]
@@ -27,11 +30,47 @@ static Vertex triangleVertices[] =
     { float3(-0.5, -0.5, 0.0), float4(0.0, 0.0, 1.0, 1.0) }
 };
 
-float3 Transform(float3 position, float rotationY) 
+float4x4 LookAtLHMatrix(float3 eyePosition, float3 targetPosition, float3 upDirection)
 {
+    float3 forwardDirection = normalize(targetPosition - eyePosition);
+    float3 rightDirection = normalize(cross(upDirection, forwardDirection));
+    float3 upDirectionNew = cross(forwardDirection, rightDirection);
+
+    float4 row1 = float4(rightDirection.x, upDirectionNew.x, forwardDirection.x, 0.0f);
+    float4 row2 = float4(rightDirection.y, upDirectionNew.y, forwardDirection.y, 0.0f);
+    float4 row3 = float4(rightDirection.z, upDirectionNew.z, forwardDirection.z, 0.0f);
+    float4 row4 = float4(-dot(rightDirection, eyePosition), -dot(upDirectionNew, eyePosition), -dot(forwardDirection, eyePosition), 1.0f);
+
+    return float4x4(row1, row2, row3, row4);
+}
+
+float4x4 PerspectiveProjectionMatrix(float fovY, float aspectRatio, float zNear)
+{
+    float height = 1.0 / tan(fovY * 0.5);
+
+    float4 row1 = float4(height / aspectRatio, 0.0f, 0.0f, 0.0f);
+    float4 row2 = float4(0.0f, height, 0.0f, 0.0f);
+    float4 row3 = float4(0.0f, 0.0f, 0, 1.0f);
+    float4 row4 = float4(0.0f, 0.0f, zNear, 0.0f);
+
+    return float4x4(row1, row2, row3, row4);
+}
+
+float4x4 RotationMatrix(float rotationX, float rotationY, float rotationZ)
+{
+    float cosX = cos(rotationX);
+    float sinX = sin(rotationX);
     float cosY = cos(rotationY);
     float sinY = sin(rotationY);
-    return float3(position.x * cosY - position.z * sinY, position.y, position.x * sinY + position.z * cosY + 0.5);
+    float cosZ = cos(rotationZ);
+    float sinZ = sin(rotationZ);
+
+    float4 row1 = float4(cosY * cosZ, sinX * sinY * cosZ - cosX * sinZ, cosX * sinY * cosZ + sinX * sinZ, 0.0f);
+    float4 row2 = float4(cosY * sinZ, sinX * sinY * sinZ + cosX * cosZ, cosX * sinY * sinZ - sinX * cosZ, 0.0f);
+    float4 row3 = float4(-sinY, sinX * cosY, cosX * cosY, 0.0f);
+    float4 row4 = float4(0.0f, 0.0f, 0.0f, 1.0f);
+
+    return float4x4(row1, row2, row3, row4);
 }
 
 [OutputTopology("triangle")]
@@ -44,7 +83,13 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
 
     if (groupThreadId < meshVertexCount)
     {
-        vertices[groupThreadId].Position = float4(Transform(triangleVertices[groupThreadId].Position, parameters.RotationY), 1.0);
+        float4x4 worldMatrix = RotationMatrix(parameters.RotationX, parameters.RotationY, parameters.RotationZ);
+        float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, -2), float3(0, 0, 0), float3(0, 1, 0));
+        float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
+
+        float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
+
+        vertices[groupThreadId].Position = mul(float4(triangleVertices[groupThreadId].Position, 1), worldViewProjectionMatrix);
         vertices[groupThreadId].Color = triangleVertices[groupThreadId].Color;
     }
 
