@@ -11,12 +11,11 @@
 #define PackedStructEnd
 #endif
 
-
 float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
 {
     // TODO: Allows the configuration of deadzone
-    auto deadZone = 0.25f;
-    auto normalizedValue = ((float)value / maxValue) * 2.0f - 1.0f;
+    float_t deadZone = 0.25f;
+    float_t normalizedValue = ((float)value / maxValue) * 2.0f - 1.0f;
 
     if (normalizedValue < deadZone && normalizedValue > -deadZone)
     {
@@ -26,10 +25,10 @@ float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
     return normalizedValue;
 }
 
-void SetInputObjectAnalogValue(struct InputState inputState, enum InputObjectKey inputObjectKey, float value) 
+void SetInputObjectAnalogValue(struct InputState inputState, enum InputObjectKey inputObjectKey, float_t value) 
 {
     struct InputObject inputObject = ((struct InputObject*)inputState.InputObjectsPointer)[inputObjectKey];
-    ((float*)inputState.DataPointer)[inputObject.Value.Offset] = value;
+    ((float_t*)inputState.DataPointer)[inputObject.Value.Offset] = value;
 }
 
 void SetInputObjectDigitalValue(struct InputState inputState, enum InputObjectKey inputObjectKey, bool value) 

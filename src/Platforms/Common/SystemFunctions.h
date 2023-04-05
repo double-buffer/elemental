@@ -35,6 +35,7 @@ void* SystemGetFunctionExport(void* library, std::string functionName)
 #endif
 }
 
+#ifdef _WINDOWS
 std::wstring ConvertUtf8ToWString(unsigned char* source)
 {
     auto stringLength = std::string((char*)source).length();
@@ -73,3 +74,4 @@ std::wstring SystemGetExecutableFolderPath()
         return L"";
     }
 }
+#endif

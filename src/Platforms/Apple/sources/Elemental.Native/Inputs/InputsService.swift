@@ -77,7 +77,7 @@ func handle_InputReportCallback(context: UnsafeMutableRawPointer?, result: IORet
     hidInputDevice.inputDataConvertFunction(localInputState, Int32(hidInputDevice.deviceId), report, UInt32(reportLength))
     
     // DEBUG
-    print(report.withMemoryRebound(to: XboxOneWirelessGamepadReport.self, capacity: 1) { $0.pointee })
+    //print(report.withMemoryRebound(to: XboxOneWirelessGamepadReport.self, capacity: 1) { $0.pointee })
 }
 
 @_cdecl("Native_InitInputsService")

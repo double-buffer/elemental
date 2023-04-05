@@ -138,7 +138,7 @@ applicationService.RunApplication(application, (status) =>
         RotationY = shaderParameters.RotationY + inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds
     };
 
-    Console.WriteLine($"Button1: {inputState.Gamepad.Button1.Value}, Button2: {inputState.Gamepad.Button2.Value}");
+    //Console.WriteLine($"Left: {inputState.Gamepad.LeftStickX.Value}");
 
     frameTimer.Restart();
 
