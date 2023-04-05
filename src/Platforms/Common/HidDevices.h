@@ -109,8 +109,8 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputSta
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535.0f));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535.0f));
-    SetInputObjectDigitalValue(inputState, Gamepad1Button1, true);
-    SetInputObjectDigitalValue(inputState, Gamepad1Button2, true);
+    SetInputObjectDigitalValue(inputState, Gamepad1Button1, inputData->Buttons & 0x01);
+    SetInputObjectDigitalValue(inputState, Gamepad1Button2, inputData->Buttons & 0x02);
 }
 
 //---------------------------------------------------------------------------------------------------------------

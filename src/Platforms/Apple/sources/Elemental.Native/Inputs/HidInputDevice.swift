@@ -8,7 +8,11 @@ public class HidInputDevice {
         self.deviceId = deviceId
         self.device = device
         self.inputRawReportSize = inputRawReportSize
+
+        // TODO: Free memory
         self.inputRawReport = UnsafeMutablePointer<UInt8>.allocate(capacity: inputRawReportSize)
+        inputRawReport.initialize(repeating: 0, count: inputRawReportSize)
+        
         self.inputDataConvertFunction = inputDataConvertFunction
     }
 

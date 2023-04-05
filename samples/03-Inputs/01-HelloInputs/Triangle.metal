@@ -15,7 +15,10 @@ struct PrimitiveOutput
 
 struct ShaderParameters
 {
+    float RotationX;
     float RotationY;
+    float RotationZ;
+    float AspectRatio;
 };
 
 constant float3 triangleVertices[] =
@@ -37,40 +40,47 @@ constant uint8_t rectangleIndices[] =
     0, 1, 2
 };
 
-float3 rotate(float3 position, float pitch, float roll, float yaw) 
+float4x4 RotationMatrix(float rotationX, float rotationY, float rotationZ)
 {
-    float cosa = cos(yaw);
-    float sina = sin(yaw);
+    float cosX = cos(rotationX);
+    float sinX = sin(rotationX);
+    float cosY = cos(rotationY);
+    float sinY = sin(rotationY);
+    float cosZ = cos(rotationZ);
+    float sinZ = sin(rotationZ);
 
-    float cosb = cos(pitch);
-    float sinb = sin(pitch);
+    float4 row1 = float4(cosY * cosZ, sinX * sinY * cosZ - cosX * sinZ, cosX * sinY * cosZ + sinX * sinZ, 0.0f);
+    float4 row2 = float4(cosY * sinZ, sinX * sinY * sinZ + cosX * cosZ, cosX * sinY * sinZ - sinX * cosZ, 0.0f);
+    float4 row3 = float4(-sinY, sinX * cosY, cosX * cosY, 0.0f);
+    float4 row4 = float4(0.0f, 0.0f, 0.0f, 1.0f);
 
-    float cosc = cos(roll);
-    float sinc = sin(roll);
+    return float4x4(row1, row2, row3, row4);
+}
 
-    float Axx = cosa*cosb;
-    float Axy = cosa*sinb*sinc - sina*cosc;
-    float Axz = cosa*sinb*cosc + sina*sinc;
+float4x4 LookAtLHMatrix(float3 eyePosition, float3 targetPosition, float3 upDirection)
+{
+    float3 forwardDirection = normalize(targetPosition - eyePosition);
+    float3 rightDirection = normalize(cross(upDirection, forwardDirection));
+    float3 upDirectionNew = cross(forwardDirection, rightDirection);
 
-    float Ayx = sina*cosb;
-    float Ayy = sina*sinb*sinc + cosa*cosc;
-    float Ayz = sina*sinb*cosc - cosa*sinc;
+    float4 row1 = float4(rightDirection.x, upDirectionNew.x, forwardDirection.x, 0.0f);
+    float4 row2 = float4(rightDirection.y, upDirectionNew.y, forwardDirection.y, 0.0f);
+    float4 row3 = float4(rightDirection.z, upDirectionNew.z, forwardDirection.z, 0.0f);
+    float4 row4 = float4(-dot(rightDirection, eyePosition), -dot(upDirectionNew, eyePosition), -dot(forwardDirection, eyePosition), 1.0f);
 
-    float Azx = -sinb;
-    float Azy = cosb*sinc;
-    float Azz = cosb*cosc;
+    return float4x4(row1, row2, row3, row4);
+}
 
-    float px = position.x;
-    float py = position.y;
-    float pz = position.z;
+float4x4 PerspectiveProjectionMatrix(float fovY, float aspectRatio, float zNear)
+{
+    float height = 1.0 / tan(fovY * 0.5);
 
-    float3 result;
+    float4 row1 = float4(height / aspectRatio, 0.0f, 0.0f, 0.0f);
+    float4 row2 = float4(0.0f, height, 0.0f, 0.0f);
+    float4 row3 = float4(0.0f, 0.0f, 0, 1.0f);
+    float4 row4 = float4(0.0f, 0.0f, zNear, 0.0f);
 
-    result.x = Axx*px + Axy*py + Axz*pz;
-    result.y = Ayx*px + Ayy*py + Ayz*pz;
-    result.z = Azx*px + Azy*py + Azz*pz;
-
-    return result;
+    return float4x4(row1, row2, row3, row4);
 }
 
 constant uint32_t meshVertexCount = 3;
@@ -93,12 +103,13 @@ void MeshMain(AAPLTriangleMeshType output,
     {
         VertexOutput vertexOutput = {};
         
-        float3 position = triangleVertices[groupThreadId];
-        
-        position = rotate(position, parameters.RotationY, 0, 0);
-        position.z = 0.5;
+        float4x4 worldMatrix = RotationMatrix(parameters.RotationX, parameters.RotationY, parameters.RotationZ);
+        float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, -2), float3(0, 0, 0), float3(0, 1, 0));
+        float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
 
-        vertexOutput.Position = float4(position, 1.0);
+        float4x4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
+
+        vertexOutput.Position = worldViewProjectionMatrix * float4(triangleVertices[groupThreadId], 1);
         vertexOutput.Color = triangleColors[groupThreadId];
         
         output.set_vertex(groupThreadId, vertexOutput);
