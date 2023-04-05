@@ -1,4 +1,4 @@
-#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=4, b0)"
+#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=5, b0)"
 
 struct ShaderParameters
 {
@@ -6,6 +6,7 @@ struct ShaderParameters
     float RotationY;
     float RotationZ;
     float AspectRatio;
+    uint CurrentColorIndex;
 };
 
 [[vk::push_constant]]
@@ -28,6 +29,12 @@ static Vertex triangleVertices[] =
     { float3(-0.5, 0.5, 0.0), float4(1.0, 0.0, 0.0, 1.0) },
     { float3(0.5, 0.5, 0.0), float4(0.0, 1.0, 0.0, 1.0) },
     { float3(-0.5, -0.5, 0.0), float4(0.0, 0.0, 1.0, 1.0) }
+};
+
+static float4 Colors[] =
+{
+    float4(1.0, 0.0, 0.0, 1.0), float4(0.0, 1.0, 0.0, 1.0), float4(0.0, 0.0, 1.0, 1.0),
+    float4(1.0, 1.0, 0.0, 1.0), float4(0.0, 1.0, 1.0, 1.0), float4(1.0, 0.0, 1.0, 1.0)
 };
 
 float4x4 LookAtLHMatrix(float3 eyePosition, float3 targetPosition, float3 upDirection)
@@ -90,7 +97,7 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
         float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
 
         vertices[groupThreadId].Position = mul(float4(triangleVertices[groupThreadId].Position, 1), worldViewProjectionMatrix);
-        vertices[groupThreadId].Color = triangleVertices[groupThreadId].Color;
+        vertices[groupThreadId].Color = Colors[(parameters.CurrentColorIndex % 2) * 3 + groupThreadId];
     }
 
     if (groupThreadId == 0)

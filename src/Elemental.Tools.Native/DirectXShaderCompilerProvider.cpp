@@ -69,6 +69,8 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     
     // HACK: For the moment we hard code the root signature def
     arguments.push_back(L"-rootsig-define RootSignatureDef");
+
+    // TODO: pass all-resources-bound!!!
     
             
     // TODO: Additional options to be considered

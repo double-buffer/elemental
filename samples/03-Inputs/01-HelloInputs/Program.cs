@@ -135,8 +135,9 @@ applicationService.RunApplication(application, (status) =>
     shaderParameters = shaderParameters with
     {
         RotationX = shaderParameters.RotationX + -inputState.Gamepad.LeftStickY.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
-        RotationY = shaderParameters.RotationY + inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds
-    };
+        RotationY = shaderParameters.RotationY + inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
+        CurrentColorIndex = inputState.Gamepad.Button1.Value == 1 ? shaderParameters.CurrentColorIndex + 1 : shaderParameters.CurrentColorIndex
+};
 
     //Console.WriteLine($"Left: {inputState.Gamepad.LeftStickX.Value}");
 
@@ -145,7 +146,7 @@ applicationService.RunApplication(application, (status) =>
     var commandList = graphicsService.CreateCommandList(commandQueue);
 
     using var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
-    graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 1.0f, 1.0f, 1.0f) } });
+    graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 0.0f, 0.0f, 1.0f) } });
 
     graphicsService.SetShader(commandList, shader);
     graphicsService.SetShaderConstants(commandList, 0, ref shaderParameters);
@@ -165,4 +166,5 @@ readonly record struct ShaderParameters
     public float RotationY { get; init; }
     public float RotationZ { get; init; }
     public float AspectRatio { get; init; }
+    public uint CurrentColorIndex { get; init; }
 }
