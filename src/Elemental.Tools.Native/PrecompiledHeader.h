@@ -1,5 +1,16 @@
 #pragma once
 
+#pragma warning(disable: 4820)
+#pragma warning(disable: 4668)
+#pragma warning(disable: 4365)
+#pragma warning(disable: 5026)
+#pragma warning(disable: 4625)
+#pragma warning(disable: 4626)
+#pragma warning(disable: 5027)
+#pragma warning(disable: 4061)
+#pragma warning(disable: 5204)
+#pragma warning(disable: 5045)
+
 #if _WINDOWS
 #define DllExport extern "C" __declspec(dllexport)
 #include <windows.h>
@@ -32,7 +43,9 @@ using namespace Microsoft::WRL;
 #include <iostream>
 #include <cstdlib>
 
-#include "../Platforms/Common/SystemFunctions.h"
+#include "dxcapi.h"
+#include "d3d12shader.h"
+#include "spirv_msl.hpp"
 
 #define AssertIfFailed(result) assert(!FAILED(result))
 
@@ -62,3 +75,14 @@ struct Span
         return Span<T>();
     }
 };
+
+#pragma warning(default: 4820)
+#pragma warning(default: 4668)
+#pragma warning(default: 4365)
+#pragma warning(default: 5026)
+#pragma warning(default: 4625)
+#pragma warning(default: 4626)
+#pragma warning(default: 5027)
+#pragma warning(default: 4061)
+#pragma warning(default: 5204)
+#pragma warning(default: 5045)

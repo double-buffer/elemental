@@ -29,6 +29,6 @@ public:
 
 private:
     T* _data;
-    uint32_t _maxSize;
     uint64_t _currentIndex;
+    uint32_t _maxSize;
 };

@@ -20,13 +20,13 @@ public readonly record struct SwapChainOptions
     /// Width in pixels of the <see cref="SwapChain" />.
     /// </summary>
     /// <value>Width in pixels.</value>
-    public int Width { get; init; }
+    public uint Width { get; init; }
     
     /// <summary>
     /// Height in pixels of the <see cref="SwapChain" />.
     /// </summary>
     /// <value>Height in pixels.</value>
-    public int Height { get; init; }
+    public uint Height { get; init; }
 
     /// <summary>
     /// Format of the <see cref="SwapChain" />.
@@ -45,7 +45,7 @@ public readonly record struct SwapChainOptions
     /// Setting this value to 1 can reduce latency but reduce the ability for the
     /// CPU and GPU to work in parallel. 
     /// </remarks>
-    public int MaximumFrameLatency { get; init; }
+    public uint MaximumFrameLatency { get; init; }
 
     // TODO: Provide options for VRR
 }

@@ -5,9 +5,9 @@ struct Win32Window
 {
     HWND WindowHandle;
     WINDOWPLACEMENT WindowPlacement;
-    int Width;
-    int Height;
-    float UIScale;
+    uint32_t Width;
+    uint32_t Height;
+    float_t UIScale;
 };
 
 DllExport void Native_SetWindowState(Win32Window *window, NativeWindowState windowState);

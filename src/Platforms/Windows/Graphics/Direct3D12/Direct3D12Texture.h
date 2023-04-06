@@ -10,8 +10,8 @@ struct Direct3D12Texture : Direct3D12BaseGraphicsObject
 
     ComPtr<ID3D12Resource> DeviceObject;
     bool IsPresentTexture;
-    int32_t Width = 0;
-    int32_t Height = 0;
+    uint32_t Width = 0;
+    uint32_t Height = 0;
 
     D3D12_CPU_DESCRIPTOR_HANDLE RtvDescriptor;
 };

@@ -77,7 +77,7 @@ bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLog
     std::wstring line;
 
     // TODO: Merge error messages and warnings message until next find
-    for (int32_t i = 0; i < lines.size(); i++)
+    for (size_t i = 0; i < lines.size(); i++)
     {
         line = lines[i];
 

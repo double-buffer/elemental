@@ -3,9 +3,6 @@
 #include "ElementalTools.h"
 #include "ShaderCompilerProvider.h"
 
-#include "spirv_msl.hpp"
-
-
 class SpirvCrossShaderCompilerProvider : ShaderCompilerProvider
 {
 public:

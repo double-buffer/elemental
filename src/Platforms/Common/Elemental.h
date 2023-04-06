@@ -29,15 +29,15 @@ enum NativeWindowState
 struct NativeWindowOptions
 {
     uint8_t* Title;
-    int32_t Width;
-    int32_t Height;
+    uint32_t Width;
+    uint32_t Height;
     enum NativeWindowState WindowState;
 };
 
 struct NativeWindowSize
 {
-    int32_t Width;
-    int32_t Height;
+    uint32_t Width;
+    uint32_t Height;
     float_t UIScale;
     enum NativeWindowState WindowState;
 };
@@ -93,10 +93,10 @@ enum SwapChainFormat
 
 struct SwapChainOptions
 {
-    int32_t Width;
-    int32_t Height;
+    uint32_t Width;
+    uint32_t Height;
     enum SwapChainFormat Format;
-    int32_t MaximumFrameLatency;
+    uint32_t MaximumFrameLatency;
 };
 
 struct ShaderPart
@@ -104,9 +104,9 @@ struct ShaderPart
     enum ShaderStage Stage;
     uint8_t* EntryPoint;
     void* DataPointer;
-    int32_t DataCount;
+    uint32_t DataCount;
     struct ShaderMetaData* MetaDataPointer;
-    int32_t MetaDataCount;
+    uint32_t MetaDataCount;
 };
 
 struct RenderPassRenderTarget
@@ -156,8 +156,8 @@ enum InputObjectType : uint8_t
 
 struct InputObjectValueAddress
 {
-    int32_t Offset;
-    int32_t BitPosition;
+    uint32_t Offset;
+    uint32_t BitPosition;
 };
 
 struct InputObject

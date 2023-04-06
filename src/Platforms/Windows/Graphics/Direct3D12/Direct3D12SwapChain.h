@@ -15,8 +15,8 @@ struct Direct3D12SwapChain : Direct3D12BaseGraphicsObject
     ComPtr<IDXGISwapChain4> DeviceObject;
     Direct3D12CommandQueue* CommandQueue;
     HANDLE WaitHandle;
-    int32_t Width = 0;
-    int32_t Height = 0;
+    uint32_t Width = 0;
+    uint32_t Height = 0;
 
     SwapChainFormat Format;
     Direct3D12Texture* RenderBuffers[3];

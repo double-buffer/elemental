@@ -35,5 +35,5 @@ Span<uint8_t> SpirvCrossShaderCompilerProvider::CompileShader(std::vector<Shader
     memcpy(outputShaderData, metalCode.c_str(), metalCode.length());
 
     printf("MetalCode: %s\n", metalCode.c_str());
-    return Span<uint8_t>(outputShaderData, metalCode.length());
+    return Span<uint8_t>(outputShaderData, (uint32_t)metalCode.length());
 }

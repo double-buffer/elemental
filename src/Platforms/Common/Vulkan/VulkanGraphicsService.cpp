@@ -79,11 +79,11 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
 
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
-        VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
-        createInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
-        createInfo.pfnCallback = DebugReportCallback;
+        VkDebugReportCallbackCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
+        debugCreateInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
+        debugCreateInfo.pfnCallback = DebugReportCallback;
 
-        AssertIfFailed(vkCreateDebugReportCallbackEXT(_vulkanInstance, &createInfo, 0, &_debugCallback));
+        AssertIfFailed(vkCreateDebugReportCallbackEXT(_vulkanInstance, &debugCreateInfo, 0, &_debugCallback));
     }
 }
 
@@ -389,7 +389,6 @@ void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint
 void* VulkanGraphicsService::CreateCommandList(void* commandQueuePointer)
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
-    auto graphicsDevice = commandQueue->GraphicsDevice;
 
     auto commandPool = GetCommandPool(commandQueue);
     auto commandList = GetCommandList(commandQueue, commandPool);
@@ -459,18 +458,18 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
     auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
 
     VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
-    timelineInfo.waitSemaphoreValueCount = fenceToWaitCount;
+    timelineInfo.waitSemaphoreValueCount = (uint32_t)fenceToWaitCount;
     timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
     timelineInfo.signalSemaphoreValueCount = 1;
     timelineInfo.pSignalSemaphoreValues = &fenceValue;
 
     VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
     submitInfo.pNext = &timelineInfo;
-    submitInfo.waitSemaphoreCount = fenceToWaitCount;
+    submitInfo.waitSemaphoreCount = (uint32_t)fenceToWaitCount;
     submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &commandQueue->TimelineSemaphore;
-    submitInfo.commandBufferCount = commandListCount;
+    submitInfo.commandBufferCount = (uint32_t)commandListCount;
     submitInfo.pCommandBuffers = vulkanCommandBuffers;
     submitInfo.pWaitDstStageMask = submitStageMasks;
 
@@ -599,7 +598,7 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
     swapChain->CreateInfo = swapChainCreateInfo;
     AssertIfFailed(vkCreateSwapchainKHR(graphicsDevice->Device, &swapChainCreateInfo, nullptr, &swapChain->DeviceObject));
 
-    CreateSwapChainBackBuffers(swapChain, swapChainCreateInfo.imageExtent.width, swapChainCreateInfo.imageExtent.height);
+    CreateSwapChainBackBuffers(swapChain, (int32_t)swapChainCreateInfo.imageExtent.width, (int32_t)swapChainCreateInfo.imageExtent.height);
 
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     AssertIfFailed(vkCreateFence(graphicsDevice->Device, &fenceCreateInfo, 0, &swapChain->BackBufferAcquireFence ));
@@ -644,8 +643,8 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
 
     auto swapChainCreateInfo = swapChain->CreateInfo;
     swapChainCreateInfo.oldSwapchain = oldSwapChain;
-    swapChainCreateInfo.imageExtent.width = width;
-    swapChainCreateInfo.imageExtent.height = height;
+    swapChainCreateInfo.imageExtent.width = (uint32_t)width;
+    swapChainCreateInfo.imageExtent.height = (uint32_t)height;
     
     AssertIfFailed(vkCreateSwapchainKHR(graphicsDevice->Device, &swapChainCreateInfo, nullptr, &swapChain->DeviceObject));
 
@@ -657,7 +656,7 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
 
     vkDestroySwapchainKHR(graphicsDevice->Device, oldSwapChain, nullptr);
     
-    CreateSwapChainBackBuffers(swapChain, swapChainCreateInfo.imageExtent.width, swapChainCreateInfo.imageExtent.height);
+    CreateSwapChainBackBuffers(swapChain, (int32_t)swapChainCreateInfo.imageExtent.width, (int32_t)swapChainCreateInfo.imageExtent.height);
 }
 
 void* VulkanGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
@@ -725,7 +724,7 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
 
         if (pushConstantCount == 0)
         {
-            for (int32_t j = 0; j < shaderPart.MetaDataCount; j++)
+            for (uint32_t j = 0; j < shaderPart.MetaDataCount; j++)
             {
                 auto metaData = shaderPart.MetaDataPointer[j];
 
@@ -738,7 +737,7 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
         }
 
         VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-        createInfo.codeSize = shaderPart.DataCount;
+        createInfo.codeSize = (size_t)shaderPart.DataCount;
         createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderPart.DataPointer);
 
         VkShaderModule shaderModule = nullptr;
@@ -824,7 +823,7 @@ void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPass
         colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
         colorAttachment.loadOp = !renderPassDescriptor->RenderTarget0.Value.ClearColor.HasValue ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.clearValue.color = { clearColor.X, clearColor.Y, clearColor.Z, 1 };
+        colorAttachment.clearValue.color = { {clearColor.X, clearColor.Y, clearColor.Z, 1.0f} };
 
         VkRenderingInfo passInfo = { VK_STRUCTURE_TYPE_RENDERING_INFO };
         passInfo.renderArea.extent.width = texture->Width;
@@ -884,7 +883,7 @@ void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPoin
         // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
-            printf("Create PipelineState for shader %d...\n", hash);
+            printf("Create PipelineState for shader %llu...\n", hash);
             auto pipelineStateCacheItem = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
             graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
@@ -905,7 +904,7 @@ void VulkanGraphicsService::SetShaderConstants(void* commandListPointer, uint32_
     assert(commandList->CurrentShader != nullptr);
 
     // TODO: There seems that there was a memory leak in the old engine. Check that again!
-    vkCmdPushConstants(commandList->DeviceObject, commandList->CurrentShader->PipelineLayout, VK_SHADER_STAGE_ALL, 0, constantValueCount, constantValues);
+    vkCmdPushConstants(commandList->DeviceObject, commandList->CurrentShader->PipelineLayout, VK_SHADER_STAGE_ALL, 0, (uint32_t)constantValueCount, constantValues);
 }
 
 void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
@@ -1006,8 +1005,6 @@ VulkanCommandPoolItem* VulkanGraphicsService::GetCommandPool(VulkanCommandQueue*
     
 void VulkanGraphicsService::UpdateCommandPoolFence(VulkanCommandList* commandList, uint64_t fenceValue)
 {
-    auto graphicsDevice = commandList->GraphicsDevice;
-
     auto fence = Fence();
     fence.CommandQueuePointer = commandList->CommandQueue;
     fence.FenceValue = fenceValue;
@@ -1107,8 +1104,8 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
         backBufferTexture->DeviceObject = swapchainImages[i];
         backBufferTexture->IsPresentTexture = true;
         backBufferTexture->Format = format;
-        backBufferTexture->Width = width;
-        backBufferTexture->Height = height;
+        backBufferTexture->Width = (uint32_t)width;
+        backBufferTexture->Height = (uint32_t)height;
 
         VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         createInfo.image = swapchainImages[i];
@@ -1119,7 +1116,6 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
         createInfo.subresourceRange.levelCount = 1;
         createInfo.subresourceRange.layerCount = 1;
 
-        VkImageView view = nullptr;
         AssertIfFailed(vkCreateImageView(graphicsDevice->Device, &createInfo, 0, &backBufferTexture->ImageView));
 
         swapChain->BackBufferTextures[i] = backBufferTexture;

@@ -58,11 +58,11 @@ internal static unsafe class ShaderCompilerResultMarshaller
         public ShaderStage Stage { get; init; }
         public byte* EntryPoint { get; init; }
         public void* ShaderDataPointer { get; init; }
-        public int ShaderDataCount { get; init; }
+        public uint ShaderDataCount { get; init; }
         public ShaderCompilerLogEntryUnmanaged* LogEntryPointer { get; init; }
-        public int LogEntryCount { get; init; }
+        public uint LogEntryCount { get; init; }
         public ShaderMetaData* MetaDataPointer { get; init; }
-        public int MetaDataCount { get; init; }
+        public uint MetaDataCount { get; init; }
     }
 
     public static ShaderCompilerResultUnmanaged ConvertToUnmanaged(ShaderCompilerResult managed)
@@ -74,14 +74,14 @@ internal static unsafe class ShaderCompilerResultMarshaller
     {
         // TODO: Can we avoid the copy here?
         var shaderData = unmanaged.ShaderDataPointer != null ? new byte[unmanaged.ShaderDataCount] : Array.Empty<byte>();
-        var sourceShaderDataSpan = new Span<byte>(unmanaged.ShaderDataPointer, unmanaged.ShaderDataCount);
+        var sourceShaderDataSpan = new Span<byte>(unmanaged.ShaderDataPointer, (int)unmanaged.ShaderDataCount);
         sourceShaderDataSpan.CopyTo(shaderData);
         
         var logEntries = unmanaged.LogEntryPointer != null ? new ShaderCompilerLogEntry[unmanaged.LogEntryCount] : Array.Empty<ShaderCompilerLogEntry>();
-        var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, unmanaged.LogEntryCount);
+        var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, (int)unmanaged.LogEntryCount);
 
         var shaderMetaData = unmanaged.MetaDataPointer != null ? new ShaderMetaData[unmanaged.MetaDataCount] : Array.Empty<ShaderMetaData>();
-        var sourceMetaDataSpan = new Span<ShaderMetaData>(unmanaged.MetaDataPointer, unmanaged.MetaDataCount);
+        var sourceMetaDataSpan = new Span<ShaderMetaData>(unmanaged.MetaDataPointer, (int)unmanaged.MetaDataCount);
         sourceMetaDataSpan.CopyTo(shaderMetaData);
 
         for (var i = 0; i < unmanaged.LogEntryCount; i++)
@@ -108,7 +108,7 @@ internal static unsafe class ShaderCompilerResultMarshaller
 
     public static void Free(ShaderCompilerResultUnmanaged unmanaged)
     {
-        var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, unmanaged.LogEntryCount);
+        var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, (int)unmanaged.LogEntryCount);
 
         for (var i = 0; i < unmanaged.LogEntryCount; i++)
         {

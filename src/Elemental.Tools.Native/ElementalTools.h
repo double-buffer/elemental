@@ -1,5 +1,5 @@
 #pragma once
-#include "../Platforms/Common/ElementalCommon.h"
+#include "ElementalCommon.h"
 
 enum ShaderLanguage
 {
@@ -43,11 +43,11 @@ struct ShaderCompilerResult
     enum ShaderStage Stage;
     const uint8_t* EntryPoint;
     uint8_t* ShaderData;
-    int32_t ShaderDataCount;
+    uint32_t ShaderDataCount;
     struct ShaderCompilerLogEntry* LogEntries;
-    int32_t LogEntryCount;
+    uint32_t LogEntryCount;
     struct ShaderMetaData* MetaData;
-    int32_t MetaDataCount;
+    uint32_t MetaDataCount;
 };
 
 const ShaderCompilerResult CreateErrorResult(ShaderStage stage, const uint8_t* entryPoint, const uint8_t* message)

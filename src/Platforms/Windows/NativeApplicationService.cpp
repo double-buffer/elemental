@@ -1,9 +1,12 @@
 #include "WindowsCommon.h"
-#include "Libs/Win32DarkMode/DarkMode.h"
 #include "Elemental.h"
 #include "SystemFunctions.h"
 #include "Win32Application.h"
 #include "Win32Window.h"
+
+#pragma warning(disable: 4191)
+#include "Libs/Win32DarkMode/DarkMode.h"
+#pragma warning(default: 4191)
 
 // HACK: Remove that
 #include <map>
@@ -58,8 +61,8 @@ DllExport void Native_RunApplication(Win32Application* application, RunHandlerPt
 
 DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions options)
 {
-    auto width = options.Width;
-    auto height = options.Height;
+    auto width = (int32_t)options.Width;
+    auto height = (int32_t)options.Height;
 
     auto nativeWindow = new Win32Window();
 
@@ -77,7 +80,6 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
         nativeApplication->ApplicationInstance,
         nativeWindow);
    
-    HMODULE shcoreLibrary = LoadLibrary(L"shcore.dll");
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     auto mainScreenDpi = GetDpiForWindow(window);
@@ -86,19 +88,19 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     RECT clientRectangle;
     clientRectangle.left = 0;
     clientRectangle.top = 0;
-    clientRectangle.right = static_cast<LONG>(width * mainScreenScaling);
-    clientRectangle.bottom = static_cast<LONG>(height * mainScreenScaling);
+    clientRectangle.right = (LONG)((float_t)width * mainScreenScaling);
+    clientRectangle.bottom = (LONG)((float_t)height * mainScreenScaling);
 
     AdjustWindowRectExForDpi(&clientRectangle, WS_OVERLAPPEDWINDOW, false, 0, mainScreenDpi);
 
-    width = clientRectangle.right - clientRectangle.left;
-    height = clientRectangle.bottom - clientRectangle.top;
+    width = (int32_t)(clientRectangle.right - clientRectangle.left);
+    height = (int32_t)(clientRectangle.bottom - clientRectangle.top);
 
     // Compute the position of the window to center it 
     RECT desktopRectangle;
     GetClientRect(GetDesktopWindow(), &desktopRectangle);
-    int x = (desktopRectangle.right / 2) - (width / 2);
-    int y = (desktopRectangle.bottom / 2) - (height / 2);
+    int32_t x = (int32_t)((desktopRectangle.right / 2) - (width / 2));
+    int32_t y = (int32_t)((desktopRectangle.bottom / 2) - (height / 2));
 
     // Dark mode
     // TODO: Don't include the full library for this
@@ -117,8 +119,8 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     GetWindowPlacement(window, &windowPlacement);
 
     nativeWindow->WindowHandle = window;
-    nativeWindow->Width = width;
-    nativeWindow->Height = height;
+    nativeWindow->Width = (uint32_t)width;
+    nativeWindow->Height = (uint32_t)height;
     nativeWindow->UIScale = mainScreenScaling;
     nativeWindow->WindowPlacement = windowPlacement;
 
@@ -144,8 +146,8 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
     auto mainScreenDpi = GetDpiForWindow(nativeWindow->WindowHandle);
     auto mainScreenScaling = static_cast<float>(mainScreenDpi) / 96.0f;
 
-    nativeWindow->Width = windowRectangle.right - windowRectangle.left;
-    nativeWindow->Height = windowRectangle.bottom - windowRectangle.top;
+    nativeWindow->Width = (uint32_t)(windowRectangle.right - windowRectangle.left);
+    nativeWindow->Height = (uint32_t)(windowRectangle.bottom - windowRectangle.top);
     nativeWindow->UIScale = mainScreenScaling;
 
     auto result = NativeWindowSize();
@@ -153,15 +155,15 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
     result.Height = nativeWindow->Height;
     result.UIScale = nativeWindow->UIScale;
 
-    DWORD windowStyle = GetWindowLong(nativeWindow->WindowHandle, GWL_STYLE);
+    LONG windowStyle = GetWindowLong(nativeWindow->WindowHandle, GWL_STYLE);
     WINDOWPLACEMENT windowPlacement;
     GetWindowPlacement(nativeWindow->WindowHandle, &windowPlacement);
     
     MONITORINFO monitorInfos = { sizeof(monitorInfos) };
     GetMonitorInfo(MonitorFromWindow(nativeWindow->WindowHandle, MONITOR_DEFAULTTOPRIMARY), &monitorInfos);
 
-    auto screenWidth = monitorInfos.rcMonitor.right - monitorInfos.rcMonitor.left;
-    auto screenHeight = monitorInfos.rcMonitor.bottom - monitorInfos.rcMonitor.top;
+    auto screenWidth = (uint32_t)(monitorInfos.rcMonitor.right - monitorInfos.rcMonitor.left);
+    auto screenHeight = (uint32_t)(monitorInfos.rcMonitor.bottom - monitorInfos.rcMonitor.top);
 
     if (screenWidth == nativeWindow->Width && screenHeight == nativeWindow->Height)
     {
@@ -193,7 +195,7 @@ DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, uint8_t* title)
     
 DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState windowState)
 {
-    DWORD windowStyle = GetWindowLong(window->WindowHandle, GWL_STYLE);
+    LONG windowStyle = GetWindowLong(window->WindowHandle, GWL_STYLE);
 
     if (windowState == NativeWindowState_FullScreen && (windowStyle & WS_OVERLAPPEDWINDOW))
     {

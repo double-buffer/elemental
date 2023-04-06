@@ -4,6 +4,8 @@
 class BaseGraphicsService
 {
 public:
+    virtual ~BaseGraphicsService() {};
+
     virtual void GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count) = 0;
     virtual void* CreateGraphicsDevice(GraphicsDeviceOptions* options) = 0;
     virtual void FreeGraphicsDevice(void* graphicsDevicePointer) = 0;

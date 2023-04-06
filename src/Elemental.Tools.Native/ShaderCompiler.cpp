@@ -22,7 +22,7 @@ void RegisterShaderCompilerProvider(ShaderCompilerProvider* shaderCompilerProvid
 
 ShaderCompilerProvider* FindShaderCompiler(ShaderLanguage targetShaderLanguage)
 {
-    for (auto i = 0; i < _shaderCompilerProviders.size(); i++)
+    for (size_t i = 0; i < _shaderCompilerProviders.size(); i++)
     {
         auto shaderCompilerProvider = _shaderCompilerProviders[i];
 
@@ -91,7 +91,7 @@ DllExport void Native_InitShaderCompiler()
     
 DllExport void Native_FreeShaderCompiler()
 {
-    for (auto i = 0; i < _shaderCompilerProviders.size(); i++)
+    for (size_t i = 0; i < _shaderCompilerProviders.size(); i++)
     {
         delete _shaderCompilerProviders[i];
     }
@@ -129,7 +129,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         auto logList = std::vector<ShaderCompilerLogEntry>();
         auto metaDataList = std::vector<ShaderMetaData>();
 
-        auto currentShaderData = Span<uint8_t>(shaderCode, strlen((char*)shaderCode));
+        auto currentShaderData = Span<uint8_t>(shaderCode, (uint32_t)strlen((char*)shaderCode));
 
         for (int32_t i = result - 1; i >= 0; i--)
         {
@@ -155,19 +155,19 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         auto metaDataListData = new ShaderMetaData[metaDataList.size()];
         memcpy(metaDataListData, metaDataList.data(), metaDataList.size() * sizeof(ShaderMetaData));
         
-        ShaderCompilerResult result = {};
+        ShaderCompilerResult compilerResult = {};
 
-        result.IsSuccess = isSuccess;
-        result.Stage = shaderStage;
-        result.EntryPoint = entryPoint;
-        result.LogEntries = logEntriesData;
-        result.LogEntryCount = logList.size();
-        result.ShaderData = currentShaderData.Pointer;
-        result.ShaderDataCount = currentShaderData.Length;
-        result.MetaData = metaDataListData;
-        result.MetaDataCount = metaDataList.size();
+        compilerResult.IsSuccess = isSuccess;
+        compilerResult.Stage = shaderStage;
+        compilerResult.EntryPoint = entryPoint;
+        compilerResult.LogEntries = logEntriesData;
+        compilerResult.LogEntryCount = (uint32_t)logList.size();
+        compilerResult.ShaderData = currentShaderData.Pointer;
+        compilerResult.ShaderDataCount = (uint32_t)currentShaderData.Length;
+        compilerResult.MetaData = metaDataListData;
+        compilerResult.MetaDataCount = (uint32_t)metaDataList.size();
 
-        return result;
+        return compilerResult;
     } 
         
     return CreateErrorResult(shaderStage, entryPoint, SystemConvertWideCharToUtf8(L"Cannot find compatible shader compilers toolchain."));

@@ -1,12 +1,14 @@
 #pragma once
 
-#include "../BaseGraphicsService.h"
-#include "../BaseGraphicsObject.h"
-#include "../SystemFunctions.h"
+#include "BaseGraphicsService.h"
+#include "BaseGraphicsObject.h"
+#include "SystemFunctions.h"
 
+#pragma warning(disable: 4191)
 #define VK_USE_PLATFORM_WIN32_KHR
 #define VOLK_IMPLEMENTATION
 #include "volk.h"
+#pragma warning(default: 4191)
 
 struct VulkanGraphicsDevice;
 

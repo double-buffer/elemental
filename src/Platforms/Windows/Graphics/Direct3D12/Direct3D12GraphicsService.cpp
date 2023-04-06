@@ -52,12 +52,12 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
 {
     ComPtr<IDXGIAdapter4> graphicsAdapter;
 
-    for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.ReleaseAndGetAddressOf())); i++)
+    for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.ReleaseAndGetAddressOf())); i++)
     {
         DXGI_ADAPTER_DESC3 adapterDescription = {};
         AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
         
-        if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0)
+        if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE) == 0)
         {
             ComPtr<ID3D12Device> tempDevice;
             D3D12CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(tempDevice.GetAddressOf()));
@@ -95,7 +95,7 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* opt
     DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;
 
-    for (int i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
+    for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != _dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
     {
         AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
 
@@ -261,7 +261,7 @@ Fence Direct3D12GraphicsService::ExecuteCommandLists(void* commandQueuePointer, 
         commandListsToExecute[i] = ((Direct3D12CommandList*)commandLists[i])->DeviceObject.Get();
     }
 
-    commandQueue->DeviceObject->ExecuteCommandLists(commandListCount, commandListsToExecute);
+    commandQueue->DeviceObject->ExecuteCommandLists((uint32_t)commandListCount, commandListsToExecute);
 
     auto fence = CreateCommandQueueFence(commandQueue);
     
@@ -392,8 +392,8 @@ void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int widt
     }
 
     auto swapChain = (Direct3D12SwapChain*)swapChainPointer;
-    swapChain->Width = width;
-    swapChain->Height = height;
+    swapChain->Width = (uint32_t)width;
+    swapChain->Height = (uint32_t)height;
 
     auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
     WaitForFenceOnCpu(fence);
@@ -404,7 +404,7 @@ void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int widt
         swapChain->RenderBuffers[i] = nullptr;
     }
     
-    AssertIfFailed(swapChain->DeviceObject->ResizeBuffers(swapChain->RenderBufferCount, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
+    AssertIfFailed(swapChain->DeviceObject->ResizeBuffers(swapChain->RenderBufferCount, (uint32_t)width, (uint32_t)height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
     CreateSwapChainBackBuffers(swapChain);
 }
     
@@ -470,7 +470,6 @@ void Direct3D12GraphicsService::FreeShader(void* shaderPointer)
 void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
-    auto graphicsDevice = commandList->GraphicsDevice;
 
     commandList->CurrentRenderPassDescriptor = *renderPassDescriptor;
     commandList->IsRenderPassActive = true;
@@ -548,7 +547,6 @@ void Direct3D12GraphicsService::BeginRenderPass(void* commandListPointer, Render
 void Direct3D12GraphicsService::EndRenderPass(void* commandListPointer)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
-    auto graphicsDevice = commandList->GraphicsDevice;
 
     commandList->DeviceObject->EndRenderPass();
 
@@ -601,7 +599,7 @@ void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shader
         // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
-            printf("Create PipelineState for shader %d...\n", hash);
+            printf("Create PipelineState for shader %llu...\n", hash);
             auto pipelineStateCacheItem = PipelineStateCacheItem();
             pipelineStateCacheItem.PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
@@ -627,7 +625,7 @@ void Direct3D12GraphicsService::SetShaderConstants(void* commandListPointer, uin
 
     if (commandList->IsRenderPassActive)
     {
-        commandList->DeviceObject->SetGraphicsRoot32BitConstants(slot, constantValueCount / 4, constantValues, 0);
+        commandList->DeviceObject->SetGraphicsRoot32BitConstants(slot, (uint32_t)constantValueCount / 4u, constantValues, 0);
     }
 }
     
@@ -715,8 +713,6 @@ CommandAllocatorPoolItem* Direct3D12GraphicsService::GetCommandAllocator(Direct3
 
 void Direct3D12GraphicsService::UpdateCommandAllocatorFence(Direct3D12CommandList* commandList, uint64_t fenceValue)
 {
-    auto graphicsDevice = commandList->GraphicsDevice;
-
     auto fence = Fence();
     fence.CommandQueuePointer = commandList->CommandQueue;
     fence.FenceValue = fenceValue;

@@ -1,8 +1,8 @@
 #pragma once
 
-// TODO: Find a solution here
-#pragma warning(disable :5045)
-
+#pragma warning(disable: 5045)
+#pragma warning(disable: 4820)
+#pragma warning(disable: 4324)
 
 //HACK: TEMPORARY
 #pragma warning(disable: 4100)
@@ -71,9 +71,9 @@ void SystemConcatStrings(char* dest, const char* str1, const char* str2)
 std::vector<std::wstring> SystemSplitString(std::wstring w, std::wstring tokenizerStr) 
 {
     std::vector<std::wstring> result;
-    long tokeninzerLength = tokenizerStr.length();
-    long position = 0;
-    long findIndex = w.find(tokenizerStr, position);
+    size_t tokeninzerLength = tokenizerStr.length();
+    size_t position = 0;
+    size_t findIndex = w.find(tokenizerStr, position);
 
     while (findIndex != -1)
     {
@@ -83,7 +83,7 @@ std::vector<std::wstring> SystemSplitString(std::wstring w, std::wstring tokeniz
         findIndex = w.find(tokenizerStr, position);
     }
 
-    result.push_back(w.substr(position, w.length() - position));
+    result.push_back(w.substr((size_t)position, w.length() - (size_t)position));
 
     return result;
 }
@@ -196,7 +196,7 @@ std::wstring SystemGetExecutableFolderPath()
     if (last_slash != NULL) 
     {
         // Create a string with the folder path
-        return std::wstring(path, last_slash - path);
+        return std::wstring(path, (size_t)(last_slash - path));
     }
     else 
     {
@@ -220,7 +220,7 @@ void SystemWriteBytesToFile(const std::string& filename, uint8_t* data, uint32_t
     fclose(file);
 }
 
-void SystemReadBytesFromFile(const std::string& filename, uint8_t** data, uint32_t* dataSizeInBytes)
+void SystemReadBytesFromFile(const std::string& filename, uint8_t** data, size_t* dataSizeInBytes)
 {
     FILE* file = NULL;
     errno_t result = fopen_s(&file, filename.c_str(), "rb");
@@ -232,7 +232,7 @@ void SystemReadBytesFromFile(const std::string& filename, uint8_t** data, uint32
     }
 
     std::fseek(file, 0, SEEK_END);
-    std::size_t fileSize = std::ftell(file);
+    size_t fileSize = (size_t)ftell(file);
     std::rewind(file);
 
     auto outputData = new uint8_t[fileSize];

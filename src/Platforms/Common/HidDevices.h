@@ -132,7 +132,7 @@ ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t ve
 
 static uint32_t* globalInputStateData = 0;
 static size_t globalInputStateDataSize = 0;
-static int32_t inputStateCurrentAllocatedIndex = 0;
+static uint32_t inputStateCurrentAllocatedIndex = 0;
 static uint8_t inputStateCurrentAllocatedBitPosition = 0;
 static bool currentAllocationBits = false;
 static struct InputObject* globalInputObjects = 0;

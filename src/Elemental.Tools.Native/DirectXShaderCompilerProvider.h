@@ -3,8 +3,6 @@
 #include "ElementalTools.h"
 #include "ShaderCompilerProvider.h"
 
-#include "dxcapi.h"
-#include "d3d12shader.h"
 #include "Interop/DxilRootSignature.h"
 
 class DirectXShaderCompilerProvider : ShaderCompilerProvider

@@ -1,4 +1,5 @@
 #include "PrecompiledHeader.h"
+#include "SystemFunctions.h"
 
 #include "DirectXShaderCompilerProvider.cpp"
 #include "SpirvCrossShaderCompilerProvider.cpp"

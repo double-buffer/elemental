@@ -13,7 +13,7 @@ struct Direct3D12GraphicsDevice;
 #define MAX_DIRECT3D12_COMMAND_ALLOCATORS 64
 #define MAX_DIRECT3D12_COMMAND_LISTS 64
 
-#include "../Win32Window.h"
+#include "Win32Window.h"
 #include "Direct3D12CommandQueue.h"
 #include "Direct3D12CommandList.h"
 #include "Direct3D12Shader.h"

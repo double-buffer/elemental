@@ -115,8 +115,6 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
         compileResult = dxilCompileResult;
     }
 
-    auto hasErrors = ProcessLogOutput(logList, compileResult);
-    
     ComPtr<IDxcBlob> shaderByteCode;
     AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
 
@@ -125,13 +123,12 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
     memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
 
-    return Span<uint8_t>(outputShaderData, shaderByteCode->GetBufferSize());
+    return Span<uint8_t>(outputShaderData, (uint32_t)shaderByteCode->GetBufferSize());
 }
 
 bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
 {
     auto hasErrors = false;
-    auto numOutputs = compileResult->GetNumOutputs();
 
     ComPtr<IDxcBlobUtf8> pErrors;
     AssertIfFailed(compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr));
@@ -144,7 +141,7 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
         auto lines = SystemSplitString(errorContent, L"\n");
         std::wstring line;
 
-        for (int32_t i = 0; i < lines.size(); i++)
+        for (size_t i = 0; i < lines.size(); i++)
         {
             line = lines[i];
 
@@ -205,7 +202,7 @@ void DirectXShaderCompilerProvider::ExtractMetaData(std::vector<ShaderMetaData>&
     ComPtr<IDxcContainerReflection> containerReflection;
     AssertIfFailed(_createInstanceFunc(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection)));
 
-    IDxcBlob* rootSignatureBlob;
+    IDxcBlob* rootSignatureBlob = {};
 
     #ifdef _WINDOWS
     AssertIfFailed(containerReflection->Load(dxilShaderByteCode.Get()));
@@ -227,22 +224,24 @@ void DirectXShaderCompilerProvider::ExtractMetaData(std::vector<ShaderMetaData>&
         }
     }
 
-    auto pointer = (uint8_t*)rootSignatureBlob->GetBufferPointer();
-
-    auto desc = (DxilContainerRootSignatureDesc*)pointer;
-
-    // TODO: Handle multiple parameters
-    for (int i = 0; i < desc->NumParameters; i++)
+    if (rootSignatureBlob)
     {
-        auto parameter = (DxilContainerRootParameter*)(pointer + desc->RootParametersOffset + i * sizeof(DxilContainerRootParameter));
+        auto pointer = (uint8_t*)rootSignatureBlob->GetBufferPointer();
+        auto desc = (DxilContainerRootSignatureDesc*)pointer;
 
-        if ((DxilRootParameterType)parameter->ParameterType == DxilRootParameterType::Constants32Bit)
+        // TODO: Handle multiple parameters
+        for (uint32_t i = 0; i < desc->NumParameters; i++)
         {
-            auto payload = (DxilRootConstants*)(pointer + parameter->PayloadOffset);
-            auto pushConstantCount = payload->Num32BitValues;
-        
-            metaDataList.push_back({ ShaderMetaDataType_PushConstantsCount, pushConstantCount });
-            break;
+            auto parameter = (DxilContainerRootParameter*)(pointer + desc->RootParametersOffset + i * sizeof(DxilContainerRootParameter));
+
+            if ((DxilRootParameterType)parameter->ParameterType == DxilRootParameterType::Constants32Bit)
+            {
+                auto payload = (DxilRootConstants*)(pointer + parameter->PayloadOffset);
+                auto pushConstantCount = payload->Num32BitValues;
+            
+                metaDataList.push_back({ ShaderMetaDataType_PushConstantsCount, pushConstantCount });
+                break;
+            }
         }
     }
 }
