@@ -2,8 +2,6 @@
 #include "SystemFunctions.h"
 #include "../Platforms/Common/ElementalCommon.h"
 
-
-
 enum ShaderLanguage
 {
     ShaderLanguage_Unknown = 0,

@@ -1,15 +1,8 @@
 #pragma once
 #include <stdint.h>
 #include <stdlib.h>
+#include "SystemFunctions.h"
 #include "Elemental.h"
-
-#ifdef _WINDOWS
-#define PackedStruct __pragma(pack(push, 1)) struct
-#define PackedStructEnd __pragma(pack(pop))
-#else
-#define PackedStruct struct __attribute__((__packed__))
-#define PackedStructEnd
-#endif
 
 float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
 {
