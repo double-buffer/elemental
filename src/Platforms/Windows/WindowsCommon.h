@@ -8,8 +8,6 @@
 #include <assert.h>
 #include <io.h>
 
-#define D3D12SDKVersion 608
-#define D3D12SDKPath u8".\\"
 
 #include <ShellScalingAPI.h>
 #include <Windows.h>

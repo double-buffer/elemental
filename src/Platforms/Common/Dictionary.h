@@ -44,7 +44,7 @@ public:
 
     uint32_t Count()
     {
-        return _map.size();
+        return (uint32_t)_map.size();
     }
 
 private:

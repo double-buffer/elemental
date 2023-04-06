@@ -1,7 +1,7 @@
 #pragma once
 #include "WindowsCommon.h"
-#include "../../../Common/CircularList.h"
-#include "../../../Common/Dictionary.h"
+#include "CircularList.h"
+#include "Dictionary.h"
 
 struct CommandAllocatorPoolItem
 {

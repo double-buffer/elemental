@@ -21,9 +21,9 @@ internal static unsafe class InputStateMarshaller
     internal readonly struct InputStateUnmanaged
     {
         public nint DataPointer { get; }
-        public int DataSize { get; }
+        public nuint DataSize { get; }
         public nint InputObjectsPointer { get; }
-        public int InputObjectsSize { get; }
+        public nuint InputObjectsSize { get; }
     }
 
     public static InputStateUnmanaged ConvertToUnmanaged(InputState _)
@@ -35,9 +35,9 @@ internal static unsafe class InputStateMarshaller
     {
         return new InputState
         {
-            InputStateData = new Span<uint>(unmanaged.DataPointer.ToPointer(), unmanaged.DataSize),
-            InputStateDataFloat = new Span<float>(unmanaged.DataPointer.ToPointer(), unmanaged.DataSize),
-            InputObjects = new Span<InputObject>(unmanaged.InputObjectsPointer.ToPointer(), unmanaged.InputObjectsSize)
+            InputStateData = new Span<uint>(unmanaged.DataPointer.ToPointer(), (int)unmanaged.DataSize),
+            InputStateDataFloat = new Span<float>(unmanaged.DataPointer.ToPointer(), (int)unmanaged.DataSize),
+            InputObjects = new Span<InputObject>(unmanaged.InputObjectsPointer.ToPointer(), (int)unmanaged.InputObjectsSize)
         };
     }
     
@@ -46,7 +46,7 @@ internal static unsafe class InputStateMarshaller
     }
 }
 
-public enum InputObjectKey : byte
+public enum InputObjectKey
 {
     Gamepad1LeftStickX,
     Gamepad1LeftStickY,
@@ -56,7 +56,7 @@ public enum InputObjectKey : byte
     Gamepad1Button2,
 }
 
-public enum InputObjectType : byte
+public enum InputObjectType
 {
     Digital,
     Analog

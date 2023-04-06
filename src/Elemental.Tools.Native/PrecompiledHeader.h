@@ -32,6 +32,8 @@ using namespace Microsoft::WRL;
 #include <iostream>
 #include <cstdlib>
 
+#include "../Platforms/Common/SystemFunctions.h"
+
 #define AssertIfFailed(result) assert(!FAILED(result))
 
 template<typename T>
@@ -60,4 +62,3 @@ struct Span
         return Span<T>();
     }
 };
-

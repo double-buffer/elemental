@@ -1,7 +1,7 @@
 #include "WindowsCommon.h"
-#include "../../Common/Elemental.h"
-#include "../../Common/SystemFunctions.h"
-#include "../../Common/HidDevices.h"
+#include "Elemental.h"
+#include "SystemFunctions.h"
+#include "HidDevices.h"
 #include "HidInputDevice.h"
 
 #include <vector>
@@ -62,7 +62,7 @@ void RegisterHidDevice(HANDLE hidDevice)
 
     HidInputDevice hidInputDevice = {};
     hidInputDevice.Device = hidDevice;
-    hidInputDevice.DeviceId = globalHidInputDevices.size();
+    hidInputDevice.DeviceId = (uint32_t)globalHidInputDevices.size();
     hidInputDevice.Event = CreateEvent(nullptr, true, false, nullptr);
     hidInputDevice.InputDataConvertFunction = convertHidInputDeviceDataFunctionPointer;
     
@@ -111,20 +111,26 @@ DWORD WINAPI InputThread(LPVOID lpParam)
 
     while (true) 
     {
-        auto inputDevicesCount = globalHidInputDevices.size();
+        auto inputDevicesCount = (int32_t)globalHidInputDevices.size();
         assert(inputDevicesCount <= 32);
+
+        if (inputDevicesCount == 0)
+        {
+            Sleep(1000);
+            continue;
+        }
 
         for (int32_t i = 0; i < inputDevicesCount; i++)
         {
-            eventsToWait[i] = globalHidInputDevices[i].Event;
+            eventsToWait[i] = globalHidInputDevices[(size_t)i].Event;
         }
 
-        auto waitResult = WaitForMultipleObjects(inputDevicesCount, eventsToWait, false, INFINITE);
+        auto waitResult = WaitForMultipleObjects((DWORD)inputDevicesCount, eventsToWait, false, INFINITE);
 
-        if (waitResult >= WAIT_OBJECT_0 && waitResult == WAIT_OBJECT_0)
+        if (waitResult != WAIT_FAILED)
         {
-            int deviceIndex = waitResult - WAIT_OBJECT_0;
-            auto hidInputDevice = globalHidInputDevices[deviceIndex];
+            int32_t deviceIndex = (int32_t)(waitResult - WAIT_OBJECT_0);
+            auto hidInputDevice = globalHidInputDevices[(size_t)deviceIndex];
 
             ReadFile(hidInputDevice.Device, hidInputDevice.ReadBuffer, hidInputDevice.ReadBufferSizeInBytes, nullptr, &hidInputDevice.Overlapped);
 

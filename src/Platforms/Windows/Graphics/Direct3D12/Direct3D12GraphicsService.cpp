@@ -15,7 +15,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* opt
     ComPtr<ID3D12DeviceFactory> deviceFactory;
     AssertIfFailed(sdkConfiguration1->CreateDeviceFactory(D3D12SDKVersion, D3D12SDKPath, IID_PPV_ARGS(deviceFactory.GetAddressOf())));*/
 
-    AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, D3D12SDKPath));
+    AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, ".\\"));
 
     UINT createFactoryFlags = 0;
     bool sdkLayerExists = _waccess((SystemGetExecutableFolderPath() + L".\\D3D12SDKLayers.dll").c_str(), 0) == 0;
@@ -206,7 +206,7 @@ void Direct3D12GraphicsService::FreeCommandQueue(void* commandQueuePointer)
 void Direct3D12GraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
-    commandQueue->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
+    commandQueue->DeviceObject->SetName(SystemConvertUtf8ToWideChar(label));
 }
 
 void* Direct3D12GraphicsService::CreateCommandList(void* commandQueuePointer)
@@ -233,7 +233,7 @@ void Direct3D12GraphicsService::FreeCommandList(void* commandListPointer)
 void Direct3D12GraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
-    commandList->DeviceObject->SetName(ConvertUtf8ToWString(label).c_str());
+    commandList->DeviceObject->SetName(SystemConvertUtf8ToWideChar(label));
 }
 
 void Direct3D12GraphicsService::CommitCommandList(void* commandListPointer)
@@ -647,7 +647,7 @@ void Direct3D12GraphicsService::DispatchMesh(void* commandListPointer, uint32_t 
 GraphicsDeviceInfo Direct3D12GraphicsService::ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
 {
     auto result = GraphicsDeviceInfo();
-    result.DeviceName = ConvertWStringToUtf8(adapterDescription.Description);
+    result.DeviceName = SystemConvertWideCharToUtf8(adapterDescription.Description);
     result.GraphicsApi = GraphicsApi_Direct3D12;
     result.DeviceId = GetDeviceId(adapterDescription);
     result.AvailableMemory = adapterDescription.DedicatedVideoMemory;

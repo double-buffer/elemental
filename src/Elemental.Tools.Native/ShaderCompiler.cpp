@@ -1,3 +1,4 @@
+#include "PrecompiledHeader.h"
 #include "ElementalTools.h"
 #include "ShaderCompilerProvider.h"
 #include "DirectXShaderCompilerProvider.h"
@@ -114,7 +115,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
 {
     if (!_platformTargetLanguages.count(graphicsApi))
     {
-        return CreateErrorResult(shaderStage, entryPoint, SystemConvertWStringToUtf8(L"Graphics API is not supported!"));
+        return CreateErrorResult(shaderStage, entryPoint, SystemConvertWideCharToUtf8(L"Graphics API is not supported!"));
     }
 
     auto graphicsApiTargetShaderLanguage = _platformTargetLanguages[graphicsApi];
@@ -169,7 +170,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         return result;
     } 
         
-    return CreateErrorResult(shaderStage, entryPoint, SystemConvertWStringToUtf8(L"Cannot find compatible shader compilers toolchain."));
+    return CreateErrorResult(shaderStage, entryPoint, SystemConvertWideCharToUtf8(L"Cannot find compatible shader compilers toolchain."));
 }
     
 DllExport void Native_CompileShaders(ShaderCompilerInput* inputs, int32_t inputCount, GraphicsApi graphicsApi, ShaderCompilationOptions* options, ShaderCompilerResult* results, int32_t* resultCount)

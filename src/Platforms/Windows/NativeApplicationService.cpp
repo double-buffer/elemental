@@ -1,7 +1,7 @@
 #include "WindowsCommon.h"
 #include "Libs/Win32DarkMode/DarkMode.h"
-#include "../Common/Elemental.h"
-#include "../Common/SystemFunctions.h"
+#include "Elemental.h"
+#include "SystemFunctions.h"
 #include "Win32Application.h"
 #include "Win32Window.h"
 
@@ -66,7 +66,7 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
-        ConvertUtf8ToWString(options.Title).c_str(),
+        SystemConvertUtf8ToWideChar(options.Title),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -188,7 +188,7 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
 
 DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, uint8_t* title)
 {
-    SetWindowText(nativeWindow->WindowHandle, ConvertUtf8ToWString(title).c_str());
+    SetWindowText(nativeWindow->WindowHandle, SystemConvertUtf8ToWideChar(title));
 }
     
 DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState windowState)

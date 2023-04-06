@@ -44,7 +44,7 @@ struct NativeWindowSize
 
 struct GraphicsDeviceInfo
 {
-    uint8_t* DeviceName;
+    const uint8_t* DeviceName;
     enum GraphicsApi GraphicsApi;
     uint64_t DeviceId;
     uint64_t AvailableMemory;
@@ -132,9 +132,9 @@ struct RenderPassDescriptor
 struct InputState
 {
     void* DataPointer;
-    int32_t DataSize;
+    size_t DataSize;
     void* InputObjectsPointer;
-    int32_t InputObjectsSize;
+    size_t InputObjectsSize;
 };
 
 enum InputObjectKey : uint8_t

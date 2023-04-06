@@ -1,119 +1,71 @@
 #pragma once
 
+// TODO: Find a solution here
+#pragma warning(disable :5045)
+
+
+//HACK: TEMPORARY
+#pragma warning(disable: 4100)
+
 // TODO: Remove c++
+#include <string>
+#include <vector>
 
 #ifdef _WINDOWS
 #define PackedStruct __pragma(pack(push, 1)) struct
 #define PackedStructEnd __pragma(pack(pop))
+
+#define popen _popen
+#define pclose _pclose
 #else
 #define PackedStruct struct __attribute__((__packed__))
 #define PackedStructEnd
 #endif
-
-#if _WINDOWS
-uint8_t* SystemConvertWStringToUtf8(const std::wstring &source)
-{
-    char *destination = new char[source.length() + 1];
-    destination[source.length()] = '\0';
-    WideCharToMultiByte(65001, 0, source.c_str(), -1, destination, (int)source.length(), NULL, NULL);
-
-    return (uint8_t*)destination;
-}
-
-std::wstring SystemConvertUtf8ToWString(uint8_t* source)
-{
-    auto stringLength = std::string((char*)source).length();
-    std::wstring destination;
-    destination.resize(stringLength + 1);
-    MultiByteToWideChar(CP_UTF8, 0, (char*)source, -1, (wchar_t*)destination.c_str(), (int)(stringLength + 1));
-
-	return destination;
-}
-std::wstring SystemGenerateTempFilename() 
-{
-    wchar_t temp[MAX_PATH];
-
-    // TODO: Get users temp directory
-
-    DWORD dwRetVal = GetTempFileName(L".", L"tempfile", 0, temp);
-    if (dwRetVal != 0) {
-        return std::wstring(temp);
-    }
-    return L"";
-}
-#else
-uint8_t* SystemConvertWStringToUtf8(const std::wstring &source)
-{
-    iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
-
-    char* output_buffer = new char[source.length() * 4];
-    char* output_ptr = output_buffer;
-    size_t output_len = source.length() * 4;
-
-    char* input_ptr = reinterpret_cast<char*>((char*)source.c_str());
-    size_t input_len = source.length() * sizeof(wchar_t);
-
-    int result = iconv(cd, &input_ptr, &input_len, &output_ptr, &output_len);
-
-    return (uint8_t*)output_buffer;
-}
-
-// TODO: This seems to be the thing to do, convert the other functions
-std::wstring SystemConvertUtf8ToWString(const uint8_t* source)
-{
-    iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
-    
-    auto inputString = std::string((char*)source);
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    auto outputString = converter.from_bytes(inputString);
-    
-    return outputString;
-}
-
-std::string SystemGenerateTempFilename() 
-{
-    char temp[] = "/tmp/tempfileXXXXXX";
-    int fd = mkstemp(temp);
-    if (fd != -1) {
-        close(fd);
-        return std::string(temp);
-    }
-    return "";
-}
-#endif
-void* SystemLoadLibrary(const std::string libraryName)
-{
 #ifdef _WINDOWS
-    const std::string libraryExtension = ".dll";
+    const char* libraryExtension = ".dll";
 #elif __APPLE__
-    const std::string libraryExtension = ".dylib";
+    const char* libraryExtension = ".dylib";
 #else
-    const std::string libraryExtension = ".so";
+    const char* libraryExtension = ".so";
 #endif
 
-#ifdef _WINDOWS
-    return LoadLibraryA((libraryName + libraryExtension).c_str());
-#else
-    return dlopen(("lib" + libraryName + libraryExtension).c_str(), RTLD_LAZY);
-#endif
+//---------------------------------------------------------------------------------------------------------------
+// Memory management functions
+//---------------------------------------------------------------------------------------------------------------
+// TODO: Write system allocate/free functions so we can track if we have memory leak in the interop layer
+
+uint32_t globalAllocationCount = 0;
+
+void* SystemAllocateMemory(uint64_t sizeInBytes)
+{
+    void* memory = malloc(sizeInBytes);
+    globalAllocationCount++;
+    return memory;
 }
 
-void SystemFreeLibrary(void* library)
+void SystemFreeMemory(void* memory)
 {
-#ifdef _WINDOWS
-    FreeLibrary((HMODULE)library);
-#else
-    dlclose(library);
-#endif
+    free(memory);
 }
 
-void* SystemGetFunctionExport(void* library, std::string functionName)
+//---------------------------------------------------------------------------------------------------------------
+// String functions
+//---------------------------------------------------------------------------------------------------------------
+
+void SystemConcatStrings(char* dest, const char* str1, const char* str2) 
 {
-#ifdef _WINDOWS
-    return GetProcAddress((HMODULE)library, functionName.c_str());
-#else
-    return dlsym(library, functionName.c_str());
-#endif
+    // get the lengths of the strings
+    size_t len1 = strlen(str1);
+    size_t len2 = strlen(str2);
+
+    // copy the first string into the buffer
+    memcpy(dest, str1, len1);
+
+    // copy the second string into the buffer, starting at the end of the first string
+    memcpy(dest + len1, str2, len2);
+
+    // null-terminate the concatenated string
+    dest[len1 + len2] = '\0';
 }
 
 std::vector<std::wstring> SystemSplitString(std::wstring w, std::wstring tokenizerStr) 
@@ -136,113 +88,102 @@ std::vector<std::wstring> SystemSplitString(std::wstring w, std::wstring tokeniz
     return result;
 }
 
-void SystemWriteBytesToFile(const std::string& filename, Span<uint8_t> data) 
+const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source)
 {
-    FILE* outFile = fopen(filename.c_str(), "wb");
-    fwrite(data.Pointer, sizeof(uint8_t), data.Length, outFile);
-    fclose(outFile);
-}
-
-Span<uint8_t> SystemReadBytesFromFile(const std::string& filename)
-{
-    FILE* inFile = fopen(filename.c_str(), "rb");
-
-    if (!inFile) 
-    {
-        throw std::runtime_error("Failed to open file: " + filename);
+    // first, determine the required buffer size
+    size_t dest_size = 0;
+    errno_t err = wcstombs_s(&dest_size, NULL, 0, source, 0);
+    if (err != 0 || dest_size == 0) {
+        // conversion failed
+        return NULL;
     }
 
-    std::fseek(inFile, 0, SEEK_END);
-    std::size_t fileSize = std::ftell(inFile);
-    std::rewind(inFile);
-
-    auto outputData = new uint8_t[fileSize];
-    std::size_t bytesRead = std::fread(outputData, sizeof(uint8_t), fileSize, inFile);
-
-    assert(bytesRead == fileSize);
-    std::fclose(inFile);
-
-    return Span<uint8_t>(outputData, fileSize);
-}
-
-void SystemDeleteFile(const std::string& filename)
-{
-   remove(filename.c_str()); 
-}
-
-std::string SystemExecuteProcess(const std::string cmd) 
-{
-    char buffer[128];
-    std::string result = "";
-
-    FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
-    assert(pipe);
-
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) 
-    {
-        result += buffer;
+    // allocate a buffer for the encoded string
+    char* dest = (char*)malloc(dest_size + 1); // add 1 for null terminator
+    if (dest == NULL) {
+        // memory allocation failed
+        return NULL;
     }
 
-    pclose(pipe);
-    return result;
+    // encode the string
+    size_t converted_chars = 0;
+    err = wcstombs_s(&converted_chars, dest, dest_size + 1, source, dest_size);
+    if (err != 0 || converted_chars == 0) {
+        // conversion failed
+        free(dest);
+        return NULL;
+    }
+
+    // null-terminate the string
+    dest[converted_chars] = '\0';
+
+    return (uint8_t*)dest;
 }
 
-// TODO: Write system allocate/free functions so we can track if we have memory leak in the interop layer
-
-void* SystemLoadLibrary(const std::string libraryName)
+const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
 {
-#ifdef _WINDOWS
-    const std::string libraryExtension = ".dll";
-#elif __APPLE__
-    const std::string libraryExtension = ".dylib";
+    // first, determine the required buffer size
+    size_t dest_size = 0;
+    errno_t err = mbstowcs_s(&dest_size, NULL, 0, (char*)source, 0);
+    if (err != 0 || dest_size == 0) {
+        // conversion failed
+        return NULL;
+    }
+
+    // allocate a buffer for the converted string
+    wchar_t* dest = (wchar_t*)malloc((dest_size + 1) * sizeof(wchar_t)); // add 1 for null terminator
+    if (dest == NULL) {
+        // memory allocation failed
+        return NULL;
+    }
+
+    // convert the string
+    size_t converted_chars = 0;
+    err = mbstowcs_s(&converted_chars, dest, dest_size + 1, (char*)source, dest_size);
+    if (err != 0 || converted_chars == 0) {
+        // conversion failed
+        free(dest);
+        return NULL;
+    }
+
+    // null-terminate the string
+    dest[converted_chars] = L'\0';
+
+    return dest;
+}
+
+//---------------------------------------------------------------------------------------------------------------
+// IO functions
+//---------------------------------------------------------------------------------------------------------------
+
+#if _WINDOWS
+const wchar_t* SystemGenerateTempFilename() 
+{
+    // TODO: HACK
+    wchar_t* temp = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
+
+    // TODO: Get users temp directory
+
+    DWORD dwRetVal = GetTempFileName(L".", L"tempfile", 0, temp);
+    if (dwRetVal != 0) {
+        return temp;
+    }
+    return L"";
+}
 #else
-    const std::string libraryExtension = ".so";
+const wchar_t* SystemGenerateTempFilename() 
+{
+    char temp[] = "/tmp/tempfileXXXXXX";
+    int fd = mkstemp(temp);
+    if (fd != -1) {
+        close(fd);
+        return temp;
+    }
+    return "";
+}
 #endif
 
 #ifdef _WINDOWS
-    return LoadLibraryA((libraryName + libraryExtension).c_str());
-#else
-    return dlopen(("lib" + libraryName + libraryExtension).c_str(), RTLD_LAZY);
-#endif
-}
-
-void SystemFreeLibrary(void* library)
-{
-#ifdef _WINDOWS
-    FreeLibrary((HMODULE)library);
-#else
-    dlclose(library);
-#endif
-}
-
-void* SystemGetFunctionExport(void* library, std::string functionName)
-{
-#ifdef _WINDOWS
-    return GetProcAddress((HMODULE)library, functionName.c_str());
-#else
-    return dlsym(library, functionName.c_str());
-#endif
-}
-
-#ifdef _WINDOWS
-std::wstring ConvertUtf8ToWString(unsigned char* source)
-{
-    auto stringLength = std::string((char*)source).length();
-    std::wstring destination;
-    destination.resize(stringLength + 1);
-    MultiByteToWideChar(CP_UTF8, 0, (char*)source, -1, (wchar_t*)destination.c_str(), (int)(stringLength + 1));
-
-	return destination;
-}
-
-unsigned char* ConvertWStringToUtf8(const std::wstring &source)
-{
-    char *destination = new char[source.length() + 1];
-    destination[source.length()] = '\0';
-    WideCharToMultiByte(CP_ACP, 0, source.c_str(), -1, destination, (int)source.length(), NULL, NULL);
-
-    return (unsigned char*)destination;
-}
 
 std::wstring SystemGetExecutableFolderPath() 
 {
@@ -265,16 +206,98 @@ std::wstring SystemGetExecutableFolderPath()
 }
 #endif
 
-uint32_t globalAllocationCount = 0;
-
-void* SystemAllocateMemory(uint64_t sizeInBytes)
+void SystemWriteBytesToFile(const std::string& filename, uint8_t* data, uint32_t dataSizeInBytes) 
 {
-    void* memory = malloc(sizeInBytes);
-    globalAllocationCount++;
-    return memory;
+    FILE* file = NULL;
+    errno_t result = fopen_s(&file, filename.c_str(), "wb");
+
+    if (result != 0 || file == NULL)
+    {
+        return;
+    }
+
+    fwrite(data, sizeof(uint8_t), dataSizeInBytes, file);
+    fclose(file);
 }
 
-void SystemFreeMemory(void* memory)
+void SystemReadBytesFromFile(const std::string& filename, uint8_t** data, uint32_t* dataSizeInBytes)
 {
-    free(memory);
+    FILE* file = NULL;
+    errno_t result = fopen_s(&file, filename.c_str(), "rb");
+
+    if (result != 0 || file == NULL)
+    {
+        *data = NULL;
+        *dataSizeInBytes = 0;
+    }
+
+    std::fseek(file, 0, SEEK_END);
+    std::size_t fileSize = std::ftell(file);
+    std::rewind(file);
+
+    auto outputData = new uint8_t[fileSize];
+    std::size_t bytesRead = std::fread(outputData, sizeof(uint8_t), fileSize, file);
+
+    assert(bytesRead == fileSize);
+    std::fclose(file);
+
+    *data = outputData;
+    *dataSizeInBytes = fileSize;
+}
+
+void SystemDeleteFile(const std::string& filename)
+{
+   remove(filename.c_str()); 
+}
+
+//---------------------------------------------------------------------------------------------------------------
+// Library / process functions
+//---------------------------------------------------------------------------------------------------------------
+
+const void* SystemLoadLibrary(const char* libraryName)
+{
+    char fullName[MAX_PATH];
+    SystemConcatStrings(fullName, libraryName, libraryExtension);
+
+#ifdef _WINDOWS
+    return LoadLibraryA(fullName);
+#else
+    char* fullNameUnix[MAX_PATH];
+    return dlopen(SystemContacStrings(fullNameUnix, "lib", fullName), RTLD_LAZY);
+#endif
+}
+
+void SystemFreeLibrary(const void* library)
+{
+#ifdef _WINDOWS
+    FreeLibrary((HMODULE)library);
+#else
+    dlclose(library);
+#endif
+}
+
+const void* SystemGetFunctionExport(const void* library, const char* functionName)
+{
+#ifdef _WINDOWS
+    return GetProcAddress((HMODULE)library, functionName);
+#else
+    return dlsym(library, functionName);
+#endif
+}
+
+std::string SystemExecuteProcess(const std::string cmd) 
+{
+    char buffer[128];
+    std::string result = "";
+
+    FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
+    assert(pipe);
+
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL) 
+    {
+        result += buffer;
+    }
+
+    pclose(pipe);
+    return result;
 }

@@ -1,8 +1,8 @@
 #include "WindowsCommon.h"
+#include "BaseGraphicsObject.h"
+#include "BaseGraphicsService.h"
 #include "Direct3D12/Direct3D12GraphicsService.h"
-#include "../../Common/BaseGraphicsObject.h"
-#include "../../Common/BaseGraphicsService.h"
-#include "../../Common/Vulkan/VulkanGraphicsService.h"
+#include "Vulkan/VulkanGraphicsService.h"
 
 static Direct3D12GraphicsService* _globalDirect3D12GraphicsService; 
 static VulkanGraphicsService* _globalVulkanGraphicsService; 

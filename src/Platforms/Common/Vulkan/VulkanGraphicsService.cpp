@@ -144,8 +144,8 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     uint32_t deviceCount = 16;
     VkPhysicalDevice devices[16];
     VkPhysicalDevice physicalDevice = {};
-    VkPhysicalDeviceProperties deviceProperties;
-    VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
+    VkPhysicalDeviceProperties deviceProperties = {};
+    VkPhysicalDeviceMemoryProperties deviceMemoryProperties {};
     bool foundDevice = false;
 
     AssertIfFailed(vkEnumeratePhysicalDevices(_vulkanInstance, &deviceCount, nullptr));
@@ -287,9 +287,9 @@ void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     VulkanCommandPoolItem* item;
 
-    for (uint32_t i = 0; i < graphicsDevice->PipelineStates.Count(); i++)
+    for (int32_t i = 0; i < (int32_t)graphicsDevice->PipelineStates.Count(); i++)
     {
-        vkDestroyPipeline(graphicsDevice->Device, graphicsDevice->PipelineStates[(int32_t)i].PipelineState, nullptr);
+        vkDestroyPipeline(graphicsDevice->Device, graphicsDevice->PipelineStates[i].PipelineState, nullptr);
     }
 
     for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
@@ -921,7 +921,7 @@ void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t thre
 GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
     auto result = GraphicsDeviceInfo();
-    result.DeviceName = ConvertWStringToUtf8(std::wstring(deviceProperties.deviceName, deviceProperties.deviceName + strlen(deviceProperties.deviceName)));
+    result.DeviceName = SystemConvertWideCharToUtf8(std::wstring(deviceProperties.deviceName, deviceProperties.deviceName + strlen(deviceProperties.deviceName)).c_str());
     result.GraphicsApi = GraphicsApi_Vulkan;
     result.DeviceId = deviceProperties.deviceID;
     result.AvailableMemory = deviceMemoryProperties.memoryHeaps[0].size;
@@ -1253,7 +1253,7 @@ void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandL
     }
 }
 
-static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
+static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* pMessage, void*)
 {
     // This silences warnings like "For optimal performance image layout should be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL instead of GENERAL."
     // We'll assume other performance warnings are also not useful.

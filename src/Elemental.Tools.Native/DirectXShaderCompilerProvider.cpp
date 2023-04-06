@@ -1,3 +1,4 @@
+#include "PrecompiledHeader.h"
 #include "DirectXShaderCompilerProvider.h"
 
 DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
@@ -49,8 +50,8 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     //-E for the entry point (eg. PSMain)
     arguments.push_back(L"-E");
     
-    auto entryPointString = SystemConvertUtf8ToWString(entryPoint);
-    arguments.push_back(entryPointString.c_str());
+    auto entryPointString = SystemConvertUtf8ToWideChar(entryPoint);
+    arguments.push_back(entryPointString);
 
     // TODO: Use defines
     auto shaderTarget = L"ms_6_7";
@@ -137,7 +138,7 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
 
     if (pErrors && pErrors->GetStringLength() > 0)
     {
-        auto errorContent = SystemConvertUtf8ToWString((uint8_t*)pErrors->GetBufferPointer());
+        auto errorContent = SystemConvertUtf8ToWideChar((uint8_t*)pErrors->GetBufferPointer());
         auto currentLogType = ShaderCompilerLogEntryType_Error;
 
         auto lines = SystemSplitString(errorContent, L"\n");
@@ -164,7 +165,7 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
             
             if (line.length() > 0)
             {
-                logList.push_back({ currentLogType, SystemConvertWStringToUtf8(line) });
+                logList.push_back({ currentLogType, SystemConvertWideCharToUtf8(line.c_str()) });
             }
         }
     }

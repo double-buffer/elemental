@@ -1,5 +1,4 @@
 #pragma once
-#include "SystemFunctions.h"
 #include "../Platforms/Common/ElementalCommon.h"
 
 enum ShaderLanguage
@@ -22,7 +21,7 @@ enum ShaderCompilerLogEntryType
 struct ShaderCompilerLogEntry
 {
     enum ShaderCompilerLogEntryType Type;
-    uint8_t* Message;
+    const uint8_t* Message;
 };
 
 struct ShaderCompilationOptions
@@ -42,7 +41,7 @@ struct ShaderCompilerResult
 {
     bool IsSuccess;
     enum ShaderStage Stage;
-    uint8_t* EntryPoint;
+    const uint8_t* EntryPoint;
     uint8_t* ShaderData;
     int32_t ShaderDataCount;
     struct ShaderCompilerLogEntry* LogEntries;
@@ -51,7 +50,7 @@ struct ShaderCompilerResult
     int32_t MetaDataCount;
 };
 
-ShaderCompilerResult CreateErrorResult(ShaderStage stage, uint8_t* entryPoint, uint8_t* message)
+const ShaderCompilerResult CreateErrorResult(ShaderStage stage, const uint8_t* entryPoint, const uint8_t* message)
 {
     ShaderCompilerResult result = {};
 

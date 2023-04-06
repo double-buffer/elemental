@@ -1,6 +1,4 @@
 #pragma once
-#include <stdint.h>
-#include <stdlib.h>
 #include "SystemFunctions.h"
 #include "Elemental.h"
 
@@ -8,7 +6,7 @@ float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
 {
     // TODO: Allows the configuration of deadzone
     float_t deadZone = 0.25f;
-    float_t normalizedValue = ((float)value / maxValue) * 2.0f - 1.0f;
+    float_t normalizedValue = ((float_t)value / (float_t)maxValue) * 2.0f - 1.0f;
 
     if (normalizedValue < deadZone && normalizedValue > -deadZone)
     {
@@ -29,7 +27,7 @@ void SetInputObjectDigitalValue(struct InputState inputState, enum InputObjectKe
     struct InputObject inputObject = ((struct InputObject*)inputState.InputObjectsPointer)[inputObjectKey];
 
     uint32_t currentValue = ((uint32_t *)inputState.DataPointer)[inputObject.Value.Offset];
-    uint32_t mask = 1 << inputObject.Value.BitPosition;
+    uint32_t mask = 1u << (uint32_t)inputObject.Value.BitPosition;
     ((uint32_t *)inputState.DataPointer)[inputObject.Value.Offset] = (currentValue & ~mask) | ((value ? 1 : 0) << inputObject.Value.BitPosition);
 }
 
@@ -71,8 +69,8 @@ void ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(struct InputState
 {
     struct XboxOneWirelessOldDriverGamepadReport* inputData = (struct XboxOneWirelessOldDriverGamepadReport*)reportData;
 
-    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535.0f));
-    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535.0f));
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535));
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535));
     SetInputObjectDigitalValue(inputState, Gamepad1Button1, inputData->Buttons & 0x01);
     SetInputObjectDigitalValue(inputState, Gamepad1Button2, inputData->Buttons & 0x02);
 }
@@ -99,8 +97,8 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputSta
 {
     struct XboxOneWirelessGamepadReport* inputData = (struct XboxOneWirelessGamepadReport*)reportData;
 
-    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535.0f));
-    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535.0f));
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535));
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535));
     SetInputObjectDigitalValue(inputState, Gamepad1Button1, inputData->Buttons & 0x01);
     SetInputObjectDigitalValue(inputState, Gamepad1Button2, inputData->Buttons & 0x02);
 }
@@ -133,12 +131,12 @@ ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t ve
 //---------------------------------------------------------------------------------------------------------------
 
 static uint32_t* globalInputStateData = 0;
-static int32_t globalInputStateDataSize = 0;
+static size_t globalInputStateDataSize = 0;
 static int32_t inputStateCurrentAllocatedIndex = 0;
 static uint8_t inputStateCurrentAllocatedBitPosition = 0;
 static bool currentAllocationBits = false;
 static struct InputObject* globalInputObjects = 0;
-static int32_t globalInputObjectsSize = 0;
+static size_t globalInputObjectsSize = 0;
 
 void CreateInputObject(enum InputObjectKey inputObjectKey, enum InputObjectType inputObjectType)
 {

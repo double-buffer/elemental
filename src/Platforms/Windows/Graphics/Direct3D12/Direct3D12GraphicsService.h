@@ -1,11 +1,13 @@
 #pragma once
 #include "WindowsCommon.h"
-#include "../../../Common/BaseGraphicsService.h"
-#include "../../../Common/BaseGraphicsObject.h"
-#include "../../../Common/SystemFunctions.h"
-#include "../../../Common/BinaryContainer.h"
+#include "BaseGraphicsService.h"
+#include "BaseGraphicsObject.h"
+#include "SystemFunctions.h"
+#include "BinaryContainer.h"
 
 struct Direct3D12GraphicsDevice;
+
+#define D3D12SDKVersion 608
 
 #define MAX_DIRECT3D12_GRAPHICS_DEVICES 64
 #define MAX_DIRECT3D12_COMMAND_ALLOCATORS 64

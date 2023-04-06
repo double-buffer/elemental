@@ -1,4 +1,5 @@
 #pragma once
+#include "PrecompiledHeader.h"
 #include "ElementalTools.h"
 
 class ShaderCompilerProvider

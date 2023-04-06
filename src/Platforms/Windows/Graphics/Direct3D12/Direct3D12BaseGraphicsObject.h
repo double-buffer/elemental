@@ -1,6 +1,6 @@
 #pragma once
 #include "WindowsCommon.h"
-#include "../../../Common/BaseGraphicsObject.h"
+#include "BaseGraphicsObject.h"
 
 struct Direct3D12BaseGraphicsObject : BaseGraphicsObject
 {

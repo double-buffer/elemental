@@ -1,3 +1,4 @@
+#include "PrecompiledHeader.h"
 #include "MetalShaderCompilerProvider.h"
 
 ShaderLanguage MetalShaderCompilerProvider::GetShaderLanguage()
@@ -23,7 +24,7 @@ bool MetalShaderCompilerProvider::IsCompilerInstalled()
 Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
 #ifdef _WINDOWS
-    logList.push_back({ShaderCompilerLogEntryType_Error, SystemConvertWStringToUtf8(L"Metal shader compiler is not supported on Windows.")});
+    logList.push_back({ShaderCompilerLogEntryType_Error, SystemConvertWideCharToUtf8(L"Metal shader compiler is not supported on Windows.")});
     return Span<uint8_t>::Empty();
 #else
     auto inputFilePath = SystemGenerateTempFilename() + ".metal";
@@ -68,7 +69,7 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     
 bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, std::string output)
 {
-    auto outputWString = SystemConvertUtf8ToWString((uint8_t*)output.c_str());
+    auto outputWString = SystemConvertUtf8ToWideChar((uint8_t*)output.c_str());
     auto lines = SystemSplitString(outputWString, L"\n");
     
     auto hasErrors = false;
@@ -92,7 +93,7 @@ bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLog
 
         if (line.length() > 0)
         { 
-            logList.push_back({ currentLogType, SystemConvertWStringToUtf8(line) });
+            logList.push_back({ currentLogType, SystemConvertWideCharToUtf8(line.c_str()) });
         }
     }
 

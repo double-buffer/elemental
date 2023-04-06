@@ -1,6 +1,6 @@
 #pragma once
 #include "WindowsCommon.h"
-#include "../Common/Elemental.h"
+#include "Elemental.h"
 
 struct Win32Application
 {
