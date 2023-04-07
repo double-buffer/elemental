@@ -11,6 +11,11 @@
 #pragma warning(disable: 5204)
 #pragma warning(disable: 5045)
 
+#ifdef _DEBUG
+#undef _DEBUG
+#define _WASDEBUG
+#endif
+
 #if _WINDOWS
 #define DllExport extern "C" __declspec(dllexport)
 #include <windows.h>
@@ -45,7 +50,13 @@ using namespace Microsoft::WRL;
 
 #include "dxcapi.h"
 #include "d3d12shader.h"
+
+
 #include "spirv_msl.hpp"
+
+#ifdef _WASDEBUG
+#define _DEBUG
+#endif
 
 #define AssertIfFailed(result) assert(!FAILED(result))
 

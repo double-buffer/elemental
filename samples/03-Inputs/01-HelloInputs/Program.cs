@@ -5,7 +5,7 @@ using Elemental.Graphics;
 using Elemental.Inputs;
 using Elemental.Tools;
 
-var applicationService = new NativeApplicationService();
+using var applicationService = new NativeApplicationService();
 using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = GraphicsDiagnostics.Debug });
 using var inputsService = new InputsService();
 
@@ -137,7 +137,7 @@ applicationService.RunApplication(application, (status) =>
         RotationX = shaderParameters.RotationX + -inputState.Gamepad.LeftStickY.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
         RotationY = shaderParameters.RotationY + inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
         CurrentColorIndex = inputState.Gamepad.Button1.Value == 1 ? shaderParameters.CurrentColorIndex + 1 : shaderParameters.CurrentColorIndex
-};
+    };
 
     //Console.WriteLine($"Left: {inputState.Gamepad.LeftStickX.Value}");
 

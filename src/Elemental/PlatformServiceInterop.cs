@@ -5,6 +5,12 @@ namespace Elemental;
 internal static partial class PlatformServiceInterop
 {
     [LibraryImport("Elemental.Native")]
+    internal static partial void Native_InitNativeApplicationService();
+    
+    [LibraryImport("Elemental.Native")]
+    internal static partial void Native_FreeNativeApplicationService();
+
+    [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeNativePointer(nint pointer);
 
     [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]

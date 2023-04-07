@@ -95,6 +95,10 @@ DllExport void Native_FreeShaderCompiler()
     {
         delete _shaderCompilerProviders[i];
     }
+    
+    #ifdef _DEBUG
+    SystemCheckAllocations();
+    #endif
 }
 
 DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)

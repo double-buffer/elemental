@@ -15,6 +15,17 @@ HWND globalMainWindow;
 void ProcessMessages(Win32Application* application);
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
+DllExport void Native_InitNativeApplicationService()
+{
+}
+
+DllExport void Native_FreeNativeApplicationService()
+{
+    #ifdef _DEBUG
+    SystemCheckAllocations();
+    #endif
+}
+
 DllExport void Native_FreeNativePointer(void* nativePointer)
 {
     delete nativePointer;
@@ -40,7 +51,6 @@ DllExport void* Native_CreateApplication(uint8_t* applicationName)
 
 DllExport void Native_FreeApplication(void* applicationPointer)
 {
-    SystemCheckAllocations();
     delete (Win32Application*)applicationPointer;
 }
 

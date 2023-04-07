@@ -3,7 +3,7 @@ namespace Elemental;
 /// <summary>
 /// Manages the application lifecycle and windows.
 /// </summary>
-[PlatformService]
+[PlatformService(InitMethod = nameof(PlatformServiceInterop.Native_InitNativeApplicationService), DisposeMethod = nameof(PlatformServiceInterop.Native_FreeNativeApplicationService))]
 public interface INativeApplicationService
 {
     /// <summary>
