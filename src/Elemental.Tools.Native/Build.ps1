@@ -32,6 +32,7 @@ function CompileNativeTools {
 
         if ($IsMacOS) {
             # TODO: Release mode
+            # TODO: Define Debug
             clang -std=c++17 -lc++ -fms-extensions -g -liconv -lspirv-cross-core -lspirv-cross-cpp -lspirv-cross-msl -lspirv-cross-glsl -lspirv-cross-reflect -lspirv-cross-util -L../../../external/shader-compilers/spirv-cross/lib/  -dynamiclib -I../Interop/ -I../../../external/DirectX-Headers/include/directx/ -I../../../external/shader-compilers/dxc/include/dxc/ -I../../../external/shader-compilers/spirv-cross/include/ -o $outputDirectory/Elemental.Tools.Native.dylib ../UnityBuild.cpp
         } else {
             RegisterVisualStudioEnvironment

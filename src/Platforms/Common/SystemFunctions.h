@@ -30,23 +30,56 @@
 #endif
 
 //---------------------------------------------------------------------------------------------------------------
-// Memory management functions
+// Debug Memory management functions
 //---------------------------------------------------------------------------------------------------------------
-// TODO: Write system allocate/free functions so we can track if we have memory leak in the interop layer
+#ifdef _DEBUG
+#include <unordered_map>
 
-uint32_t globalAllocationCount = 0;
-
-void* SystemAllocateMemory(uint64_t sizeInBytes)
+struct SystemAllocation
 {
-    void* memory = malloc(sizeInBytes);
-    globalAllocationCount++;
-    return memory;
+    size_t SizeInBytes;
+    char File[MAX_PATH];
+    uint32_t LineNumber;
+};
+
+std::unordered_map<void*, SystemAllocation> allocations;
+
+void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNumber)
+{
+    void* pointer = malloc(sizeInBytes);
+
+    SystemAllocation allocation = {};
+    allocation.SizeInBytes = sizeInBytes;
+    strcpy_s(allocation.File, file);
+    allocation.LineNumber = lineNumber;
+
+    allocations.emplace(pointer, allocation);
+    return pointer;
 }
 
-void SystemFreeMemory(void* memory)
+void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 {
-    free(memory);
+    if (allocations.count(pointer) > 0)
+    {
+        allocations.erase(pointer);
+    }
+
+    free(pointer);
 }
+
+void SystemCheckAllocations()
+{
+    printf("WARNING: Leaked native memory allocations: %zu\n", allocations.size());
+
+    for (auto& [key, value]: allocations)
+    {
+        printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value.SizeInBytes, value.File, value.LineNumber);
+    }
+}
+
+#define malloc(size) SystemAllocateMemory(size, __FILE__, (uint32_t)__LINE__)
+#define free(pointer) SystemFreeMemory(pointer, __FILE__, (uint32_t)__LINE__)
+#endif
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions

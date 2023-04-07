@@ -40,6 +40,7 @@ DllExport void* Native_CreateApplication(uint8_t* applicationName)
 
 DllExport void Native_FreeApplication(void* applicationPointer)
 {
+    SystemCheckAllocations();
     delete (Win32Application*)applicationPointer;
 }
 
