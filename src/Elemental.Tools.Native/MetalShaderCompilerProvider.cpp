@@ -17,8 +17,8 @@ void MetalShaderCompilerProvider::GetTargetShaderLanguages(ShaderLanguage* targe
 bool MetalShaderCompilerProvider::IsCompilerInstalled()
 {
     // TODO: Doesn't work on windows
-    auto output = SystemExecuteProcess("xcrun -f metal");
-    return !output.empty();
+    char output[1024];
+    return SystemExecuteProcess("xcrun -f metal", output);
 }
     
 Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
@@ -27,57 +27,75 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     logList.push_back({ShaderCompilerLogEntryType_Error, SystemConvertWideCharToUtf8(L"Metal shader compiler is not supported on Windows.")});
     return Span<uint8_t>::Empty();
 #else
-    auto inputFilePath = SystemGenerateTempFilename() + ".metal";
-    auto airFilePath = SystemGenerateTempFilename();
-    auto outputFilePath = SystemGenerateTempFilename();
+    auto inputFilePath = std::string(SystemGenerateTempFilename()) + ".metal";
+    auto airFilePath = std::string(SystemGenerateTempFilename());
+    auto outputFilePath = std::string(SystemGenerateTempFilename());
 
-    SystemWriteBytesToFile(inputFilePath, shaderCode);
+    SystemWriteBytesToFile(inputFilePath.c_str(), shaderCode.Pointer, shaderCode.Length);
 
     auto commandLine = "xcrun metal -c " + inputFilePath + " -o " + airFilePath;
-    auto output = SystemExecuteProcess(commandLine);
+
+    // TODO: Change that
+    char* output = new char[1024];
+    auto result = SystemExecuteProcess(commandLine.c_str(), output);
 
     auto hasErrors = ProcessLogOutput(logList, output);
     
     if (hasErrors)
     {
-        SystemDeleteFile(inputFilePath);
+        SystemDeleteFile(inputFilePath.c_str());
         return Span<uint8_t>::Empty();
     }
     
     commandLine = "xcrun metallib " + airFilePath + " -o " + outputFilePath;
-    output = SystemExecuteProcess(commandLine);
+    // TODO: Change that
+    output = new char[1024];
+    SystemExecuteProcess(commandLine.c_str(), output);
     
     hasErrors = ProcessLogOutput(logList, output);
     
     if (hasErrors)
     {
-        SystemDeleteFile(inputFilePath);
-        SystemDeleteFile(airFilePath);
+        SystemDeleteFile(inputFilePath.c_str());
+        SystemDeleteFile(airFilePath.c_str());
         
         return Span<uint8_t>::Empty();
     }
     
-    auto outputShaderData = SystemReadBytesFromFile(outputFilePath);
+    uint8_t* outputShaderData;
+    size_t outputShaderDataSize;
+
+    SystemReadBytesFromFile(outputFilePath.c_str(), &outputShaderData, &outputShaderDataSize);
  
-    SystemDeleteFile(inputFilePath);
-    SystemDeleteFile(airFilePath);
-    SystemDeleteFile(outputFilePath);
+    SystemDeleteFile(inputFilePath.c_str());
+    SystemDeleteFile(airFilePath.c_str());
+    SystemDeleteFile(outputFilePath.c_str());
         
-    return outputShaderData;
+    return Span<uint8_t>(outputShaderData, outputShaderDataSize);
     #endif
 }
     
-bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, std::string output)
+bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, char* output)
 {
-    auto outputWString = SystemConvertUtf8ToWideChar((uint8_t*)output.c_str());
-    auto lines = SystemSplitString(outputWString, L"\n");
+    auto outputWString = SystemConvertUtf8ToWideChar((uint8_t*)output);
+
+    if (wcslen(outputWString) == 0)
+    {
+        return true;
+    }
+    
+    uint32_t linesLength;
+    SystemSplitString(outputWString, L'\n', nullptr, &linesLength);
+
+    wchar_t** lines = new wchar_t*[linesLength];
+    SystemSplitString(outputWString, L'\n', lines, &linesLength);
     
     auto hasErrors = false;
     auto currentLogType = ShaderCompilerLogEntryType_Error;
     std::wstring line;
 
     // TODO: Merge error messages and warnings message until next find
-    for (size_t i = 0; i < lines.size(); i++)
+    for (size_t i = 0; i < linesLength; i++)
     {
         line = lines[i];
 

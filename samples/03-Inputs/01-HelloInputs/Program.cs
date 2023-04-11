@@ -85,7 +85,7 @@ for (var i = 0; i < shaderCompilationResults.Length; i++)
         }
     };
 }
-
+    
 using var shader = graphicsService.CreateShader(graphicsDevice, shaderParts);
 
 var frameTimer = new Stopwatch();

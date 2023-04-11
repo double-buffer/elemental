@@ -4,12 +4,20 @@
 #pragma warning(disable: 4820)
 #pragma warning(disable: 4324)
 
+// TODO: REVIEW HEADERS
+
+#include <stdbool.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+#include <dlfcn.h>
+
 //HACK: TEMPORARY
 #pragma warning(disable: 4100)
-
-// TODO: Remove c++
-#include <string>
-#include <vector>
 
 #ifdef _WINDOWS
 #define PackedStruct __pragma(pack(push, 1)) struct
@@ -20,11 +28,17 @@
 #else
 #define PackedStruct struct __attribute__((__packed__))
 #define PackedStructEnd
+#define MAX_PATH 256
+#ifndef NDEBUG
+    //#define _DEBUG
+#endif
 #endif
 #ifdef _WINDOWS
     const char* libraryExtension = ".dll";
 #elif __APPLE__
     const char* libraryExtension = ".dylib";
+    //HACK
+    #define size_t uint64_t
 #else
     const char* libraryExtension = ".so";
 #endif
@@ -85,104 +99,103 @@ void SystemCheckAllocations()
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
-void SystemConcatStrings(char* dest, const char* str1, const char* str2) 
+char* SystemConcatStrings(const char* str1, const char* str2) 
 {
-    // get the lengths of the strings
     size_t len1 = strlen(str1);
     size_t len2 = strlen(str2);
 
-    // copy the first string into the buffer
-    memcpy(dest, str1, len1);
+    char* destination = (char*)malloc(len1 + len2 + 1);
 
-    // copy the second string into the buffer, starting at the end of the first string
-    memcpy(dest + len1, str2, len2);
+    memcpy(destination, str1, len1);
+    memcpy(destination + len1, str2, len2);
 
-    // null-terminate the concatenated string
-    dest[len1 + len2] = '\0';
+    destination[len1 + len2] = '\0';
+
+    return destination;
 }
 
-std::vector<std::wstring> SystemSplitString(std::wstring w, std::wstring tokenizerStr) 
+void SystemSplitString(const wchar_t* source, const wchar_t separator, wchar_t** result, uint32_t* resultCount) 
 {
-    std::vector<std::wstring> result;
-    size_t tokeninzerLength = tokenizerStr.length();
-    size_t position = 0;
-    size_t findIndex = w.find(tokenizerStr, position);
-
-    while (findIndex != -1)
+    if (!source || !result || !resultCount) 
     {
-        std::wstring str = w.substr(position, findIndex - position);
-        result.push_back(str);
-        position = findIndex + tokeninzerLength;
-        findIndex = w.find(tokenizerStr, position);
+        return;
     }
 
-    result.push_back(w.substr((size_t)position, w.length() - (size_t)position));
+    wchar_t* p = (wchar_t*)source;
+    uint32_t count = 0;
+    while (*p != L'\0') {
+        if (*p == separator) {
+            ++count;
+        }
+        ++p;
+    }
+    ++count;
 
-    return result;
+    *resultCount = count;
+
+    if (result)
+    {
+        wchar_t* copy = wcsdup(source);
+        if (!copy) {
+            *result = NULL;
+            return;
+        }
+
+        p = copy;
+        uint32_t index = 0;
+        while (*p != L'\0') {
+            if (*p == separator) {
+                *p = L'\0';
+            } else if (index == 0 || *(p - 1) == L'\0') {
+                result[index++] = p;
+            }
+            ++p;
+        }
+    }
 }
 
 const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source)
 {
-    // first, determine the required buffer size
-    size_t dest_size = 0;
-    errno_t err = wcstombs_s(&dest_size, NULL, 0, source, 0);
-    if (err != 0 || dest_size == 0) {
-        // conversion failed
+    size_t requiredSize = wcstombs(NULL, source, 0);
+
+    if (requiredSize == -1) 
+    {
         return NULL;
     }
 
-    // allocate a buffer for the encoded string
-    char* dest = (char*)malloc(dest_size + 1); // add 1 for null terminator
-    if (dest == NULL) {
-        // memory allocation failed
+    uint8_t* destination = (uint8_t*)malloc(requiredSize + 1);
+    size_t convertedSize = wcstombs((char*)destination, source, requiredSize);
+
+    if (convertedSize == -1) 
+    {
+        free(destination);
         return NULL;
     }
 
-    // encode the string
-    size_t converted_chars = 0;
-    err = wcstombs_s(&converted_chars, dest, dest_size + 1, source, dest_size);
-    if (err != 0 || converted_chars == 0) {
-        // conversion failed
-        free(dest);
-        return NULL;
-    }
-
-    // null-terminate the string
-    dest[converted_chars] = '\0';
-
-    return (uint8_t*)dest;
+    destination[convertedSize] = '\0';
+    return destination;
 }
 
 const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
 {
-    // first, determine the required buffer size
-    size_t dest_size = 0;
-    errno_t err = mbstowcs_s(&dest_size, NULL, 0, (char*)source, 0);
-    if (err != 0 || dest_size == 0) {
-        // conversion failed
+    size_t requiredSize = mbstowcs(NULL, (char*)source, 0);
+
+    if (requiredSize == -1) 
+    {
         return NULL;
     }
 
-    // allocate a buffer for the converted string
-    wchar_t* dest = (wchar_t*)malloc((dest_size + 1) * sizeof(wchar_t)); // add 1 for null terminator
-    if (dest == NULL) {
-        // memory allocation failed
+    wchar_t* destination = (wchar_t*)malloc((requiredSize + 1) * sizeof(wchar_t));
+    size_t convertedSize = mbstowcs(destination, (char*)source, requiredSize);
+
+    if (convertedSize == -1)
+    {
+        free(destination);
         return NULL;
     }
 
-    // convert the string
-    size_t converted_chars = 0;
-    err = mbstowcs_s(&converted_chars, dest, dest_size + 1, (char*)source, dest_size);
-    if (err != 0 || converted_chars == 0) {
-        // conversion failed
-        free(dest);
-        return NULL;
-    }
-
-    // null-terminate the string
-    dest[converted_chars] = L'\0';
-
-    return dest;
+    destination[convertedSize] = L'\0';
+    return destination;
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -204,15 +217,16 @@ const wchar_t* SystemGenerateTempFilename()
     return L"";
 }
 #else
-const wchar_t* SystemGenerateTempFilename() 
+char* SystemGenerateTempFilename() 
 {
     char temp[] = "/tmp/tempfileXXXXXX";
     int fd = mkstemp(temp);
     if (fd != -1) {
         close(fd);
-        return temp;
+        return strdup(temp);
     }
-    return "";
+
+    return NULL;
 }
 #endif
 
@@ -239,12 +253,11 @@ std::wstring SystemGetExecutableFolderPath()
 }
 #endif
 
-void SystemWriteBytesToFile(const std::string& filename, uint8_t* data, uint32_t dataSizeInBytes) 
+void SystemWriteBytesToFile(const char* filename, uint8_t* data, uint32_t dataSizeInBytes) 
 {
-    FILE* file = NULL;
-    errno_t result = fopen_s(&file, filename.c_str(), "wb");
+    FILE* file = fopen(filename, "wb");
 
-    if (result != 0 || file == NULL)
+    if (file == NULL)
     {
         return;
     }
@@ -253,34 +266,33 @@ void SystemWriteBytesToFile(const std::string& filename, uint8_t* data, uint32_t
     fclose(file);
 }
 
-void SystemReadBytesFromFile(const std::string& filename, uint8_t** data, size_t* dataSizeInBytes)
+void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataSizeInBytes)
 {
-    FILE* file = NULL;
-    errno_t result = fopen_s(&file, filename.c_str(), "rb");
+    FILE* file = fopen(filename, "rb");
 
-    if (result != 0 || file == NULL)
+    if (file == NULL)
     {
         *data = NULL;
         *dataSizeInBytes = 0;
     }
 
-    std::fseek(file, 0, SEEK_END);
+    fseek(file, 0, SEEK_END);
     size_t fileSize = (size_t)ftell(file);
-    std::rewind(file);
+    rewind(file);
 
-    auto outputData = new uint8_t[fileSize];
-    std::size_t bytesRead = std::fread(outputData, sizeof(uint8_t), fileSize, file);
+    uint8_t* outputData = (uint8_t*)malloc(fileSize);
+    size_t bytesRead = fread(outputData, sizeof(uint8_t), fileSize, file);
 
     assert(bytesRead == fileSize);
-    std::fclose(file);
+    fclose(file);
 
     *data = outputData;
     *dataSizeInBytes = fileSize;
 }
 
-void SystemDeleteFile(const std::string& filename)
+void SystemDeleteFile(const char* filename)
 {
-   remove(filename.c_str()); 
+   remove(filename); 
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -289,14 +301,19 @@ void SystemDeleteFile(const std::string& filename)
 
 const void* SystemLoadLibrary(const char* libraryName)
 {
-    char fullName[MAX_PATH];
-    SystemConcatStrings(fullName, libraryName, libraryExtension);
+    char* fullName = SystemConcatStrings(libraryName, libraryExtension);
 
 #ifdef _WINDOWS
-    return LoadLibraryA(fullName);
+    void* library = LoadLibraryA(fullName);
+    free(fullName);
+    return library;
 #else
-    char* fullNameUnix[MAX_PATH];
-    return dlopen(SystemContacStrings(fullNameUnix, "lib", fullName), RTLD_LAZY);
+    char* fullNameUnix = SystemConcatStrings("lib", fullName);
+    void* library = dlopen(fullNameUnix, RTLD_LAZY);
+    
+    free(fullName);
+    free(fullNameUnix);
+    return library;
 #endif
 }
 
@@ -305,7 +322,7 @@ void SystemFreeLibrary(const void* library)
 #ifdef _WINDOWS
     FreeLibrary((HMODULE)library);
 #else
-    dlclose(library);
+    dlclose((void*)library);
 #endif
 }
 
@@ -314,23 +331,32 @@ const void* SystemGetFunctionExport(const void* library, const char* functionNam
 #ifdef _WINDOWS
     return GetProcAddress((HMODULE)library, functionName);
 #else
-    return dlsym(library, functionName);
+    return dlsym((void*)library, functionName);
 #endif
 }
 
-std::string SystemExecuteProcess(const std::string cmd) 
+// TODO: check for errors
+bool SystemExecuteProcess(const char* command, char* result) 
 {
     char buffer[128];
-    std::string result = "";
+    result[0] = '\0';
 
-    FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
+    char* finalCommand = SystemConcatStrings(command, " 2>&1");
+
+    FILE* pipe = popen(finalCommand, "r");
     assert(pipe);
 
     while (fgets(buffer, sizeof(buffer), pipe) != NULL) 
     {
-        result += buffer;
+        char* temp = result;
+        result = SystemConcatStrings(temp, buffer);
+        
+        // HACK: Change that
+        //free(temp);
     }
 
     pclose(pipe);
-    return result;
+    free(finalCommand);
+
+    return true;
 }

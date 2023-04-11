@@ -138,12 +138,17 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
         auto errorContent = SystemConvertUtf8ToWideChar((uint8_t*)pErrors->GetBufferPointer());
         auto currentLogType = ShaderCompilerLogEntryType_Error;
 
-        auto lines = SystemSplitString(errorContent, L"\n");
+        uint32_t linesLength;
+        SystemSplitString(errorContent, L'\n', nullptr, &linesLength);
+
+        wchar_t** lines = new wchar_t*[linesLength];
+        SystemSplitString(errorContent, L'\n', lines, &linesLength);
+
         std::wstring line;
 
-        for (size_t i = 0; i < lines.size(); i++)
+        for (size_t i = 0; i < linesLength; i++)
         {
-            line = lines[i];
+            line = std::wstring(lines[i]);
 
             if (line.length() == 0)
             {

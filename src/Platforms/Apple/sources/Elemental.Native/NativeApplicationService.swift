@@ -3,6 +3,14 @@ import NativeElemental
 
 // TODO: Split AppKit specific code! 
 
+@_cdecl("Native_InitNativeApplicationService")
+public func initNativeApplicationService(optionsPointer: UnsafePointer<GraphicsServiceOptions>) {
+}
+
+@_cdecl("Native_FreeNativeApplicationService")
+public func freeNativeApplicationService() {
+}
+
 @_cdecl("Native_FreeNativePointer")
 public func freeNativePointer(pointer: UnsafeRawPointer) {
     pointer.deallocate()
@@ -109,7 +117,7 @@ public func getWindowRenderSize(_ windowPointer: UnsafeRawPointer) -> NativeWind
             windowState = NativeWindowState_Maximized
         }
 
-        return NativeWindowSize(Width: Int32(size.width), Height: Int32(size.height), UIScale: Float(mainScreenScaling), WindowState: windowState)
+        return NativeWindowSize(Width: UInt32(size.width), Height: UInt32(size.height), UIScale: Float(mainScreenScaling), WindowState: windowState)
     }
 }
 
