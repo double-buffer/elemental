@@ -7,14 +7,12 @@
 // TODO: REVIEW HEADERS
 
 #include <stdbool.h>
-#include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <wchar.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dlfcn.h>
 
 //HACK: TEMPORARY
 #pragma warning(disable: 4100)
@@ -25,6 +23,7 @@
 
 #define popen _popen
 #define pclose _pclose
+#define wcsdup _wcsdup
 #else
 #define PackedStruct struct __attribute__((__packed__))
 #define PackedStructEnd
@@ -32,6 +31,9 @@
 #ifndef NDEBUG
     //#define _DEBUG
 #endif
+#include <unistd.h>
+#include <dlfcn.h>
+#define fopen_s(pFile,filename,mode) ((*(pFile))=fopen((filename),(mode)))==NULL
 #endif
 #ifdef _WINDOWS
     const char* libraryExtension = ".dll";
@@ -156,17 +158,19 @@ void SystemSplitString(const wchar_t* source, const wchar_t separator, wchar_t**
 
 const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source)
 {
-    size_t requiredSize = wcstombs(NULL, source, 0);
+    size_t requiredSize;
+    errno_t error = wcstombs_s(&requiredSize, NULL, 0, source, 0);
 
-    if (requiredSize == -1) 
+    if (error != 0) 
     {
         return NULL;
     }
 
     uint8_t* destination = (uint8_t*)malloc(requiredSize + 1);
-    size_t convertedSize = wcstombs((char*)destination, source, requiredSize);
+    size_t convertedSize;
+    error = wcstombs_s(&convertedSize, (char*)destination, requiredSize, source, requiredSize);
 
-    if (convertedSize == -1) 
+    if (error != 0) 
     {
         free(destination);
         return NULL;
@@ -178,17 +182,19 @@ const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source)
 
 const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
 {
-    size_t requiredSize = mbstowcs(NULL, (char*)source, 0);
+    size_t requiredSize;
+    errno_t error = mbstowcs_s(&requiredSize, NULL, 0, (char *)source, 0);
 
-    if (requiredSize == -1) 
+    if (error != 0) 
     {
         return NULL;
     }
 
     wchar_t* destination = (wchar_t*)malloc((requiredSize + 1) * sizeof(wchar_t));
-    size_t convertedSize = mbstowcs(destination, (char*)source, requiredSize);
+    size_t convertedSize;
+    error = mbstowcs_s(&convertedSize, destination, requiredSize, (char *)source, requiredSize);
 
-    if (convertedSize == -1)
+    if (error != 0)
     {
         free(destination);
         return NULL;
@@ -255,9 +261,11 @@ std::wstring SystemGetExecutableFolderPath()
 
 void SystemWriteBytesToFile(const char* filename, uint8_t* data, uint32_t dataSizeInBytes) 
 {
-    FILE* file = fopen(filename, "wb");
+    FILE *file;
+   
+    errno_t error = fopen_s(&file, filename, "wb");
 
-    if (file == NULL)
+    if (error != 0)
     {
         return;
     }
@@ -268,9 +276,11 @@ void SystemWriteBytesToFile(const char* filename, uint8_t* data, uint32_t dataSi
 
 void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataSizeInBytes)
 {
-    FILE* file = fopen(filename, "rb");
+    FILE *file;
+   
+    errno_t error = fopen_s(&file, filename, "rb");
 
-    if (file == NULL)
+    if (error != 0)
     {
         *data = NULL;
         *dataSizeInBytes = 0;
