@@ -50,6 +50,7 @@ internal static unsafe class ShaderPartMarshaller
 
     public static ShaderPartUnmanaged ConvertToUnmanaged(ShaderPart managed)
     {
+        // TODO: Find a way to track nativememory allocation
         // TODO: Can we avoid the copy here?
         var dataPointer = NativeMemory.Alloc((nuint)managed.Data.Length);
         var dataSpan = new Span<byte>(dataPointer, managed.Data.Length);

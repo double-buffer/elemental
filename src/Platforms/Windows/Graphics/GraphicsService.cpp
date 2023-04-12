@@ -52,6 +52,11 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
             }
         }
     }
+    
+    for (int i = 0; i < availableDeviceCount; i++)
+    {
+        delete availableDevices[i].DeviceName;
+    }
 
     options->DeviceId = selectedDevice.DeviceId;
 

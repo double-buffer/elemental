@@ -4,6 +4,8 @@
 #pragma warning(disable: 4820)
 #pragma warning(disable: 4324)
 
+
+
 // TODO: REVIEW HEADERS
 
 #include <stdbool.h>
@@ -85,13 +87,16 @@ void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
     free(pointer);
 }
 
-void SystemCheckAllocations()
+void SystemCheckAllocations(const char* description)
 {
-    printf("WARNING: Leaked native memory allocations: %zu\n", allocations.size());
-
-    for (auto& [key, value]: allocations)
+    if (allocations.size() > 0)
     {
-        printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value.SizeInBytes, value.File, value.LineNumber);
+        printf("WARNING: Leaked native memory allocations (%s): %zu\n", description, allocations.size());
+
+        for (auto& [key, value]: allocations)
+        {
+            printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value.SizeInBytes, value.File, value.LineNumber);
+        }
     }
 }
 
@@ -108,6 +113,7 @@ char* SystemConcatStrings(const char* str1, const char* str2)
     size_t len1 = strlen(str1);
     size_t len2 = strlen(str2);
 
+    //char* destination = (char*)SystemAllocateMemory(len1 + len2 + 1, str1, 0);
     char* destination = (char*)malloc(len1 + len2 + 1);
 
     memcpy(destination, str1, len1);
@@ -192,6 +198,7 @@ const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
         return L"";
     }
 
+    //wchar_t* destination = (wchar_t*)SystemAllocateMemory((requiredSize + 1) * sizeof(wchar_t), (const char*)source, 0);
     wchar_t* destination = (wchar_t*)malloc((requiredSize + 1) * sizeof(wchar_t));
     size_t convertedSize;
     error = mbstowcs_s(&convertedSize, destination, requiredSize, (char *)source, requiredSize);
@@ -293,13 +300,13 @@ void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataS
     rewind(file);
 
     uint8_t* outputData = (uint8_t*)malloc(fileSize);
-    size_t bytesRead = fread(outputData, sizeof(uint8_t), fileSize, file);
 
+    size_t bytesRead = fread(outputData, sizeof(uint8_t), fileSize, file);
     assert(bytesRead == fileSize);
     fclose(file);
 
     *data = outputData;
-    *dataSizeInBytes = fileSize;
+    *dataSizeInBytes = bytesRead;
 }
 
 void SystemDeleteFile(const char* filename)
@@ -361,10 +368,10 @@ bool SystemExecuteProcess(const char* command, char* result)
     while (fgets(buffer, sizeof(buffer), pipe) != NULL) 
     {
         char* temp = result;
-        result = SystemConcatStrings(temp, buffer);
-        
-        // HACK: Change that
-        //free(temp);
+        temp = SystemConcatStrings(temp, buffer);
+        strcpy_s(result, 1024, temp);
+
+        free(temp);
     }
 
     pclose(pipe);

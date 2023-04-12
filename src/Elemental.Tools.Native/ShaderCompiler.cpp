@@ -97,7 +97,7 @@ DllExport void Native_FreeShaderCompiler()
     }
     
     #ifdef _DEBUG
-    SystemCheckAllocations();
+    SystemCheckAllocations("Elemental Tools");
     #endif
 }
 

@@ -11,6 +11,10 @@
 #pragma warning(disable: 5204)
 #pragma warning(disable: 5045)
 
+// Inlining informational warnings
+#pragma warning(disable: 4710)
+#pragma warning(disable: 4711) 
+
 #ifdef _DEBUG
 #undef _DEBUG
 #define _WASDEBUG

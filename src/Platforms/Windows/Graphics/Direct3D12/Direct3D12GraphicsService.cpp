@@ -209,8 +209,11 @@ void Direct3D12GraphicsService::SetCommandQueueLabel(void* commandQueuePointer, 
     commandQueue->DeviceObject->SetName(SystemConvertUtf8ToWideChar(label));
 }
 
+uint8_t* buffer;
+
 void* Direct3D12GraphicsService::CreateCommandList(void* commandQueuePointer)
 {
+    buffer = new uint8_t[16];
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
     auto commandAllocator = GetCommandAllocator(commandQueue);
