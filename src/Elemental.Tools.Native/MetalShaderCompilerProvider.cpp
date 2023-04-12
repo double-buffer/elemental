@@ -81,7 +81,7 @@ bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLog
 
     if (wcslen(outputWString) == 0)
     {
-        return true;
+        return false;
     }
     
     uint32_t linesLength;
