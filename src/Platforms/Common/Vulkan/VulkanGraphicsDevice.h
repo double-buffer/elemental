@@ -41,10 +41,10 @@ struct VulkanGraphicsDevice : BaseGraphicsObject
     VkPhysicalDeviceProperties DeviceProperties;
     VkPhysicalDeviceMemoryProperties DeviceMemoryProperties;
 
-    uint32_t InternalId;
-    uint32_t RenderCommandQueueFamilyIndex;
-    uint32_t ComputeCommandQueueFamilyIndex;
-    uint32_t CopyCommandQueueFamilyIndex;
+    uint32_t InternalId = UINT32_MAX;
+    uint32_t RenderCommandQueueFamilyIndex = UINT32_MAX;
+    uint32_t ComputeCommandQueueFamilyIndex = UINT32_MAX;
+    uint32_t CopyCommandQueueFamilyIndex = UINT32_MAX;
     
     CircularList<VulkanCommandPoolItem> DirectCommandPool;
     CircularList<VulkanCommandPoolItem> ComputeCommandPool;

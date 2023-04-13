@@ -180,19 +180,19 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
 
     for (uint32_t i = 0; i < queueFamilyCount; i++)
     {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && graphicsDevice->RenderCommandQueueFamilyIndex == UINT32_MAX)
         {
             graphicsDevice->RenderCommandQueueFamilyIndex = i;
             queueCreateInfos[i] = CreateDeviceQueueCreateInfo(i, 2);
         }
 
-        else if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
+        else if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT && graphicsDevice->ComputeCommandQueueFamilyIndex == UINT32_MAX)
         {
             graphicsDevice->ComputeCommandQueueFamilyIndex = i;
             queueCreateInfos[i] = CreateDeviceQueueCreateInfo(i, 1);
         }
 
-        else if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
+        else if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT && graphicsDevice->CopyCommandQueueFamilyIndex == UINT32_MAX)
         {
             graphicsDevice->CopyCommandQueueFamilyIndex = i;
             queueCreateInfos[i] = CreateDeviceQueueCreateInfo(i, 1);
