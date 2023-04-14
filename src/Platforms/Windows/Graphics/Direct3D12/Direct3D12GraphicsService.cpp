@@ -1028,5 +1028,9 @@ ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState
 
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)
 {
-    printf("Debug Callback\n");
+    if (Severity != D3D12_MESSAGE_SEVERITY_INFO && Severity != D3D12_MESSAGE_SEVERITY_MESSAGE)
+    {
+        // TODO: Bind that to an elemental callback
+        printf("%s\n", pDescription);
+    }
 }

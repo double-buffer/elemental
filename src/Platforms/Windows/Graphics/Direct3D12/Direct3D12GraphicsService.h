@@ -7,7 +7,7 @@
 
 struct Direct3D12GraphicsDevice;
 
-#define D3D12SDKVersion 608
+#define D3D12SDKVersion 610
 
 #define MAX_DIRECT3D12_GRAPHICS_DEVICES 64
 #define MAX_DIRECT3D12_COMMAND_ALLOCATORS 64
