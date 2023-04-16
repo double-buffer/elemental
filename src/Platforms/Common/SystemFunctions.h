@@ -4,8 +4,6 @@
 #pragma warning(disable: 4820)
 #pragma warning(disable: 4324)
 
-
-
 // TODO: REVIEW HEADERS
 
 #include <stdbool.h>
@@ -20,12 +18,16 @@
 #pragma warning(disable: 4100)
 
 #ifdef _WINDOWS
+#include <io.h>
+
 #define PackedStruct __pragma(pack(push, 1)) struct
 #define PackedStructEnd __pragma(pack(pop))
 
 #define popen _popen
 #define pclose _pclose
 #define wcsdup _wcsdup
+#define strdup _strdup
+#define mkstemp(value) _mktemp_s(value, MAX_PATH)
 #else
 #define PackedStruct struct __attribute__((__packed__))
 #define PackedStructEnd
@@ -53,7 +55,7 @@
 // Debug Memory management functions
 //---------------------------------------------------------------------------------------------------------------
 #ifdef _DEBUG
-#include <unordered_map>
+#include "Dictionary.h"
 
 struct SystemAllocation
 {
@@ -62,26 +64,41 @@ struct SystemAllocation
     uint32_t LineNumber;
 };
 
-std::unordered_map<void*, SystemAllocation> allocations;
+Dictionary* debugAllocations = DictionaryCreate(64);
 
 void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNumber)
 {
     void* pointer = malloc(sizeInBytes);
 
-    SystemAllocation allocation = {};
-    allocation.SizeInBytes = sizeInBytes;
-    strcpy_s(allocation.File, file);
-    allocation.LineNumber = lineNumber;
+    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
+    allocation->SizeInBytes = sizeInBytes;
+    strcpy_s(allocation->File, file);
+    allocation->LineNumber = lineNumber;
 
-    allocations.emplace(pointer, allocation);
+    DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
+
+    return pointer;
+}
+
+void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, uint32_t lineNumber)
+{
+    void* pointer = calloc(count, size);
+    
+    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
+    allocation->SizeInBytes = count * size;
+    strcpy_s(allocation->File, file);
+    allocation->LineNumber = lineNumber;
+
+    DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
+  
     return pointer;
 }
 
 void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 {
-    if (allocations.count(pointer) > 0)
+    if (DictionaryContains(debugAllocations, (size_t)pointer))
     {
-        allocations.erase(pointer);
+        DictionaryDelete(debugAllocations, (size_t)pointer);
     }
 
     free(pointer);
@@ -89,18 +106,21 @@ void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 
 void SystemCheckAllocations(const char* description)
 {
-    if (allocations.size() > 0)
+    DictionaryPrint(debugAllocations);
+    
+    if (debugAllocations->Count > 0)
     {
-        printf("WARNING: Leaked native memory allocations (%s): %zu\n", description, allocations.size());
+        printf("WARNING: Leaked native memory allocations (%s): %zu\n", description, debugAllocations->Count);
 
-        for (auto& [key, value]: allocations)
+        /*for (auto& [key, value]: allocations)
         {
-            printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value.SizeInBytes, value.File, value.LineNumber);
-        }
+            printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
+        }*/
     }
 }
 
 #define malloc(size) SystemAllocateMemory(size, __FILE__, (uint32_t)__LINE__)
+#define calloc(count, size) SystemAllocateMemoryAndReset(count, size, __FILE__, (uint32_t)__LINE__)
 #define free(pointer) SystemFreeMemory(pointer, __FILE__, (uint32_t)__LINE__)
 #endif
 
@@ -217,33 +237,18 @@ const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
 // IO functions
 //---------------------------------------------------------------------------------------------------------------
 
-#if _WINDOWS
-const wchar_t* SystemGenerateTempFilename() 
-{
-    // TODO: HACK
-    wchar_t* temp = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
-
-    // TODO: Get users temp directory
-
-    DWORD dwRetVal = GetTempFileName(L".", L"tempfile", 0, temp);
-    if (dwRetVal != 0) {
-        return temp;
-    }
-    return L"";
-}
-#else
 char* SystemGenerateTempFilename() 
 {
     char temp[] = "/tmp/tempfileXXXXXX";
     int fd = mkstemp(temp);
-    if (fd != -1) {
-        close(fd);
+    
+    if (fd != -1) 
+    {
         return strdup(temp);
     }
 
-    return "";
+    return NULL;
 }
-#endif
 
 #ifdef _WINDOWS
 

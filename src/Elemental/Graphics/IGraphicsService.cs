@@ -189,7 +189,7 @@ public interface IGraphicsService
     /// <param name="commandList">Command list.</param>
     void EndRenderPass(CommandList commandList);
 
-    // TODO: void CompileRenderShader(Shader shader, in RenderPassDescriptor renderPassDescriptor);
+    // TODO: void CompileRenderShader(Shader shader, in RenderPassDescriptor renderPassDescriptor); // Use specific parameters instead of RenderPassDescriptor
     // TODO: ShaderCompilationStatus GetRenderShaderCompilationStatus(Shader shader, in RenderPassDescriptor renderPassDescriptor);
     // TODO: GetShaderCompilationStatusList(....)
 

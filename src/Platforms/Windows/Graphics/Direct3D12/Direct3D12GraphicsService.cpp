@@ -29,6 +29,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* opt
         if (_debugInterface)
         {
             _debugInterface->EnableDebugLayer();
+            _debugInterface->SetEnableSynchronizedCommandQueueValidation(true);
         }
 
         AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(_dxgiDebugInterface.GetAddressOf())));
@@ -91,6 +92,11 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
 
 void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+
     ComPtr<IDXGIAdapter4> graphicsAdapter;
     DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;
@@ -209,11 +215,8 @@ void Direct3D12GraphicsService::SetCommandQueueLabel(void* commandQueuePointer, 
     commandQueue->DeviceObject->SetName(SystemConvertUtf8ToWideChar(label));
 }
 
-uint8_t* buffer;
-
 void* Direct3D12GraphicsService::CreateCommandList(void* commandQueuePointer)
 {
-    buffer = new uint8_t[16];
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
 
     auto commandAllocator = GetCommandAllocator(commandQueue);
@@ -602,6 +605,7 @@ void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shader
         // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
+            // TODO: Review allocators
             printf("Create PipelineState for shader %llu...\n", hash);
             auto pipelineStateCacheItem = PipelineStateCacheItem();
             pipelineStateCacheItem.PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);

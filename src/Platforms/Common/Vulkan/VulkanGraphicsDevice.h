@@ -51,7 +51,7 @@ struct VulkanGraphicsDevice : BaseGraphicsObject
     CircularList<VulkanCommandPoolItem> CopyCommandPool;
     uint64_t CommandPoolGeneration = 0;
     
-    Dictionary<uint64_t, VulkanPipelineStateCacheItem> PipelineStates;
+    DictionaryOld<uint64_t, VulkanPipelineStateCacheItem> PipelineStates;
 };
 
 struct VulkanDeviceCommandPools
