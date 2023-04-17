@@ -29,6 +29,7 @@ Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* opt
         if (_debugInterface)
         {
             _debugInterface->EnableDebugLayer();
+            _debugInterface->SetEnableSynchronizedCommandQueueValidation(true);
         }
 
         AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(_dxgiDebugInterface.GetAddressOf())));
@@ -401,6 +402,8 @@ void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int widt
     for (uint32_t i = 0; i < swapChain->RenderBufferCount; i++)
     {
         swapChain->RenderBuffers[i]->DeviceObject.Reset();
+        delete swapChain->RenderBuffers[i];
+
         swapChain->RenderBuffers[i] = nullptr;
     }
     
@@ -599,6 +602,7 @@ void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shader
         // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
+            // TODO: Review allocators
             printf("Create PipelineState for shader %llu...\n", hash);
             auto pipelineStateCacheItem = PipelineStateCacheItem();
             pipelineStateCacheItem.PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
@@ -1025,5 +1029,9 @@ ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState
 
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)
 {
-    printf("Debug Callback\n");
+    if (Severity != D3D12_MESSAGE_SEVERITY_INFO && Severity != D3D12_MESSAGE_SEVERITY_MESSAGE)
+    {
+        // TODO: Bind that to an elemental callback
+        printf("%s\n", pDescription);
+    }
 }

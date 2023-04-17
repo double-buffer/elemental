@@ -123,6 +123,8 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
     memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
 
+    delete entryPointString;
+
     return Span<uint8_t>(outputShaderData, (uint32_t)shaderByteCode->GetBufferSize());
 }
 

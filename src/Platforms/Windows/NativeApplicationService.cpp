@@ -22,7 +22,7 @@ DllExport void Native_InitNativeApplicationService()
 DllExport void Native_FreeNativeApplicationService()
 {
     #ifdef _DEBUG
-    SystemCheckAllocations();
+    SystemCheckAllocations("Elemental");
     #endif
 }
 
@@ -76,11 +76,13 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     auto height = (int32_t)options.Height;
 
     auto nativeWindow = new Win32Window();
+    
+    auto convertedTitle = SystemConvertUtf8ToWideChar(options.Title);
 
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
-        SystemConvertUtf8ToWideChar(options.Title),
+        convertedTitle,
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -139,6 +141,7 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
 
     // HACK
     globalMainWindow = window;
+    delete convertedTitle;
 
     return nativeWindow;
 }
@@ -201,7 +204,9 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
 
 DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, uint8_t* title)
 {
-    SetWindowText(nativeWindow->WindowHandle, SystemConvertUtf8ToWideChar(title));
+    auto convertedTitle = SystemConvertUtf8ToWideChar(title);
+    SetWindowText(nativeWindow->WindowHandle, convertedTitle);
+    delete convertedTitle;
 }
     
 DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState windowState)

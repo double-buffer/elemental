@@ -4,6 +4,8 @@
 #include <math.h>
 #include "ElementalCommon.h"
 
+// TODO: Convert to typedef
+
 enum NativeApplicationStatusFlags
 {
     None = 0,

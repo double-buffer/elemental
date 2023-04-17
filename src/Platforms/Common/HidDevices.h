@@ -16,19 +16,29 @@ float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
     return normalizedValue;
 }
 
-void SetInputObjectAnalogValue(struct InputState inputState, enum InputObjectKey inputObjectKey, float_t value) 
+void SetInputObjectAnalogValue(struct InputState* inputState, enum InputObjectKey inputObjectKey, float_t value) 
 {
-    struct InputObject inputObject = ((struct InputObject*)inputState.InputObjectsPointer)[inputObjectKey];
-    ((float_t*)inputState.DataPointer)[inputObject.Value.Offset] = value;
+    if (inputState->DataPointer == NULL)
+    {
+        return;
+    }
+
+    struct InputObject inputObject = ((struct InputObject*)inputState->InputObjectsPointer)[inputObjectKey];
+    ((float_t*)inputState->DataPointer)[inputObject.Value.Offset] = value;
 }
 
-void SetInputObjectDigitalValue(struct InputState inputState, enum InputObjectKey inputObjectKey, bool value) 
+void SetInputObjectDigitalValue(struct InputState* inputState, enum InputObjectKey inputObjectKey, bool value) 
 {
-    struct InputObject inputObject = ((struct InputObject*)inputState.InputObjectsPointer)[inputObjectKey];
+    if (inputState->DataPointer == NULL)
+    {
+        return;
+    }
 
-    uint32_t currentValue = ((uint32_t *)inputState.DataPointer)[inputObject.Value.Offset];
+    struct InputObject inputObject = ((struct InputObject*)inputState->InputObjectsPointer)[inputObjectKey];
+
+    uint32_t currentValue = ((uint32_t *)inputState->DataPointer)[inputObject.Value.Offset];
     uint32_t mask = 1u << (uint32_t)inputObject.Value.BitPosition;
-    ((uint32_t *)inputState.DataPointer)[inputObject.Value.Offset] = (currentValue & ~mask) | ((value ? 1 : 0) << inputObject.Value.BitPosition);
+    ((uint32_t *)inputState->DataPointer)[inputObject.Value.Offset] = (currentValue & ~mask) | ((value ? 1 : 0) << inputObject.Value.BitPosition);
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -65,7 +75,7 @@ PackedStruct XboxOneWirelessOldDriverGamepadReport
 };
 PackedStructEnd
 
-void ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(struct InputState inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
+void ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(struct InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
 {
     struct XboxOneWirelessOldDriverGamepadReport* inputData = (struct XboxOneWirelessOldDriverGamepadReport*)reportData;
 
@@ -93,7 +103,7 @@ PackedStruct XboxOneWirelessGamepadReport
 };
 PackedStructEnd
 
-void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
+void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
 {
     struct XboxOneWirelessGamepadReport* inputData = (struct XboxOneWirelessGamepadReport*)reportData;
 
@@ -107,7 +117,7 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState inputSta
 // Vendor gamepad dispatcher
 //---------------------------------------------------------------------------------------------------------------
 
-typedef void (*ConvertHidInputDeviceDataFuncPtr)(struct InputState inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);
+typedef void (*ConvertHidInputDeviceDataFuncPtr)(struct InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);
 
 ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t vendorId, uint32_t productId)
 {
@@ -194,8 +204,11 @@ struct InputState InitInputState()
     return result;
 }
 
-void FreeInputState(struct InputState inputState)
+void FreeInputState(struct InputState* inputState)
 {
-    free(inputState.DataPointer);
-    free(inputState.InputObjectsPointer);
+    free(inputState->DataPointer);
+    inputState->DataPointer = NULL;
+
+    free(inputState->InputObjectsPointer);
+    inputState->InputObjectsPointer = NULL;
 }

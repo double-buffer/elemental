@@ -18,12 +18,16 @@
 #pragma warning(disable: 4100)
 
 #ifdef _WINDOWS
+#include <io.h>
+
 #define PackedStruct __pragma(pack(push, 1)) struct
 #define PackedStructEnd __pragma(pack(pop))
 
 #define popen _popen
 #define pclose _pclose
 #define wcsdup _wcsdup
+#define strdup _strdup
+#define mkstemp(value) _mktemp_s(value, MAX_PATH)
 #else
 #define PackedStruct struct __attribute__((__packed__))
 #define PackedStructEnd
@@ -51,7 +55,7 @@
 // Debug Memory management functions
 //---------------------------------------------------------------------------------------------------------------
 #ifdef _DEBUG
-#include <unordered_map>
+#include "Dictionary.h"
 
 struct SystemAllocation
 {
@@ -60,42 +64,68 @@ struct SystemAllocation
     uint32_t LineNumber;
 };
 
-std::unordered_map<void*, SystemAllocation> allocations;
+Dictionary* debugAllocations = DictionaryCreate(64);
 
 void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNumber)
 {
     void* pointer = malloc(sizeInBytes);
 
-    SystemAllocation allocation = {};
-    allocation.SizeInBytes = sizeInBytes;
-    strcpy_s(allocation.File, file);
-    allocation.LineNumber = lineNumber;
+    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
+    allocation->SizeInBytes = sizeInBytes;
+    strcpy_s(allocation->File, file);
+    allocation->LineNumber = lineNumber;
 
-    allocations.emplace(pointer, allocation);
+    DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
+
+    return pointer;
+}
+
+void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, uint32_t lineNumber)
+{
+    void* pointer = calloc(count, size);
+    
+    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
+    allocation->SizeInBytes = count * size;
+    strcpy_s(allocation->File, file);
+    allocation->LineNumber = lineNumber;
+
+    DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
+  
     return pointer;
 }
 
 void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 {
-    if (allocations.count(pointer) > 0)
+    if (DictionaryContains(debugAllocations, (size_t)pointer))
     {
-        allocations.erase(pointer);
+        SystemAllocation* allocation = (SystemAllocation*)DictionaryGetEntry(debugAllocations, (size_t)pointer);
+        free(allocation);
+        DictionaryDelete(debugAllocations, (size_t)pointer);
     }
 
     free(pointer);
 }
 
-void SystemCheckAllocations()
+void SystemDisplayMemoryLeak(uint64_t key, void* data)
 {
-    printf("WARNING: Leaked native memory allocations: %zu\n", allocations.size());
+    SystemAllocation* value = (SystemAllocation*)data;
+    printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
+}
 
-    for (auto& [key, value]: allocations)
+void SystemCheckAllocations(const char* description)
+{
+    if (debugAllocations->Count > 0)
     {
-        printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value.SizeInBytes, value.File, value.LineNumber);
+        printf("WARNING: Leaked native memory allocations (%s): %zu\n", description, debugAllocations->Count);
+        DictionaryEnumerateEntries(debugAllocations, SystemDisplayMemoryLeak);
     }
+    
+    DictionaryFree(debugAllocations);
+    debugAllocations = NULL;
 }
 
 #define malloc(size) SystemAllocateMemory(size, __FILE__, (uint32_t)__LINE__)
+#define calloc(count, size) SystemAllocateMemoryAndReset(count, size, __FILE__, (uint32_t)__LINE__)
 #define free(pointer) SystemFreeMemory(pointer, __FILE__, (uint32_t)__LINE__)
 #endif
 
@@ -108,6 +138,7 @@ char* SystemConcatStrings(const char* str1, const char* str2)
     size_t len1 = strlen(str1);
     size_t len2 = strlen(str2);
 
+    //char* destination = (char*)SystemAllocateMemory(len1 + len2 + 1, str1, 0);
     char* destination = (char*)malloc(len1 + len2 + 1);
 
     memcpy(destination, str1, len1);
@@ -192,6 +223,7 @@ const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
         return NULL;
     }
 
+    //wchar_t* destination = (wchar_t*)SystemAllocateMemory((requiredSize + 1) * sizeof(wchar_t), (const char*)source, 0);
     wchar_t* destination = (wchar_t*)malloc((requiredSize + 1) * sizeof(wchar_t));
     size_t convertedSize;
     error = mbstowcs_s(&convertedSize, destination, requiredSize, (char*)source, requiredSize);
@@ -210,33 +242,18 @@ const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
 // IO functions
 //---------------------------------------------------------------------------------------------------------------
 
-#if _WINDOWS
-const wchar_t* SystemGenerateTempFilename() 
-{
-    // TODO: HACK
-    wchar_t* temp = (wchar_t*)malloc(MAX_PATH * sizeof(wchar_t));
-
-    // TODO: Get users temp directory
-
-    DWORD dwRetVal = GetTempFileName(L".", L"tempfile", 0, temp);
-    if (dwRetVal != 0) {
-        return temp;
-    }
-    return L"";
-}
-#else
 char* SystemGenerateTempFilename() 
 {
     char temp[] = "/tmp/tempfileXXXXXX";
     int fd = mkstemp(temp);
-    if (fd != -1) {
-        close(fd);
+    
+    if (fd != -1) 
+    {
         return strdup(temp);
     }
 
-    return strdup("");
+    return NULL;
 }
-#endif
 
 #ifdef _WINDOWS
 
@@ -293,13 +310,13 @@ void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataS
     rewind(file);
 
     uint8_t* outputData = (uint8_t*)malloc(fileSize);
-    size_t bytesRead = fread(outputData, sizeof(uint8_t), fileSize, file);
 
+    size_t bytesRead = fread(outputData, sizeof(uint8_t), fileSize, file);
     assert(bytesRead == fileSize);
     fclose(file);
 
     *data = outputData;
-    *dataSizeInBytes = fileSize;
+    *dataSizeInBytes = bytesRead;
 }
 
 void SystemDeleteFile(const char* filename)
@@ -361,10 +378,10 @@ bool SystemExecuteProcess(const char* command, char* result)
     while (fgets(buffer, sizeof(buffer), pipe) != NULL) 
     {
         char* temp = result;
-        result = SystemConcatStrings(temp, buffer);
-        
-        // HACK: Change that
-        //free(temp);
+        temp = SystemConcatStrings(temp, buffer);
+        strcpy_s(result, 1024, temp);
+
+        free(temp);
     }
 
     pclose(pipe);

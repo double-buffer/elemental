@@ -137,7 +137,7 @@ DWORD WINAPI InputThread(LPVOID lpParam)
             DWORD bytesRead = 0;
             if (GetOverlappedResult(hidInputDevice.Device, &hidInputDevice.Overlapped, &bytesRead, true))
             {
-                ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(globalInputState, 0, hidInputDevice.ReadBuffer, bytesRead);
+                ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(&globalInputState, 0, hidInputDevice.ReadBuffer, bytesRead);
             }
         }
     }
@@ -209,16 +209,21 @@ DllExport void Native_InitInputsService()
     
 DllExport void Native_FreeInputsService()
 {
-    FreeInputState(globalInputState);
-    
-    // TODO: Close all handles
-    //CloseHandle(hidDevice);
+    for (size_t i = 0; i < globalHidInputDevices.size(); i++)
+    {
+        auto device = globalHidInputDevices[i];
+        delete[] device.ReadBuffer;
+
+        CloseHandle(device.Device);
+    }
 
     if (globalNotificationHandle != nullptr)
     {
         AssertIfFailed(CM_Unregister_Notification(globalNotificationHandle));
         globalNotificationHandle = nullptr;
     }
+    
+    FreeInputState(&globalInputState);
 }
     
 DllExport InputState Native_GetInputState(void* applicationPointer)

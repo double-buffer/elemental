@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/src/Platforms/Windows/**",
+                "${workspaceFolder}/src/Platforms/Common/**",
+                "${workspaceFolder}/external/**"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/src/Platforms/Windows/UnityBuild.cpp"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "_WINDOWS"
+            ],
+            "windowsSdkVersion": "10.0.22000.0",
+            "compilerPath": "cl.exe",
+            "compilerArgs": ["/permissive-"],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}
