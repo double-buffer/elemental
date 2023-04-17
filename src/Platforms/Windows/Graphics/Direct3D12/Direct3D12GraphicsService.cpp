@@ -92,11 +92,6 @@ void Direct3D12GraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* 
 
 void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-
     ComPtr<IDXGIAdapter4> graphicsAdapter;
     DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;
@@ -407,6 +402,8 @@ void Direct3D12GraphicsService::ResizeSwapChain(void* swapChainPointer, int widt
     for (uint32_t i = 0; i < swapChain->RenderBufferCount; i++)
     {
         swapChain->RenderBuffers[i]->DeviceObject.Reset();
+        delete swapChain->RenderBuffers[i];
+
         swapChain->RenderBuffers[i] = nullptr;
     }
     

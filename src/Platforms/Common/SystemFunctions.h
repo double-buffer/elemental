@@ -98,25 +98,30 @@ void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 {
     if (DictionaryContains(debugAllocations, (size_t)pointer))
     {
+        SystemAllocation* allocation = (SystemAllocation*)DictionaryGetEntry(debugAllocations, (size_t)pointer);
+        free(allocation);
         DictionaryDelete(debugAllocations, (size_t)pointer);
     }
 
     free(pointer);
 }
 
+void SystemDisplayMemoryLeak(uint64_t key, void* data)
+{
+    SystemAllocation* value = (SystemAllocation*)data;
+    printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
+}
+
 void SystemCheckAllocations(const char* description)
 {
-    DictionaryPrint(debugAllocations);
-    
     if (debugAllocations->Count > 0)
     {
         printf("WARNING: Leaked native memory allocations (%s): %zu\n", description, debugAllocations->Count);
-
-        /*for (auto& [key, value]: allocations)
-        {
-            printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
-        }*/
+        DictionaryEnumerateEntries(debugAllocations, SystemDisplayMemoryLeak);
     }
+    
+    DictionaryFree(debugAllocations);
+    debugAllocations = NULL;
 }
 
 #define malloc(size) SystemAllocateMemory(size, __FILE__, (uint32_t)__LINE__)

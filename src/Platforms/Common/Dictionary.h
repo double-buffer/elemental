@@ -1,9 +1,6 @@
-
-// https://github.com/EpicGames/UnrealEngine/blob/5ca9da84c694c6eee288c30a547fcaa1a40aed9b/Engine/Source/Runtime/Core/Public/Containers/Map.h
-
-// TODO: Basic implementation with std:map first
-
 #pragma once
+
+// TODO: Don't malloc items, use a unified malloc here with an array
 
 struct DictionaryEntry
 {
@@ -14,10 +11,12 @@ struct DictionaryEntry
 
 struct Dictionary
 {
-    struct DictionaryEntry* DictionaryEntries;
+    DictionaryEntry** DictionaryEntries;
     size_t MaxEntries;
     size_t Count;
 } typedef Dictionary;
+
+typedef void (*DictionaryEnumerateEntry)(uint64_t key, void* entry);
 
 uint64_t HashFunction(uint64_t key)
 {
@@ -31,54 +30,93 @@ uint64_t HashFunction(uint64_t key)
 
 Dictionary* DictionaryCreate(size_t maxEntries)
 {
-    size_t arraySizeInBytes = maxEntries * sizeof(DictionaryEntry);
-
     Dictionary* dictionary = (Dictionary*)malloc(sizeof(Dictionary));
-    dictionary->DictionaryEntries = (DictionaryEntry*)malloc(arraySizeInBytes);
     dictionary->MaxEntries = maxEntries;
     dictionary->Count = 0;
-
-    ZeroMemory(dictionary->DictionaryEntries, arraySizeInBytes);
+    dictionary->DictionaryEntries = (DictionaryEntry**)calloc(maxEntries, sizeof(DictionaryEntry*));
 
     return dictionary;
 }
 
 void DictionaryFree(Dictionary* dictionary)
 {
-    // TODO
-}
-
-void DictionaryAdd(Dictionary* dictionary, uint64_t key, void* data)
-{
     if (dictionary == NULL)
     {
         return;
     }
 
-    uint64_t hash = HashFunction(key) % dictionary->MaxEntries;
-    dictionary->Count++;
-
-    if (dictionary->DictionaryEntries[hash].Data == NULL)
+    for (size_t i = 0; i < dictionary->MaxEntries; i++)
     {
-        dictionary->DictionaryEntries[hash].Key = key;
-        dictionary->DictionaryEntries[hash].Data = data;
-    }
-    else
-    {
-        DictionaryEntry* entry = &dictionary->DictionaryEntries[hash];
+        DictionaryEntry* entry = dictionary->DictionaryEntries[i];
 
-        while (entry->Next != NULL)
+        while (entry != NULL)
         {
+            DictionaryEntry* next = entry->Next;
+            free(entry);
+
+            entry = next;
+        }
+    }
+
+    free(dictionary->DictionaryEntries);
+    free(dictionary);
+}
+
+void* DictionaryGetEntry(Dictionary* dictionary, uint64_t key)
+{
+    if (dictionary == NULL || dictionary->Count == 0)
+    {
+        return NULL;
+    }
+
+    uint64_t index = HashFunction(key) % dictionary->MaxEntries;
+
+    if (dictionary->DictionaryEntries[index] != NULL)
+    {
+        DictionaryEntry* entry = dictionary->DictionaryEntries[index];
+
+        while (entry != NULL)
+        {
+            if (entry->Key == key)
+            {
+                return entry->Data;
+            }
+
             entry = entry->Next;
         }
-
-        DictionaryEntry* nextEntry = (DictionaryEntry*)malloc(sizeof(DictionaryEntry));
-        nextEntry->Key = key;
-        nextEntry->Data = data;
-        nextEntry->Next = NULL;
-
-        entry->Next = nextEntry;
     }
+
+    return NULL;
+}
+
+bool DictionaryContains(Dictionary* dictionary, uint64_t key)
+{
+    return DictionaryGetEntry(dictionary, key) != NULL;
+}
+
+bool DictionaryAdd(Dictionary* dictionary, uint64_t key, void* data)
+{
+    if (dictionary == NULL || data == NULL || DictionaryContains(dictionary, key))
+    {
+        return false;
+    }
+
+    uint64_t index = HashFunction(key) % dictionary->MaxEntries;
+    dictionary->Count++;
+    
+    DictionaryEntry* nextEntry = (DictionaryEntry*)malloc(sizeof(DictionaryEntry));
+    nextEntry->Key = key;
+    nextEntry->Data = data;
+    nextEntry->Next = NULL;
+
+    if (dictionary->DictionaryEntries[index] != NULL)
+    {
+        nextEntry->Next = dictionary->DictionaryEntries[index];
+    }
+
+    dictionary->DictionaryEntries[index] = nextEntry;
+
+    return true;
 }
 
 void DictionaryDelete(Dictionary* dictionary, uint64_t key)
@@ -88,25 +126,26 @@ void DictionaryDelete(Dictionary* dictionary, uint64_t key)
         return;
     }
 
-    uint64_t hash = HashFunction(key) % dictionary->MaxEntries;
+    uint64_t index = HashFunction(key) % dictionary->MaxEntries;
     dictionary->Count--;
 
-    if (dictionary->DictionaryEntries[hash].Data != NULL)
+    if (dictionary->DictionaryEntries[index] != NULL)
     {
-        DictionaryEntry* entry = &dictionary->DictionaryEntries[hash];
+        DictionaryEntry* entry = dictionary->DictionaryEntries[index];
 
         if (entry->Key == key)
         {
             if (entry->Next != NULL)
             {
                 DictionaryEntry* nextEntry = entry->Next;
-                dictionary->DictionaryEntries[hash] = *entry->Next;
-                free(nextEntry);
+                free(dictionary->DictionaryEntries[index]);
+                dictionary->DictionaryEntries[index] = nextEntry;
             }
             else
             {
-                dictionary->DictionaryEntries[hash].Key = 0;
-                dictionary->DictionaryEntries[hash].Data = NULL;
+                // TODO: MEMORY LEAK
+                free(entry);
+                dictionary->DictionaryEntries[index] = NULL;
             }
 
             return;
@@ -127,36 +166,27 @@ void DictionaryDelete(Dictionary* dictionary, uint64_t key)
     }
 }
 
-bool DictionaryContains(Dictionary* dictionary, uint64_t key)
+void DictionaryEnumerateEntries(Dictionary* dictionary, DictionaryEnumerateEntry enumerateFunction)
 {
     if (dictionary == NULL)
     {
-        return false;
+        return;
     }
 
-    uint64_t hash = HashFunction(key) % dictionary->MaxEntries;
-
-    if (dictionary->DictionaryEntries[hash].Data != NULL)
+    for (size_t i = 0; i < dictionary->MaxEntries; i++)
     {
-        DictionaryEntry* entry = &dictionary->DictionaryEntries[hash];
-
-        if (entry->Key == key)
+        if (dictionary->DictionaryEntries[i] != NULL)
         {
-            return true;
-        }
+            enumerateFunction(dictionary->DictionaryEntries[i]->Key, dictionary->DictionaryEntries[i]->Data);
+            DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i]->Next;
 
-        while (entry->Next != NULL)
-        {
-            entry = entry->Next;
-
-            if (entry->Key == key)
+            while (nextEntry != NULL)
             {
-                return true;
+                enumerateFunction(nextEntry->Key, nextEntry->Data);
+                nextEntry = nextEntry->Next;
             }
         }
     }
-
-    return false;
 }
 
 void DictionaryPrint(Dictionary* dictionary)
@@ -168,11 +198,11 @@ void DictionaryPrint(Dictionary* dictionary)
 
     for (size_t i = 0; i < dictionary->MaxEntries; i++)
     {
-        if (dictionary->DictionaryEntries[i].Data != NULL)
+        if (dictionary->DictionaryEntries[i] != NULL)
         {
-            printf("Dictionary %zu: %llu", i, dictionary->DictionaryEntries[i].Key);
+            printf("Dictionary %zu: %llu", i, dictionary->DictionaryEntries[i]->Key);
 
-            DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i].Next;
+            DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i]->Next;
 
             while (nextEntry != NULL)
             {
