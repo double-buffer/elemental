@@ -37,7 +37,7 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
 
     // TODO: Change that
     char* output = new char[1024];
-    auto result = SystemExecuteProcess(commandLine.c_str(), output);
+    SystemExecuteProcess(commandLine.c_str(), output);
 
     auto hasErrors = ProcessLogOutput(logList, output);
     

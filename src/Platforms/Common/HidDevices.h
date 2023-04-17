@@ -172,6 +172,7 @@ void InitGamepad(int32_t gamePadIndex)
     CreateInputObject(Gamepad1Button2, InputObjectType_Digital);
 }
 
+// BUG: It seems that sometimes the state is not init on MacOS. We have random gamepad movement
 struct InputState InitInputState()
 {
     globalInputObjectsSize = InputObjectKey_MaxValue + 1;

@@ -34,8 +34,8 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #define fopen_s(pFile, filename, mode) ((*(pFile))=fopen((filename),(mode)))==NULL
-#define wcstombs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=wcstombs((destination), (source), (size)))==NULL
-#define mbstowcs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=mbstowcs((destination), (source), (size)))==NULL
+#define wcstombs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=wcstombs((destination), (source), (size)))==-1
+#define mbstowcs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=mbstowcs((destination), (source), (size)))==-1
 #endif
 #ifdef _WINDOWS
     const char* libraryExtension = ".dll";
@@ -189,17 +189,17 @@ const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
 
     if (error != 0) 
     {
-        return L"";
+        return NULL;
     }
 
     wchar_t* destination = (wchar_t*)malloc((requiredSize + 1) * sizeof(wchar_t));
     size_t convertedSize;
-    error = mbstowcs_s(&convertedSize, destination, requiredSize, (char *)source, requiredSize);
+    error = mbstowcs_s(&convertedSize, destination, requiredSize, (char*)source, requiredSize);
 
     if (error != 0)
     {
         free(destination);
-        return L"";
+        return NULL;
     }
 
     destination[convertedSize] = L'\0';
@@ -234,7 +234,7 @@ char* SystemGenerateTempFilename()
         return strdup(temp);
     }
 
-    return "";
+    return strdup("");
 }
 #endif
 
