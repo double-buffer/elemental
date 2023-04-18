@@ -54,7 +54,7 @@ struct Direct3D12GraphicsDevice : BaseGraphicsObject
     CircularList<CommandListPoolItem> ComputeCommandListsPool;
     CircularList<CommandListPoolItem> CopyCommandListsPool;
 
-    DictionaryOld<uint64_t, PipelineStateCacheItem> PipelineStates;
+    Dictionary<uint64_t, PipelineStateCacheItem> PipelineStates;
 
     // HACK: This is temporary, will be refactored later!
     ComPtr<ID3D12DescriptorHeap> RtvDescriptorHeap;

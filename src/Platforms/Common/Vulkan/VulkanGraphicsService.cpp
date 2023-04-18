@@ -282,15 +282,18 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     return graphicsDevice;
 }
 
+void DeletePipelineCacheItem(uint64_t key, void* data)
+{
+    auto cacheItem = (VulkanPipelineStateCacheItem*)data;
+    vkDestroyPipeline(cacheItem->Device, cacheItem->PipelineState, nullptr);
+}
+
 void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     VulkanCommandPoolItem* item;
 
-    for (int32_t i = 0; i < (int32_t)graphicsDevice->PipelineStates.Count(); i++)
-    {
-        vkDestroyPipeline(graphicsDevice->Device, graphicsDevice->PipelineStates[i].PipelineState, nullptr);
-    }
+    graphicsDevice->PipelineStates.EnumerateEntries(DeletePipelineCacheItem);
 
     for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
     {
@@ -889,7 +892,7 @@ void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPoin
             graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
         }
 
-        auto pipelineState = &graphicsDevice->PipelineStates[hash];
+        auto pipelineState = graphicsDevice->PipelineStates[hash];
         assert(pipelineState->PipelineState != nullptr);
 
         vkCmdBindPipeline(commandList->DeviceObject, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineState->PipelineState);
@@ -1135,7 +1138,7 @@ uint64_t VulkanGraphicsService::ComputeRenderPipelineStateHash(VulkanShader* sha
     return (uint64_t)shader;
 }
 
-VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
+VulkanPipelineStateCacheItem* VulkanGraphicsService::CreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
     auto graphicsDevice = shader->GraphicsDevice;
 
@@ -1214,8 +1217,9 @@ VulkanPipelineStateCacheItem VulkanGraphicsService::CreateRenderPipelineState(Vu
     VkPipeline pipelineState = nullptr;
     AssertIfFailed(vkCreateGraphicsPipelines(graphicsDevice->Device, nullptr, 1, &createInfo, 0, &pipelineState));
 
-    VulkanPipelineStateCacheItem cacheItem = {};
-    cacheItem.PipelineState = pipelineState;
+    VulkanPipelineStateCacheItem* cacheItem = new VulkanPipelineStateCacheItem();
+    cacheItem->PipelineState = pipelineState;
+    cacheItem->Device = graphicsDevice->Device;
 
     return cacheItem;
 }

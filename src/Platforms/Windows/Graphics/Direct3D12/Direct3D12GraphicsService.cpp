@@ -320,6 +320,16 @@ void Direct3D12GraphicsService::FreeTexture(void* texturePointer)
 
 void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+    malloc(1024);
+
     auto window = (Win32Window*)windowPointer;
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
     auto graphicsDevice = commandQueue->GraphicsDevice;
@@ -604,13 +614,13 @@ void Direct3D12GraphicsService::SetShader(void* commandListPointer, void* shader
         {
             // TODO: Review allocators
             printf("Create PipelineState for shader %llu...\n", hash);
-            auto pipelineStateCacheItem = PipelineStateCacheItem();
-            pipelineStateCacheItem.PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
+            auto pipelineStateCacheItem = new PipelineStateCacheItem();
+            pipelineStateCacheItem->PipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
             graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
         }
 
-        auto pipelineState = graphicsDevice->PipelineStates[hash].PipelineState;
+        auto pipelineState = graphicsDevice->PipelineStates[hash]->PipelineState;
         assert(pipelineState != nullptr);
 
         commandList->DeviceObject->SetPipelineState(pipelineState.Get());

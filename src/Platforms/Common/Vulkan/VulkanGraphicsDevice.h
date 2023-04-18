@@ -24,6 +24,7 @@ struct VulkanCommandPoolItem
 
 struct VulkanPipelineStateCacheItem
 {
+    VkDevice Device;
     VkPipeline PipelineState;
 };
 
@@ -51,7 +52,7 @@ struct VulkanGraphicsDevice : BaseGraphicsObject
     CircularList<VulkanCommandPoolItem> CopyCommandPool;
     uint64_t CommandPoolGeneration = 0;
     
-    DictionaryOld<uint64_t, VulkanPipelineStateCacheItem> PipelineStates;
+    Dictionary<uint64_t, VulkanPipelineStateCacheItem> PipelineStates;
 };
 
 struct VulkanDeviceCommandPools
