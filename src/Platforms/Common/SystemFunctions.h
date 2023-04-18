@@ -64,7 +64,7 @@ struct SystemAllocation
     uint32_t LineNumber;
 };
 
-Dictionary* debugAllocations = DictionaryCreate(64);
+DictionaryStruct* debugAllocations = DictionaryCreate(64);
 
 void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNumber)
 {
@@ -114,6 +114,8 @@ void SystemDisplayMemoryLeak(uint64_t key, void* data)
 
 void SystemCheckAllocations(const char* description)
 {
+    DictionaryPrint(debugAllocations);
+
     if (debugAllocations->Count > 0)
     {
         printf("WARNING: Leaked native memory allocations (%s): %zu\n", description, debugAllocations->Count);
