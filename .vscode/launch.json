@@ -14,7 +14,18 @@
             "cwd": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/x64/Debug/net7.0",
             "environment": [],
             "console": "internalConsole"
-        }
-
+        },
+{
+        "name": "(lldb) Lancer",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/Debug/HelloInputs.app/Contents/MacOS/HelloInputs",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/Debug/HelloInputs.app/Contents/MacOS/",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb"
+    },
     ]
 }

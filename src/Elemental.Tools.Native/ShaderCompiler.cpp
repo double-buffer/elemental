@@ -80,6 +80,10 @@ DllExport void Native_FreeNativePointer(void* nativePointer)
 
 DllExport void Native_InitShaderCompiler()
 {
+    #ifdef _DEBUG
+    SystemInitDebugAllocations();
+    #endif
+
     _platformTargetLanguages[GraphicsApi_Direct3D12] = ShaderLanguage_Dxil;
     _platformTargetLanguages[GraphicsApi_Vulkan] = ShaderLanguage_Spirv;
     _platformTargetLanguages[GraphicsApi_Metal] = ShaderLanguage_MetalIR;

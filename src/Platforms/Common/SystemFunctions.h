@@ -33,7 +33,7 @@
 #define PackedStructEnd
 #define MAX_PATH 256
 #ifndef NDEBUG
-    //#define _DEBUG
+    #define _DEBUG
 #endif
 #include <unistd.h>
 #include <dlfcn.h>
@@ -48,7 +48,7 @@
 #elif __APPLE__
     const char* libraryExtension = ".dylib";
     //HACK
-    #define size_t uint64_t
+    //#define size_t uint64_t
 #else
     const char* libraryExtension = ".so";
 #endif
@@ -66,13 +66,18 @@ struct SystemAllocation
     uint32_t LineNumber;
 };
 
-DictionaryStruct* debugAllocations = DictionaryCreate(64);
+static struct DictionaryStruct* debugAllocations = NULL;
 
 void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNumber)
 {
+    if (debugAllocations == NULL)
+    {
+        return malloc(sizeInBytes);
+    }
+
     void* pointer = malloc(sizeInBytes);
 
-    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
+    struct SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
     allocation->SizeInBytes = sizeInBytes;
     strcpy_s(allocation->File, file);
     allocation->LineNumber = lineNumber;
@@ -84,9 +89,14 @@ void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNu
 
 void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, uint32_t lineNumber)
 {
+    if (debugAllocations == NULL)
+    {
+        return calloc(count, size);
+    }
+
     void* pointer = calloc(count, size);
     
-    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
+    struct SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
     allocation->SizeInBytes = count * size;
     strcpy_s(allocation->File, file);
     allocation->LineNumber = lineNumber;
@@ -98,9 +108,15 @@ void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, 
 
 void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 {
+    if (debugAllocations == NULL)
+    {
+        free(pointer);
+        return;
+    }
+
     if (DictionaryContains(debugAllocations, (size_t)pointer))
     {
-        SystemAllocation* allocation = (SystemAllocation*)DictionaryGetEntry(debugAllocations, (size_t)pointer);
+        struct SystemAllocation* allocation = (struct SystemAllocation*)DictionaryGetEntry(debugAllocations, (size_t)pointer);
         free(allocation);
         DictionaryDelete(debugAllocations, (size_t)pointer);
     }
@@ -110,8 +126,13 @@ void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 
 void SystemDisplayMemoryLeak(uint64_t key, void* data)
 {
-    SystemAllocation* value = (SystemAllocation*)data;
+    struct SystemAllocation* value = (struct SystemAllocation*)data;
     printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
+}
+
+void SystemInitDebugAllocations()
+{
+    debugAllocations = DictionaryCreate(64);
 }
 
 void SystemCheckAllocations(const char* description)

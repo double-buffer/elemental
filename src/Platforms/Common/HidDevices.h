@@ -183,7 +183,7 @@ void InitGamepad(int32_t gamePadIndex)
 }
 
 // BUG: It seems that sometimes the state is not init on MacOS. We have random gamepad movement
-struct InputState InitInputState()
+struct InputState* InitInputState()
 {
     globalInputObjectsSize = InputObjectKey_MaxValue + 1;
     globalInputObjects = (struct InputObject*)calloc(globalInputObjectsSize, sizeof(struct InputObject));
@@ -195,11 +195,11 @@ struct InputState InitInputState()
 
     InitGamepad(0);
 
-    struct InputState result;
-    result.DataPointer = globalInputStateData;
-    result.DataSize = globalInputStateDataSize;
-    result.InputObjectsPointer = globalInputObjects;
-    result.InputObjectsSize = globalInputObjectsSize;
+    struct InputState* result = malloc(sizeof(struct InputState));
+    result->DataPointer = globalInputStateData;
+    result->DataSize = globalInputStateDataSize;
+    result->InputObjectsPointer = globalInputObjects;
+    result->InputObjectsSize = globalInputObjectsSize;
 
     return result;
 }

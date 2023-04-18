@@ -1,6 +1,7 @@
 import Foundation
 import IOKit
 import IOKit.hid
+import SystemFunctions
 import NativeElemental
 import HidDevices
 
@@ -74,7 +75,7 @@ func handle_InputReportCallback(context: UnsafeMutableRawPointer?, result: IORet
     }
 
     let hidInputDevice = Unmanaged<HidInputDevice>.fromOpaque(context).takeUnretainedValue()
-    hidInputDevice.inputDataConvertFunction(localInputState, Int32(hidInputDevice.deviceId), report, UInt32(reportLength))
+    hidInputDevice.inputDataConvertFunction(inputState, Int32(hidInputDevice.deviceId), report, UInt32(reportLength))
     
     // DEBUG
     //print(report.withMemoryRebound(to: XboxOneWirelessGamepadReport.self, capacity: 1) { $0.pointee })
@@ -105,5 +106,5 @@ public func getInputState(application: UnsafeMutableRawPointer?) -> InputState {
         return InputState(DataPointer: nil, DataSize: 0, InputObjectsPointer: nil, InputObjectsSize: 0)
     }    
     
-    return localInputState
+    return localInputState.pointee
 }

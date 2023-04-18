@@ -1,12 +1,15 @@
 #pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
+
 // TODO: Don't malloc items, use a unified malloc here with an array
 
 struct DictionaryEntry
 {
-    uint64_t Key = UINT64_MAX;
+    uint64_t Key;
     void* Data;
-    struct DictionaryEntry* Next = NULL;
+    struct DictionaryEntry* Next;
 } typedef DictionaryEntry;
 
 struct DictionaryStruct
@@ -220,6 +223,7 @@ void DictionaryPrint(struct DictionaryStruct* dictionary)
     }
 }
 
+#ifdef _cplusplus
 template<typename TKey, typename TValue>
 class Dictionary
 {
@@ -262,3 +266,4 @@ public:
 private:
     DictionaryStruct* _dictionaryStruct;
 };
+#endif
