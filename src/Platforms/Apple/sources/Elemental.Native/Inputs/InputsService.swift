@@ -5,7 +5,7 @@ import NativeElemental
 import HidDevices
 
 var hidInputDevices: [HidInputDevice] = []
-var inputState: InputState? = nil
+var inputState: UnsafeMutablePointer<InputState>? = nil
 
 // TODO: This works only on MacOS
 let checkInputDevicesThread = Thread {
