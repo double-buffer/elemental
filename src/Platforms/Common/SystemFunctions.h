@@ -23,6 +23,7 @@
 #define PackedStruct __pragma(pack(push, 1)) struct
 #define PackedStructEnd __pragma(pack(pop))
 
+#define _cplusplus
 #define popen _popen
 #define pclose _pclose
 #define wcsdup _wcsdup
@@ -404,7 +405,7 @@ bool SystemExecuteProcess(const char* command, char* result)
     {
         char* temp = result;
         temp = SystemConcatStrings(temp, buffer);
-        strcpy_s(result, temp);
+        strcpy_s(result, 1024, temp);
 
         free(temp);
     }

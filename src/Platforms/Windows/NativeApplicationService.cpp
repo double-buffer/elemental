@@ -17,6 +17,9 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 
 DllExport void Native_InitNativeApplicationService()
 {
+    #ifdef _DEBUG
+    SystemInitDebugAllocations();
+    #endif
 }
 
 DllExport void Native_FreeNativeApplicationService()

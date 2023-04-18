@@ -195,7 +195,7 @@ struct InputState* InitInputState()
 
     InitGamepad(0);
 
-    struct InputState* result = malloc(sizeof(struct InputState));
+    struct InputState* result = (struct InputState*)malloc(sizeof(struct InputState));
     result->DataPointer = globalInputStateData;
     result->DataSize = globalInputStateDataSize;
     result->InputObjectsPointer = globalInputObjects;

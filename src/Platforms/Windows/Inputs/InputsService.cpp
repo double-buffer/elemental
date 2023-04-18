@@ -9,7 +9,7 @@
 #define GAMEPAD_USAGE_PAGE 0x01
 #define GAMEPAD_USAGE_ID   0x05
 
-static InputState globalInputState;
+static InputState* globalInputState = nullptr;
 static HCMNOTIFICATION globalNotificationHandle = nullptr;
 
 // TODO: Review data structure
@@ -137,7 +137,7 @@ DWORD WINAPI InputThread(LPVOID lpParam)
             DWORD bytesRead = 0;
             if (GetOverlappedResult(hidInputDevice.Device, &hidInputDevice.Overlapped, &bytesRead, true))
             {
-                ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(&globalInputState, 0, hidInputDevice.ReadBuffer, bytesRead);
+                ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(globalInputState, 0, hidInputDevice.ReadBuffer, bytesRead);
             }
         }
     }
@@ -223,10 +223,10 @@ DllExport void Native_FreeInputsService()
         globalNotificationHandle = nullptr;
     }
     
-    FreeInputState(&globalInputState);
+    FreeInputState(globalInputState);
 }
     
 DllExport InputState Native_GetInputState(void* applicationPointer)
 {
-    return globalInputState;
+    return *globalInputState;
 }
