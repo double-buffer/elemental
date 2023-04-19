@@ -80,7 +80,7 @@ void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNu
 
     struct SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
     allocation->SizeInBytes = sizeInBytes;
-    strcpy_s(allocation->File, file);
+    strcpy_s(allocation->File, sizeof(allocation->File), file);
     allocation->LineNumber = lineNumber;
 
     DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
@@ -99,7 +99,7 @@ void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, 
     
     struct SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
     allocation->SizeInBytes = count * size;
-    strcpy_s(allocation->File, file);
+    strcpy_s(allocation->File, sizeof(allocation->File), file);
     allocation->LineNumber = lineNumber;
 
     DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
