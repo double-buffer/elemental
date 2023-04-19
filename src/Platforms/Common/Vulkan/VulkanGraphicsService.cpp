@@ -282,18 +282,12 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     return graphicsDevice;
 }
 
-void DeletePipelineCacheItem(uint64_t key, void* data)
-{
-    auto cacheItem = (VulkanPipelineStateCacheItem*)data;
-    vkDestroyPipeline(cacheItem->Device, cacheItem->PipelineState, nullptr);
-}
-
 void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     VulkanCommandPoolItem* item;
 
-    graphicsDevice->PipelineStates.EnumerateEntries(DeletePipelineCacheItem);
+    graphicsDevice->PipelineStates.EnumerateEntries(VulkanDeletePipelineCacheItem);
 
     for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
     {
@@ -1289,4 +1283,11 @@ static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDe
     }
 
     return VK_FALSE;
+}
+
+static void VulkanDeletePipelineCacheItem(uint64_t key, void* data)
+{
+    auto cacheItem = (VulkanPipelineStateCacheItem*)data;
+    vkDestroyPipeline(cacheItem->Device, cacheItem->PipelineState, nullptr);
+    delete cacheItem;
 }

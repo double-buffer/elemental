@@ -16,7 +16,7 @@ float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
     return normalizedValue;
 }
 
-void SetInputObjectAnalogValue(InputState* inputState, enum InputObjectKey inputObjectKey, float_t value) 
+void SetInputObjectAnalogValue(InputState* inputState, InputObjectKey inputObjectKey, float_t value) 
 {
     if (inputState->DataPointer == NULL)
     {
@@ -27,7 +27,7 @@ void SetInputObjectAnalogValue(InputState* inputState, enum InputObjectKey input
     ((float_t*)inputState->DataPointer)[inputObject.Value.Offset] = value;
 }
 
-void SetInputObjectDigitalValue(InputState* inputState, enum InputObjectKey inputObjectKey, bool value) 
+void SetInputObjectDigitalValue(InputState* inputState, InputObjectKey inputObjectKey, bool value) 
 {
     if (inputState->DataPointer == NULL)
     {
@@ -45,18 +45,18 @@ void SetInputObjectDigitalValue(InputState* inputState, enum InputObjectKey inpu
 // Vendor specific gamepad code
 //---------------------------------------------------------------------------------------------------------------
 
-enum HidGamepadVendor: uint32_t 
+typedef enum : uint32_t 
 {
     HidGamepadVendor_Microsoft = 0x045E,
     HidGamepadVendor_Sony = 0x054C
-};
+} HidGamepadVendor;
 
-enum HidGamepadProduct: uint32_t 
+typedef enum : uint32_t 
 {
     HidGamepadProduct_XboxOneWirelessOldDriver = 0x02E0,
     HidGamepadProduct_XboxOneWireless = 0x02FD,
     HidGamepadProduct_DualShock4 = 0x5C4
-};
+} HidGamepadProduct;
 
 //---------------------------------------------------------------------------------------------------------------
 // Xbox One Wireless old driver
@@ -148,7 +148,7 @@ static bool currentAllocationBits = false;
 static InputObject* globalInputObjects = 0;
 static size_t globalInputObjectsSize = 0;
 
-void CreateInputObject(enum InputObjectKey inputObjectKey, enum InputObjectType inputObjectType)
+void CreateInputObject(InputObjectKey inputObjectKey, InputObjectType inputObjectType)
 {
     globalInputObjects[inputObjectKey].Type = inputObjectType;
 
@@ -207,8 +207,6 @@ InputState* InitInputState()
 void FreeInputState(InputState* inputState)
 {
     free(inputState->DataPointer);
-    inputState->DataPointer = NULL;
-
     free(inputState->InputObjectsPointer);
-    inputState->InputObjectsPointer = NULL;
+    free(inputState);
 }

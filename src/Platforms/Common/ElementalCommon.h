@@ -19,31 +19,31 @@ typedef struct
     void* Value;
 } NullablePointer;
 
-enum GraphicsApi
+typedef enum
 {
     GraphicsApi_Unknown = 0,
     GraphicsApi_Direct3D12 = 1,
     GraphicsApi_Vulkan = 2,
     GraphicsApi_Metal = 3
-};
+} GraphicsApi;
 
-enum ShaderStage
+typedef enum
 {
     ShaderStage_AmplificationShader = 1,
     ShaderStage_MeshShader = 2,
     ShaderStage_PixelShader = 3
-};
+} ShaderStage;
 
-enum ShaderMetaDataType
+typedef enum
 {
     ShaderMetaDataType_PushConstantsCount,
     ShaderMetaDataType_ThreadCountX,
     ShaderMetaDataType_ThreadCountY,
     ShaderMetaDataType_ThreadCountZ
-};
+} ShaderMetaDataType;
 
 typedef struct _ShaderMetaData
 {
-    enum ShaderMetaDataType Type;
+    ShaderMetaDataType Type;
     uint32_t Value;
 } ShaderMetaData;

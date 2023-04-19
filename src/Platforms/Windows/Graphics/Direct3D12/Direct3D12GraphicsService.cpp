@@ -157,6 +157,7 @@ void* Direct3D12GraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* opt
 void Direct3D12GraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (Direct3D12GraphicsDevice*)graphicsDevicePointer;
+    graphicsDevice->PipelineStates.EnumerateEntries(Direct3D12DeletePipelineCacheItem);
     delete graphicsDevice;
 }
 
@@ -1044,4 +1045,10 @@ static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_S
         // TODO: Bind that to an elemental callback
         printf("%s\n", pDescription);
     }
+}
+
+static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data)
+{
+    auto cacheItem = (PipelineStateCacheItem*)data;
+    delete cacheItem;
 }

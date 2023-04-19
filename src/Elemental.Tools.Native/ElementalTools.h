@@ -1,7 +1,7 @@
 #pragma once
 #include "ElementalCommon.h"
 
-enum ShaderLanguage
+typedef enum
 {
     ShaderLanguage_Unknown = 0,
     ShaderLanguage_Hlsl = 1,
@@ -9,46 +9,46 @@ enum ShaderLanguage
     ShaderLanguage_Dxil = 3,
     ShaderLanguage_Spirv = 4,
     ShaderLanguage_MetalIR = 5
-};
+} ShaderLanguage;
 
-enum ShaderCompilerLogEntryType
+typedef enum
 {
     ShaderCompilerLogEntryType_Message = 0,
     ShaderCompilerLogEntryType_Warning = 1,
     ShaderCompilerLogEntryType_Error = 2
-};
+} ShaderCompilerLogEntryType;
 
-struct ShaderCompilerLogEntry
+typedef struct
 {
-    enum ShaderCompilerLogEntryType Type;
+    ShaderCompilerLogEntryType Type;
     const uint8_t* Message;
-};
+} ShaderCompilerLogEntry;
 
-struct ShaderCompilationOptions
+typedef struct
 {
     bool DebugMode;
-};
+} ShaderCompilationOptions;
 
-struct ShaderCompilerInput
+typedef struct
 {
     uint8_t* ShaderCode;
-    enum ShaderStage Stage;
+    ShaderStage Stage;
     uint8_t* EntryPoint;
-    enum ShaderLanguage ShaderLanguage;
-};
+    ShaderLanguage ShaderLanguage;
+} ShaderCompilerInput;
 
-struct ShaderCompilerResult
+typedef struct
 {
     bool IsSuccess;
-    enum ShaderStage Stage;
+    ShaderStage Stage;
     const uint8_t* EntryPoint;
     uint8_t* ShaderData;
     uint32_t ShaderDataCount;
-    struct ShaderCompilerLogEntry* LogEntries;
+    ShaderCompilerLogEntry* LogEntries;
     uint32_t LogEntryCount;
     ShaderMetaData* MetaData;
     uint32_t MetaDataCount;
-};
+} ShaderCompilerResult;
 
 const ShaderCompilerResult CreateErrorResult(ShaderStage stage, const uint8_t* entryPoint, const uint8_t* message)
 {

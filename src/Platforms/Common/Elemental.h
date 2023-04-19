@@ -20,20 +20,20 @@ typedef struct
 
 typedef bool (*RunHandlerPtr)(NativeApplicationStatus status);
 
-enum NativeWindowState
+typedef enum
 {
     NativeWindowState_Normal = 0,
     NativeWindowState_Minimized = 1,
     NativeWindowState_Maximized = 2,
     NativeWindowState_FullScreen = 3
-};
+} NativeWindowState;
 
 typedef struct
 {
     uint8_t* Title;
     uint32_t Width;
     uint32_t Height;
-    enum NativeWindowState WindowState;
+    NativeWindowState WindowState;
 } NativeWindowOptions;
 
 typedef struct
@@ -41,26 +41,26 @@ typedef struct
     uint32_t Width;
     uint32_t Height;
     float_t UIScale;
-    enum NativeWindowState WindowState;
+    NativeWindowState WindowState;
 } NativeWindowSize;
 
 typedef struct
 {
     const uint8_t* DeviceName;
-    enum GraphicsApi GraphicsApi;
+    GraphicsApi GraphicsApi;
     uint64_t DeviceId;
     uint64_t AvailableMemory;
 } GraphicsDeviceInfo;
 
-enum GraphicsDiagnostics
+typedef enum
 {
     GraphicsDiagnostics_None = 0,
     GraphicsDiagnostics_Debug = 1
-};
+} GraphicsDiagnostics;
 
 typedef struct
 {
-    enum GraphicsDiagnostics GraphicsDiagnostics;
+    GraphicsDiagnostics GraphicsDiagnostics;
 } GraphicsServiceOptions;
 
 typedef struct
@@ -68,12 +68,12 @@ typedef struct
     uint64_t DeviceId;
 } GraphicsDeviceOptions;
 
-enum CommandQueueType
+typedef enum
 {
     CommandQueueType_Graphics = 0,
     CommandQueueType_Compute = 1,
     CommandQueueType_Copy = 2
-};
+} CommandQueueType;
 
 typedef struct
 {
@@ -81,29 +81,29 @@ typedef struct
     uint64_t FenceValue;
 } Fence;
 
-enum TextureFormat
+typedef enum
 {
     TextureFormat_Unknown = 0,
     TextureFormat_Rgba8UnormSrgb = 1
-};
+} TextureFormat;
 
-enum SwapChainFormat
+typedef enum
 {
     SwapChainFormat_Default = 0,
     SwapChainFormat_HighDynamicRange = 1
-};
+} SwapChainFormat;
 
 typedef struct
 {
     uint32_t Width;
     uint32_t Height;
-    enum SwapChainFormat Format;
+    SwapChainFormat Format;
     uint32_t MaximumFrameLatency;
 } SwapChainOptions;
 
 typedef struct
 {
-    enum ShaderStage Stage;
+    ShaderStage Stage;
     uint8_t* EntryPoint;
     void* DataPointer;
     uint32_t DataCount;
@@ -139,7 +139,7 @@ typedef struct
     size_t InputObjectsSize;
 } InputState;
 
-enum InputObjectKey : uint8_t
+typedef enum : uint8_t
 {
     Gamepad1LeftStickX,
     Gamepad1LeftStickY,
@@ -148,13 +148,13 @@ enum InputObjectKey : uint8_t
     Gamepad1Button1,
     Gamepad1Button2,
     InputObjectKey_MaxValue = Gamepad1Button2
-};
+} InputObjectKey;
 
-enum InputObjectType : uint8_t
+typedef enum : uint8_t
 {
     InputObjectType_Digital,
     InputObjectType_Analog
-};
+} InputObjectType;
 
 typedef struct
 {
@@ -164,7 +164,7 @@ typedef struct
 
 typedef struct
 {
-    enum InputObjectType Type;
+    InputObjectType Type;
     InputObjectValueAddress Value;
     InputObjectValueAddress PreviousValue;
 } InputObject;

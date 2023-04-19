@@ -21,6 +21,8 @@ struct Direct3D12GraphicsDevice;
 #include "Direct3D12SwapChain.h"
 #include "Direct3D12GraphicsDevice.h"
 
+// TODO: Prefix structures with Direct3D12 like in vulkan!
+
 class Direct3D12GraphicsService : BaseGraphicsService
 {
 public:
@@ -94,6 +96,7 @@ private:
 
 NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
 static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
+static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data);
 
 thread_local DeviceCommandAllocators CommandAllocators[MAX_DIRECT3D12_GRAPHICS_DEVICES];
 
