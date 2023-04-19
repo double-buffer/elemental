@@ -6,19 +6,19 @@
 
 // TODO: Convert to typedef
 
-enum NativeApplicationStatusFlags
+typedef enum
 {
     None = 0,
     Active = 1,
     Closing = 2
-};
+} NativeApplicationStatusFlags;
 
-struct NativeApplicationStatus
+typedef struct
 {
     uint32_t Status;
-};
+} NativeApplicationStatus;
 
-typedef bool (*RunHandlerPtr)(struct NativeApplicationStatus status);
+typedef bool (*RunHandlerPtr)(NativeApplicationStatus status);
 
 enum NativeWindowState
 {
@@ -28,29 +28,29 @@ enum NativeWindowState
     NativeWindowState_FullScreen = 3
 };
 
-struct NativeWindowOptions
+typedef struct
 {
     uint8_t* Title;
     uint32_t Width;
     uint32_t Height;
     enum NativeWindowState WindowState;
-};
+} NativeWindowOptions;
 
-struct NativeWindowSize
+typedef struct
 {
     uint32_t Width;
     uint32_t Height;
     float_t UIScale;
     enum NativeWindowState WindowState;
-};
+} NativeWindowSize;
 
-struct GraphicsDeviceInfo
+typedef struct
 {
     const uint8_t* DeviceName;
     enum GraphicsApi GraphicsApi;
     uint64_t DeviceId;
     uint64_t AvailableMemory;
-};
+} GraphicsDeviceInfo;
 
 enum GraphicsDiagnostics
 {
@@ -58,15 +58,15 @@ enum GraphicsDiagnostics
     GraphicsDiagnostics_Debug = 1
 };
 
-struct GraphicsServiceOptions
+typedef struct
 {
     enum GraphicsDiagnostics GraphicsDiagnostics;
-};
+} GraphicsServiceOptions;
 
-struct GraphicsDeviceOptions
+typedef struct
 {
     uint64_t DeviceId;
-};
+} GraphicsDeviceOptions;
 
 enum CommandQueueType
 {
@@ -75,11 +75,11 @@ enum CommandQueueType
     CommandQueueType_Copy = 2
 };
 
-struct Fence
+typedef struct
 {
     void* CommandQueuePointer;
     uint64_t FenceValue;
-};
+} Fence;
 
 enum TextureFormat
 {
@@ -93,51 +93,51 @@ enum SwapChainFormat
     SwapChainFormat_HighDynamicRange = 1
 };
 
-struct SwapChainOptions
+typedef struct
 {
     uint32_t Width;
     uint32_t Height;
     enum SwapChainFormat Format;
     uint32_t MaximumFrameLatency;
-};
+} SwapChainOptions;
 
-struct ShaderPart
+typedef struct
 {
     enum ShaderStage Stage;
     uint8_t* EntryPoint;
     void* DataPointer;
     uint32_t DataCount;
-    struct ShaderMetaData* MetaDataPointer;
+    ShaderMetaData* MetaDataPointer;
     uint32_t MetaDataCount;
-};
+} ShaderPart;
 
-struct RenderPassRenderTarget
+typedef struct
 {
     void* TexturePointer;
-    struct NullableVector4 ClearColor;
-};
+    NullableVector4 ClearColor;
+} RenderPassRenderTarget;
 
-struct NullableRenderPassRenderTarget
+typedef struct
 {
     bool HasValue;
-    struct RenderPassRenderTarget Value;
-};
+    RenderPassRenderTarget Value;
+} NullableRenderPassRenderTarget;
 
-struct RenderPassDescriptor
+typedef struct
 {
-    struct NullableRenderPassRenderTarget RenderTarget0;
-    struct NullableRenderPassRenderTarget RenderTarget1;
-    struct NullableRenderPassRenderTarget RenderTarget2;
-    struct NullableRenderPassRenderTarget RenderTarget3;
-};
+    NullableRenderPassRenderTarget RenderTarget0;
+    NullableRenderPassRenderTarget RenderTarget1;
+    NullableRenderPassRenderTarget RenderTarget2;
+    NullableRenderPassRenderTarget RenderTarget3;
+} RenderPassDescriptor;
 
-struct InputState
+typedef struct
 {
     void* DataPointer;
     size_t DataSize;
     void* InputObjectsPointer;
     size_t InputObjectsSize;
-};
+} InputState;
 
 enum InputObjectKey : uint8_t
 {
@@ -156,15 +156,15 @@ enum InputObjectType : uint8_t
     InputObjectType_Analog
 };
 
-struct InputObjectValueAddress
+typedef struct
 {
     uint32_t Offset;
     uint32_t BitPosition;
-};
+} InputObjectValueAddress;
 
-struct InputObject
+typedef struct
 {
     enum InputObjectType Type;
-    struct InputObjectValueAddress Value;
-    struct InputObjectValueAddress PreviousValue;
-};
+    InputObjectValueAddress Value;
+    InputObjectValueAddress PreviousValue;
+} InputObject;

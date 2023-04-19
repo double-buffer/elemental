@@ -5,19 +5,19 @@
 
 // TODO: Don't malloc items, use a unified malloc here with an array
 
-struct _DictionaryEntry
+typedef struct _DictionaryEntry
 {
     uint64_t Key;
     void* Data;
     struct _DictionaryEntry* Next;
-} typedef DictionaryEntry;
+} DictionaryEntry;
 
-struct _DictionaryStruct
+typedef struct
 {
     DictionaryEntry** DictionaryEntries;
     size_t MaxEntries;
     size_t Count;
-} typedef DictionaryStruct;
+} DictionaryStruct;
 
 typedef void (*DictionaryEnumerateEntry)(uint64_t key, void* entry);
 

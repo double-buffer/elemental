@@ -16,25 +16,25 @@ float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
     return normalizedValue;
 }
 
-void SetInputObjectAnalogValue(struct InputState* inputState, enum InputObjectKey inputObjectKey, float_t value) 
+void SetInputObjectAnalogValue(InputState* inputState, enum InputObjectKey inputObjectKey, float_t value) 
 {
     if (inputState->DataPointer == NULL)
     {
         return;
     }
 
-    struct InputObject inputObject = ((struct InputObject*)inputState->InputObjectsPointer)[inputObjectKey];
+    InputObject inputObject = ((InputObject*)inputState->InputObjectsPointer)[inputObjectKey];
     ((float_t*)inputState->DataPointer)[inputObject.Value.Offset] = value;
 }
 
-void SetInputObjectDigitalValue(struct InputState* inputState, enum InputObjectKey inputObjectKey, bool value) 
+void SetInputObjectDigitalValue(InputState* inputState, enum InputObjectKey inputObjectKey, bool value) 
 {
     if (inputState->DataPointer == NULL)
     {
         return;
     }
 
-    struct InputObject inputObject = ((struct InputObject*)inputState->InputObjectsPointer)[inputObjectKey];
+    InputObject inputObject = ((InputObject*)inputState->InputObjectsPointer)[inputObjectKey];
 
     uint32_t currentValue = ((uint32_t *)inputState->DataPointer)[inputObject.Value.Offset];
     uint32_t mask = 1u << (uint32_t)inputObject.Value.BitPosition;
@@ -75,9 +75,9 @@ PackedStruct XboxOneWirelessOldDriverGamepadReport
 };
 PackedStructEnd
 
-void ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(struct InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
+void ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
 {
-    struct XboxOneWirelessOldDriverGamepadReport* inputData = (struct XboxOneWirelessOldDriverGamepadReport*)reportData;
+    XboxOneWirelessOldDriverGamepadReport* inputData = (XboxOneWirelessOldDriverGamepadReport*)reportData;
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535));
@@ -103,9 +103,9 @@ PackedStruct XboxOneWirelessGamepadReport
 };
 PackedStructEnd
 
-void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
+void ConvertHidInputDeviceData_XboxOneWirelessGamepad(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
 {
-    struct XboxOneWirelessGamepadReport* inputData = (struct XboxOneWirelessGamepadReport*)reportData;
+    XboxOneWirelessGamepadReport* inputData = (XboxOneWirelessGamepadReport*)reportData;
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535));
@@ -117,7 +117,7 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(struct InputState* inputSt
 // Vendor gamepad dispatcher
 //---------------------------------------------------------------------------------------------------------------
 
-typedef void (*ConvertHidInputDeviceDataFuncPtr)(struct InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);
+typedef void (*ConvertHidInputDeviceDataFuncPtr)(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);
 
 ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t vendorId, uint32_t productId)
 {
@@ -145,7 +145,7 @@ static size_t globalInputStateDataSize = 0;
 static uint32_t inputStateCurrentAllocatedIndex = 0;
 static uint8_t inputStateCurrentAllocatedBitPosition = 0;
 static bool currentAllocationBits = false;
-static struct InputObject* globalInputObjects = 0;
+static InputObject* globalInputObjects = 0;
 static size_t globalInputObjectsSize = 0;
 
 void CreateInputObject(enum InputObjectKey inputObjectKey, enum InputObjectType inputObjectType)
@@ -183,10 +183,10 @@ void InitGamepad(int32_t gamePadIndex)
 }
 
 // BUG: It seems that sometimes the state is not init on MacOS. We have random gamepad movement
-struct InputState* InitInputState()
+InputState* InitInputState()
 {
     globalInputObjectsSize = InputObjectKey_MaxValue + 1;
-    globalInputObjects = (struct InputObject*)calloc(globalInputObjectsSize, sizeof(struct InputObject));
+    globalInputObjects = (InputObject*)calloc(globalInputObjectsSize, sizeof(InputObject));
     
     // TODO: Refine that for now we allocate the maximum amout of data
     // TODO: Do a 2 pass approach
@@ -195,7 +195,7 @@ struct InputState* InitInputState()
 
     InitGamepad(0);
 
-    struct InputState* result = (struct InputState*)malloc(sizeof(struct InputState));
+    InputState* result = (InputState*)malloc(sizeof(InputState));
     result->DataPointer = globalInputStateData;
     result->DataSize = globalInputStateDataSize;
     result->InputObjectsPointer = globalInputObjects;
@@ -204,7 +204,7 @@ struct InputState* InitInputState()
     return result;
 }
 
-void FreeInputState(struct InputState* inputState)
+void FreeInputState(InputState* inputState)
 {
     free(inputState->DataPointer);
     inputState->DataPointer = NULL;
