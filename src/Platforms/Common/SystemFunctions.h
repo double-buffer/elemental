@@ -59,7 +59,7 @@
 #ifdef _DEBUG
 #include "Dictionary.h"
 
-typedef struct SystemAllocation
+typedef struct _SystemAllocation
 {
     size_t SizeInBytes;
     char File[MAX_PATH];

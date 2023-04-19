@@ -5,14 +5,14 @@
 
 // TODO: Don't malloc items, use a unified malloc here with an array
 
-struct DictionaryEntry
+struct _DictionaryEntry
 {
     uint64_t Key;
     void* Data;
-    struct DictionaryEntry* Next;
+    struct _DictionaryEntry* Next;
 } typedef DictionaryEntry;
 
-struct DictionaryStruct
+struct _DictionaryStruct
 {
     DictionaryEntry** DictionaryEntries;
     size_t MaxEntries;
