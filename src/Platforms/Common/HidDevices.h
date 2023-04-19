@@ -62,7 +62,7 @@ enum HidGamepadProduct: uint32_t
 // Xbox One Wireless old driver
 //---------------------------------------------------------------------------------------------------------------
 
-PackedStruct XboxOneWirelessOldDriverGamepadReport 
+typedef PackedStruct
 {
     uint8_t Padding;
     uint16_t LeftStickX;
@@ -72,7 +72,7 @@ PackedStruct XboxOneWirelessOldDriverGamepadReport
     uint16_t Triggers;
     uint16_t Buttons;
     uint8_t Dpad;
-};
+} XboxOneWirelessOldDriverGamepadReport;
 PackedStructEnd
 
 void ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
@@ -89,7 +89,7 @@ void ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(InputState* input
 // Xbox One Wireless
 //---------------------------------------------------------------------------------------------------------------
 
-PackedStruct XboxOneWirelessGamepadReport 
+typedef PackedStruct
 {
     uint8_t Padding;
     uint16_t LeftStickX;
@@ -100,7 +100,7 @@ PackedStruct XboxOneWirelessGamepadReport
     uint16_t RightTrigger;
     uint8_t Dpad;
     uint32_t Buttons;
-};
+} XboxOneWirelessGamepadReport;
 PackedStructEnd
 
 void ConvertHidInputDeviceData_XboxOneWirelessGamepad(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)

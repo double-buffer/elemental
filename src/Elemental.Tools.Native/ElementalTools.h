@@ -46,7 +46,7 @@ struct ShaderCompilerResult
     uint32_t ShaderDataCount;
     struct ShaderCompilerLogEntry* LogEntries;
     uint32_t LogEntryCount;
-    struct ShaderMetaData* MetaData;
+    ShaderMetaData* MetaData;
     uint32_t MetaDataCount;
 };
 

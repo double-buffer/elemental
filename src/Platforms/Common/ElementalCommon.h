@@ -2,22 +2,22 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct Vector4
+typedef struct
 {
     float X, Y, Z, W;
-};
+} Vector4;
 
-struct NullableVector4
+typedef struct
 {
     bool HasValue;
-    struct Vector4 Value;
-};
+    Vector4 Value;
+} NullableVector4;
 
-struct NullablePointer
+typedef struct
 {
     bool HasValue;
     void* Value;
-};
+} NullablePointer;
 
 enum GraphicsApi
 {
@@ -42,8 +42,8 @@ enum ShaderMetaDataType
     ShaderMetaDataType_ThreadCountZ
 };
 
-struct ShaderMetaData
+typedef struct _ShaderMetaData
 {
     enum ShaderMetaDataType Type;
     uint32_t Value;
-};
+} ShaderMetaData;
