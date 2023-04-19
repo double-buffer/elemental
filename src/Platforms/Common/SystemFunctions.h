@@ -65,7 +65,7 @@ struct SystemAllocation
     size_t SizeInBytes;
     char File[MAX_PATH];
     uint32_t LineNumber;
-};
+} typedef SystemAllocation;
 
 static struct DictionaryStruct* debugAllocations = NULL;
 
@@ -97,7 +97,7 @@ void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, 
 
     void* pointer = calloc(count, size);
     
-    struct SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
+    SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
     allocation->SizeInBytes = count * size;
     strcpy_s(allocation->File, sizeof(allocation->File), file);
     allocation->LineNumber = lineNumber;
