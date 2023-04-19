@@ -23,7 +23,6 @@
 #define PackedStruct __pragma(pack(push, 1)) struct
 #define PackedStructEnd __pragma(pack(pop))
 
-#define _cplusplus
 #define popen _popen
 #define pclose _pclose
 #define wcsdup _wcsdup
@@ -60,12 +59,12 @@
 #ifdef _DEBUG
 #include "Dictionary.h"
 
-struct SystemAllocation
+typedef struct SystemAllocation
 {
     size_t SizeInBytes;
     char File[MAX_PATH];
     uint32_t LineNumber;
-} typedef SystemAllocation;
+} SystemAllocation;
 
 static struct DictionaryStruct* debugAllocations = NULL;
 

@@ -9,7 +9,6 @@ void* operator new(size_t size, const char* file, uint32_t lineNumber)
 
 void* operator new[](size_t size, const char* file, uint32_t lineNumber)
 {
-    printf("TEEEST\n");
     return SystemAllocateMemory(size, file, lineNumber);
 }
 
