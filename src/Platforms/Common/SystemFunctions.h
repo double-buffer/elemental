@@ -41,7 +41,7 @@
 #define fopen_s(pFile, filename, mode) ((*(pFile))=fopen((filename),(mode)))==NULL
 #define wcstombs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=wcstombs((destination), (source), (size)))==-1
 #define mbstowcs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=mbstowcs((destination), (source), (size)))==-1
-#define strcpy_s(destination, source) strcpy(destination, source)
+#define strcpy_s(destination, size, source) strcpy(destination, source)
 #define errno_t uint64_t
 #endif
 #ifdef _WINDOWS
