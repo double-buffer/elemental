@@ -14,7 +14,7 @@ struct DictionaryEntry
 
 struct DictionaryStruct
 {
-    struct DictionaryEntry** DictionaryEntries;
+    DictionaryEntry** DictionaryEntries;
     size_t MaxEntries;
     size_t Count;
 } typedef DictionaryStruct;
@@ -32,17 +32,17 @@ uint64_t HashFunction(uint64_t key)
   return key;
 }
 
-struct DictionaryStruct* DictionaryCreate(size_t maxEntries)
+DictionaryStruct* DictionaryCreate(size_t maxEntries)
 {
-    struct DictionaryStruct* dictionary = (struct DictionaryStruct*)malloc(sizeof(struct DictionaryStruct));
+    DictionaryStruct* dictionary = (DictionaryStruct*)malloc(sizeof(DictionaryStruct));
     dictionary->MaxEntries = maxEntries;
     dictionary->Count = 0;
-    dictionary->DictionaryEntries = (struct DictionaryEntry**)calloc(maxEntries, sizeof(struct DictionaryEntry*));
+    dictionary->DictionaryEntries = (DictionaryEntry**)calloc(maxEntries, sizeof(DictionaryEntry*));
 
     return dictionary;
 }
 
-void DictionaryFree(struct DictionaryStruct* dictionary)
+void DictionaryFree(DictionaryStruct* dictionary)
 {
     if (dictionary == NULL)
     {
@@ -51,11 +51,11 @@ void DictionaryFree(struct DictionaryStruct* dictionary)
 
     for (size_t i = 0; i < dictionary->MaxEntries; i++)
     {
-        struct DictionaryEntry* entry = dictionary->DictionaryEntries[i];
+        DictionaryEntry* entry = dictionary->DictionaryEntries[i];
 
         while (entry != NULL)
         {
-            struct DictionaryEntry* next = entry->Next;
+            DictionaryEntry* next = entry->Next;
             free(entry);
 
             entry = next;
@@ -66,7 +66,7 @@ void DictionaryFree(struct DictionaryStruct* dictionary)
     free(dictionary);
 }
 
-void* DictionaryGetEntry(struct DictionaryStruct* dictionary, uint64_t key)
+void* DictionaryGetEntry(DictionaryStruct* dictionary, uint64_t key)
 {
     if (dictionary == NULL || dictionary->Count == 0)
     {
@@ -77,7 +77,7 @@ void* DictionaryGetEntry(struct DictionaryStruct* dictionary, uint64_t key)
 
     if (dictionary->DictionaryEntries[index] != NULL)
     {
-        struct DictionaryEntry* entry = dictionary->DictionaryEntries[index];
+        DictionaryEntry* entry = dictionary->DictionaryEntries[index];
 
         while (entry != NULL)
         {
@@ -93,12 +93,12 @@ void* DictionaryGetEntry(struct DictionaryStruct* dictionary, uint64_t key)
     return NULL;
 }
 
-bool DictionaryContains(struct DictionaryStruct* dictionary, uint64_t key)
+bool DictionaryContains(DictionaryStruct* dictionary, uint64_t key)
 {
     return DictionaryGetEntry(dictionary, key) != NULL;
 }
 
-bool DictionaryAdd(struct DictionaryStruct* dictionary, uint64_t key, void* data)
+bool DictionaryAdd(DictionaryStruct* dictionary, uint64_t key, void* data)
 {
     if (dictionary == NULL || data == NULL || DictionaryContains(dictionary, key))
     {
@@ -108,7 +108,7 @@ bool DictionaryAdd(struct DictionaryStruct* dictionary, uint64_t key, void* data
     uint64_t index = HashFunction(key) % dictionary->MaxEntries;
     dictionary->Count++;
     
-    struct DictionaryEntry* nextEntry = (struct DictionaryEntry*)malloc(sizeof(struct DictionaryEntry));
+    DictionaryEntry* nextEntry = (DictionaryEntry*)malloc(sizeof(DictionaryEntry));
     nextEntry->Key = key;
     nextEntry->Data = data;
     nextEntry->Next = NULL;
@@ -123,7 +123,7 @@ bool DictionaryAdd(struct DictionaryStruct* dictionary, uint64_t key, void* data
     return true;
 }
 
-void DictionaryDelete(struct DictionaryStruct* dictionary, uint64_t key)
+void DictionaryDelete(DictionaryStruct* dictionary, uint64_t key)
 {
     if (dictionary == NULL)
     {
@@ -135,13 +135,13 @@ void DictionaryDelete(struct DictionaryStruct* dictionary, uint64_t key)
 
     if (dictionary->DictionaryEntries[index] != NULL)
     {
-        struct DictionaryEntry* entry = dictionary->DictionaryEntries[index];
+        DictionaryEntry* entry = dictionary->DictionaryEntries[index];
 
         if (entry->Key == key)
         {
             if (entry->Next != NULL)
             {
-                struct DictionaryEntry* nextEntry = entry->Next;
+                DictionaryEntry* nextEntry = entry->Next;
                 free(dictionary->DictionaryEntries[index]);
                 dictionary->DictionaryEntries[index] = nextEntry;
             }
@@ -159,7 +159,7 @@ void DictionaryDelete(struct DictionaryStruct* dictionary, uint64_t key)
         {
             if (entry->Next->Key == key)
             {
-                struct DictionaryEntry* nextEntry = entry->Next->Next;
+                DictionaryEntry* nextEntry = entry->Next->Next;
                 free(entry->Next);
                 entry->Next = nextEntry;
                 return;
@@ -170,7 +170,7 @@ void DictionaryDelete(struct DictionaryStruct* dictionary, uint64_t key)
     }
 }
 
-void DictionaryEnumerateEntries(struct DictionaryStruct* dictionary, DictionaryEnumerateEntry enumerateFunction)
+void DictionaryEnumerateEntries(DictionaryStruct* dictionary, DictionaryEnumerateEntry enumerateFunction)
 {
     if (dictionary == NULL)
     {
@@ -182,7 +182,7 @@ void DictionaryEnumerateEntries(struct DictionaryStruct* dictionary, DictionaryE
         if (dictionary->DictionaryEntries[i] != NULL)
         {
             enumerateFunction(dictionary->DictionaryEntries[i]->Key, dictionary->DictionaryEntries[i]->Data);
-            struct DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i]->Next;
+            DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i]->Next;
 
             while (nextEntry != NULL)
             {
@@ -193,7 +193,7 @@ void DictionaryEnumerateEntries(struct DictionaryStruct* dictionary, DictionaryE
     }
 }
 
-void DictionaryPrint(struct DictionaryStruct* dictionary)
+void DictionaryPrint(DictionaryStruct* dictionary)
 {
     if (dictionary == NULL)
     {
@@ -206,7 +206,7 @@ void DictionaryPrint(struct DictionaryStruct* dictionary)
         {
             printf("Dictionary %zu: %llu", i, dictionary->DictionaryEntries[i]->Key);
 
-            struct DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i]->Next;
+            DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i]->Next;
 
             while (nextEntry != NULL)
             {

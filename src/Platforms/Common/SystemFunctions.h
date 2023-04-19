@@ -66,7 +66,7 @@ typedef struct SystemAllocation
     uint32_t LineNumber;
 } SystemAllocation;
 
-static struct DictionaryStruct* debugAllocations = NULL;
+static DictionaryStruct* debugAllocations = NULL;
 
 void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNumber)
 {
@@ -77,7 +77,7 @@ void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNu
 
     void* pointer = malloc(sizeInBytes);
 
-    struct SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
+    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
     allocation->SizeInBytes = sizeInBytes;
     strcpy_s(allocation->File, sizeof(allocation->File), file);
     allocation->LineNumber = lineNumber;
@@ -96,7 +96,7 @@ void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, 
 
     void* pointer = calloc(count, size);
     
-    SystemAllocation* allocation = (struct SystemAllocation*)malloc(sizeof(struct SystemAllocation));
+    SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
     allocation->SizeInBytes = count * size;
     strcpy_s(allocation->File, sizeof(allocation->File), file);
     allocation->LineNumber = lineNumber;
@@ -116,7 +116,7 @@ void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 
     if (DictionaryContains(debugAllocations, (size_t)pointer))
     {
-        struct SystemAllocation* allocation = (struct SystemAllocation*)DictionaryGetEntry(debugAllocations, (size_t)pointer);
+        SystemAllocation* allocation = (SystemAllocation*)DictionaryGetEntry(debugAllocations, (size_t)pointer);
         free(allocation);
         DictionaryDelete(debugAllocations, (size_t)pointer);
     }
@@ -126,7 +126,7 @@ void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
 
 void SystemDisplayMemoryLeak(uint64_t key, void* data)
 {
-    struct SystemAllocation* value = (struct SystemAllocation*)data;
+    SystemAllocation* value = (SystemAllocation*)data;
     printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
 }
 
