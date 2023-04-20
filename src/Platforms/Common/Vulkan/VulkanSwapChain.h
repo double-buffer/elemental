@@ -4,6 +4,9 @@ struct VulkanSwapChain : VulkanBaseGraphicsObject
 {
     VulkanSwapChain(BaseGraphicsService* graphicsService, VulkanGraphicsDevice* graphicsDevice) : VulkanBaseGraphicsObject(graphicsService, graphicsDevice)
     {
+        BackBufferTextures[0] = nullptr;
+        BackBufferTextures[1] = nullptr;
+        BackBufferTextures[2] = nullptr;
     }
 
     VkSwapchainKHR DeviceObject;

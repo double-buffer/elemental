@@ -316,6 +316,7 @@ void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
     if (graphicsDevice->Device != nullptr)
     {
         vkDestroyDevice(graphicsDevice->Device, nullptr);
+        delete graphicsDevice;
     }
 }
 
@@ -800,6 +801,8 @@ void VulkanGraphicsService::FreeShader(void* shaderPointer)
     {
         vkDestroyShaderModule(graphicsDevice->Device, shader->PixelShader, nullptr);
     }
+
+    delete shader;
 }
 
 void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
@@ -1097,6 +1100,11 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
 
     for (uint32_t i = 0; i < swapchainImageCount; i++)
     {
+        if (swapChain->BackBufferTextures[i])
+        {
+            delete swapChain->BackBufferTextures[i];
+        }
+
         auto backBufferTexture = new VulkanTexture(this, graphicsDevice);
         backBufferTexture->DeviceObject = swapchainImages[i];
         backBufferTexture->IsPresentTexture = true;

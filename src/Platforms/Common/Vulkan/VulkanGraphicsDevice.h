@@ -15,6 +15,17 @@ struct VulkanCommandPoolItem
         IsInUse = true;
     }
 
+    ~VulkanCommandPoolItem()
+    {
+        for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_BUFFERS; i++)
+        {
+            if (CommandLists[i])
+            {
+                delete CommandLists[i];
+            }
+        }
+    }
+
     VkCommandPool CommandPool;
     Fence Fence;
     VulkanCommandList* CommandLists[MAX_VULKAN_COMMAND_BUFFERS];

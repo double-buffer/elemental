@@ -321,16 +321,6 @@ void Direct3D12GraphicsService::FreeTexture(void* texturePointer)
 
 void* Direct3D12GraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-    malloc(1024);
-
     auto window = (Win32Window*)windowPointer;
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
     auto graphicsDevice = commandQueue->GraphicsDevice;
