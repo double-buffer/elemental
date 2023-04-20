@@ -43,12 +43,14 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     
     if (hasErrors)
     {
+        delete output;
         SystemDeleteFile(inputFilePath.c_str());
         return Span<uint8_t>::Empty();
     }
     
     commandLine = "xcrun metallib " + airFilePath + " -o " + outputFilePath;
     // TODO: Change that
+    delete output;
     output = new char[1024];
     SystemExecuteProcess(commandLine.c_str(), output);
     
@@ -56,6 +58,7 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     
     if (hasErrors)
     {
+        delete output;
         SystemDeleteFile(inputFilePath.c_str());
         SystemDeleteFile(airFilePath.c_str());
         
@@ -66,7 +69,9 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     size_t outputShaderDataSize;
 
     SystemReadBytesFromFile(outputFilePath.c_str(), &outputShaderData, &outputShaderDataSize);
- 
+
+    delete output;
+
     SystemDeleteFile(inputFilePath.c_str());
     SystemDeleteFile(airFilePath.c_str());
     SystemDeleteFile(outputFilePath.c_str());

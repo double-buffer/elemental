@@ -30,16 +30,23 @@ public class MacOSApplication {
     }
 }
 
-
 class MacOSAppDelegate: NSObject, NSApplicationDelegate {
     private let application: MacOSApplication
 
     public init(_ application: MacOSApplication) {
         self.application = application
     }
-    
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+
+    public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         self.application.setStatus(Closing, 1)
         return NSApplication.TerminateReply.terminateCancel
+    }
+    
+    public func applicationWillTerminate(_ notification: Notification) {
+        self.application.setStatus(Closing, 1)
+    }
+
+    public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
     }
 }

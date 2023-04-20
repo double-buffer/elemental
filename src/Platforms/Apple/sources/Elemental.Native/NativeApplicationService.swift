@@ -5,6 +5,7 @@ import NativeElemental
 
 @_cdecl("Native_InitNativeApplicationService")
 public func initNativeApplicationService(optionsPointer: UnsafePointer<GraphicsServiceOptions>) {
+    ProcessInfo.processInfo.disableSuddenTermination()
 }
 
 @_cdecl("Native_FreeNativeApplicationService")
@@ -18,7 +19,8 @@ public func freeNativePointer(pointer: UnsafeRawPointer) {
 
 @_cdecl("Native_CreateApplication")
 public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> UnsafeMutableRawPointer? {
-    autoreleasepool {
+    // TODO: Investigate, the delegate was not fired with the autoreleasepool
+    //autoreleasepool {
         var processSerialNumber = ProcessSerialNumber(highLongOfPSN: 0, lowLongOfPSN: UInt32(kCurrentProcess))
         TransformProcessType(&processSerialNumber, UInt32(kProcessTransformToForegroundApplication))
     
@@ -32,7 +34,7 @@ public func createApplication(applicationName: UnsafeMutablePointer<Int8>) -> Un
         buildMainMenu(applicationName: String(cString: applicationName))
 
         return Unmanaged.passRetained(application).toOpaque()
-    }
+    //}
 }
 
 @_cdecl("Native_FreeApplication")
