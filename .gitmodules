@@ -7,3 +7,6 @@
 [submodule "external/DirectX-Headers"]
 	path = external/DirectX-Headers
 	url = https://github.com/microsoft/DirectX-Headers.git
+[submodule "external/metal-cpp"]
+	path = external/metal-cpp
+	url = https://github.com/bkaradzic/metal-cpp.git
