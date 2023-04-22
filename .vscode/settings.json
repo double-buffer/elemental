@@ -14,6 +14,19 @@
         "xstring": "cpp",
         "xtree": "cpp",
         "xutility": "cpp",
-        "new": "cpp"
+        "new": "cpp",
+        "charconv": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp",
+        "__tree": "cpp",
+        "bitset": "cpp",
+        "map": "cpp",
+        "queue": "cpp",
+        "set": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "random": "cpp"
     }
 }

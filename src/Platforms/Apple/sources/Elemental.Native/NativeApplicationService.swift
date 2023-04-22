@@ -1,15 +1,20 @@
 import Cocoa
+import SystemFunctions
 import NativeElemental
 
 // TODO: Split AppKit specific code! 
 
 @_cdecl("Native_InitNativeApplicationService")
 public func initNativeApplicationService(optionsPointer: UnsafePointer<GraphicsServiceOptions>) {
+    SystemInitDebugAllocations()
+    // TODO: Do we really need this?
     ProcessInfo.processInfo.disableSuddenTermination()
+
 }
 
 @_cdecl("Native_FreeNativeApplicationService")
 public func freeNativeApplicationService() {
+    SystemCheckAllocations("Elemental")
 }
 
 @_cdecl("Native_FreeNativePointer")

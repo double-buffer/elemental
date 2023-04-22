@@ -55,13 +55,13 @@ using namespace Microsoft::WRL;
 #include "dxcapi.h"
 #include "d3d12shader.h"
 
-
 #include "spirv_msl.hpp"
 
 #ifdef _WASDEBUG
 #define _DEBUG
 #endif
 
+// TODO: Move that to SystemFunctions
 #define AssertIfFailed(result) assert(!FAILED(result))
 
 template<typename T>

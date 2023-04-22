@@ -143,7 +143,7 @@ applicationService.RunApplication(application, (status) =>
 
     frameTimer.Restart();
 
-    var commandList = graphicsService.CreateCommandList(commandQueue);
+    using var commandList = graphicsService.CreateCommandList(commandQueue);
 
     using var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
     graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 0.0f, 0.0f, 1.0f) } });
