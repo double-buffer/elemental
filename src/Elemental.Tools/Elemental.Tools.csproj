@@ -37,7 +37,7 @@
       <PowerShellCommand>pwsh</PowerShellCommand>
     </PropertyGroup>
     <!-- <Exec Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File $(BuildScript) -outputDirectory $(OutputPath) -configuration $(Configuration.ToLower())" /> -->
-    <Exec Command="make -C $(MSBuildProjectDirectory)/../Elemental.Tools.Native/ OutputDirectory=$(OutputPath) Configuration=$(Configuration.ToLower())" />
+    <Exec Command="make -C $(MSBuildProjectDirectory)/../Elemental.Tools.Native/ OutputDirectory=$(OutputPath) Configuration=$(Configuration)" />
   </Target>
 
   <!-- REFACTOR the copying of the tools -->

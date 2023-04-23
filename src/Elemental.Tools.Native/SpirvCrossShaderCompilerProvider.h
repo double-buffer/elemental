@@ -1,5 +1,5 @@
 #pragma once
-#include "PrecompiledHeader.h"
+#include "PreCompiledHeader.h"
 #include "ElementalTools.h"
 #include "ShaderCompilerProvider.h"
 

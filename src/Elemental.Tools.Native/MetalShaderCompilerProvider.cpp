@@ -1,4 +1,4 @@
-#include "PrecompiledHeader.h"
+#include "PreCompiledHeader.h"
 #include "MetalShaderCompilerProvider.h"
 
 ShaderLanguage MetalShaderCompilerProvider::GetShaderLanguage()

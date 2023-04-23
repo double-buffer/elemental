@@ -1,4 +1,4 @@
-#include "PrecompiledHeader.h"
+#include "PreCompiledHeader.h"
 #include "DirectXShaderCompilerProvider.h"
 
 DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()

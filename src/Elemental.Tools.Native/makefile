@@ -1,3 +1,4 @@
+# Determine the operating system
 ifeq ($(OS),Windows_NT)
     OS = Windows
     ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
@@ -21,6 +22,7 @@ else
     endif
 endif
 
+# Set common compiler parameters
 ifeq ($(Configuration), Debug)
 DBG_OPT_FLAGS=-g
 else
@@ -42,21 +44,46 @@ LIBS=-liconv\
 	 -lspirv-cross-util\
 	 -L../../external/shader-compilers/spirv-cross/lib/
 
-CC=clang++
-CFLAGS=-Wall -std=c++20 -fms-extensions -fno-objc-arc $(INCLUDES) $(DBG_OPT_FLAGS)
-LDFLAGS=$(LIBS) -dynamiclib
+# Set compiler and flags based on the operating system
+ifeq ($(OS), Windows)
+    CC = cl
+    CFLAGS = /nologo /MD /Wall /std:c++latest /EHsc /DUNICODE /D_UNICODE /D_WINDOWS /D_USRDLL /D_WINDLL $(INCLUDES) $(DBG_OPT_FLAGS)
+    LDFLAGS = /DLL $(LIBS)
+	# TODO:
+	PCHFLAGS = -include-pch obj/PreCompiledHeader.pch
+	LIB_EXTENSION = dll
+else
+	CC = clang++
+	CFLAGS = -Wall -std=c++20 -fms-extensions -fno-objc-arc $(INCLUDES) $(DBG_OPT_FLAGS)
+	PCHFLAGS = -include-pch obj/PreCompiledHeader.pch
+	LDFLAGS = -dynamiclib $(LIBS) 
+	LIB_EXTENSION = dylib
+endif
 
-SRC_FILES = $(filter-out UnityBuild.cpp, $(wildcard *.cpp))
+# Get source files dependency
+SRC_FILES = $(filter-out UnityBuild.cpp, $(wildcard *.cpp *.h **/*.cpp **/*.h))
  
+# Create obj folder if it doesn't exist
+$(shell mkdir -p obj)
+
+# Targets
+.PHONY: clean all
 all: Elemental.Tools.Native
 
-obj/UnityBuild.o: $(SRC_FILES)
-	@echo "[93mCompiling Tools Native ($(Configuration) - $(PLATFORM) / $(OS))...[0m"
-	$(CC) -c $(CFLAGS) UnityBuild.cpp -o $@
+obj/PreCompiledHeader.pch: PreCompiledHeader.h
+	$(CC) -c $(CFLAGS) -x c++-header PreCompiledHeader.h -o obj/PreCompiledHeader.pch
 
-../Elemental.Tools/$(OutputDirectory)Elemental.Tools.Native.dylib: obj/UnityBuild.o
+obj/UnityBuild.o: $(SRC_FILES) obj/PreCompiledHeader.pch
+	@echo "[93mCompiling Tools Native ($(Configuration) - $(PLATFORM) / $(OS))...[0m"
+	$(CC) -c $(CFLAGS) $(PCHFLAGS) UnityBuild.cpp -o $@
+
+../Elemental.Tools/$(OutputDirectory)Elemental.Tools.Native.$(LIB_EXTENSION): obj/UnityBuild.o obj/PreCompiledHeader.pch
 	@echo "[93mLinking Tools Native ($(Configuration) - $(PLATFORM) / $(OS))...[0m"
-	$(CC) $(CFLAGS) $(LDFLAGS) -o ../Elemental.Tools/$(OutputDirectory)Elemental.Tools.Native.dylib $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -o ../Elemental.Tools/$(OutputDirectory)Elemental.Tools.Native.$(LIB_EXTENSION) $<
 	@echo "[92mTools Native Compiled Successfully![0m"
 
-Elemental.Tools.Native: ../Elemental.Tools/$(OutputDirectory)Elemental.Tools.Native.dylib
+Elemental.Tools.Native: ../Elemental.Tools/$(OutputDirectory)Elemental.Tools.Native.$(LIB_EXTENSION)
+
+clean:
+	rm -f obj/*\
+		./Elemental.Tools/$(OutputDirectory)Elemental.Tools.Native.$(LIB_EXTENSION)

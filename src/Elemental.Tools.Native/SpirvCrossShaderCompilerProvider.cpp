@@ -1,4 +1,4 @@
-#include "PrecompiledHeader.h"
+#include "PreCompiledHeader.h"
 #include "SpirvCrossShaderCompilerProvider.h"
 
 ShaderLanguage SpirvCrossShaderCompilerProvider::GetShaderLanguage()
