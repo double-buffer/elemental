@@ -23,10 +23,10 @@
     </PropertyGroup>
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
       <PowerShellCommand>pwsh</PowerShellCommand>
-      <BuildScript>$(MSBuildProjectDirectory)/../Platforms/Apple/Build.ps1</BuildScript>
+      <BuildScript>$(MSBuildProjectDirectory)/../Platforms/AppleOld/Build.ps1</BuildScript>
     </PropertyGroup>
     <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File $(BuildScript) -outputDirectory $(OutputPath) -configuration $(Configuration.ToLower())" />
-    <Exec Condition="$([MSBuild]::IsOSPlatform('OSX'))" Command="swift build --package-path $(MSBuildProjectDirectory)/../Platforms/Apple/ -c $(Configuration.ToLower())" />
+    <Exec Condition="$([MSBuild]::IsOSPlatform('OSX'))" Command="make -C $(MSBuildProjectDirectory)/../Platforms/Apple/ OutputDirectory=$(OutputPath) Configuration=$(Configuration)" />
   </Target>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(CompileNative)' == 'True'">
@@ -63,7 +63,7 @@
   </ItemGroup>   
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(CompileNative)' == 'True'">
-    <Content Include="$(MSBuildProjectDirectory)/../Platforms/Apple/.build/$(Configuration)/libElemental.Native.dylib">
+    <Content Include="$(MSBuildProjectDirectory)/../Platforms/AppleOld/.build/$(Configuration)/libElemental.Native.dylib">
       <TargetPath>Elemental.Native.dylib</TargetPath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

@@ -23,6 +23,7 @@ else
 endif
 
 # Set common compiler parameters
+# TODO: Debug defines per platform
 ifeq ($(Configuration), Debug)
 DBG_OPT_FLAGS=-g
 else
