@@ -16,16 +16,6 @@
     <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   
-  <Target Name="GetShaderCompilers" BeforeTargets="CoreCompile" Condition="'$(CompileNative)' == 'True'">
-    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-      <PowerShellCommand>powershell</PowerShellCommand>
-    </PropertyGroup>
-    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
-      <PowerShellCommand>pwsh</PowerShellCommand>
-    </PropertyGroup>
-    <Exec Condition="!Exists('../../external/shader-compilers')" Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File ../../external/GetShaderCompilers.ps1" />
-  </Target>
-  
   <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(CompileNative)' == 'True'">
     <Exec Command="cmake -B $(MSBuildProjectDirectory)/../Elemental.Tools.Native/build -S $(MSBuildProjectDirectory)/../Elemental.Tools.Native/" />
     <Exec Command="cmake --build $(MSBuildProjectDirectory)/../Elemental.Tools.Native/build --config $(Configuration)" />
