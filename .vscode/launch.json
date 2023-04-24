@@ -8,10 +8,10 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/x64/Debug/net7.0/HelloInputs.exe",
+            "program": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/Debug/net7.0/HelloInputs.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/x64/Debug/net7.0",
+            "cwd": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/Debug/net7.0",
             "environment": [],
             "console": "internalConsole"
         },

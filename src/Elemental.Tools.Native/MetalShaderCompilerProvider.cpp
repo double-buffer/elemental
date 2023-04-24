@@ -82,6 +82,7 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     
 bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, char* output)
 {
+    // BUG: 
     return false;
     auto outputWString = SystemConvertUtf8ToWideChar((uint8_t*)output);
 

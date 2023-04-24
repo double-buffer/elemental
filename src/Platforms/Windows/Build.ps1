@@ -73,7 +73,7 @@ try
         Push-Location ./../Platforms/Windows
     }
 
-    RegisterVisualStudioEnvironment
+    # RegisterVisualStudioEnvironment
 
     # TODO: Allow to have builds without Direct3D12 or Vulkan
 
