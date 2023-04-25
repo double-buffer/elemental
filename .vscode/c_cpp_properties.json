@@ -8,6 +8,9 @@
                 "_WIN32",
                 "_WINDOWS",
                 "_UNICODE"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/src/Platforms/Windows/UnityBuild.cpp"
             ]
         },
         {

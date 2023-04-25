@@ -11,9 +11,12 @@ endif()
 
 # Set Global properties like C++ Version etc.
 
+# TODO: Find a way to have only one build directory
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 include(functions)
 
+# TODO: Don't include tools dep for the runtime
 add_subdirectory(external)
 add_subdirectory(src/Platforms/Common)
 add_subdirectory(src/Elemental.Tools.Native)

@@ -16,36 +16,35 @@
   </ItemGroup>
   
   <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(BuildProjectReferences)' == 'true'">
-    <Exec Command="cmake -B $(MSBuildProjectDirectory)/../../build/tools -S $(MSBuildProjectDirectory)/../.." />
-    <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build/tools --target Elemental.Tools.Native --config $(Configuration)" />
+    <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build --target Elemental.Tools.Native --config $(Configuration)" />
   </Target>
 
   <!-- REFACTOR the copying of the tools -->
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildProjectReferences)' == 'true'">
-    <Content Include="$(MSBuildProjectDirectory)/../../build/tools/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.dll">
       <TargetPath>Elemental.Tools.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/tools/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.pdb">
+    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.pdb">
       <TargetPath>Elemental.Tools.Native.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/tools/external/shader-compilers/dxc/bin/x64/dxcompiler.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/external/shader-compilers/dxc/bin/x64/dxcompiler.dll">
       <TargetPath>dxcompiler.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/tools/external/shader-compilers/dxc/bin/x64/dxil.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/external/shader-compilers/dxc/bin/x64/dxil.dll">
       <TargetPath>dxil.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildProjectReferences)' == 'true'">
-    <Content Include="$(MSBuildProjectDirectory)/../../build/tools/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.dylib">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.dylib">
       <TargetPath>Elemental.Tools.Native.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/tools/external/shader-compilers/dxc/lib/libdxcompiler.dylib">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/external/shader-compilers/dxc/lib/libdxcompiler.dylib">
       <TargetPath>libdxcompiler.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

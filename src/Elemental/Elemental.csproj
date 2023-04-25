@@ -16,33 +16,32 @@
   </ItemGroup>
   
   <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(BuildProjectReferences)' == 'true'">
-    <Exec Command="cmake -B $(MSBuildProjectDirectory)/../../build/native -S $(MSBuildProjectDirectory)/../.." />
-    <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build/native --target Elemental.Native --config $(Configuration)" />
+    <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build --target Elemental.Native --config $(Configuration)" />
   </Target>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildProjectReferences)' == 'True'">
-    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/Elemental.Native.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/Elemental.Native.dll">
       <TargetPath>Elemental.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/Elemental.Native.pdb">
+    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/Elemental.Native.pdb">
       <TargetPath>Elemental.Native.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     
-    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12Core.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12Core.dll">
       <TargetPath>D3D12Core.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12Core.pdb">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12Core.pdb">
       <TargetPath>D3D12Core.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.dll">
       <TargetPath>D3D12SDKLayers.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.pdb">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.pdb">
       <TargetPath>D3D12SDKLayers.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
