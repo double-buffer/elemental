@@ -1,5 +1,5 @@
 #pragma once
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 #include "Elemental.h"
 
 struct Win32Application

@@ -1,5 +1,5 @@
 #pragma once
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 #include "BaseGraphicsObject.h"
 
 struct Direct3D12BaseGraphicsObject : BaseGraphicsObject

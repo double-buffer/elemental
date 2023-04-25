@@ -1,4 +1,4 @@
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 #include "SystemFunctions.h"
 
 #include "NativeApplicationService.cpp"

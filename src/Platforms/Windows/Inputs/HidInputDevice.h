@@ -1,4 +1,5 @@
 #pragma once
+#include "PreCompiledHeader.h"
 
 struct HidInputDevice 
 {

@@ -1,5 +1,5 @@
 #pragma once
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 #include "IatHook.h"
 
 enum IMMERSIVE_HC_CACHE_MODE

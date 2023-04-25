@@ -1,6 +1,6 @@
 ﻿using Elemental;
 
-var applicationService = new NativeApplicationService();
+using var applicationService = new NativeApplicationService();
 using var application = applicationService.CreateApplication("Hello Window");
 
 using var window = applicationService.CreateWindow(application, new NativeWindowOptions

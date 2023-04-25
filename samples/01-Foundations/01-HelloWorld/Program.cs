@@ -2,7 +2,7 @@
 
 var counter = 0;
 
-var applicationService = new NativeApplicationService();
+using var applicationService = new NativeApplicationService();
 using var application = applicationService.CreateApplication("Hello World");
 
 applicationService.RunApplication(application, (status) =>

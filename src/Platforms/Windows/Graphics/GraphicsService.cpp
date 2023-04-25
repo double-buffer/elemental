@@ -1,4 +1,4 @@
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 #include "BaseGraphicsObject.h"
 #include "BaseGraphicsService.h"
 #include "Direct3D12/Direct3D12GraphicsService.h"

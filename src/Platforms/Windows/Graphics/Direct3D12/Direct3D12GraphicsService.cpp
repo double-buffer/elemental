@@ -1,4 +1,4 @@
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 #include "Direct3D12GraphicsService.h"
 
 Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* options)

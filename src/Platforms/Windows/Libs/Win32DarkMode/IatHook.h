@@ -4,7 +4,7 @@
 // See PolyHook_2_0-LICENSE for more information.
 
 #pragma once
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 
 template <typename T, typename T1, typename T2>
 constexpr T RVA2VA(T1 base, T2 rva)

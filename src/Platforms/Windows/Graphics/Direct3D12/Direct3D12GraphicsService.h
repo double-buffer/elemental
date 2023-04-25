@@ -1,5 +1,5 @@
 #pragma once
-#include "WindowsCommon.h"
+#include "PreCompiledHeader.h"
 #include "BaseGraphicsService.h"
 #include "BaseGraphicsObject.h"
 #include "SystemFunctions.h"

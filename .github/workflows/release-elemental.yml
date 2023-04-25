@@ -110,7 +110,7 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet build ./src/Elemental -c Release -p:CompileNative="False" -p:Version=${{ inputs.tag }} 
+        dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} 
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
