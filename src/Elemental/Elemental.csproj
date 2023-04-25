@@ -14,43 +14,35 @@
     <ProjectReference Include="../Elemental.Common/Elemental.Common.csproj" />
     <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
-
-  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(BuildProjectReferences)' == 'True'">
-    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-      <PowerShellCommand>powershell</PowerShellCommand>
-      <BuildScript>$(MSBuildProjectDirectory)/../Platforms/Windows/Build.ps1</BuildScript>
-    </PropertyGroup>
-    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
-      <PowerShellCommand>pwsh</PowerShellCommand>
-      <BuildScript>$(MSBuildProjectDirectory)/../Platforms/AppleOld/Build.ps1</BuildScript>
-    </PropertyGroup>
-    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" Command="$(PowerShellCommand) -ExecutionPolicy Unrestricted -NoProfile -File $(BuildScript) -outputDirectory $(OutputPath) -configuration $(Configuration.ToLower())" />
-    <Exec Condition="$([MSBuild]::IsOSPlatform('OSX'))" Command="make -C $(MSBuildProjectDirectory)/../Platforms/Apple/ OutputDirectory=$(OutputPath) Configuration=$(Configuration)" />
+  
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(BuildProjectReferences)' == 'true'">
+    <Exec Command="cmake -B $(MSBuildProjectDirectory)/../../build/native -S $(MSBuildProjectDirectory)/../.." />
+    <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build/native --target Elemental.Native --config $(Configuration)" />
   </Target>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildProjectReferences)' == 'True'">
-    <Content Include="$(OutputPath)/Elemental.Native.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/Elemental.Native.dll">
       <TargetPath>Elemental.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(OutputPath)/Elemental.Native.pdb">
+    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/Elemental.Native.pdb">
       <TargetPath>Elemental.Native.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     
-    <Content Include="$(OutputPath)/D3D12/D3D12Core.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12Core.dll">
       <TargetPath>D3D12Core.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(OutputPath)/D3D12/D3D12Core.pdb">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12Core.pdb">
       <TargetPath>D3D12Core.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(OutputPath)/D3D12/D3D12SDKLayers.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.dll">
       <TargetPath>D3D12SDKLayers.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(OutputPath)/D3D12/D3D12SDKLayers.pdb">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/native/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.pdb">
       <TargetPath>D3D12SDKLayers.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

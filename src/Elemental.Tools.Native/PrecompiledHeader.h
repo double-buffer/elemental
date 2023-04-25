@@ -20,7 +20,7 @@
 #define _WASDEBUG
 #endif
 
-#if _WINDOWS
+#ifdef _WINDOWS
 #define DllExport extern "C" __declspec(dllexport)
 #include <windows.h>
 #include <wrl/client.h>

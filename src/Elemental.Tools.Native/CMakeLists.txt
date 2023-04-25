@@ -9,5 +9,5 @@ target_link_libraries(Elemental.Tools.Native PRIVATE tools_external_dependencies
 
 if(WIN32)
     target_compile_options(Elemental.Tools.Native PRIVATE -EHs -MD)
-    target_compile_definitions(Elemental.Tools.Native PRIVATE UNICODE _UNICODE)
+    target_compile_definitions(Elemental.Tools.Native PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
 endif()
