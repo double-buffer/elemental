@@ -30,7 +30,6 @@ using namespace Microsoft::WRL;
 #define pclose _pclose
 #undef min
 #else
-#define DllExport extern "C" __attribute__((visibility("default"))) 
 #define ComPtr CComPtr
 #undef _WIN32
 #include <iconv.h>

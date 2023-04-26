@@ -23,4 +23,6 @@ add_subdirectory(src/Elemental.Tools.Native)
 
 if(WIN32)
     add_subdirectory(src/Platforms/Windows)
+elseif(APPLE)
+    add_subdirectory(src/Platforms/Apple)
 endif()

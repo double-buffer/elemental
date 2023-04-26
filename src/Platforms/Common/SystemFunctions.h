@@ -42,6 +42,7 @@
 #define mbstowcs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=mbstowcs((destination), (source), (size)))==-1
 #define strcpy_s(destination, size, source) strcpy(destination, source)
 #define errno_t uint64_t
+#define DllExport extern "C" __attribute__((visibility("default"))) 
 #endif
 #ifdef _WINDOWS
     const char* libraryExtension = ".dll";
@@ -178,70 +179,6 @@ void operator delete(void* pointer)
 }
 
 #define new new(__FILE__, (uint32_t)__LINE__)
-#endif
-#ifdef __OBJC__
-#include <CoreFoundation/CoreFoundation.h>
-
-// Custom allocator function that logs memory allocation events
-static void *myAllocatorAllocate(CFIndex allocSize, CFOptionFlags hint, void *info) {
-    void *ptr = malloc(allocSize);//CFAllocatorAllocateAligned(kCFAllocatorSystemDefault, allocSize, 0, hint);
-    printf("Allocated %ld bytes at address %p\n", allocSize, ptr);
-    fflush(stdout);
-    return ptr;
-}
-
-// Custom allocator function that logs memory reallocation events
-static void *myAllocatorReallocate(void *ptr, CFIndex newsize, CFOptionFlags hint, void *info) {
-    void *newptr = realloc(ptr, newsize);
-    printf("Reallocated %ld bytes at address %p to new address %p\n", newsize, ptr, newptr);
-    fflush(stdout);
-    return newptr;
-}
-
-// Custom allocator function that logs memory deallocation events
-static void myAllocatorDeallocate(void *ptr, void *info) {
-    printf("Deallocated memory at address %p\n", ptr);
-    fflush(stdout);
-    //free(ptr);
-}
-
-static CFIndex myAllocatorPreferredSize(CFIndex size, CFOptionFlags hint, void *info) {
-    printf("Preferred size requested for size %ld with hint %lu\n", size, hint);
-    return size;
-}
-
-static void* myAllocatorRetain(void *ptr) {
-    printf("Retain memory at address %p\n", ptr);
-    return ptr;
-}
-
-static void myAllocatorRelease(void *ptr) {
-    printf("Release memory at address %p\n", ptr);
-}
-
-void SystemInitDebugAllocations()
-{
-    printf("Init Memory\n");
-    debugAllocations = DictionaryCreate(64);
-
-    CFAllocatorContext allocatorContext;
-	allocatorContext.version = 0;
-	allocatorContext.info = NULL;
-	allocatorContext.retain = &myAllocatorRetain;
-	allocatorContext.release = &myAllocatorRelease;
-	allocatorContext.copyDescription = NULL;
-	allocatorContext.allocate = &myAllocatorAllocate;
-	allocatorContext.reallocate = &myAllocatorReallocate;
-	allocatorContext.deallocate = &myAllocatorDeallocate;
-	allocatorContext.preferredSize = &myAllocatorPreferredSize;
-
-    // Create a custom allocator using CFAllocatorCreate
-    //CFAllocatorRef myAllocator = CFAllocatorCreate(kCFAllocatorDefault, &allocatorContext);
-
-    // Set the custom allocator as the default allocator using CFAllocatorSetDefault
-    //CFAllocatorSetDefault(myAllocator);
-}
-
 #endif
 
 #define malloc(size) SystemAllocateMemory(size, __FILE__, (uint32_t)__LINE__)

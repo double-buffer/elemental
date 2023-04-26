@@ -2,7 +2,7 @@ add_library(Elemental.Tools.Native SHARED UnityBuild.cpp)
 
 target_compile_options(Elemental.Tools.Native PRIVATE -Wall)
 target_compile_features(Elemental.Tools.Native PRIVATE cxx_std_20)
-target_precompile_headers(Elemental.Tools.Native PRIVATE PrecompiledHeader.h)
+target_precompile_headers(Elemental.Tools.Native PRIVATE PreCompiledHeader.h)
 
 target_link_libraries(Elemental.Tools.Native PRIVATE common)
 target_link_libraries(Elemental.Tools.Native PRIVATE tools_external_dependencies)

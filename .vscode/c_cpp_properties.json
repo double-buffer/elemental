@@ -3,29 +3,10 @@
         {
             "name": "Win32",
             "intelliSenseMode": "windows-msvc-x64",
-            "configurationProvider": "ms-vscode.cmake-tools",
-            "defines": [
-                "_WIN32",
-                "_WINDOWS",
-                "_UNICODE"
-            ],
-            "forcedInclude": [
-                "${workspaceFolder}/src/Platforms/Windows/UnityBuild.cpp"
-            ]
+            "configurationProvider": "ms-vscode.cmake-tools"
         },
         {
             "name": "Mac",
-            "includePath": [
-                "${workspaceFolder}/**"
-            ],
-            "defines": [
-                "_DEBUG"
-            ],
-            "macFrameworkPath": [
-                "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
-            ],
-            "compilerPath": "/usr/bin/clang",
-            "cStandard": "c17",
             "intelliSenseMode": "macos-clang-x64",
             "configurationProvider": "ms-vscode.cmake-tools"
         }
