@@ -35,6 +35,7 @@ namespace NS
 	{
 		public:
 			View*		init( CGRect frame );
+			CGRect		frame();
 	};
 }
 
@@ -43,3 +44,9 @@ _NS_INLINE NS::View* NS::View::init( CGRect frame )
 {
 	return Object::sendMessage< View* >( _APPKIT_PRIVATE_CLS( NSView ), _APPKIT_PRIVATE_SEL( initWithFrame_ ), frame );
 }
+
+_NS_INLINE CGRect NS::View::frame()
+{
+	return Object::sendMessage<CGRect>(this, _APPKIT_PRIVATE_SEL(frame));
+}
+

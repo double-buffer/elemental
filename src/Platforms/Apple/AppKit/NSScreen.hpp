@@ -17,7 +17,7 @@
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
-// AppKit/AppKit.hpp
+// AppKit/NSWindow.hpp
 //
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -25,15 +25,30 @@
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#include <Foundation/Foundation.hpp>
 #include "AppKitPrivate.hpp"
-#include "RunLoopMode.hpp"
-#include "NSEvent.hpp"
-#include "NSScreen.hpp"
-#include "NSApplication.hpp"
-#include "NSRunningApplication.hpp"
-#include "NSWindow.hpp"
-#include "NSMenu.hpp"
-#include "NSMenuItem.hpp"
+#include <Foundation/NSObject.hpp>
 
-//-------------------------------------------------------------------------------------------------------------------------------------------------------------
+#include <CoreGraphics/CGGeometry.h>
+
+
+namespace NS
+{
+	class Screen : public Referencing<Screen>
+	{
+		public:
+			CGRect		frame();
+			CGFloat     backingScaleFactor();
+	};
+
+}
+
+_NS_INLINE CGRect NS::Screen::frame()
+{
+	return Object::sendMessage<CGRect>(this, _APPKIT_PRIVATE_SEL(frame));
+}
+
+_NS_INLINE CGFloat NS::Screen::backingScaleFactor()
+{
+	return Object::sendMessage<CGFloat>(this, _APPKIT_PRIVATE_SEL(backingScaleFactor));
+}
+

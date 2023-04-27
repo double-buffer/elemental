@@ -105,6 +105,9 @@ _APPKIT_PRIVATE_DEF_SEL( close,
 
 _APPKIT_PRIVATE_DEF_SEL( currentApplication,
 						"currentApplication" );
+						
+_APPKIT_PRIVATE_DEF_SEL( contentView,
+						"contentView" );
 
 _APPKIT_PRIVATE_DEF_SEL( keyEquivalentModifierMask,
  						"keyEquivalentModifierMask" );
@@ -175,9 +178,35 @@ _APPKIT_PRIVATE_DEF_SEL( center,
 _APPKIT_PRIVATE_DEF_SEL( otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data_data2_,
 						"otherEventWithType:location:modifierFlags:timestamp:windowNumber:context:subtype:data1:data2:" );
 
-
 _APPKIT_PRIVATE_DEF_SEL( distantPast,
 						"distantPast" );
+						
+_APPKIT_PRIVATE_DEF_SEL( backingScaleFactor,
+						"backingScaleFactor" );
+						
+_APPKIT_PRIVATE_DEF_SEL( frame,
+						"frame" );
+
+_APPKIT_PRIVATE_DEF_SEL( screen,
+						"screen" );
+
+_APPKIT_PRIVATE_DEF_SEL( isMiniaturized,
+						"isMiniaturized" );
+
+_APPKIT_PRIVATE_DEF_SEL( deminiaturize_,
+						"deminiaturize:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( miniaturize_,
+						"miniaturize:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( toggleFullScreen_,
+						"toggleFullScreen:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( isZoomed,
+						"isZoomed" );
+
+_APPKIT_PRIVATE_DEF_SEL( zoom_,
+						"zoom:" );
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
