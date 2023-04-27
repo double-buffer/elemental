@@ -52,7 +52,19 @@ add_library(vulkan_headers INTERFACE)
 target_include_directories(vulkan_headers INTERFACE ./Vulkan-Headers/include/)
 
 #=======================================================================
+# Metal-Cpp Headers
+#=======================================================================
+if(APPLE)
+    add_library(metal_cpp INTERFACE)
+    target_include_directories(metal_cpp INTERFACE ./metal-cpp/)
+endif()
+
+#=======================================================================
 # External Dependencies
 #=======================================================================
 add_library(external_dependencies INTERFACE)
 target_link_libraries(external_dependencies INTERFACE volk vulkan_headers)
+
+if(APPLE)
+    target_link_libraries(external_dependencies INTERFACE metal_cpp)
+endif()

@@ -26,6 +26,17 @@
         "environment": [],
         "externalConsole": false,
         "MIMode": "lldb"
+    },{
+        "name": "HelloWindow",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/samples/01-Foundations/02-HelloWindow/bin/Debug/HelloWindow.app/Contents/MacOS/HelloWindow",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/samples/01-Foundations/02-HelloWindow/bin/Debug/HelloWindow.app/Contents/MacOS/",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb"
     },
     ]
 }

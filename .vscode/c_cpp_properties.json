@@ -8,7 +8,11 @@
         {
             "name": "Mac",
             "intelliSenseMode": "macos-clang-x64",
-            "configurationProvider": "ms-vscode.cmake-tools"
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "mergeConfigurations": true,
+            "forcedInclude": [
+                "${workspaceFolder}/src/Platforms/Apple/UnityBuild.cpp"
+            ]
         }
     ],
     "version": 4

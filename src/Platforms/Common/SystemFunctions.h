@@ -140,7 +140,7 @@ void SystemInitDebugAllocations()
 
 void SystemCheckAllocations(const char* description)
 {
-    DictionaryPrint(debugAllocations);
+    //DictionaryPrint(debugAllocations);
 
     if (debugAllocations->Count > 0)
     {

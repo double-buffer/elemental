@@ -73,14 +73,14 @@ DllExport void Native_RunApplication(Win32Application* application, RunHandlerPt
     }
 }
 
-DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions options)
+DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions* options)
 {
-    auto width = (int32_t)options.Width;
-    auto height = (int32_t)options.Height;
+    auto width = (int32_t)options->Width;
+    auto height = (int32_t)options->Height;
 
     auto nativeWindow = new Win32Window();
     
-    auto convertedTitle = SystemConvertUtf8ToWideChar(options.Title);
+    auto convertedTitle = SystemConvertUtf8ToWideChar(options->Title);
 
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
