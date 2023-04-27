@@ -100,11 +100,25 @@ namespace NS
 
 			void					setMainMenu( const class Menu* pMenu );
 
+			void					setServicesMenu( const class Menu* pMenu );
+			
+			void					setWindowsMenu( const class Menu* pMenu );
+
 			NS::Array*				windows() const;
+			
+			class Window*			mainWindow();
 
 			void					run();
 
 			void					terminate( const Object* pSender );
+			
+			void					hide( const Object* pSender );
+			
+			void					hideOtherApplications( const Object* pSender );
+			
+			void					unhideAllApplications( const Object* pSender );
+			
+			void					orderFrontStandardAboutPanel( const Object* pSender );
 
 			void					finishLaunching();
 
@@ -184,9 +198,24 @@ _NS_INLINE void NS::Application::setMainMenu( const class Menu* pMenu )
 	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( setMainMenu_ ), pMenu );
 }
 
+_NS_INLINE void NS::Application::setServicesMenu( const class Menu* pMenu )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( setServicesMenu_ ), pMenu );
+}
+
+_NS_INLINE void NS::Application::setWindowsMenu( const class Menu* pMenu )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( setWindowsMenu_ ), pMenu );
+}
+
 _NS_INLINE NS::Array* NS::Application::windows() const
 {
 	return Object::sendMessage< NS::Array* >( this, _APPKIT_PRIVATE_SEL( windows ) );
+}
+
+_NS_INLINE NS::Window* NS::Application::mainWindow()
+{
+	return Object::sendMessage< NS::Window* >( this, _APPKIT_PRIVATE_SEL( mainWindow ) );
 }
 
 _NS_INLINE void NS::Application::run()
@@ -197,6 +226,26 @@ _NS_INLINE void NS::Application::run()
 _NS_INLINE void NS::Application::terminate( const Object* pSender )
 {
 	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( terminate_ ), pSender );
+}
+
+_NS_INLINE void NS::Application::hide( const Object* pSender )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( hide_ ), pSender );
+}
+
+_NS_INLINE void NS::Application::hideOtherApplications( const Object* pSender )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( hideOtherApplications_ ), pSender );
+}
+
+_NS_INLINE void NS::Application::unhideAllApplications( const Object* pSender )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( unhideAllApplications_ ), pSender );
+}
+
+_NS_INLINE void NS::Application::orderFrontStandardAboutPanel( const Object* pSender )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( orderFrontStandardAboutPanel_ ), pSender );
 }
 
 _NS_INLINE void NS::Application::finishLaunching()

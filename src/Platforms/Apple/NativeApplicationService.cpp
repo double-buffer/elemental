@@ -6,6 +6,7 @@
 #include "MacOSApplicationDelegate.h"
 
 static void ProcessEvents(MacOSApplication* application);
+static void CreateApplicationMenu(uint8_t* applicationName);
 
 DllExport void Native_InitNativeApplicationService()
 {
@@ -42,6 +43,8 @@ DllExport void* Native_CreateApplication(uint8_t* applicationName)
     pSharedApplication->setActivationPolicy(NS::ActivationPolicy::ActivationPolicyRegular);
     pSharedApplication->activateIgnoringOtherApps(true);
     pSharedApplication->finishLaunching();
+
+    CreateApplicationMenu(applicationName);
 
     return application;
 }
@@ -218,4 +221,84 @@ static void ProcessEvents(MacOSApplication* application)
 
         NS::Application::sharedApplication()->sendEvent(rawEvent);
     } while (rawEvent != nullptr);
+}
+
+static void CreateApplicationMenu(uint8_t* applicationName)
+{
+    using NS::StringEncoding::UTF8StringEncoding;
+
+    auto applicationNameString = NS::String::string((char*)applicationName, UTF8StringEncoding);
+
+    auto mainMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("MainMenu")));
+    auto applicationMenuItem = NS::TransferPtr(mainMenu->addItem(MTLSTR("ApplicationMenu"), nullptr, MTLSTR("")));
+
+    auto applicationSubMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Application")));
+    applicationMenuItem->setSubmenu(applicationSubMenu.get());
+
+    auto aboutSelector = NS::MenuItem::registerActionCallback("about", [](void*, SEL, const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->orderFrontStandardAboutPanel(nullptr);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("About ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), aboutSelector, MTLSTR(""));
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+    
+    auto serviceMenuItem = applicationSubMenu->addItem(MTLSTR("Service"), nullptr, MTLSTR(""));
+    auto serviceMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Service")));
+    serviceMenuItem->setSubmenu(serviceMenu.get());
+
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+    
+    auto hideSelector = NS::MenuItem::registerActionCallback("appHide", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->hide(pSender);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("Hide ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), hideSelector, MTLSTR("h"));
+    
+    auto hideOthersSelector = NS::MenuItem::registerActionCallback("appHideOthers", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->hideOtherApplications(pSender);
+    });
+
+    auto hideOthersMenuItem = applicationSubMenu->addItem(NS::String::string("Hide Others", UTF8StringEncoding), hideOthersSelector, MTLSTR("h"));
+    hideOthersMenuItem->setKeyEquivalentModifierMask(NS::EventModifierFlagCommand | NS::EventModifierFlagOption);
+    
+    auto showAllSelector = NS::MenuItem::registerActionCallback("appShowall", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->unhideAllApplications(pSender);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("Show All", UTF8StringEncoding), showAllSelector, MTLSTR(""));
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+
+    auto quitSelector = NS::MenuItem::registerActionCallback("appQuit", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->terminate(pSender);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("Quit ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), quitSelector, MTLSTR("q"));
+
+    auto windowMenuItem = NS::TransferPtr(mainMenu->addItem(MTLSTR("WindowMenu"), nullptr, MTLSTR("")));
+    auto windowSubMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Window")));
+    windowMenuItem->setSubmenu(windowSubMenu.get());
+    
+    // TODO: The 2 items here should be on the top
+    auto minimizeSelector = NS::MenuItem::registerActionCallback("minimize", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->mainWindow()->miniaturize(nullptr);
+    });
+
+    windowSubMenu->addItem(NS::String::string("Minimize", UTF8StringEncoding), minimizeSelector, MTLSTR("m"));
+    
+    auto zoomSelector = NS::MenuItem::registerActionCallback("zoom", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->mainWindow()->zoom(nullptr);
+    });
+
+    windowSubMenu->addItem(NS::String::string("Zoom", UTF8StringEncoding), zoomSelector, MTLSTR(""));
+
+    NS::Application::sharedApplication()->setMainMenu(mainMenu.get());
+    NS::Application::sharedApplication()->setServicesMenu(serviceMenu.get());
+    NS::Application::sharedApplication()->setWindowsMenu(windowSubMenu.get());
 }

@@ -132,9 +132,15 @@ _APPKIT_PRIVATE_DEF_SEL( run,
 						
 _APPKIT_PRIVATE_DEF_SEL( finishLaunching,
 						"finishLaunching" );
+						
+_APPKIT_PRIVATE_DEF_SEL( separatorItem,
+						"separatorItem" );
 
 _APPKIT_PRIVATE_DEF_SEL( terminate_,
 						"terminate:" );
+
+_APPKIT_PRIVATE_DEF_SEL( orderFrontStandardAboutPanel_,
+						"orderFrontStandardAboutPanel:" );
 
 _APPKIT_PRIVATE_DEF_SEL( initWithContentRect_styleMask_backing_defer_,
 						"initWithContentRect:styleMask:backing:defer:" );
@@ -156,6 +162,12 @@ _APPKIT_PRIVATE_DEF_SEL( setKeyEquivalentModifierMask_,
 
 _APPKIT_PRIVATE_DEF_SEL( setMainMenu_,
 						"setMainMenu:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( setServicesMenu_,
+						"setServicesMenu:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( setWindowsMenu_,
+						"setWindowsMenu:" );
 
 _APPKIT_PRIVATE_DEF_SEL( setSubmenu_,
 						"setSubmenu:" );
@@ -165,6 +177,9 @@ _APPKIT_PRIVATE_DEF_SEL( setTitle_,
 
 _APPKIT_PRIVATE_DEF_SEL( windows,
 						"windows" );
+						
+_APPKIT_PRIVATE_DEF_SEL( mainWindow,
+						"mainWindow" );
 
 _APPKIT_PRIVATE_DEF_SEL( nextEventMatchingMask_untilDate_inMode_dequeue_,
 						"nextEventMatchingMask:untilDate:inMode:dequeue:" );	
@@ -207,6 +222,15 @@ _APPKIT_PRIVATE_DEF_SEL( isZoomed,
 
 _APPKIT_PRIVATE_DEF_SEL( zoom_,
 						"zoom:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( hide_,
+						"hide:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( hideOtherApplications_,
+						"hideOtherApplications:" );
+						
+_APPKIT_PRIVATE_DEF_SEL( unhideAllApplications_,
+						"unhideAllApplications:" );
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------

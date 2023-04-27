@@ -38,10 +38,11 @@ namespace NS
 		public:
 			static SEL						registerActionCallback( const char* name, MenuItemCallback callback );
 			static MenuItem*				alloc();
+			static MenuItem*				separatorItem();
 			MenuItem*						init();
 
 			void							setKeyEquivalentModifierMask( NS::EventModifierFlags modifierMask );
-			NS::EventModifierFlags	KeyEquivalentModifierMask() const;
+			NS::EventModifierFlags			KeyEquivalentModifierMask() const;
 			void							setSubmenu( const class Menu* pSubmenu );
 	};
 }
@@ -74,6 +75,11 @@ _NS_INLINE SEL NS::MenuItem::registerActionCallback( const char* name, NS::MenuI
 _NS_INLINE NS::MenuItem* NS::MenuItem::alloc()
 {
 	return Object::alloc< NS::MenuItem >( _NS_PRIVATE_CLS( NSMenuItem ) );
+}
+
+_NS_INLINE NS::MenuItem* NS::MenuItem::separatorItem()
+{
+	return Object::sendMessage< NS::MenuItem* >( _NS_PRIVATE_CLS( NSMenuItem ), _NS_PRIVATE_SEL( separatorItem ) );
 }
 
 _NS_INLINE NS::MenuItem* NS::MenuItem::init()
