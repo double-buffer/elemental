@@ -231,6 +231,12 @@ _APPKIT_PRIVATE_DEF_SEL( hideOtherApplications_,
 						
 _APPKIT_PRIVATE_DEF_SEL( unhideAllApplications_,
 						"unhideAllApplications:" );
+
+_APPKIT_PRIVATE_DEF_SEL( setWantsLayer_,
+						"setWantsLayer:" );
+
+_APPKIT_PRIVATE_DEF_SEL( setLayer_,
+						"setLayer:" );
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------

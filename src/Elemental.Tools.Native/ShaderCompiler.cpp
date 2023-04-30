@@ -153,7 +153,11 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
                 break;
             }
 
-            // BUG: We need to delete output data of intermediate results
+            if (currentShaderData.Pointer != shaderCode)
+            {
+                delete[] currentShaderData.Pointer;
+            }
+
             currentShaderData = compilationResult;
         }
 

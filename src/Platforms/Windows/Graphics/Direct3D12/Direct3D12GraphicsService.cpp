@@ -783,6 +783,7 @@ void Direct3D12GraphicsService::PushFreeCommandList(Direct3D12CommandQueue* comm
     
 Fence Direct3D12GraphicsService::CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue)
 {
+    // TODO: Use std::atomic
     auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
     AssertIfFailed(commandQueue->DeviceObject->Signal(commandQueue->Fence.Get(), fenceValue));
 

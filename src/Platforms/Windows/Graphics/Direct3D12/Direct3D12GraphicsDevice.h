@@ -54,6 +54,7 @@ struct Direct3D12GraphicsDevice : BaseGraphicsObject
     CircularList<CommandListPoolItem> ComputeCommandListsPool;
     CircularList<CommandListPoolItem> CopyCommandListsPool;
 
+    // TODO: Have a common pipelinstate manager
     Dictionary<uint64_t, PipelineStateCacheItem> PipelineStates;
 
     // HACK: This is temporary, will be refactored later!

@@ -1,6 +1,5 @@
 #include "PreCompiledHeader.h"
 #include "Elemental.h"
-#include "SystemFunctions.h"
 #include "MacOSApplication.h"
 #include "MacOSWindow.h"
 #include "MacOSApplicationDelegate.h"

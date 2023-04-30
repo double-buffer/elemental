@@ -37,6 +37,17 @@
         "environment": [],
         "externalConsole": false,
         "MIMode": "lldb"
+    },{
+        "name": "HelloTriangle",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/samples/02-Graphics/01-HelloTriangle/bin/Debug/HelloTriangle.app/Contents/MacOS/HelloTriangle",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/samples/02-Graphics/01-HelloTriangle/bin/Debug/HelloTriangle.app/Contents/MacOS/",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb"
     },
     ]
 }

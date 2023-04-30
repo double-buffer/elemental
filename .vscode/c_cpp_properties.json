@@ -12,7 +12,8 @@
             "mergeConfigurations": true,
             "forcedInclude": [
                 "${workspaceFolder}/src/Platforms/Apple/UnityBuild.cpp"
-            ]
+            ],
+            "defines": []
         }
     ],
     "version": 4

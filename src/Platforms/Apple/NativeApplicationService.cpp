@@ -1,6 +1,5 @@
 #include "PreCompiledHeader.h"
 #include "Elemental.h"
-#include "SystemFunctions.h"
 #include "MacOSApplication.h"
 #include "MacOSWindow.h"
 #include "MacOSApplicationDelegate.h"
@@ -204,23 +203,25 @@ DllExport void Native_SetWindowState(MacOSWindow* window, NativeWindowState wind
 
 static void ProcessEvents(MacOSApplication* application) 
 {
-    NS::Event* rawEvent = nullptr; 
+    NS::SharedPtr<NS::Event> rawEvent; 
+
+    // BUG: It seems we have a memory leak when we move the mouse inside the window :/
 
     do 
     {
         if (application->IsStatusActive(Active)) 
         {
-            rawEvent = NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode(), true);
+            rawEvent = NS::RetainPtr(NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode(), true));
         }
     
-        if (rawEvent == nullptr)
+        if (!rawEvent.get())
         {
             application->SetStatus(Active, 1);
             return;
         }
 
-        NS::Application::sharedApplication()->sendEvent(rawEvent);
-    } while (rawEvent != nullptr);
+        NS::Application::sharedApplication()->sendEvent(rawEvent.get());
+    } while (rawEvent.get() != nullptr);
 }
 
 static void CreateApplicationMenu(uint8_t* applicationName)

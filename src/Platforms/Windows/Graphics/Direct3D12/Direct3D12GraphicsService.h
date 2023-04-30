@@ -90,6 +90,7 @@ private:
 
     void InitRenderPassRenderTarget(Direct3D12CommandList* commandList, D3D12_RENDER_PASS_RENDER_TARGET_DESC* renderPassRenderTargetDesc, RenderPassRenderTarget* renderTarget);
     
+    // TODO: Move that function to common code (abstract shader for all graphics API)
     uint64_t ComputeRenderPipelineStateHash(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor);
     ComPtr<ID3D12PipelineState> CreateRenderPipelineState(Direct3D12Shader* shader, RenderPassDescriptor* renderPassDescriptor);
 };

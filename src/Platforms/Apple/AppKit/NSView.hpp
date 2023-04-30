@@ -28,6 +28,7 @@
 #include "AppKitPrivate.hpp"
 #include <Foundation/NSObject.hpp>
 #include <CoreGraphics/CGGeometry.h>
+#include <QuartzCore/CAMetalLayer.hpp>
 
 namespace NS
 {
@@ -36,6 +37,8 @@ namespace NS
 		public:
 			View*		init( CGRect frame );
 			CGRect		frame();
+			void 		setWantsLayer(bool wants_layer);
+            void 		setLayer(CA::MetalLayer *layer);
 	};
 }
 
@@ -50,3 +53,12 @@ _NS_INLINE CGRect NS::View::frame()
 	return Object::sendMessage<CGRect>(this, _APPKIT_PRIVATE_SEL(frame));
 }
 
+_NS_INLINE void NS::View::setWantsLayer(bool wants_layer)
+{
+    Object::sendMessage<void>(this, _APPKIT_PRIVATE_SEL(setWantsLayer_), wants_layer);
+}
+
+_NS_INLINE void NS::View::setLayer(CA::MetalLayer *layer)
+{
+    Object::sendMessage<void>(this, _APPKIT_PRIVATE_SEL(setLayer_), layer);
+}

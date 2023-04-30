@@ -92,7 +92,7 @@ applicationService.RunApplication(application, (status) =>
 
     graphicsService.WaitForSwapChainOnCpu(swapChain);
 
-    var commandList = graphicsService.CreateCommandList(commandQueue);
+    using var commandList = graphicsService.CreateCommandList(commandQueue);
     using var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
     graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 1.0f, 1.0f, 1.0f) } });
     graphicsService.SetShader(commandList, shader);

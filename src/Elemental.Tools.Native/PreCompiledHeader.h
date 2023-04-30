@@ -63,32 +63,7 @@ using namespace Microsoft::WRL;
 // TODO: Move that to SystemFunctions
 #define AssertIfFailed(result) assert(!FAILED(result))
 
-template<typename T>
-struct Span
-{
-    Span()
-    {
-        Pointer = nullptr;
-        Length = 0;
-    }
 
-    Span(T* pointer, uint32_t length) : Pointer(pointer), Length(length)
-    {
-    }
-
-    T* Pointer;
-    uint32_t Length;
-
-    bool IsEmpty()
-    {
-        return Length == 0;
-    }
-
-    static Span<T> Empty()
-    {
-        return Span<T>();
-    }
-};
 
 #pragma warning(default: 4820)
 #pragma warning(default: 4668)

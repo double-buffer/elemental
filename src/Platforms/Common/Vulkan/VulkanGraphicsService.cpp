@@ -1060,6 +1060,7 @@ VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* com
     
 Fence VulkanGraphicsService::CreateCommandQueueFence(VulkanCommandQueue* commandQueue)
 {
+    // TODO: Use std::atomic
     auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
 
     VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };

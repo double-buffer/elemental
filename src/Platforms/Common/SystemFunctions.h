@@ -1,8 +1,10 @@
 #pragma once
 
+#ifdef _WINDOWS
 #pragma warning(disable: 5045)
 #pragma warning(disable: 4820)
 #pragma warning(disable: 4324)
+#endif
 
 // TODO: REVIEW HEADERS
 
@@ -13,11 +15,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <atomic>
 
+#ifdef _WINDOWS
 //HACK: TEMPORARY
 #pragma warning(disable: 4100)
 
-#ifdef _WINDOWS
 #include <io.h>
 
 #define PackedStruct __pragma(pack(push, 1)) struct
@@ -107,7 +110,7 @@ void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, 
     return pointer;
 }
 
-void SystemFreeMemory(void* pointer, const char* file, uint32_t lineNumber)
+void SystemFreeMemory(void* pointer)
 {
     if (debugAllocations == NULL)
     {
@@ -131,12 +134,10 @@ void SystemDisplayMemoryLeak(uint64_t key, void* data)
     printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
 }
 
-#ifndef __OBJC__
 void SystemInitDebugAllocations()
 {
     debugAllocations = DictionaryCreate(64);
 }
-#endif
 
 void SystemCheckAllocations(const char* description)
 {
@@ -152,7 +153,6 @@ void SystemCheckAllocations(const char* description)
     debugAllocations = NULL;
 }
 
-#ifdef __cplusplus
 void* operator new(size_t size, const char* file, uint32_t lineNumber)
 {
     return SystemAllocateMemory(size, file, lineNumber);
@@ -163,29 +163,63 @@ void* operator new[](size_t size, const char* file, uint32_t lineNumber)
     return SystemAllocateMemory(size, file, lineNumber);
 }
 
-void operator delete(void* pointer, const char* file, uint32_t lineNumber)
+void operator delete(void* pointer) noexcept
 {
-    return SystemFreeMemory(pointer, file, lineNumber);
+    return SystemFreeMemory(pointer);
 }
 
-void operator delete[](void* pointer, const char* file, uint32_t lineNumber)
+void operator delete[](void* pointer) noexcept
 {
-    return SystemFreeMemory(pointer, file, lineNumber);
-}
-
-void operator delete(void* pointer)
-{
-    return SystemFreeMemory(pointer, __FILE__, (uint32_t)__LINE__);
+    return SystemFreeMemory(pointer);
 }
 
 #define new new(__FILE__, (uint32_t)__LINE__)
-#endif
 
 #define malloc(size) SystemAllocateMemory(size, __FILE__, (uint32_t)__LINE__)
 #define calloc(count, size) SystemAllocateMemoryAndReset(count, size, __FILE__, (uint32_t)__LINE__)
 //TODO: realloc
-#define free(pointer) SystemFreeMemory(pointer, __FILE__, (uint32_t)__LINE__)
+#define free(pointer) SystemFreeMemory(pointer)
+
+#ifdef __APPLE__
+
+void AppleMemoryRetain()
+{
+   printf("Retain\n"); 
+}
+
+
 #endif
+#endif
+
+//---------------------------------------------------------------------------------------------------------------
+// Foundation structures
+//---------------------------------------------------------------------------------------------------------------
+template<typename T>
+struct Span
+{
+    Span()
+    {
+        Pointer = nullptr;
+        Length = 0;
+    }
+
+    Span(T* pointer, uint32_t length) : Pointer(pointer), Length(length)
+    {
+    }
+
+    T* Pointer;
+    uint32_t Length;
+
+    bool IsEmpty()
+    {
+        return Length == 0;
+    }
+
+    static Span<T> Empty()
+    {
+        return Span<T>();
+    }
+};
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
