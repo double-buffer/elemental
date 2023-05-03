@@ -1,5 +1,4 @@
 #pragma once
-#include "PreCompiledHeader.h"
 
 struct MetalSwapChain : MetalBaseGraphicsObject
 {

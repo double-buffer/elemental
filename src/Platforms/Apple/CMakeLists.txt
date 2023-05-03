@@ -9,4 +9,4 @@ target_link_libraries(Elemental.Native PRIVATE common)
 target_link_libraries(Elemental.Native PRIVATE external_dependencies)
 
 target_compile_definitions(Elemental.Native PRIVATE __BLOCKS__)
-target_link_options(Elemental.Native PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics")
+target_link_options(Elemental.Native PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")

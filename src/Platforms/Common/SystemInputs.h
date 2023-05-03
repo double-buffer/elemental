@@ -1,6 +1,4 @@
 #pragma once
-#include "SystemFunctions.h"
-#include "Elemental.h"
 
 float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
 {
@@ -55,7 +53,8 @@ typedef enum : uint32_t
 {
     HidGamepadProduct_XboxOneWirelessOldDriver = 0x02E0,
     HidGamepadProduct_XboxOneWireless = 0x02FD,
-    HidGamepadProduct_DualShock4 = 0x5C4
+    HidGamepadProduct_DualShock4OldDriver = 0x5C4,
+    HidGamepadProduct_DualShock4 = 0x9cc
 } HidGamepadProduct;
 
 //---------------------------------------------------------------------------------------------------------------
@@ -114,6 +113,43 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(InputState* inputState, in
 }
 
 //---------------------------------------------------------------------------------------------------------------
+// DualShock 4
+//---------------------------------------------------------------------------------------------------------------
+
+typedef PackedStruct
+{
+    uint8_t report_id;
+    uint8_t LeftStickX;
+    uint8_t LeftStickY;
+    uint8_t RightStickX;
+    uint8_t RightStickY;
+    uint8_t Buttons;
+    uint8_t left_trigger;
+    uint8_t right_trigger;
+    int16_t motion_x;
+    int16_t motion_y;
+    int16_t motion_z;
+    int16_t motion_gyro_x;
+    int16_t motion_gyro_y;
+    int16_t motion_gyro_z;
+    uint8_t touchpad;
+    uint8_t timestamp;
+} DualShock4GamepadReport;
+PackedStructEnd
+
+void ConvertHidInputDeviceData_DualShock4Gamepad(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
+{
+    DualShock4GamepadReport* inputData = (DualShock4GamepadReport*)reportData;
+
+    printf("LeftStickX: %u\n", inputData->LeftStickX);
+
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 255));
+    SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 255));
+    SetInputObjectDigitalValue(inputState, Gamepad1Button1, inputData->Buttons & 0x01);
+    SetInputObjectDigitalValue(inputState, Gamepad1Button2, inputData->Buttons & 0x02);
+}
+
+//---------------------------------------------------------------------------------------------------------------
 // Vendor gamepad dispatcher
 //---------------------------------------------------------------------------------------------------------------
 
@@ -130,6 +166,13 @@ ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t ve
         else if (productId == HidGamepadProduct_XboxOneWireless)
         {
             return &ConvertHidInputDeviceData_XboxOneWirelessGamepad;
+        }
+    }
+    else if (vendorId == HidGamepadVendor_Sony)
+    {
+        if (productId == HidGamepadProduct_DualShock4 || productId == HidGamepadProduct_DualShock4OldDriver)
+        {
+            return &ConvertHidInputDeviceData_DualShock4Gamepad;
         }
     }
 

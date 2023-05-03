@@ -48,6 +48,17 @@
         "environment": [],
         "externalConsole": false,
         "MIMode": "lldb"
+    },{
+        "name": "HelloInputs",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/Debug/HelloInputs.app/Contents/MacOS/HelloInputs",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/samples/03-Inputs/01-HelloInputs/bin/Debug/HelloInputs.app/Contents/MacOS/",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb"
     },
     ]
 }

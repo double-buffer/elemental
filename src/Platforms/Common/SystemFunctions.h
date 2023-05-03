@@ -481,3 +481,31 @@ bool SystemExecuteProcess(const char* command, char* result)
 
     return true;
 }
+
+//---------------------------------------------------------------------------------------------------------------
+// Threading functions
+//---------------------------------------------------------------------------------------------------------------
+
+// TODO: windows functions
+
+struct SystemThread
+{
+    pthread_t ThreadHandle;
+};
+
+typedef void* (*SystemThreadFunction)(void* parameters);
+
+SystemThread SystemCreateThread(SystemThreadFunction threadFunction)
+{
+    SystemThread result = {};
+
+    auto resultCode = pthread_create(&result.ThreadHandle, nullptr, threadFunction, nullptr);
+
+    if (resultCode != 0)
+    {
+        printf("error: Create Thread: cannot create system thread.\n");
+        return {};
+    }
+
+    return result;
+}

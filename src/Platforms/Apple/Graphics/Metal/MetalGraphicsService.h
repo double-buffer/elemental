@@ -1,5 +1,4 @@
 #pragma once
-#include "PreCompiledHeader.h"
 #include "BaseGraphicsService.h"
 #include "BaseGraphicsObject.h"
 
@@ -67,3 +66,5 @@ private:
     uint64_t ComputeRenderPipelineStateHash(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor);
     MetalPipelineStateCacheItem* CreateRenderPipelineState(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor);
 };
+
+static void MetalDeletePipelineCacheItem(uint64_t key, void* data);

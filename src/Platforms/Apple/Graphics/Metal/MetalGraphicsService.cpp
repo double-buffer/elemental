@@ -1,4 +1,3 @@
-#include "PreCompiledHeader.h"
 #include "MetalGraphicsService.h"
 
 MetalGraphicsService::MetalGraphicsService(GraphicsServiceOptions* options)
@@ -99,6 +98,7 @@ void* MetalGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
 void MetalGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (MetalGraphicsDevice*)graphicsDevicePointer;
+    graphicsDevice->PipelineStates.EnumerateEntries(MetalDeletePipelineCacheItem);
     delete graphicsDevice;
 }
 
@@ -476,8 +476,6 @@ void MetalGraphicsService::FreeShader(void* shaderPointer)
 
 void MetalGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
-    // BUG: Crash on resize !
-
     if (renderPassDescriptor == nullptr)
     {
         // TODO: Log warning
@@ -847,4 +845,10 @@ MetalPipelineStateCacheItem* MetalGraphicsService::CreateRenderPipelineState(Met
     dispatch_group_wait(dispatchGroup, DISPATCH_TIME_FOREVER);
         
     return result;
+}
+
+static void MetalDeletePipelineCacheItem(uint64_t key, void* data)
+{
+    auto cacheItem = (MetalPipelineStateCacheItem*)data;
+    delete cacheItem;
 }

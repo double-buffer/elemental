@@ -223,7 +223,6 @@ void DictionaryPrint(DictionaryStruct* dictionary)
     }
 }
 
-#ifdef __cplusplus
 template<typename TKey, typename TValue>
 class Dictionary
 {
@@ -266,4 +265,3 @@ public:
 private:
     DictionaryStruct* _dictionaryStruct;
 };
-#endif

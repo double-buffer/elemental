@@ -1,7 +1,3 @@
-#include "PreCompiledHeader.h"
-#include "Elemental.h"
-#include "MacOSApplication.h"
-#include "MacOSWindow.h"
 #include "MacOSApplicationDelegate.h"
 
 MacOSApplicationDelegate::MacOSApplicationDelegate(MacOSApplication* application)

@@ -8,4 +8,8 @@
 #include <Metal/Metal.hpp>
 #include "AppKit/AppKit.hpp"
 
+#include <IOKit/hid/IOHIDManager.h>
+
 #include "SystemFunctions.h"
+#include "Elemental.h"
+#include "SystemInputs.h"

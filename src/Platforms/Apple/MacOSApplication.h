@@ -1,7 +1,6 @@
 #pragma once
-#include "PreCompiledHeader.h"
-#include "Elemental.h"
-#include "MacOSApplicationDelegate.h"
+
+class MacOSApplicationDelegate;
 
 struct MacOSApplication
 {

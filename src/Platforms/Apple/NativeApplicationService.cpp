@@ -1,8 +1,5 @@
-#include "PreCompiledHeader.h"
-#include "Elemental.h"
 #include "MacOSApplication.h"
 #include "MacOSWindow.h"
-#include "MacOSApplicationDelegate.h"
 
 static void ProcessEvents(MacOSApplication* application);
 static void CreateApplicationMenu(uint8_t* applicationName);
@@ -180,25 +177,6 @@ DllExport void Native_SetWindowState(MacOSWindow* window, NativeWindowState wind
     {
         window->WindowHandle->miniaturize(nullptr);
     }
-
-    /*
-    let window = MacOSWindow.fromPointer(windowPointer)
-        if (window.window.isMiniaturized) {
-            window.window.deminiaturize(nil) 
-        } else if (contentViewSize.width == windowSize.width && contentViewSize.height == windowSize.height) {
-            window.window.toggleFullScreen(nil) 
-        } else if (window.window.isZoomed) {
-            window.window.zoom(nil)
-        }
-
-        if (windowState == NativeWindowState_Maximized && !window.window.isZoomed) {
-            window.window.zoom(nil)
-        } else if (windowState == NativeWindowState_FullScreen) {
-            window.window.toggleFullScreen(nil)
-        } else if (windowState == NativeWindowState_Minimized) {
-            window.window.miniaturize(nil)
-        } 
-        */
 }
 
 static void ProcessEvents(MacOSApplication* application) 

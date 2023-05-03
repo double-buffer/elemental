@@ -1,7 +1,5 @@
 #pragma once
-#include "PreCompiledHeader.h"
-
-struct MacOSApplication;
+#include "MacOSApplication.h"
 
 class MacOSApplicationDelegate : public NS::ApplicationDelegate
 {
