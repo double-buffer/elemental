@@ -13,7 +13,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Elemental\Elemental.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Elemental\Elemental.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Elemental.Tools\Elemental.Tools.csproj" />
   </ItemGroup>
 
 </Project>
