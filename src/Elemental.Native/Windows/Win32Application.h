@@ -1,6 +1,4 @@
 #pragma once
-#include "PreCompiledHeader.h"
-#include "Elemental.h"
 
 struct Win32Application
 {

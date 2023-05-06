@@ -2,7 +2,6 @@
 
 #include "BaseGraphicsService.h"
 #include "BaseGraphicsObject.h"
-#include "SystemFunctions.h"
 
 #pragma warning(disable: 4191)
 #define VK_USE_PLATFORM_WIN32_KHR

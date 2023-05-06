@@ -1,7 +1,4 @@
 #pragma once
-#include "PreCompiledHeader.h"
-#include "Direct3D12BaseGraphicsObject.h"
-#include "Direct3D12Texture.h"
 
 struct Direct3D12SwapChain : Direct3D12BaseGraphicsObject
 {

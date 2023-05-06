@@ -17,6 +17,8 @@
 #include <assert.h>
 #include <atomic>
 
+#include "Dictionary.h"
+
 #ifdef _WINDOWS
 //HACK: TEMPORARY
 #pragma warning(disable: 4100)
@@ -61,7 +63,6 @@
 // Debug Memory management functions
 //---------------------------------------------------------------------------------------------------------------
 #ifdef _DEBUG
-#include "Dictionary.h"
 
 typedef struct
 {
@@ -171,6 +172,16 @@ void operator delete(void* pointer) noexcept
 void operator delete[](void* pointer) noexcept
 {
     return SystemFreeMemory(pointer);
+}
+
+void operator delete(void* pointer, const char* file, uint32_t lineNumber)
+{
+    SystemFreeMemory(pointer);
+}
+
+void operator delete[](void* pointer, const char* file, uint32_t lineNumber)
+{
+    SystemFreeMemory(pointer);
 }
 
 #define new new(__FILE__, (uint32_t)__LINE__)
@@ -487,7 +498,7 @@ bool SystemExecuteProcess(const char* command, char* result)
 //---------------------------------------------------------------------------------------------------------------
 
 // TODO: windows functions
-
+#ifndef _WINDOWS
 struct SystemThread
 {
     pthread_t ThreadHandle;
@@ -509,3 +520,4 @@ SystemThread SystemCreateThread(SystemThreadFunction threadFunction)
 
     return result;
 }
+#endif

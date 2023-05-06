@@ -1,8 +1,6 @@
 #pragma once
-#include "PreCompiledHeader.h"
 #include "BaseGraphicsService.h"
 #include "BaseGraphicsObject.h"
-#include "SystemFunctions.h"
 
 struct Direct3D12GraphicsDevice;
 
@@ -13,6 +11,7 @@ struct Direct3D12GraphicsDevice;
 #define MAX_DIRECT3D12_COMMAND_LISTS 64
 
 #include "Win32Window.h"
+#include "Direct3D12BaseGraphicsObject.h"
 #include "Direct3D12CommandQueue.h"
 #include "Direct3D12CommandList.h"
 #include "Direct3D12Shader.h"

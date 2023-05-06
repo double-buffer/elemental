@@ -1,4 +1,3 @@
-#include "PreCompiledHeader.h"
 #include "Direct3D12GraphicsService.h"
 
 Direct3D12GraphicsService::Direct3D12GraphicsService(GraphicsServiceOptions* options)
@@ -445,19 +444,23 @@ void* Direct3D12GraphicsService::CreateShader(void* graphicsDevicePointer, Shade
     {
         auto shaderPart = shaderParts[i];
 
+        // TODO: Refactor that!
+        uint8_t* dataCopy = new uint8_t[shaderPart.DataCount];
+        memcpy(dataCopy, shaderPart.DataPointer, shaderPart.DataCount);
+
         switch (shaderPart.Stage)
         {
         case ShaderStage_AmplificationShader:
-            shader->AmplificationShader = Span<uint8_t>((uint8_t*)shaderPart.DataPointer, shaderPart.DataCount);
+            shader->AmplificationShader = Span<uint8_t>((uint8_t*)dataCopy, shaderPart.DataCount);
             break;
 
         case ShaderStage_MeshShader:
             AssertIfFailed(graphicsDevice->Device->CreateRootSignature(0, shaderPart.DataPointer, shaderPart.DataCount, IID_PPV_ARGS(shader->RootSignature.GetAddressOf())));
-            shader->MeshShader = Span<uint8_t>((uint8_t*)shaderPart.DataPointer, shaderPart.DataCount);
+            shader->MeshShader = Span<uint8_t>((uint8_t*)dataCopy, shaderPart.DataCount);
             break;
 
         case ShaderStage_PixelShader:
-            shader->PixelShader = Span<uint8_t>((uint8_t*)shaderPart.DataPointer, shaderPart.DataCount);
+            shader->PixelShader = Span<uint8_t>((uint8_t*)dataCopy, shaderPart.DataCount);
             break;
         }
     }

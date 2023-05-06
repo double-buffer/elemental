@@ -1,6 +1,4 @@
 #include "PreCompiledHeader.h"
-#include "Elemental.h"
-#include "SystemFunctions.h"
 #include "Win32Application.h"
 #include "Win32Window.h"
 

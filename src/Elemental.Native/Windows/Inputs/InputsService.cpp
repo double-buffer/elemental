@@ -1,7 +1,3 @@
-#include "PreCompiledHeader.h"
-#include "Elemental.h"
-#include "SystemFunctions.h"
-#include "HidDevices.h"
 #include "HidInputDevice.h"
 
 #include <vector>

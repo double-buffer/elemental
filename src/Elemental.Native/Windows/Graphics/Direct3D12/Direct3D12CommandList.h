@@ -1,6 +1,4 @@
 #pragma once
-#include "PreCompiledHeader.h"
-#include "Direct3D12BaseGraphicsObject.h"
 
 struct CommandAllocatorPoolItem;
 
