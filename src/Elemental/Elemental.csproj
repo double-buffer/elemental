@@ -1,10 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -20,28 +16,28 @@
   </Target>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildProjectReferences)' == 'True'">
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/Elemental.Native.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Native/Windows/$(Configuration)/Elemental.Native.dll">
       <TargetPath>Elemental.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/Elemental.Native.pdb">
+    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Native/Windows/$(Configuration)/Elemental.Native.pdb">
       <TargetPath>Elemental.Native.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12Core.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Native/Windows/$(Configuration)/D3D12Core.dll">
       <TargetPath>D3D12Core.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12Core.pdb">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Native/Windows/$(Configuration)/D3D12Core.pdb">
       <TargetPath>D3D12Core.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Native/Windows/$(Configuration)/D3D12SDKLayers.dll">
       <TargetPath>D3D12SDKLayers.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Windows/$(Configuration)/D3D12SDKLayers.pdb">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Native/Windows/$(Configuration)/D3D12SDKLayers.pdb">
       <TargetPath>D3D12SDKLayers.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -53,8 +49,8 @@
   </ItemGroup>   
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildProjectReferences)' == 'True'">
-    <!-- <Content Include="$(MSBuildProjectDirectory)/../Platforms/AppleOld/.build/$(Configuration)/libElemental.Native.dylib"> -->
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Platforms/Apple/libElemental.Native.dylib">
+    <!-- <Content Include="$(MSBuildProjectDirectory)/../Elemental.Native/AppleOld/.build/$(Configuration)/libElemental.Native.dylib"> -->
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Native/Apple/libElemental.Native.dylib">
       <TargetPath>Elemental.Native.dylib</TargetPath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
