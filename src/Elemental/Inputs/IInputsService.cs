@@ -27,13 +27,6 @@ public interface IInputsService
 
     var xMovement = inputService.GetValue(gamepad.LeftStickX);
 
-    var customDevice = inputServcie.GetDevice(...);
-
-    if (inputServcie.IsPressed(customeDevice.InputObject[1]));
-    {
-        ...
-    }
-
     struct InputObjectState
     {
         public float Value;
