@@ -10,8 +10,8 @@ struct Direct3D12Shader : Direct3D12BaseGraphicsObject
 
     ComPtr<ID3D12RootSignature> RootSignature = nullptr;
 
-    BinaryContainer AmplificationShader;
-    BinaryContainer MeshShader;
-    BinaryContainer PixelShader;
+    Span<uint8_t> AmplificationShader;
+    Span<uint8_t> MeshShader;
+    Span<uint8_t> PixelShader;
 };
 

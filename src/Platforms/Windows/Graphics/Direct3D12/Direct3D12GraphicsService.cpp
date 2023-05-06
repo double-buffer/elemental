@@ -448,16 +448,16 @@ void* Direct3D12GraphicsService::CreateShader(void* graphicsDevicePointer, Shade
         switch (shaderPart.Stage)
         {
         case ShaderStage_AmplificationShader:
-            shader->AmplificationShader.SetData(shaderPart.DataPointer, shaderPart.DataCount);
+            shader->AmplificationShader = Span<uint8_t>((uint8_t*)shaderPart.DataPointer, shaderPart.DataCount);
             break;
 
         case ShaderStage_MeshShader:
             AssertIfFailed(graphicsDevice->Device->CreateRootSignature(0, shaderPart.DataPointer, shaderPart.DataCount, IID_PPV_ARGS(shader->RootSignature.GetAddressOf())));
-            shader->MeshShader.SetData(shaderPart.DataPointer, shaderPart.DataCount);
+            shader->MeshShader = Span<uint8_t>((uint8_t*)shaderPart.DataPointer, shaderPart.DataCount);
             break;
 
         case ShaderStage_PixelShader:
-            shader->PixelShader.SetData(shaderPart.DataPointer, shaderPart.DataCount);
+            shader->PixelShader = Span<uint8_t>((uint8_t*)shaderPart.DataPointer, shaderPart.DataCount);
             break;
         }
     }
@@ -1004,14 +1004,14 @@ ComPtr<ID3D12PipelineState> Direct3D12GraphicsService::CreateRenderPipelineState
 
     if (!shader->AmplificationShader.IsEmpty())
     {
-        psoDesc.AS = { shader->AmplificationShader.GetBufferPointer(), shader->AmplificationShader.GetBufferSize() };
+        psoDesc.AS = { shader->AmplificationShader.Pointer, shader->AmplificationShader.Length };
     }
 
-    psoDesc.MS = { shader->MeshShader.GetBufferPointer(), shader->MeshShader.GetBufferSize() };
+    psoDesc.MS = { shader->MeshShader.Pointer, shader->MeshShader.Length };
 
     if (!shader->PixelShader.IsEmpty())
     {
-        psoDesc.PS = { shader->PixelShader.GetBufferPointer(), shader->PixelShader.GetBufferSize() };
+        psoDesc.PS = { shader->PixelShader.Pointer, shader->PixelShader.Length };
     }
 
     psoDesc.RenderTargets = renderTargets;

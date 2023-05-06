@@ -1,5 +1,4 @@
 #include "PreCompiledHeader.h"
-#include "SystemFunctions.h"
 
 #include "NativeApplicationService.cpp"
 #include "Graphics/GraphicsService.cpp"

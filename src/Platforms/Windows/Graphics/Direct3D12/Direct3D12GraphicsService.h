@@ -3,7 +3,6 @@
 #include "BaseGraphicsService.h"
 #include "BaseGraphicsObject.h"
 #include "SystemFunctions.h"
-#include "BinaryContainer.h"
 
 struct Direct3D12GraphicsDevice;
 

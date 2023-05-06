@@ -140,7 +140,7 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     nativeWindow->UIScale = mainScreenScaling;
     nativeWindow->WindowPlacement = windowPlacement;
 
-    Native_SetWindowState(nativeWindow, options.WindowState);
+    Native_SetWindowState(nativeWindow, options->WindowState);
 
     // HACK
     globalMainWindow = window;
