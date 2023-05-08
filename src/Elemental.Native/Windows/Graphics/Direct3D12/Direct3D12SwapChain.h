@@ -1,14 +1,18 @@
 #pragma once
 
-struct Direct3D12SwapChain : Direct3D12BaseGraphicsObject
+struct Direct3D12SwapChain : GraphicsObject
 {
-    Direct3D12SwapChain(BaseGraphicsService* graphicsService, Direct3D12GraphicsDevice* graphicsDevice) : Direct3D12BaseGraphicsObject(graphicsService, graphicsDevice)
+    Direct3D12SwapChain(Direct3D12GraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Direct3D12;
+
         RenderBuffers[0] = nullptr;
         RenderBuffers[1] = nullptr;
         RenderBuffers[2] = nullptr;
     }
 
+    Direct3D12GraphicsDevice* GraphicsDevice;
     ComPtr<IDXGISwapChain4> DeviceObject;
     Direct3D12CommandQueue* CommandQueue;
     HANDLE WaitHandle;

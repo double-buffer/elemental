@@ -2,10 +2,12 @@
 
 struct CommandAllocatorPoolItem;
 
-struct Direct3D12CommandList : Direct3D12BaseGraphicsObject
+struct Direct3D12CommandList : GraphicsObject
 {
-    Direct3D12CommandList(Direct3D12CommandQueue* commandQueue, BaseGraphicsService* graphicsService, Direct3D12GraphicsDevice* graphicsDevice) : Direct3D12BaseGraphicsObject(graphicsService, graphicsDevice)
+    Direct3D12CommandList(Direct3D12CommandQueue* commandQueue, Direct3D12GraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Direct3D12;
         CommandQueue = commandQueue;
         IsFromCommandPool = false;
         IsUsed = true;
@@ -13,6 +15,7 @@ struct Direct3D12CommandList : Direct3D12BaseGraphicsObject
         CommandAllocatorPoolItem = nullptr;
     }
 
+    Direct3D12GraphicsDevice* GraphicsDevice;
     ComPtr<ID3D12GraphicsCommandList7> DeviceObject;
     Direct3D12CommandQueue* CommandQueue;
     RenderPassDescriptor CurrentRenderPassDescriptor;

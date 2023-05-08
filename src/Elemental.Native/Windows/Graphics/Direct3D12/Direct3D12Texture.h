@@ -1,11 +1,14 @@
 #pragma once
 
-struct Direct3D12Texture : Direct3D12BaseGraphicsObject
+struct Direct3D12Texture : GraphicsObject
 {
-    Direct3D12Texture(BaseGraphicsService* graphicsService, Direct3D12GraphicsDevice* graphicsDevice) : Direct3D12BaseGraphicsObject(graphicsService, graphicsDevice)
+    Direct3D12Texture(Direct3D12GraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Direct3D12;
     }
 
+    Direct3D12GraphicsDevice* GraphicsDevice;
     ComPtr<ID3D12Resource> DeviceObject;
     bool IsPresentTexture;
     uint32_t Width = 0;

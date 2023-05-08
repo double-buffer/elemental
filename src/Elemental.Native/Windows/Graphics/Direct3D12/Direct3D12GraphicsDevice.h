@@ -25,9 +25,9 @@ struct PipelineStateCacheItem
     ComPtr<ID3D12PipelineState> PipelineState;
 };
 
-struct Direct3D12GraphicsDevice : BaseGraphicsObject
+struct Direct3D12GraphicsDevice : GraphicsObject
 {
-    Direct3D12GraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService), 
+    Direct3D12GraphicsDevice(): 
         DirectCommandAllocatorsPool(MAX_DIRECT3D12_COMMAND_ALLOCATORS), 
         ComputeCommandAllocatorsPool(MAX_DIRECT3D12_COMMAND_ALLOCATORS), 
         CopyCommandAllocatorsPool(MAX_DIRECT3D12_COMMAND_ALLOCATORS), 
@@ -36,6 +36,7 @@ struct Direct3D12GraphicsDevice : BaseGraphicsObject
         CopyCommandListsPool(MAX_DIRECT3D12_COMMAND_LISTS)
     {
         InternalId = 0;
+        GraphicsApi = GraphicsApi_Direct3D12;
     }
 
     uint32_t InternalId;

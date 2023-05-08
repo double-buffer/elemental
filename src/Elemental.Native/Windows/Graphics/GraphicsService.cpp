@@ -1,19 +1,44 @@
-#include "PreCompiledHeader.h"
 #include "BaseGraphicsObject.h"
 #include "BaseGraphicsService.h"
 
-static Direct3D12GraphicsService* _globalDirect3D12GraphicsService; 
+#define DispatchReturnGraphicsFunction(functionName, apiObject, ...) GraphicsObject* graphicsObject = (GraphicsObject*)apiObject; \
+    switch (graphicsObject->GraphicsApi) { \
+        case GraphicsApi_Direct3D12: return Direct3D12##functionName(apiObject, __VA_ARGS__); \
+        case GraphicsApi_Vulkan: \
+        case GraphicsApi_Metal: \
+        case GraphicsApi_Unknown: \
+        default: printf("Error: Unknown graphics API.\n"); return {}; \
+    }
+
+#define DispatchGraphicsFunction(functionName, apiObject, ...) GraphicsObject* graphicsObject = (GraphicsObject*)apiObject; \
+    switch (graphicsObject->GraphicsApi) { \
+        case GraphicsApi_Direct3D12: Direct3D12##functionName(apiObject, __VA_ARGS__); break; \
+        case GraphicsApi_Vulkan: \
+        case GraphicsApi_Metal: \
+        case GraphicsApi_Unknown: \
+        default: printf("Error: Unknown graphics API.\n");\
+    }
+
+#define DispatchGraphicsFunctionForApi(functionName, api, ...) \
+    switch (api) { \
+        case GraphicsApi_Direct3D12: Direct3D12##functionName(__VA_ARGS__); break; \
+        case GraphicsApi_Vulkan: \
+        case GraphicsApi_Metal: \
+        case GraphicsApi_Unknown: \
+        default: printf("Error: Unknown graphics API.\n");\
+    }
+
 static VulkanGraphicsService* _globalVulkanGraphicsService; 
 
 DllExport void Native_InitGraphicsService(GraphicsServiceOptions* options)
 {
-    _globalDirect3D12GraphicsService = new Direct3D12GraphicsService(options);
+   Direct3D12InitGraphicsService(options);
     _globalVulkanGraphicsService = new VulkanGraphicsService(options);
 }
 
 DllExport void Native_FreeGraphicsService()
 {
-    delete _globalDirect3D12GraphicsService;
+    Direct3D12FreeGraphicsService();
     delete _globalVulkanGraphicsService;
 }
 
@@ -21,7 +46,7 @@ DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDe
 {
     (*count) = 0;
 
-    _globalDirect3D12GraphicsService->GetAvailableGraphicsDevices(graphicsDevices, count);
+    Direct3D12GetAvailableGraphicsDevices(graphicsDevices, count);
     _globalVulkanGraphicsService->GetAvailableGraphicsDevices(graphicsDevices, count);
 }
 
@@ -66,7 +91,7 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
     }
     else
     {
-        graphicsService = (BaseGraphicsService*)_globalDirect3D12GraphicsService;
+        return Direct3D12CreateGraphicsDevice(options);
     }
 
     return graphicsService->CreateGraphicsDevice(options);
@@ -74,156 +99,130 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
 
 DllExport void Native_FreeGraphicsDevice(void* graphicsDevicePointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
-    graphicsService->FreeGraphicsDevice(graphicsDevicePointer);
+    DispatchGraphicsFunction(FreeGraphicsDevice, graphicsDevicePointer);
 }
 
 DllExport GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(void* graphicsDevicePointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
-    return graphicsService->GetGraphicsDeviceInfo(graphicsDevicePointer);
+    DispatchReturnGraphicsFunction(GetGraphicsDeviceInfo, graphicsDevicePointer);
 }
 
 DllExport void* Native_CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
 {
-    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
-    return graphicsService->CreateCommandQueue(graphicsDevicePointer, type);
+    DispatchReturnGraphicsFunction(CreateCommandQueue, graphicsDevicePointer, type);
 }
 
 DllExport void Native_FreeCommandQueue(void* commandQueuePointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
-    graphicsService->FreeCommandQueue(commandQueuePointer);
+    DispatchGraphicsFunction(FreeCommandQueue, commandQueuePointer);
 }
 
 DllExport void Native_SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
-    graphicsService->SetCommandQueueLabel(commandQueuePointer, label);
+    DispatchGraphicsFunction(SetCommandQueueLabel, commandQueuePointer, label);
 }
 
 DllExport void* Native_CreateCommandList(void* commandQueuePointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
-    return graphicsService->CreateCommandList(commandQueuePointer);
+    DispatchReturnGraphicsFunction(CreateCommandList, commandQueuePointer);
 }
 
 DllExport void Native_FreeCommandList(void* commandListPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->FreeCommandList(commandListPointer);
+    DispatchGraphicsFunction(FreeCommandList, commandListPointer);
 }
 
 DllExport void Native_SetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->SetCommandListLabel(commandListPointer, label);
+    DispatchGraphicsFunction(SetCommandListLabel, commandListPointer, label);
 }
 
 DllExport void Native_CommitCommandList(void* commandListPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->CommitCommandList(commandListPointer);
+    DispatchGraphicsFunction(CommitCommandList, commandListPointer);
 }
     
 DllExport Fence Native_ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
-    return graphicsService->ExecuteCommandLists(commandQueuePointer, commandLists, commandListCount, fencesToWait, fenceToWaitCount);
+    DispatchReturnGraphicsFunction(ExecuteCommandLists, commandQueuePointer, commandLists, commandListCount, fencesToWait, fenceToWaitCount);
 }
     
 DllExport void Native_WaitForFenceOnCpu(Fence fence)
 {
-    auto graphicsService = ((BaseGraphicsObject*)fence.CommandQueuePointer)->GraphicsService;
-    graphicsService->WaitForFenceOnCpu(fence);
+    DispatchGraphicsFunctionForApi(WaitForFenceOnCpu, ((GraphicsObject*)fence.CommandQueuePointer)->GraphicsApi, fence);
 }
     
 DllExport void Native_ResetCommandAllocation(void* graphicsDevicePointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
-    graphicsService->ResetCommandAllocation(graphicsDevicePointer);
+    DispatchGraphicsFunction(ResetCommandAllocation, graphicsDevicePointer);
 }
     
 DllExport void Native_FreeTexture(void* texturePointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)texturePointer)->GraphicsService;
-    graphicsService->FreeTexture(texturePointer);
+    DispatchGraphicsFunction(FreeTexture, texturePointer);
 }
 
 DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandQueuePointer)->GraphicsService;
-    return graphicsService->CreateSwapChain(windowPointer, commandQueuePointer, options);
+    DispatchReturnGraphicsFunction(CreateSwapChain, commandQueuePointer, windowPointer, options);
 }
 
 DllExport void Native_FreeSwapChain(void* swapChainPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
-    graphicsService->FreeSwapChain(swapChainPointer);
+    DispatchGraphicsFunction(FreeSwapChain, swapChainPointer);
 }
     
 DllExport void Native_ResizeSwapChain(void* swapChainPointer, int width, int height)
 {
-    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
-    graphicsService->ResizeSwapChain(swapChainPointer, width, height);
+    DispatchGraphicsFunction(ResizeSwapChain, swapChainPointer, width, height);
 }
 
 DllExport void* Native_GetSwapChainBackBufferTexture(void* swapChainPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
-    return graphicsService->GetSwapChainBackBufferTexture(swapChainPointer);
+    DispatchReturnGraphicsFunction(GetSwapChainBackBufferTexture, swapChainPointer);
 }
 
 DllExport void Native_PresentSwapChain(void* swapChainPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
-    graphicsService->PresentSwapChain(swapChainPointer);
+    DispatchGraphicsFunction(PresentSwapChain, swapChainPointer);
 }
 
 DllExport void Native_WaitForSwapChainOnCpu(void* swapChainPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)swapChainPointer)->GraphicsService;
-    graphicsService->WaitForSwapChainOnCpu(swapChainPointer);
+    DispatchGraphicsFunction(WaitForSwapChainOnCpu, swapChainPointer);
 }
     
 DllExport void* Native_CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
 {
-    auto graphicsService = ((BaseGraphicsObject*)graphicsDevicePointer)->GraphicsService;
-    return graphicsService->CreateShader(graphicsDevicePointer, shaderParts, shaderPartCount);
+    DispatchReturnGraphicsFunction(CreateShader, graphicsDevicePointer, shaderParts, shaderPartCount);
 }
 
 DllExport void Native_FreeShader(void* shaderPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)shaderPointer)->GraphicsService;
-    graphicsService->FreeShader(shaderPointer);
+    DispatchGraphicsFunction(FreeShader, shaderPointer);
 }
 
 DllExport void Native_BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->BeginRenderPass(commandListPointer, renderPassDescriptor);
+    DispatchGraphicsFunction(BeginRenderPass, commandListPointer, renderPassDescriptor);
 }
     
 DllExport void Native_EndRenderPass(void* commandListPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->EndRenderPass(commandListPointer);
+    DispatchGraphicsFunction(EndRenderPass, commandListPointer);
 }
 
 DllExport void Native_SetShader(void* commandListPointer, void* shaderPointer)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->SetShader(commandListPointer, shaderPointer);
+    DispatchGraphicsFunction(SetShader, commandListPointer, shaderPointer);
 }
     
 DllExport void Native_SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->SetShaderConstants(commandListPointer, slot, constantValues, constantValueCount);
+    DispatchGraphicsFunction(SetShaderConstants, commandListPointer, slot, constantValues, constantValueCount);
 }
     
 DllExport void Native_DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
-    auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
-    graphicsService->DispatchMesh(commandListPointer, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+    DispatchGraphicsFunction(DispatchMesh, commandListPointer, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

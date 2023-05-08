@@ -34,6 +34,7 @@
 #include <dxgi1_5.h>
 #endif
 
+// TODO: Move that
 #ifdef _DEBUG
 #define AssertIfFailed(result) assert(!FAILED(result))
 #else
