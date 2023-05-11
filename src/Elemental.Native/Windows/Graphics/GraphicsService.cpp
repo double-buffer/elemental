@@ -1,10 +1,16 @@
-#include "BaseGraphicsObject.h"
-#include "BaseGraphicsService.h"
-
 #define DispatchReturnGraphicsFunction(functionName, apiObject, ...) GraphicsObject* graphicsObject = (GraphicsObject*)apiObject; \
     switch (graphicsObject->GraphicsApi) { \
         case GraphicsApi_Direct3D12: return Direct3D12##functionName(apiObject, __VA_ARGS__); \
-        case GraphicsApi_Vulkan: \
+        case GraphicsApi_Vulkan: return Vulkan##functionName(apiObject, __VA_ARGS__); \
+        case GraphicsApi_Metal: \
+        case GraphicsApi_Unknown: \
+        default: printf("Error: Unknown graphics API.\n"); return {}; \
+    }
+    
+#define DispatchReturnGraphicsFunctionForApi(functionName, api, ...) \
+    switch (api) { \
+        case GraphicsApi_Direct3D12: return Direct3D12##functionName(__VA_ARGS__); \
+        case GraphicsApi_Vulkan: return Vulkan##functionName(__VA_ARGS__); \
         case GraphicsApi_Metal: \
         case GraphicsApi_Unknown: \
         default: printf("Error: Unknown graphics API.\n"); return {}; \
@@ -13,7 +19,7 @@
 #define DispatchGraphicsFunction(functionName, apiObject, ...) GraphicsObject* graphicsObject = (GraphicsObject*)apiObject; \
     switch (graphicsObject->GraphicsApi) { \
         case GraphicsApi_Direct3D12: Direct3D12##functionName(apiObject, __VA_ARGS__); break; \
-        case GraphicsApi_Vulkan: \
+        case GraphicsApi_Vulkan: Vulkan##functionName(apiObject, __VA_ARGS__); break; \
         case GraphicsApi_Metal: \
         case GraphicsApi_Unknown: \
         default: printf("Error: Unknown graphics API.\n");\
@@ -22,24 +28,24 @@
 #define DispatchGraphicsFunctionForApi(functionName, api, ...) \
     switch (api) { \
         case GraphicsApi_Direct3D12: Direct3D12##functionName(__VA_ARGS__); break; \
-        case GraphicsApi_Vulkan: \
+        case GraphicsApi_Vulkan: Vulkan##functionName(__VA_ARGS__); break; \
         case GraphicsApi_Metal: \
         case GraphicsApi_Unknown: \
         default: printf("Error: Unknown graphics API.\n");\
     }
 
-static VulkanGraphicsService* _globalVulkanGraphicsService; 
-
 DllExport void Native_InitGraphicsService(GraphicsServiceOptions* options)
 {
-   Direct3D12InitGraphicsService(options);
-    _globalVulkanGraphicsService = new VulkanGraphicsService(options);
+    // TODO: Allow to compile without one the providers
+
+    Direct3D12InitGraphicsService(options);
+    VulkanInitGraphicsService(options);
 }
 
 DllExport void Native_FreeGraphicsService()
 {
     Direct3D12FreeGraphicsService();
-    delete _globalVulkanGraphicsService;
+    VulkanFreeGraphicsService();
 }
 
 DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
@@ -47,7 +53,7 @@ DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDe
     (*count) = 0;
 
     Direct3D12GetAvailableGraphicsDevices(graphicsDevices, count);
-    _globalVulkanGraphicsService->GetAvailableGraphicsDevices(graphicsDevices, count);
+    VulkanGetAvailableGraphicsDevices(graphicsDevices, count);
 }
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
@@ -83,18 +89,14 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
 
     options->DeviceId = selectedDevice.DeviceId;
 
-    BaseGraphicsService* graphicsService;
-
     if (selectedDevice.GraphicsApi == GraphicsApi_Vulkan)
     {
-        graphicsService = (BaseGraphicsService*)_globalVulkanGraphicsService;
+        return VulkanCreateGraphicsDevice(options);
     }
     else
     {
         return Direct3D12CreateGraphicsDevice(options);
     }
-
-    return graphicsService->CreateGraphicsDevice(options);
 }
 
 DllExport void Native_FreeGraphicsDevice(void* graphicsDevicePointer)
@@ -164,7 +166,7 @@ DllExport void Native_FreeTexture(void* texturePointer)
 
 DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
-    DispatchReturnGraphicsFunction(CreateSwapChain, commandQueuePointer, windowPointer, options);
+    DispatchReturnGraphicsFunctionForApi(CreateSwapChain, ((GraphicsObject*)commandQueuePointer)->GraphicsApi, windowPointer, commandQueuePointer, options);
 }
 
 DllExport void Native_FreeSwapChain(void* swapChainPointer)

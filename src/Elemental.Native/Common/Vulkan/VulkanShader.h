@@ -1,10 +1,14 @@
 #pragma once
 
-struct VulkanShader : VulkanBaseGraphicsObject
+struct VulkanShader : GraphicsObject
 {
-    VulkanShader(BaseGraphicsService* graphicsService, VulkanGraphicsDevice* graphicsDevice) : VulkanBaseGraphicsObject(graphicsService, graphicsDevice)
+    VulkanShader(VulkanGraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Vulkan;
     }
+
+    VulkanGraphicsDevice* GraphicsDevice;
     
     VkShaderModule AmplificationShader = nullptr;
     char AmplificationShaderEntryPoint[255];

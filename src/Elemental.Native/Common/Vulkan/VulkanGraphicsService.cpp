@@ -1,12 +1,56 @@
-#include "VulkanGraphicsService.h"
+#pragma warning(disable: 4191)
+#define VK_USE_PLATFORM_WIN32_KHR
+#define VOLK_IMPLEMENTATION
+#include "volk.h"
+#pragma warning(default: 4191)
 
-VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
+struct VulkanGraphicsDevice;
+
+#define MAX_VULKAN_GRAPHICS_DEVICES 64
+#define MAX_VULKAN_COMMAND_POOLS 64
+#define MAX_VULKAN_COMMAND_BUFFERS 64
+
+#include "VulkanCommandQueue.h"
+#include "VulkanCommandList.h"
+#include "VulkanShader.h"
+#include "VulkanTexture.h"
+#include "VulkanSwapChain.h"
+#include "VulkanGraphicsDevice.h"
+
+GraphicsDiagnostics _vulkanGraphicsDiagnostics;
+VkInstance _vulkanInstance = nullptr;
+VkDebugReportCallbackEXT _vulkanDebugCallback = nullptr;
+uint32_t _vulkanCurrentDeviceInternalId = 0;
+
+void VulkanWaitForFenceOnCpu(Fence fence);
+
+GraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties);
+VkDeviceQueueCreateInfo VulkanCreateDeviceQueueCreateInfo(uint32_t queueFamilyIndex, uint32_t count);
+
+VulkanCommandPoolItem* VulkanGetCommandPool(VulkanCommandQueue* commandQueue);
+void VulkanUpdateCommandPoolFence(VulkanCommandList* commandList, uint64_t fenceValue);
+VulkanCommandList* VulkanGetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem);
+Fence VulkanCreateCommandQueueFence(VulkanCommandQueue* commandQueue);
+
+void VulkanCreateSwapChainBackBuffers(VulkanSwapChain* swapChain, int32_t width, int32_t height);
+
+uint64_t VulkanComputeRenderPipelineStateHash(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor);
+VulkanPipelineStateCacheItem* VulkanCreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor);
+
+void VulkanTransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer = false);
+
+static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);
+static void VulkanDeletePipelineCacheItem(uint64_t key, void* data);
+
+thread_local VulkanDeviceCommandPools CommandPools[MAX_VULKAN_GRAPHICS_DEVICES];
+
+void VulkanInitGraphicsService(GraphicsServiceOptions* options)
 {
     // HACK: For the moment, the app will run only if Vulkan SDK 1.3 is installed
     // We need to package the runtime
     // TODO: If the vulkan loader is not here, don't proceed
 
-    _graphicsDiagnostics = options->GraphicsDiagnostics;
+    _vulkanGraphicsDiagnostics = options->GraphicsDiagnostics;
 
     AssertIfFailed(volkInitialize());
     assert(volkGetInstanceVersion() >= VK_API_VERSION_1_3);
@@ -81,17 +125,17 @@ VulkanGraphicsService::VulkanGraphicsService(GraphicsServiceOptions* options)
     {
         VkDebugReportCallbackCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
         debugCreateInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
-        debugCreateInfo.pfnCallback = DebugReportCallback;
+        debugCreateInfo.pfnCallback = VulkanDebugReportCallback;
 
-        AssertIfFailed(vkCreateDebugReportCallbackEXT(_vulkanInstance, &debugCreateInfo, 0, &_debugCallback));
+        AssertIfFailed(vkCreateDebugReportCallbackEXT(_vulkanInstance, &debugCreateInfo, 0, &_vulkanDebugCallback));
     }
 }
 
-VulkanGraphicsService::~VulkanGraphicsService()
+void VulkanFreeGraphicsService()
 {
-    if (_debugCallback != nullptr)
+    if (_vulkanDebugCallback != nullptr)
     {
-        vkDestroyDebugReportCallbackEXT(_vulkanInstance, _debugCallback, nullptr);
+        vkDestroyDebugReportCallbackEXT(_vulkanInstance, _vulkanDebugCallback, nullptr);
     }
 
     if (_vulkanInstance != nullptr)
@@ -100,7 +144,7 @@ VulkanGraphicsService::~VulkanGraphicsService()
     }
 }
 
-void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
+void VulkanGetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
     uint32_t deviceCount = 16;
     VkPhysicalDevice devices[16];
@@ -134,12 +178,12 @@ void VulkanGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* grap
 
         if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader && presentIdFeatures.presentId)
         {
-            graphicsDevices[(*count)++] = ConstructGraphicsDeviceInfo(deviceProperties, deviceMemoryProperties);
+            graphicsDevices[(*count)++] = VulkanConstructGraphicsDeviceInfo(deviceProperties, deviceMemoryProperties);
         }
     }
 }
 
-void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
+void* VulkanCreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
     uint32_t deviceCount = 16;
     VkPhysicalDevice devices[16];
@@ -169,7 +213,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
         return nullptr;
     }
     
-    auto graphicsDevice = new VulkanGraphicsDevice(this);
+    auto graphicsDevice = new VulkanGraphicsDevice();
 
     uint32_t queueFamilyCount = 0;
     VkQueueFamilyProperties queueFamilies[32];
@@ -183,23 +227,23 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && graphicsDevice->RenderCommandQueueFamilyIndex == UINT32_MAX)
         {
             graphicsDevice->RenderCommandQueueFamilyIndex = i;
-            queueCreateInfos[i] = CreateDeviceQueueCreateInfo(i, 2);
+            queueCreateInfos[i] = VulkanCreateDeviceQueueCreateInfo(i, 2);
         }
 
         else if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT && graphicsDevice->ComputeCommandQueueFamilyIndex == UINT32_MAX)
         {
             graphicsDevice->ComputeCommandQueueFamilyIndex = i;
-            queueCreateInfos[i] = CreateDeviceQueueCreateInfo(i, 1);
+            queueCreateInfos[i] = VulkanCreateDeviceQueueCreateInfo(i, 1);
         }
 
         else if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT && graphicsDevice->CopyCommandQueueFamilyIndex == UINT32_MAX)
         {
             graphicsDevice->CopyCommandQueueFamilyIndex = i;
-            queueCreateInfos[i] = CreateDeviceQueueCreateInfo(i, 1);
+            queueCreateInfos[i] = VulkanCreateDeviceQueueCreateInfo(i, 1);
         }
     }
 
-    graphicsDevice->InternalId = InterlockedIncrement(&_currentDeviceInternalId) - 1;
+    graphicsDevice->InternalId = InterlockedIncrement(&_vulkanCurrentDeviceInternalId) - 1;
     graphicsDevice->PhysicalDevice = physicalDevice;
     graphicsDevice->DeviceProperties = deviceProperties;
     graphicsDevice->DeviceMemoryProperties = deviceMemoryProperties;
@@ -239,7 +283,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     features12.hostQueryReset = true;
     features12.shaderInt8 = true;
 
-    if (_graphicsDiagnostics == GraphicsDiagnostics_Debug)
+    if (_vulkanGraphicsDiagnostics == GraphicsDiagnostics_Debug)
     {
         features12.bufferDeviceAddressCaptureReplay = true;
     }
@@ -282,7 +326,7 @@ void* VulkanGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options
     return graphicsDevice;
 }
 
-void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
+void VulkanFreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     VulkanCommandPoolItem* item;
@@ -320,17 +364,17 @@ void VulkanGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
     }
 }
 
-GraphicsDeviceInfo VulkanGraphicsService::GetGraphicsDeviceInfo(void* graphicsDevicePointer)
+GraphicsDeviceInfo VulkanGetGraphicsDeviceInfo(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
-    return ConstructGraphicsDeviceInfo(graphicsDevice->DeviceProperties, graphicsDevice->DeviceMemoryProperties);
+    return VulkanConstructGraphicsDeviceInfo(graphicsDevice->DeviceProperties, graphicsDevice->DeviceMemoryProperties);
 }
 
-void* VulkanGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+void* VulkanCreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
 
-    auto commandQueue = new VulkanCommandQueue(this, graphicsDevice);
+    auto commandQueue = new VulkanCommandQueue(graphicsDevice);
     commandQueue->CommandQueueType = type;
 
     auto queueFamilyIndex = graphicsDevice->RenderCommandQueueFamilyIndex;
@@ -361,18 +405,18 @@ void* VulkanGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, Com
     return commandQueue;
 }
 
-void VulkanGraphicsService::FreeCommandQueue(void* commandQueuePointer)
+void VulkanFreeCommandQueue(void* commandQueuePointer)
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
     
-    auto fence = CreateCommandQueueFence(commandQueue);
-    WaitForFenceOnCpu(fence);
+    auto fence = VulkanCreateCommandQueueFence(commandQueue);
+    VulkanWaitForFenceOnCpu(fence);
     
     vkDestroySemaphore(commandQueue->GraphicsDevice->Device, commandQueue->TimelineSemaphore, nullptr);
     delete commandQueue;
 }
 
-void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
+void VulkanSetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
     
@@ -384,12 +428,12 @@ void VulkanGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint
     AssertIfFailed(vkSetDebugUtilsObjectNameEXT(commandQueue->GraphicsDevice->Device, &nameInfo)); 
 }
 
-void* VulkanGraphicsService::CreateCommandList(void* commandQueuePointer)
+void* VulkanCreateCommandList(void* commandQueuePointer)
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
 
-    auto commandPool = GetCommandPool(commandQueue);
-    auto commandList = GetCommandList(commandQueue, commandPool);
+    auto commandPool = VulkanGetCommandPool(commandQueue);
+    auto commandList = VulkanGetCommandList(commandQueue, commandPool);
 
     VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -399,7 +443,7 @@ void* VulkanGraphicsService::CreateCommandList(void* commandQueuePointer)
     return commandList;
 }
 
-void VulkanGraphicsService::FreeCommandList(void* commandListPointer)
+void VulkanFreeCommandList(void* commandListPointer)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
     
@@ -409,7 +453,7 @@ void VulkanGraphicsService::FreeCommandList(void* commandListPointer)
     }
 }
 
-void VulkanGraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
+void VulkanSetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
 
@@ -421,13 +465,13 @@ void VulkanGraphicsService::SetCommandListLabel(void* commandListPointer, uint8_
     AssertIfFailed(vkSetDebugUtilsObjectNameEXT(commandList->GraphicsDevice->Device, &nameInfo));
 }
 
-void VulkanGraphicsService::CommitCommandList(void* commandListPointer)
+void VulkanCommitCommandList(void* commandListPointer)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
     AssertIfFailed(vkEndCommandBuffer(commandList->DeviceObject));
 }
 
-Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
+Fence VulkanExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
 
@@ -479,7 +523,7 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
 
         if (vulkanCommandList->IsFromCommandPool)
         {
-            UpdateCommandPoolFence(vulkanCommandList, fenceValue);
+            VulkanUpdateCommandPoolFence(vulkanCommandList, fenceValue);
         }
     }
 
@@ -490,7 +534,7 @@ Fence VulkanGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void
     return fence;
 }
 
-void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
+void VulkanWaitForFenceOnCpu(Fence fence)
 {
     auto commandQueueToWait = (VulkanCommandQueue*)fence.CommandQueuePointer;
 
@@ -515,13 +559,13 @@ void VulkanGraphicsService::WaitForFenceOnCpu(Fence fence)
     }
 }
 
-void VulkanGraphicsService::ResetCommandAllocation(void* graphicsDevicePointer)
+void VulkanResetCommandAllocation(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
     graphicsDevice->CommandPoolGeneration++;
 }
 
-void VulkanGraphicsService::FreeTexture(void* texturePointer)
+void VulkanFreeTexture(void* texturePointer)
 {
     auto texture = (VulkanTexture*)texturePointer;
 
@@ -536,12 +580,12 @@ void VulkanGraphicsService::FreeTexture(void* texturePointer)
     }
 }
 
-void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
+void* VulkanCreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
     auto commandQueue = (VulkanCommandQueue*)commandQueuePointer;
     auto graphicsDevice = commandQueue->GraphicsDevice;
 
-    auto swapChain = new VulkanSwapChain(this, graphicsDevice);
+    auto swapChain = new VulkanSwapChain(graphicsDevice);
     swapChain->CommandQueue = commandQueue;
     swapChain->Format = options->Format;
     swapChain->CurrentImageIndex = 0;
@@ -596,7 +640,7 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
     swapChain->CreateInfo = swapChainCreateInfo;
     AssertIfFailed(vkCreateSwapchainKHR(graphicsDevice->Device, &swapChainCreateInfo, nullptr, &swapChain->DeviceObject));
 
-    CreateSwapChainBackBuffers(swapChain, (int32_t)swapChainCreateInfo.imageExtent.width, (int32_t)swapChainCreateInfo.imageExtent.height);
+    VulkanCreateSwapChainBackBuffers(swapChain, (int32_t)swapChainCreateInfo.imageExtent.width, (int32_t)swapChainCreateInfo.imageExtent.height);
 
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     AssertIfFailed(vkCreateFence(graphicsDevice->Device, &fenceCreateInfo, 0, &swapChain->BackBufferAcquireFence ));
@@ -604,7 +648,7 @@ void* VulkanGraphicsService::CreateSwapChain(void* windowPointer, void* commandQ
     return swapChain;
 }
 
-void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
+void VulkanFreeSwapChain(void* swapChainPointer)
 {
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
@@ -623,7 +667,7 @@ void VulkanGraphicsService::FreeSwapChain(void* swapChainPointer)
     delete swapChain;
 }
 
-void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
+void VulkanResizeSwapChain(void* swapChainPointer, int width, int height)
 {
     if (width == 0 || height == 0)
     {
@@ -633,8 +677,8 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
     auto graphicsDevice = swapChain->GraphicsDevice;
 
-    auto fence = CreateCommandQueueFence(swapChain->CommandQueue);
-    WaitForFenceOnCpu(fence);
+    auto fence = VulkanCreateCommandQueueFence(swapChain->CommandQueue);
+    VulkanWaitForFenceOnCpu(fence);
 
     swapChain->CurrentPresentId = 0;
     auto oldSwapChain = swapChain->DeviceObject;
@@ -654,16 +698,16 @@ void VulkanGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, i
 
     vkDestroySwapchainKHR(graphicsDevice->Device, oldSwapChain, nullptr);
     
-    CreateSwapChainBackBuffers(swapChain, (int32_t)swapChainCreateInfo.imageExtent.width, (int32_t)swapChainCreateInfo.imageExtent.height);
+    VulkanCreateSwapChainBackBuffers(swapChain, (int32_t)swapChainCreateInfo.imageExtent.width, (int32_t)swapChainCreateInfo.imageExtent.height);
 }
 
-void* VulkanGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
+void* VulkanGetSwapChainBackBufferTexture(void* swapChainPointer)
 {
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
     return swapChain->BackBufferTextures[swapChain->CurrentImageIndex];
 }
 
-void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
+void VulkanPresentSwapChain(void* swapChainPointer)
 {
     // TODO: Wait for the correct timeline semaphore value?
     // Or just issue a barrier because the final buffer rendering and the present is done on the same queue
@@ -686,11 +730,11 @@ void VulkanGraphicsService::PresentSwapChain(void* swapChainPointer)
 
     AssertIfFailed(vkQueuePresentKHR(swapChain->CommandQueue->DeviceObject, &presentInfo));
     
-    ResetCommandAllocation(swapChain->GraphicsDevice);
+    VulkanResetCommandAllocation(swapChain->GraphicsDevice);
     swapChain->CurrentPresentId++;
 }
 
-void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
+void VulkanWaitForSwapChainOnCpu(void* swapChainPointer)
 {
     // BUG: There is a high GPU usage when the app is not active
     auto swapChain = (VulkanSwapChain*)swapChainPointer;
@@ -709,10 +753,10 @@ void VulkanGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
     vkResetFences(swapChain->GraphicsDevice->Device, 1, &swapChain->BackBufferAcquireFence);
 }
 
-void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
+void* VulkanCreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
-    auto shader = new VulkanShader(graphicsDevice->GraphicsService, graphicsDevice);
+    auto shader = new VulkanShader(graphicsDevice);
 
     auto pushConstantCount = 0u;
     
@@ -777,7 +821,7 @@ void* VulkanGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPar
     return shader;
 }
 
-void VulkanGraphicsService::FreeShader(void* shaderPointer)
+void VulkanFreeShader(void* shaderPointer)
 {
     auto shader = (VulkanShader*)shaderPointer;
     auto graphicsDevice = (VulkanGraphicsDevice*)shader->GraphicsDevice;
@@ -805,7 +849,7 @@ void VulkanGraphicsService::FreeShader(void* shaderPointer)
     delete shader;
 }
 
-void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
+void VulkanBeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
 
@@ -816,7 +860,7 @@ void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPass
     {
         auto texture = (VulkanTexture*)commandList->CurrentRenderPassDescriptor.RenderTarget0.Value.TexturePointer;
         auto clearColor = renderPassDescriptor->RenderTarget0.Value.ClearColor.Value;
-        TransitionTextureToState(commandList, texture, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        VulkanTransitionTextureToState(commandList, texture, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         VkRenderingAttachmentInfo colorAttachment = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         colorAttachment.imageView = texture->ImageView;
@@ -842,7 +886,7 @@ void VulkanGraphicsService::BeginRenderPass(void* commandListPointer, RenderPass
     }
 }
     
-void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
+void VulkanEndRenderPass(void* commandListPointer)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
     
@@ -854,7 +898,7 @@ void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
 
         if (texture->IsPresentTexture)
         {
-            TransitionTextureToState(commandList, texture, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+            VulkanTransitionTextureToState(commandList, texture, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         }
     }
     
@@ -862,7 +906,7 @@ void VulkanGraphicsService::EndRenderPass(void* commandListPointer)
     commandList->IsRenderPassActive = false;
 }
 
-void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPointer)
+void VulkanSetShader(void* commandListPointer, void* shaderPointer)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
     auto graphicsDevice = commandList->GraphicsDevice;
@@ -877,14 +921,14 @@ void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPoin
         // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
 
         auto renderPassDescriptor = &commandList->CurrentRenderPassDescriptor;
-        auto hash = ComputeRenderPipelineStateHash(shader, renderPassDescriptor);
+        auto hash = VulkanComputeRenderPipelineStateHash(shader, renderPassDescriptor);
 
         // TODO: This is not thread-safe!
         // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
             printf("Create PipelineState for shader %llu...\n", hash);
-            auto pipelineStateCacheItem = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
+            auto pipelineStateCacheItem = VulkanCreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
             graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
         }
@@ -898,7 +942,7 @@ void VulkanGraphicsService::SetShader(void* commandListPointer, void* shaderPoin
     }
 }
 
-void VulkanGraphicsService::SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
+void VulkanSetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
     assert(commandList->CurrentShader != nullptr);
@@ -907,7 +951,7 @@ void VulkanGraphicsService::SetShaderConstants(void* commandListPointer, uint32_
     vkCmdPushConstants(commandList->DeviceObject, commandList->CurrentShader->PipelineLayout, VK_SHADER_STAGE_ALL, 0, (uint32_t)constantValueCount, constantValues);
 }
 
-void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+void VulkanDispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
 
@@ -917,7 +961,7 @@ void VulkanGraphicsService::DispatchMesh(void* commandListPointer, uint32_t thre
     }
 }
    
-GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
+GraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
     auto result = GraphicsDeviceInfo();
     result.DeviceName = SystemConvertWideCharToUtf8(std::wstring(deviceProperties.deviceName, deviceProperties.deviceName + strlen(deviceProperties.deviceName)).c_str());
@@ -928,7 +972,7 @@ GraphicsDeviceInfo VulkanGraphicsService::ConstructGraphicsDeviceInfo(VkPhysical
     return result;
 }
 
-VkDeviceQueueCreateInfo VulkanGraphicsService::CreateDeviceQueueCreateInfo(uint32_t queueFamilyIndex, uint32_t count)
+VkDeviceQueueCreateInfo VulkanCreateDeviceQueueCreateInfo(uint32_t queueFamilyIndex, uint32_t count)
 {
     auto queuePriorities = new float[count];
 
@@ -945,7 +989,7 @@ VkDeviceQueueCreateInfo VulkanGraphicsService::CreateDeviceQueueCreateInfo(uint3
     return queueCreateInfo;
 }
     
-VulkanCommandPoolItem* VulkanGraphicsService::GetCommandPool(VulkanCommandQueue* commandQueue)
+VulkanCommandPoolItem* VulkanGetCommandPool(VulkanCommandQueue* commandQueue)
 {
     auto graphicsDevice = commandQueue->GraphicsDevice;
 
@@ -989,7 +1033,7 @@ VulkanCommandPoolItem* VulkanGraphicsService::GetCommandPool(VulkanCommandQueue*
 
             if (commandPoolItem->Fence.FenceValue > 0)
             {
-                WaitForFenceOnCpu(commandPoolItem->Fence);
+                VulkanWaitForFenceOnCpu(commandPoolItem->Fence);
             }
 
             AssertIfFailed(vkResetCommandPool(graphicsDevice->Device, commandPoolItem->CommandPool, 0));
@@ -1003,7 +1047,7 @@ VulkanCommandPoolItem* VulkanGraphicsService::GetCommandPool(VulkanCommandQueue*
     return (*commandPoolItemPointer);
 }
     
-void VulkanGraphicsService::UpdateCommandPoolFence(VulkanCommandList* commandList, uint64_t fenceValue)
+void VulkanUpdateCommandPoolFence(VulkanCommandList* commandList, uint64_t fenceValue)
 {
     auto fence = Fence();
     fence.CommandQueuePointer = commandList->CommandQueue;
@@ -1013,7 +1057,7 @@ void VulkanGraphicsService::UpdateCommandPoolFence(VulkanCommandList* commandLis
     commandList->CommandPoolItem->IsInUse = false;
 }
 
-VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem)
+VulkanCommandList* VulkanGetCommandList(VulkanCommandQueue* commandQueue, VulkanCommandPoolItem* commandPoolItem)
 {
     auto graphicsDevice = commandQueue->GraphicsDevice;
 
@@ -1035,7 +1079,7 @@ VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* com
             printf("Warning: Not enough command buffer objects in the pool. Performance may decrease...\n");
         } 
 
-        commandList = new VulkanCommandList(this, commandQueue->GraphicsDevice);
+        commandList = new VulkanCommandList(commandQueue->GraphicsDevice);
         commandList->CommandQueue = commandQueue;
 
         VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -1058,7 +1102,7 @@ VulkanCommandList* VulkanGraphicsService::GetCommandList(VulkanCommandQueue* com
     return commandList;
 }
     
-Fence VulkanGraphicsService::CreateCommandQueueFence(VulkanCommandQueue* commandQueue)
+Fence VulkanCreateCommandQueueFence(VulkanCommandQueue* commandQueue)
 {
     // TODO: Use std::atomic
     auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
@@ -1088,7 +1132,7 @@ Fence VulkanGraphicsService::CreateCommandQueueFence(VulkanCommandQueue* command
     return fence;
 }
 
-void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChain, int32_t width, int32_t height)
+void VulkanCreateSwapChainBackBuffers(VulkanSwapChain* swapChain, int32_t width, int32_t height)
 {
     auto graphicsDevice = swapChain->GraphicsDevice;
 
@@ -1106,7 +1150,7 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
             delete swapChain->BackBufferTextures[i];
         }
 
-        auto backBufferTexture = new VulkanTexture(this, graphicsDevice);
+        auto backBufferTexture = new VulkanTexture(graphicsDevice);
         backBufferTexture->DeviceObject = swapchainImages[i];
         backBufferTexture->IsPresentTexture = true;
         backBufferTexture->Format = format;
@@ -1128,7 +1172,7 @@ void VulkanGraphicsService::CreateSwapChainBackBuffers(VulkanSwapChain* swapChai
     }
 }
 
-uint64_t VulkanGraphicsService::ComputeRenderPipelineStateHash(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
+uint64_t VulkanComputeRenderPipelineStateHash(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
     // TODO: For the moment the hash of the shader is base on the pointer
     // Maybe we should base it on the hash of each shader parts data? 
@@ -1141,7 +1185,7 @@ uint64_t VulkanGraphicsService::ComputeRenderPipelineStateHash(VulkanShader* sha
     return (uint64_t)shader;
 }
 
-VulkanPipelineStateCacheItem* VulkanGraphicsService::CreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
+VulkanPipelineStateCacheItem* VulkanCreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
     auto graphicsDevice = shader->GraphicsDevice;
 
@@ -1227,7 +1271,7 @@ VulkanPipelineStateCacheItem* VulkanGraphicsService::CreateRenderPipelineState(V
     return cacheItem;
 }
 
-void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer)
+void VulkanTransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer)
 {
     // TODO: Handle texture accesses, currently we only handle the image layout
     // TODO: Use VkImageMemoryBarrier2. What are the differences?
@@ -1256,7 +1300,7 @@ void VulkanGraphicsService::TransitionTextureToState(VulkanCommandList* commandL
     }
 }
 
-static VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* pMessage, void*)
+static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* pMessage, void*)
 {
     // This silences warnings like "For optimal performance image layout should be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL instead of GENERAL."
     // We'll assume other performance warnings are also not useful.

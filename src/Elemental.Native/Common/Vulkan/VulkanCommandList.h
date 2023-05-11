@@ -4,10 +4,12 @@ struct VulkanCommandPoolItem;
 struct VulkanPipelineStateCacheItem;
 struct VulkanShader;
 
-struct VulkanCommandList : VulkanBaseGraphicsObject
+struct VulkanCommandList : GraphicsObject
 {
-    VulkanCommandList(BaseGraphicsService* graphicsService, VulkanGraphicsDevice* graphicsDevice) : VulkanBaseGraphicsObject(graphicsService, graphicsDevice)
+    VulkanCommandList(VulkanGraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Vulkan;
         IsFromCommandPool = false;
         IsRenderPassActive = false;
         CommandPoolItem = nullptr;
@@ -15,6 +17,7 @@ struct VulkanCommandList : VulkanBaseGraphicsObject
         CurrentShader = nullptr;
     }
 
+    VulkanGraphicsDevice* GraphicsDevice;
     VkCommandBuffer DeviceObject;
     VulkanCommandQueue* CommandQueue;
     bool IsFromCommandPool;

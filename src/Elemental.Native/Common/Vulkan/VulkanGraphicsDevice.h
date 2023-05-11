@@ -39,13 +39,14 @@ struct VulkanPipelineStateCacheItem
     VkPipeline PipelineState;
 };
 
-struct VulkanGraphicsDevice : BaseGraphicsObject
+struct VulkanGraphicsDevice : GraphicsObject
 {
-    VulkanGraphicsDevice(BaseGraphicsService* graphicsService) : BaseGraphicsObject(graphicsService),
+    VulkanGraphicsDevice() :
         DirectCommandPool(MAX_VULKAN_COMMAND_POOLS), 
         ComputeCommandPool(MAX_VULKAN_COMMAND_POOLS), 
         CopyCommandPool(MAX_VULKAN_COMMAND_POOLS)
     {
+        GraphicsApi = GraphicsApi_Vulkan;
     }
 
     VkDevice Device;

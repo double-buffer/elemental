@@ -60,11 +60,6 @@ using namespace Microsoft::WRL;
 #define _DEBUG
 #endif
 
-// TODO: Move that to SystemFunctions
-#define AssertIfFailed(result) assert(!FAILED(result))
-
-
-
 #pragma warning(default: 4820)
 #pragma warning(default: 4668)
 #pragma warning(default: 4365)

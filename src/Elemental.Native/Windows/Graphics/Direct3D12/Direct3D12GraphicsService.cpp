@@ -17,8 +17,6 @@ struct Direct3D12GraphicsDevice;
 #include "Direct3D12Shader.h"
 #include "Direct3D12GraphicsDevice.h"
 
-#include "Direct3D12GraphicsService.h"
-    
 GraphicsDiagnostics _graphicsDiagnostics;
 ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
 ComPtr<IDXGIFactory6> _dxgiFactory; 
@@ -27,6 +25,12 @@ ComPtr<ID3D12InfoQueue1> _debugInfoQueue;
 ComPtr<IDXGIDebug1> _dxgiDebugInterface;
 uint32_t _currentDeviceInternalId = 0;
 HANDLE _globalFenceEvent;
+
+NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
+static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
+static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data);
+
+thread_local DeviceCommandAllocators CommandAllocators[MAX_DIRECT3D12_GRAPHICS_DEVICES];
     
 void Direct3D12WaitForFenceOnCpu(Fence fence);
 Fence Direct3D12CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue);
@@ -89,6 +93,11 @@ void Direct3D12InitGraphicsService(GraphicsServiceOptions* options)
 
 void Direct3D12FreeGraphicsService()
 {
+    if (_dxgiFactory)
+    {
+        _dxgiFactory = nullptr;
+    }
+
     if (_dxgiDebugInterface)
     {
         AssertIfFailed(_dxgiDebugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, (DXGI_DEBUG_RLO_FLAGS)(DXGI_DEBUG_RLO_IGNORE_INTERNAL | DXGI_DEBUG_RLO_DETAIL)));
@@ -183,7 +192,7 @@ void* Direct3D12CreateGraphicsDevice(GraphicsDeviceOptions* options)
         if (_debugInfoQueue)
         {
             DWORD callBackCookie = 0;
-            AssertIfFailed(_debugInfoQueue->RegisterMessageCallback(DebugReportCallback, D3D12_MESSAGE_CALLBACK_IGNORE_FILTERS, nullptr, &callBackCookie));
+            AssertIfFailed(_debugInfoQueue->RegisterMessageCallback(Direct3D12DebugReportCallback, D3D12_MESSAGE_CALLBACK_IGNORE_FILTERS, nullptr, &callBackCookie));
         }
     }
 
@@ -365,7 +374,7 @@ void Direct3D12FreeTexture(void* texturePointer)
     }
 }
 
-void* Direct3D12CreateSwapChain(void* commandQueuePointer, void* windowPointer, SwapChainOptions* options)
+void* Direct3D12CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
     auto window = (Win32Window*)windowPointer;
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
@@ -1095,7 +1104,7 @@ ComPtr<ID3D12PipelineState> Direct3D12CreateRenderPipelineState(Direct3D12Shader
     return pipelineState;
 }
 
-static void DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)
+static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)
 {
     if (Severity != D3D12_MESSAGE_SEVERITY_INFO && Severity != D3D12_MESSAGE_SEVERITY_MESSAGE)
     {

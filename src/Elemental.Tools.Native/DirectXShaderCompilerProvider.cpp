@@ -185,7 +185,6 @@ void DirectXShaderCompilerProvider::ExtractMetaData(std::vector<ShaderMetaData>&
     ComPtr<IDxcBlob> shaderReflectionBlob;
     AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
 
-    // BUG: There is a bug in release mode here !
     DxcBuffer reflectionBuffer;
     reflectionBuffer.Ptr = shaderReflectionBlob->GetBufferPointer();
     reflectionBuffer.Size = shaderReflectionBlob->GetBufferSize();

@@ -59,6 +59,12 @@
     const char* libraryExtension = ".so";
 #endif
 
+#ifdef _DEBUG
+#define AssertIfFailed(result) assert(!FAILED(result))
+#else
+#define AssertIfFailed(result) result
+#endif
+
 //---------------------------------------------------------------------------------------------------------------
 // Debug Memory management functions
 //---------------------------------------------------------------------------------------------------------------

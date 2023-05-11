@@ -73,6 +73,7 @@ DllExport void Native_RunApplication(Win32Application* application, RunHandlerPt
 
 DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions* options)
 {
+    // BUG: Random Memory bug and sometimes function is really slow
     auto width = (int32_t)options->Width;
     auto height = (int32_t)options->Height;
 

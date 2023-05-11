@@ -1,11 +1,14 @@
 #pragma once
 
-struct VulkanTexture : VulkanBaseGraphicsObject
+struct VulkanTexture : GraphicsObject
 {
-    VulkanTexture(BaseGraphicsService* graphicsService, VulkanGraphicsDevice* graphicsDevice) : VulkanBaseGraphicsObject(graphicsService, graphicsDevice)
+    VulkanTexture(VulkanGraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Vulkan;
     }
 
+    VulkanGraphicsDevice* GraphicsDevice;
     VkImage DeviceObject;
     VkImageView ImageView;
     VkFormat Format;

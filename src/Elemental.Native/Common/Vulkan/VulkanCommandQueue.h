@@ -1,11 +1,14 @@
 #pragma once
 
-struct VulkanCommandQueue : VulkanBaseGraphicsObject
+struct VulkanCommandQueue : GraphicsObject
 {
-    VulkanCommandQueue(BaseGraphicsService* graphicsService, VulkanGraphicsDevice* graphicsDevice) : VulkanBaseGraphicsObject(graphicsService, graphicsDevice)
+    VulkanCommandQueue(VulkanGraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Vulkan;
     }
 
+    VulkanGraphicsDevice* GraphicsDevice;
     VkQueue DeviceObject;
     CommandQueueType CommandQueueType;
     uint32_t FamilyIndex;

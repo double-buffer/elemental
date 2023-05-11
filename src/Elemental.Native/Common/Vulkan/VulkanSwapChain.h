@@ -1,14 +1,18 @@
 #pragma once
 
-struct VulkanSwapChain : VulkanBaseGraphicsObject
+struct VulkanSwapChain : GraphicsObject
 {
-    VulkanSwapChain(BaseGraphicsService* graphicsService, VulkanGraphicsDevice* graphicsDevice) : VulkanBaseGraphicsObject(graphicsService, graphicsDevice)
+    VulkanSwapChain(VulkanGraphicsDevice* graphicsDevice)
     {
+        GraphicsDevice = graphicsDevice;
+        GraphicsApi = GraphicsApi_Vulkan;
+
         BackBufferTextures[0] = nullptr;
         BackBufferTextures[1] = nullptr;
         BackBufferTextures[2] = nullptr;
     }
 
+    VulkanGraphicsDevice* GraphicsDevice;
     VkSwapchainKHR DeviceObject;
     VkSurfaceKHR WindowSurface;
     VulkanCommandQueue* CommandQueue;
