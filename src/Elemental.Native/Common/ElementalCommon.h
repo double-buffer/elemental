@@ -21,6 +21,22 @@ typedef struct
 
 typedef enum
 {
+    LogMessageType_Debug = 0,
+    LogMessageType_Warning = 1,
+    LogMessageType_Error = 2
+} LogMessageType;
+
+typedef enum
+{
+    LogMessageCategory_NativeApplication = 0,
+    LogMessageCategory_Graphics = 1,
+    LogMessageCategory_Inputs = 2
+} LogMessageCategory;
+
+typedef void (*LogMessageHandlerPtr)(LogMessageType messageType, LogMessageCategory category, const wchar_t* function, const wchar_t* message);
+
+typedef enum
+{
     GraphicsApi_Unknown = 0,
     GraphicsApi_Direct3D12 = 1,
     GraphicsApi_Vulkan = 2,

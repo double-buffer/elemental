@@ -13,17 +13,22 @@ HWND globalMainWindow;
 void ProcessMessages(Win32Application* application);
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
-DllExport void Native_InitNativeApplicationService()
+DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
     #ifdef _DEBUG
     SystemInitDebugAllocations();
     #endif
+
+    if (options->LogMessageHandler)
+    {
+        globalLogMessageHandler = options->LogMessageHandler;
+    }
 }
 
 DllExport void Native_FreeNativeApplicationService()
 {
     #ifdef _DEBUG
-    SystemCheckAllocations("Elemental");
+    SystemCheckAllocations(L"Elemental");
     #endif
 }
 
@@ -32,7 +37,7 @@ DllExport void Native_FreeNativePointer(void* nativePointer)
     delete nativePointer;
 }
 
-DllExport void* Native_CreateApplication(uint8_t* applicationName)
+DllExport void* Native_CreateApplication(wchar_t* applicationName)
 {
     auto application = new Win32Application();
     application->ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
@@ -79,12 +84,10 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
 
     auto nativeWindow = new Win32Window();
     
-    auto convertedTitle = SystemConvertUtf8ToWideChar(options->Title);
-
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
-        convertedTitle,
+        options->Title,
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -143,7 +146,6 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
 
     // HACK
     globalMainWindow = window;
-    delete convertedTitle;
 
     return nativeWindow;
 }
@@ -204,11 +206,9 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
     return result;
 }
 
-DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, uint8_t* title)
+DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, wchar_t* title)
 {
-    auto convertedTitle = SystemConvertUtf8ToWideChar(title);
-    SetWindowText(nativeWindow->WindowHandle, convertedTitle);
-    delete convertedTitle;
+    SetWindowText(nativeWindow->WindowHandle, title);
 }
     
 DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState windowState)

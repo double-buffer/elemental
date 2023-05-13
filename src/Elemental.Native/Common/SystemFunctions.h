@@ -65,6 +65,49 @@
 #define AssertIfFailed(result) result
 #endif
 
+#ifdef _MSC_VER // Microsoft compilers
+
+#define GET_ARG_COUNT(...)  INTERNAL_EXPAND_ARGS_PRIVATE(INTERNAL_ARGS_AUGMENTER(__VA_ARGS__))
+
+#define INTERNAL_ARGS_AUGMENTER(...) unused, __VA_ARGS__
+#define INTERNAL_EXPAND(x) x
+#define INTERNAL_EXPAND_ARGS_PRIVATE(...) INTERNAL_EXPAND(INTERNAL_GET_ARG_COUNT_PRIVATE(__VA_ARGS__, 69, 68, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+#define INTERNAL_GET_ARG_COUNT_PRIVATE(_1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, _17_, _18_, _19_, _20_, _21_, _22_, _23_, _24_, _25_, _26_, _27_, _28_, _29_, _30_, _31_, _32_, _33_, _34_, _35_, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, _65, _66, _67, _68, _69, _70, count, ...) count
+
+#else // Non-Microsoft compilers
+
+#define GET_ARG_COUNT(...) INTERNAL_GET_ARG_COUNT_PRIVATE(0, ## __VA_ARGS__, 70, 69, 68, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define INTERNAL_GET_ARG_COUNT_PRIVATE(_0, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_, _13_, _14_, _15_, _16_, _17_, _18_, _19_, _20_, _21_, _22_, _23_, _24_, _25_, _26_, _27_, _28_, _29_, _30_, _31_, _32_, _33_, _34_, _35_, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, _65, _66, _67, _68, _69, _70, count, ...) count
+
+#endif
+
+//---------------------------------------------------------------------------------------------------------------
+// Logging functions
+//---------------------------------------------------------------------------------------------------------------
+static LogMessageHandlerPtr globalLogMessageHandler = nullptr;
+
+// TODO: Log in output debug
+
+#define LogMessage(type, category, format, ...) \
+    { \
+        if (!GET_ARG_COUNT(__VA_ARGS__)) { \
+            if (globalLogMessageHandler) globalLogMessageHandler(type, category, __LPREFIX(__FUNCTION__), format); \
+        } else { \
+            wchar_t buffer[256]; \
+            int length = swprintf(buffer, sizeof(buffer), format, __VA_ARGS__); \
+            if (length >= sizeof(buffer)) { \
+                if (globalLogMessageHandler) globalLogMessageHandler(LogMessageType_Warning, category, __LPREFIX(__FUNCTION__), L"Cannot log message"); \
+                length = sizeof(buffer) - 1; \
+            } \
+            buffer[length] = '\0'; \
+            if (globalLogMessageHandler) globalLogMessageHandler(type, category, __LPREFIX(__FUNCTION__), buffer); \
+        } \
+    }
+
+#define LogDebugMessage(category, format, ...) LogMessage(LogMessageType_Debug, category, format, __VA_ARGS__)
+#define LogWarningMessage(category, format, ...) LogMessage(LogMessageType_Warning, category, format, __VA_ARGS__)
+#define LogErrorMessage(category, format, ...) LogMessage(LogMessageType_Error, category, format, __VA_ARGS__)
+
 //---------------------------------------------------------------------------------------------------------------
 // Debug Memory management functions
 //---------------------------------------------------------------------------------------------------------------
@@ -73,13 +116,13 @@
 typedef struct
 {
     size_t SizeInBytes;
-    char File[MAX_PATH];
+    wchar_t File[MAX_PATH];
     uint32_t LineNumber;
 } SystemAllocation;
 
 static DictionaryStruct* debugAllocations = NULL;
 
-void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNumber)
+void* SystemAllocateMemory(size_t sizeInBytes, const wchar_t* file, uint32_t lineNumber)
 {
     if (debugAllocations == NULL)
     {
@@ -90,7 +133,7 @@ void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNu
 
     SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
     allocation->SizeInBytes = sizeInBytes;
-    strcpy_s(allocation->File, sizeof(allocation->File), file);
+    wcscpy_s(allocation->File, _countof(allocation->File), file);
     allocation->LineNumber = lineNumber;
 
     DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
@@ -98,7 +141,7 @@ void* SystemAllocateMemory(size_t sizeInBytes, const char* file, uint32_t lineNu
     return pointer;
 }
 
-void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, uint32_t lineNumber)
+void* SystemAllocateMemoryAndReset(size_t count, size_t size, const wchar_t* file, uint32_t lineNumber)
 {
     if (debugAllocations == NULL)
     {
@@ -109,7 +152,7 @@ void* SystemAllocateMemoryAndReset(size_t count, size_t size, const char* file, 
     
     SystemAllocation* allocation = (SystemAllocation*)malloc(sizeof(SystemAllocation));
     allocation->SizeInBytes = count * size;
-    strcpy_s(allocation->File, sizeof(allocation->File), file);
+    wcscpy_s(allocation->File, _countof(allocation->File), file);
     allocation->LineNumber = lineNumber;
 
     DictionaryAdd(debugAllocations, (size_t)pointer, allocation);
@@ -138,7 +181,7 @@ void SystemFreeMemory(void* pointer)
 void SystemDisplayMemoryLeak(uint64_t key, void* data)
 {
     SystemAllocation* value = (SystemAllocation*)data;
-    printf("%zu (size in bytes: %zu): %s: %u\n", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
+    LogWarningMessage(LogMessageCategory_NativeApplication, L"%zu (size in bytes: %zu): %s: %u", (size_t)key, value->SizeInBytes, value->File, value->LineNumber);
 }
 
 void SystemInitDebugAllocations()
@@ -146,13 +189,13 @@ void SystemInitDebugAllocations()
     debugAllocations = DictionaryCreate(64);
 }
 
-void SystemCheckAllocations(const char* description)
+void SystemCheckAllocations(const wchar_t* description)
 {
     //DictionaryPrint(debugAllocations);
 
     if (debugAllocations->Count > 0)
     {
-        printf("WARNING: Leaked native memory allocations (%s): %zu\n", description, debugAllocations->Count);
+        LogWarningMessage(LogMessageCategory_NativeApplication, L"Leaked native memory allocations (%s): %zu", description, debugAllocations->Count);
         DictionaryEnumerateEntries(debugAllocations, SystemDisplayMemoryLeak);
     }
     
@@ -160,12 +203,12 @@ void SystemCheckAllocations(const char* description)
     debugAllocations = NULL;
 }
 
-void* operator new(size_t size, const char* file, uint32_t lineNumber)
+void* operator new(size_t size, const wchar_t* file, uint32_t lineNumber)
 {
     return SystemAllocateMemory(size, file, lineNumber);
 }
 
-void* operator new[](size_t size, const char* file, uint32_t lineNumber)
+void* operator new[](size_t size, const wchar_t* file, uint32_t lineNumber)
 {
     return SystemAllocateMemory(size, file, lineNumber);
 }
@@ -180,20 +223,20 @@ void operator delete[](void* pointer) noexcept
     return SystemFreeMemory(pointer);
 }
 
-void operator delete(void* pointer, const char* file, uint32_t lineNumber)
+void operator delete(void* pointer, const wchar_t* file, uint32_t lineNumber)
 {
     SystemFreeMemory(pointer);
 }
 
-void operator delete[](void* pointer, const char* file, uint32_t lineNumber)
+void operator delete[](void* pointer, const wchar_t* file, uint32_t lineNumber)
 {
     SystemFreeMemory(pointer);
 }
 
-#define new new(__FILE__, (uint32_t)__LINE__)
+#define new new(__LPREFIX(__FILE__), (uint32_t)__LINE__)
 
-#define malloc(size) SystemAllocateMemory(size, __FILE__, (uint32_t)__LINE__)
-#define calloc(count, size) SystemAllocateMemoryAndReset(count, size, __FILE__, (uint32_t)__LINE__)
+#define malloc(size) SystemAllocateMemory(size,__LPREFIX(__FILE__), (uint32_t)__LINE__)
+#define calloc(count, size) SystemAllocateMemoryAndReset(count, size, __LPREFIX(__FILE__), (uint32_t)__LINE__)
 //TODO: realloc
 #define free(pointer) SystemFreeMemory(pointer)
 
@@ -322,7 +365,7 @@ const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source)
     return destination;
 }
 
-const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
+const wchar_t* SystemConvertUtf8ToWideChar(const char* source)
 {
     size_t requiredSize;
     errno_t error = mbstowcs_s(&requiredSize, NULL, 0, (char *)source, 0);
@@ -345,6 +388,11 @@ const wchar_t* SystemConvertUtf8ToWideChar(const uint8_t* source)
 
     destination[convertedSize] = L'\0';
     return destination;
+}
+
+void SystemFreeConvertedString(const wchar_t* value)
+{
+    free((void*)value);
 }
 
 //---------------------------------------------------------------------------------------------------------------

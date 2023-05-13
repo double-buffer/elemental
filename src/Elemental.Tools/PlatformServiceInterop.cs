@@ -9,7 +9,7 @@ internal static partial class PlatformServiceInterop
     internal static partial void Native_FreeNativePointer(nint pointer);
 
     [LibraryImport("Elemental.Tools.Native")]
-    internal static partial void Native_InitShaderCompiler();
+    internal static partial void Native_InitShaderCompiler(in ShaderCompilerOptions options = default);
     
     [LibraryImport("Elemental.Tools.Native")]
     internal static partial void Native_FreeShaderCompiler();

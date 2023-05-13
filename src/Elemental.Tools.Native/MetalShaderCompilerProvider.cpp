@@ -84,7 +84,7 @@ bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLog
 {
     // BUG: 
     return false;
-    auto outputWString = SystemConvertUtf8ToWideChar((uint8_t*)output);
+    auto outputWString = SystemConvertUtf8ToWideChar(output);
 
     if (wcslen(outputWString) == 0)
     {

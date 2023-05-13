@@ -47,7 +47,7 @@ internal static unsafe class NativeWindowOptionsMarshaller
 {
     internal struct NativeWindowOptionsUnmanaged
     {
-        public byte* Title;
+        public void* Title;
         public int Width;
         public int Height;
         public NativeWindowState WindowState;
@@ -55,14 +55,19 @@ internal static unsafe class NativeWindowOptionsMarshaller
 
     public static NativeWindowOptionsUnmanaged ConvertToUnmanaged(NativeWindowOptions managed)
     {
-        return new NativeWindowOptionsUnmanaged
+        fixed (void* nativeTitle = &Utf16StringMarshaller.GetPinnableReference(managed.Title))
         {
-            Title = Utf8StringMarshaller.ConvertToUnmanaged(managed.Title),
-            Width = managed.Width,
-            Height = managed.Height,
-            WindowState = managed.WindowState
-        };
+            return new NativeWindowOptionsUnmanaged
+            {
+                Title = nativeTitle,
+                Width = managed.Width,
+                Height = managed.Height,
+                WindowState = managed.WindowState
+            };
+        }
     }
 
-    public static void Free(NativeWindowOptionsUnmanaged unmanaged) => Utf8StringMarshaller.Free(unmanaged.Title);
+    public static void Free(NativeWindowOptionsUnmanaged _)
+    {
+    }
 }

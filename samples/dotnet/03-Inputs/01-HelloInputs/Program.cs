@@ -5,7 +5,20 @@ using Elemental.Graphics;
 using Elemental.Inputs;
 using Elemental.Tools;
 
-using var applicationService = new NativeApplicationService();
+static void MessageHandler(LogMessageType messageType, LogMessageCategory category, string function, string message) 
+{
+    Console.ForegroundColor = messageType switch
+    {
+        LogMessageType.Warning => ConsoleColor.Yellow,
+        LogMessageType.Error => ConsoleColor.Red,
+        _ => ConsoleColor.Gray
+    };
+
+    Console.WriteLine($"{category}: {function}: {message}");
+    Console.ForegroundColor = ConsoleColor.Gray;
+}
+
+using var applicationService = new NativeApplicationService(new() { LogMessageHandler = MessageHandler });
 using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = GraphicsDiagnostics.Debug });
 using var inputsService = new InputsService();
 
@@ -20,7 +33,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 {
     if (availableGraphicsDevice.GraphicsApi == GraphicsApi.Vulkan)
     {
-        selectedGraphicsDevice = availableGraphicsDevice;
+        //selectedGraphicsDevice = availableGraphicsDevice;
     }
 
     Console.WriteLine($"{availableGraphicsDevice}");
@@ -37,7 +50,7 @@ var currentRenderSize = applicationService.GetWindowRenderSize(window);
 // HACK: This is needed when we run the program from the root directory
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
-using var shaderCompiler = new ShaderCompiler();
+using var shaderCompiler = new ShaderCompiler(new() { LogMessageHandler = MessageHandler });
 
 var shaderCode = File.ReadAllText("Triangle.hlsl");
 

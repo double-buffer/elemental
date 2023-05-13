@@ -46,12 +46,12 @@ void RegisterHidDevice(HANDLE hidDevice)
         return;
     }
 
-    printf("Gamepad connected: (ProductID: %d, VendorID: %d)\n", attrib.ProductID, attrib.VendorID);
+    LogDebugMessage(LogMessageCategory_Inputs, L"Gamepad connected: (ProductID: %d, VendorID: %d)", attrib.ProductID, attrib.VendorID);
     auto convertHidInputDeviceDataFunctionPointer = GetConvertHidInputDeviceDataFuncPtr(attrib.VendorID, attrib.ProductID);
 
     if (convertHidInputDeviceDataFunctionPointer == nullptr)
     {
-        printf("Cannot find an HID Input Device data converter function for: (ProductID: %d, VendorID: %d)\n", attrib.ProductID, attrib.VendorID);
+        LogWarningMessage(LogMessageCategory_Inputs, L"Cannot find an HID Input Device data converter function for: (ProductID: %d, VendorID: %d)", attrib.ProductID, attrib.VendorID);
         CloseHandle(hidDevice);
         return;
     }
@@ -90,7 +90,7 @@ uint32_t HidDevice_NotificationCallback(HCMNOTIFICATION handle, void* context, C
     }
     else
     {
-        printf("Disconnected...\n");
+        LogDebugMessage(LogMessageCategory_Inputs, L"Disconnected...");
 
         // TODO: Unregister device, free memory, etc...
     }

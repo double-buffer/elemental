@@ -4,7 +4,10 @@
 #include <math.h>
 #include "ElementalCommon.h"
 
-// TODO: Convert to typedef
+typedef struct 
+{
+    LogMessageHandlerPtr LogMessageHandler;
+} NativeApplicationOptions;
 
 typedef enum
 {
@@ -30,7 +33,7 @@ typedef enum
 
 typedef struct
 {
-    uint8_t* Title;
+    wchar_t* Title;
     uint32_t Width;
     uint32_t Height;
     NativeWindowState WindowState;

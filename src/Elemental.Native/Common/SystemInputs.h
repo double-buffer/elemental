@@ -141,7 +141,7 @@ void ConvertHidInputDeviceData_DualShock4Gamepad(InputState* inputState, int gam
 {
     DualShock4GamepadReport* inputData = (DualShock4GamepadReport*)reportData;
 
-    printf("LeftStickX: %u\n", inputData->LeftStickX);
+    LogDebugMessage(LogMessageCategory_Inputs, L"LeftStickX: %u", inputData->LeftStickX);
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 255));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 255));

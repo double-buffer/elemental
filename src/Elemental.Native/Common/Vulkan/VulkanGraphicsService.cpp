@@ -65,7 +65,7 @@ void VulkanInitGraphicsService(GraphicsServiceOptions* options)
 
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
-        printf("Vulkan Debug Mode\n");
+        LogDebugMessage(LogMessageCategory_Graphics, L"Vulkan Debug Mode");
 
         const char* layers[] =
         {
@@ -548,7 +548,7 @@ void VulkanWaitForFenceOnCpu(Fence fence)
 
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
     {
-        printf("Wait for fence on CPU...\n");
+        LogDebugMessage(LogMessageCategory_Graphics, L"Wait for fence on CPU...");
 
         VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
         waitInfo.semaphoreCount = 1;
@@ -927,7 +927,7 @@ void VulkanSetShader(void* commandListPointer, void* shaderPointer)
         // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
-            printf("Create PipelineState for shader %llu...\n", hash);
+            LogDebugMessage(LogMessageCategory_Graphics, L"Create PipelineState for shader %llu...", hash);
             auto pipelineStateCacheItem = VulkanCreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
             graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
@@ -1076,7 +1076,7 @@ VulkanCommandList* VulkanGetCommandList(VulkanCommandQueue* commandQueue, Vulkan
     {
         if (!isFromCommandPoolItem)
         {
-            printf("Warning: Not enough command buffer objects in the pool. Performance may decrease...\n");
+            LogWarningMessage(LogMessageCategory_Graphics, L"Warning: Not enough command buffer objects in the pool. Performance may decrease...");
         } 
 
         commandList = new VulkanCommandList(commandQueue->GraphicsDevice);
@@ -1309,26 +1309,20 @@ static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags
     // 	return VK_FALSE;
     // }
 
-    const char* type = "[93mVULKAN INFO";
+    auto messageType = LogMessageType_Debug;
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
-        type = "[91mVULKAN ERROR";
+        messageType = LogMessageType_Error;
     }
-
     else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
     {
-        type = "[93mVULKAN WARNING";
+        messageType = LogMessageType_Warning;
     }
 
-    char message[4096];
-    snprintf(message, 4096, "%s: %s[0m\n", type, pMessage);
-
-    printf("%s", message);
-
-#ifdef _WIN32
-    OutputDebugStringA(message);
-#endif
+    auto convertedString = SystemConvertUtf8ToWideChar(pMessage);
+    LogMessage(messageType, LogMessageCategory_Graphics, convertedString);
+    SystemFreeConvertedString(convertedString);
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {

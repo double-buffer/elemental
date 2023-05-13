@@ -21,6 +21,8 @@
         "type_traits": "cpp",
         "chrono": "cpp",
         "cstddef": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "xlocale": "cpp",
+        "format": "cpp"
     }
 }

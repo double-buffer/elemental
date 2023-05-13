@@ -50,7 +50,7 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     //-E for the entry point (eg. PSMain)
     arguments.push_back(L"-E");
     
-    auto entryPointString = SystemConvertUtf8ToWideChar(entryPoint);
+    auto entryPointString = SystemConvertUtf8ToWideChar((char*)entryPoint);
     arguments.push_back(entryPointString);
 
     // TODO: Use defines
@@ -137,7 +137,7 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
 
     if (pErrors && pErrors->GetStringLength() > 0)
     {
-        auto errorContent = SystemConvertUtf8ToWideChar((uint8_t*)pErrors->GetBufferPointer());
+        auto errorContent = SystemConvertUtf8ToWideChar((char*)pErrors->GetBufferPointer());
         auto currentLogType = ShaderCompilerLogEntryType_Error;
 
         uint32_t linesLength;

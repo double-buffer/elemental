@@ -78,11 +78,16 @@ DllExport void Native_FreeNativePointer(void* nativePointer)
     free(nativePointer);
 }
 
-DllExport void Native_InitShaderCompiler()
+DllExport void Native_InitShaderCompiler(ShaderCompilerOptions* options)
 {
     #ifdef _DEBUG
     SystemInitDebugAllocations();
     #endif
+
+    if (options->LogMessageHandler)
+    {
+        globalLogMessageHandler = options->LogMessageHandler;
+    }
 
     _platformTargetLanguages[GraphicsApi_Direct3D12] = ShaderLanguage_Dxil;
     _platformTargetLanguages[GraphicsApi_Vulkan] = ShaderLanguage_Spirv;
@@ -101,7 +106,7 @@ DllExport void Native_FreeShaderCompiler()
     }
     
     #ifdef _DEBUG
-    SystemCheckAllocations("Elemental Tools");
+    SystemCheckAllocations(L"Elemental Tools");
     #endif
 }
 

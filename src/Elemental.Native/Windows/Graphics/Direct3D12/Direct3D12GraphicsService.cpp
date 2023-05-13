@@ -72,7 +72,7 @@ void Direct3D12InitGraphicsService(GraphicsServiceOptions* options)
  
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && sdkLayerExists)
     {
-        printf("DirectX12 Debug Mode\n");
+        LogDebugMessage(LogMessageCategory_Graphics, L"DirectX12 Debug Mode");
 
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
@@ -263,7 +263,7 @@ void Direct3D12FreeCommandQueue(void* commandQueuePointer)
 void Direct3D12SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
-    commandQueue->DeviceObject->SetName(SystemConvertUtf8ToWideChar(label));
+    commandQueue->DeviceObject->SetName(SystemConvertUtf8ToWideChar((char*)label));
 }
 
 void* Direct3D12CreateCommandList(void* commandQueuePointer)
@@ -290,7 +290,7 @@ void Direct3D12FreeCommandList(void* commandListPointer)
 void Direct3D12SetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
     auto commandList = (Direct3D12CommandList*)commandListPointer;
-    commandList->DeviceObject->SetName(SystemConvertUtf8ToWideChar(label));
+    commandList->DeviceObject->SetName(SystemConvertUtf8ToWideChar((char*)label));
 }
 
 void Direct3D12CommitCommandList(void* commandListPointer)
@@ -352,7 +352,7 @@ void Direct3D12WaitForFenceOnCpu(Fence fence)
 
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
     {
-        printf("Wait for Fence on CPU...\n");
+        LogDebugMessage(LogMessageCategory_Graphics, L"Wait for Fence on CPU...");
         commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
         WaitForSingleObject(_globalFenceEvent, INFINITE);
     }
@@ -679,7 +679,7 @@ void Direct3D12SetShader(void* commandListPointer, void* shaderPointer)
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
             // TODO: Review allocators
-            printf("Create PipelineState for shader %llu...\n", hash);
+            LogDebugMessage(LogMessageCategory_Graphics, L"Create PipelineState for shader %llu...", hash);
             auto pipelineStateCacheItem = new PipelineStateCacheItem();
             pipelineStateCacheItem->PipelineState = Direct3D12CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
@@ -835,7 +835,7 @@ Direct3D12CommandList* Direct3D12GetCommandList(Direct3D12CommandQueue* commandQ
 
         if (commandList->IsUsed)
         {
-            printf("Warning: Not enough command list objects in the pool. Performance may decrease...\n");
+            LogWarningMessage(LogMessageCategory_Graphics, L"Warning: Not enough command list objects in the pool. Performance may decrease...");
             auto commandListResult = new Direct3D12CommandList(commandQueue, commandQueue->GraphicsDevice);
             commandListResult->IsUsed = true;
 
@@ -1104,13 +1104,27 @@ ComPtr<ID3D12PipelineState> Direct3D12CreateRenderPipelineState(Direct3D12Shader
     return pipelineState;
 }
 
-static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext)
+static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void* context)
 {
-    if (Severity != D3D12_MESSAGE_SEVERITY_INFO && Severity != D3D12_MESSAGE_SEVERITY_MESSAGE)
+    if (severity == D3D12_MESSAGE_SEVERITY_INFO)
     {
-        // TODO: Bind that to an elemental callback
-        printf("%s\n", pDescription);
+        return;
     }
+
+    auto messageType = LogMessageType_Debug;
+
+    if (severity == D3D12_MESSAGE_SEVERITY_WARNING)
+    {
+        messageType = LogMessageType_Warning;
+    }
+    else if(severity == D3D12_MESSAGE_SEVERITY_ERROR || severity == D3D12_MESSAGE_SEVERITY_CORRUPTION)
+    {
+        messageType = LogMessageType_Error;
+    }
+
+    auto convertedString = SystemConvertUtf8ToWideChar(description);
+    LogMessage(messageType, LogMessageCategory_Graphics, convertedString);
+    SystemFreeConvertedString(convertedString);
 }
 
 static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data)

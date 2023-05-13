@@ -1,6 +1,11 @@
 #pragma once
 #include "ElementalCommon.h"
 
+typedef struct 
+{
+    LogMessageHandlerPtr LogMessageHandler;
+} ShaderCompilerOptions;
+
 typedef enum
 {
     ShaderLanguage_Unknown = 0,

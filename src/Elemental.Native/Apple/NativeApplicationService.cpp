@@ -25,7 +25,9 @@ DllExport void Native_FreeNativePointer(void* nativePointer)
     free(nativePointer);
 }
 
-DllExport void* Native_CreateApplication(uint8_t* applicationName)
+// TODO: Important convert all uint8_t* for strings to wchar_t
+
+DllExport void* Native_CreateApplication(wchar_t* applicationName)
 {
     // TODO: Is it really needed? 
     ProcessSerialNumber processSerialNumber = {0, kCurrentProcess};
@@ -81,7 +83,7 @@ DllExport void* Native_CreateWindow(MacOSApplication* nativeApplication, NativeW
         NS::BackingStoreBuffered,
         false ));
 
-    windowHandle->setTitle(NS::String::string((const char*)options->Title, NS::StringEncoding::UTF8StringEncoding));
+    windowHandle->setTitle(NS::String::string((const char*)options->Title, NS::StringEncoding::UTF16StringEncoding));
     windowHandle->center();
     windowHandle->makeKeyAndOrderFront(nullptr);
 
@@ -134,9 +136,9 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(MacOSWindow* nativeWindow)
     return result;
 }
 
-DllExport void Native_SetWindowTitle(MacOSWindow* nativeWindow, uint8_t* title)
+DllExport void Native_SetWindowTitle(MacOSWindow* nativeWindow, wchar_t* title)
 {
-    nativeWindow->WindowHandle->setTitle(NS::String::string((const char*)title, NS::StringEncoding::UTF8StringEncoding));
+    nativeWindow->WindowHandle->setTitle(NS::String::string((const char*)title, NS::StringEncoding::UTF16StringEncoding));
 }
     
 DllExport void Native_SetWindowState(MacOSWindow* window, NativeWindowState windowState)
