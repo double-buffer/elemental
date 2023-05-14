@@ -49,7 +49,7 @@ typedef struct
 
 typedef struct
 {
-    const uint8_t* DeviceName;
+    wchar_t DeviceName[50];
     GraphicsApi GraphicsApi;
     uint64_t DeviceId;
     uint64_t AvailableMemory;

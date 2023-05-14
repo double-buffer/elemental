@@ -47,9 +47,9 @@ public readonly record struct GraphicsDeviceInfo
 [CustomMarshaller(typeof(GraphicsDeviceInfo), MarshalMode.Default, typeof(GraphicsDeviceInfoMarshaller))]
 internal static unsafe class GraphicsDeviceInfoMarshaller
 {
-    internal readonly struct GraphicsDeviceInfoUnmanaged
+    internal struct GraphicsDeviceInfoUnmanaged
     {
-        public byte* DeviceName { get; }
+        public fixed char DeviceName[50];
         public GraphicsApi GraphicsApi { get; }
         public ulong DeviceId { get; }
         public ulong AvailableMemory { get; }
@@ -64,15 +64,14 @@ internal static unsafe class GraphicsDeviceInfoMarshaller
     {
         return new GraphicsDeviceInfo
         {
-            DeviceName = Utf8StringMarshaller.ConvertToManaged(unmanaged.DeviceName) ?? string.Empty,
+            DeviceName = Marshal.PtrToStringUni((nint)unmanaged.DeviceName) ?? "Unknown Device",
             GraphicsApi = unmanaged.GraphicsApi,
             DeviceId = unmanaged.DeviceId,
             AvailableMemory = unmanaged.AvailableMemory
         };
     }
     
-    public static void Free(GraphicsDeviceInfoUnmanaged unmanaged)
+    public static void Free(GraphicsDeviceInfoUnmanaged _)
     {
-        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.DeviceName);
     }
 }

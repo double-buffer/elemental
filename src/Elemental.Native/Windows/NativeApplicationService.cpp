@@ -32,11 +32,6 @@ DllExport void Native_FreeNativeApplicationService()
     #endif
 }
 
-DllExport void Native_FreeNativePointer(void* nativePointer)
-{
-    delete nativePointer;
-}
-
 DllExport void* Native_CreateApplication(wchar_t* applicationName)
 {
     auto application = new Win32Application();

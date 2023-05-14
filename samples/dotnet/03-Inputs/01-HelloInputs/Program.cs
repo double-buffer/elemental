@@ -5,7 +5,7 @@ using Elemental.Graphics;
 using Elemental.Inputs;
 using Elemental.Tools;
 
-static void MessageHandler(LogMessageType messageType, LogMessageCategory category, string function, string message) 
+static void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, string function, string message) 
 {
     Console.ForegroundColor = messageType switch
     {
@@ -18,7 +18,7 @@ static void MessageHandler(LogMessageType messageType, LogMessageCategory catego
     Console.ForegroundColor = ConsoleColor.Gray;
 }
 
-using var applicationService = new NativeApplicationService(new() { LogMessageHandler = MessageHandler });
+using var applicationService = new NativeApplicationService(new() { LogMessageHandler = LogMessageHandler });
 using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = GraphicsDiagnostics.Debug });
 using var inputsService = new InputsService();
 
@@ -50,7 +50,7 @@ var currentRenderSize = applicationService.GetWindowRenderSize(window);
 // HACK: This is needed when we run the program from the root directory
 Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
 
-using var shaderCompiler = new ShaderCompiler(new() { LogMessageHandler = MessageHandler });
+using var shaderCompiler = new ShaderCompiler(new() { LogMessageHandler = LogMessageHandler });
 
 var shaderCode = File.ReadAllText("Triangle.hlsl");
 

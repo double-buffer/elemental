@@ -725,7 +725,7 @@ void Direct3D12DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX
 GraphicsDeviceInfo Direct3D12ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
 {
     auto result = GraphicsDeviceInfo();
-    result.DeviceName = SystemConvertWideCharToUtf8(adapterDescription.Description);
+    wcscpy_s(result.DeviceName, adapterDescription.Description);
     result.GraphicsApi = GraphicsApi_Direct3D12;
     result.DeviceId = Direct3D12GetDeviceId(adapterDescription);
     result.AvailableMemory = adapterDescription.DedicatedVideoMemory;
@@ -1123,7 +1123,7 @@ static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12
     }
 
     auto convertedString = SystemConvertUtf8ToWideChar(description);
-    LogMessage(messageType, LogMessageCategory_Graphics, convertedString);
+    LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString);
     SystemFreeConvertedString(convertedString);
 }
 

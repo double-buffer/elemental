@@ -963,8 +963,9 @@ void VulkanDispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, ui
    
 GraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
+    // TODO: Avoid std::wstring
     auto result = GraphicsDeviceInfo();
-    result.DeviceName = SystemConvertWideCharToUtf8(std::wstring(deviceProperties.deviceName, deviceProperties.deviceName + strlen(deviceProperties.deviceName)).c_str());
+    wcscpy_s(result.DeviceName, std::wstring(deviceProperties.deviceName, deviceProperties.deviceName + strlen(deviceProperties.deviceName)).c_str());
     result.GraphicsApi = GraphicsApi_Vulkan;
     result.DeviceId = deviceProperties.deviceID;
     result.AvailableMemory = deviceMemoryProperties.memoryHeaps[0].size;
@@ -1321,7 +1322,7 @@ static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags
     }
 
     auto convertedString = SystemConvertUtf8ToWideChar(pMessage);
-    LogMessage(messageType, LogMessageCategory_Graphics, convertedString);
+    LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString);
     SystemFreeConvertedString(convertedString);
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
