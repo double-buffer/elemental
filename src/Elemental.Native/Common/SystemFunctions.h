@@ -88,19 +88,20 @@ static LogMessageHandlerPtr globalLogMessageHandler = nullptr;
 
 // TODO: Log in output debug
 
+
 #define LogMessage(type, category, format, ...) \
     { \
         if (!GET_ARG_COUNT(__VA_ARGS__)) { \
-            if (globalLogMessageHandler) globalLogMessageHandler(type, category, __LPREFIX(__FUNCTION__), format); \
+            if (globalLogMessageHandler) globalLogMessageHandler(type, category, L"" __FUNCTION__, format); \
         } else { \
             wchar_t buffer[256]; \
             int length = swprintf(buffer, sizeof(buffer), format, __VA_ARGS__); \
             if (length >= sizeof(buffer)) { \
-                if (globalLogMessageHandler) globalLogMessageHandler(LogMessageType_Warning, category, __LPREFIX(__FUNCTION__), L"Cannot log message"); \
+                if (globalLogMessageHandler) globalLogMessageHandler(LogMessageType_Warning, category, L"" __FUNCTION__, L"Cannot log message"); \
                 length = sizeof(buffer) - 1; \
             } \
             buffer[length] = '\0'; \
-            if (globalLogMessageHandler) globalLogMessageHandler(type, category, __LPREFIX(__FUNCTION__), buffer); \
+            if (globalLogMessageHandler) globalLogMessageHandler(type, category, L"" __FUNCTION__, buffer); \
         } \
     }
 

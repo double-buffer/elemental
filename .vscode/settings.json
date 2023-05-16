@@ -23,6 +23,15 @@
         "cstddef": "cpp",
         "filesystem": "cpp",
         "xlocale": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "array": "cpp",
+        "compare": "cpp",
+        "functional": "cpp",
+        "memory": "cpp",
+        "utility": "cpp",
+        "xmemory": "cpp",
+        "xstring": "cpp",
+        "xtr1common": "cpp",
+        "xutility": "cpp"
     }
 }

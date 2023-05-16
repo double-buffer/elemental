@@ -1,21 +1,17 @@
 namespace Elemental;
 
-public enum LogMessageType
-{
-    Debug = 0,
-    Warning = 1,
-    Error = 2
-}
-
-public enum LogMessageCategory
-{
-    NativeApplication,
-    Graphics,
-    Inputs
-}
-
+/// <summary>
+/// Delegates that can be used to gets log messages.
+/// </summary>
+/// <param name="messageType">Type of the message.</param>
+/// <param name="category">Category of the message.</param>
+/// <param name="function"></param>
+/// <param name="message"></param>
 public delegate void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, string function, string message);
 
+/// <summary>
+/// Converts the handler to unmanaged.
+/// </summary>
 [CustomMarshaller(typeof(LogMessageHandler), MarshalMode.ManagedToUnmanagedIn, typeof(LogMessageHandlerMarshaller))]
 public static unsafe class LogMessageHandlerMarshaller
 {
@@ -37,6 +33,11 @@ public static unsafe class LogMessageHandlerMarshaller
         _interceptorEntry.Callback(messageType, category, Marshal.PtrToStringUni(new nint(function)) ?? "", Marshal.PtrToStringUni(new nint(message)) ?? "");
     }
 
+    /// <summary>
+    /// Convert to unmanaged.
+    /// </summary>
+    /// <param name="managed">Managed version of the object.</param>
+    /// <returns>Unmanaged pointer.</returns>
     public static nint ConvertToUnmanaged(LogMessageHandler managed)
     {
         // TODO: Unallocate handle
@@ -48,6 +49,10 @@ public static unsafe class LogMessageHandlerMarshaller
         return unmanaged;
     }
 
+    /// <summary>
+    /// Frees the native pointer.
+    /// </summary>
+    /// <param name="_">Native pointer.</param>
     public static void Free(nint _)
     {
     }
