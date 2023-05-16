@@ -1,7 +1,7 @@
 #include "PreCompiledHeader.h"
 
-#include "SystemFunctions.h"
 #include "Elemental.h"
+#include "SystemFunctions.h"
 #include "SystemInputs.h"
 
 #include "MacOSApplicationDelegate.cpp"
