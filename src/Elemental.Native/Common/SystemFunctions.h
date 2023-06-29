@@ -1,11 +1,5 @@
 #pragma once
 
-#ifdef _WINDOWS
-#pragma warning(disable: 5045)
-#pragma warning(disable: 4820)
-#pragma warning(disable: 4324)
-#endif
-
 // TODO: REVIEW HEADERS
 
 #include <stdbool.h>
@@ -20,8 +14,6 @@
 #include "Dictionary.h"
 
 #ifdef _WINDOWS
-//HACK: TEMPORARY
-#pragma warning(disable: 4100)
 
 #include <io.h>
 
@@ -88,20 +80,22 @@ static LogMessageHandlerPtr globalLogMessageHandler = nullptr;
 
 // TODO: Log in output debug
 
-
 #define LogMessage(type, category, format, ...) \
     { \
+        auto functionName = __FUNCTION__;\
+        wchar_t functionNameBuffer[256];\
+        mbstowcs (functionNameBuffer, functionName, strlen(functionName));\
         if (!GET_ARG_COUNT(__VA_ARGS__)) { \
-            if (globalLogMessageHandler) globalLogMessageHandler(type, category, L"" __FUNCTION__, format); \
+            if (globalLogMessageHandler) globalLogMessageHandler(type, category, functionNameBuffer, format); \
         } else { \
             wchar_t buffer[256]; \
             int length = swprintf(buffer, sizeof(buffer), format, __VA_ARGS__); \
             if (length >= sizeof(buffer)) { \
-                if (globalLogMessageHandler) globalLogMessageHandler(LogMessageType_Warning, category, L"" __FUNCTION__, L"Cannot log message"); \
+                if (globalLogMessageHandler) globalLogMessageHandler(LogMessageType_Warning, category, functionNameBuffer, L"Cannot log message"); \
                 length = sizeof(buffer) - 1; \
             } \
             buffer[length] = '\0'; \
-            if (globalLogMessageHandler) globalLogMessageHandler(type, category, L"" __FUNCTION__, buffer); \
+            if (globalLogMessageHandler) globalLogMessageHandler(type, category, functionNameBuffer, buffer); \
         } \
     }
 
@@ -234,10 +228,10 @@ void operator delete[](void* pointer, const wchar_t* file, uint32_t lineNumber)
     SystemFreeMemory(pointer);
 }
 
-#define new new(__LPREFIX(__FILE__), (uint32_t)__LINE__)
+#define new new(L"" __FILE__, (uint32_t)__LINE__)
 
-#define malloc(size) SystemAllocateMemory(size,__LPREFIX(__FILE__), (uint32_t)__LINE__)
-#define calloc(count, size) SystemAllocateMemoryAndReset(count, size, __LPREFIX(__FILE__), (uint32_t)__LINE__)
+#define malloc(size) SystemAllocateMemory(size, L"" __FILE__, (uint32_t)__LINE__)
+#define calloc(count, size) SystemAllocateMemoryAndReset(count, size, L"" __FILE__, (uint32_t)__LINE__)
 //TODO: realloc
 #define free(pointer) SystemFreeMemory(pointer)
 

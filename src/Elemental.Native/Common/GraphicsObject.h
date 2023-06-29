@@ -4,3 +4,4 @@ struct GraphicsObject
 {
     GraphicsApi GraphicsApi;
 };
+

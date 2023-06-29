@@ -13,6 +13,13 @@ std::vector<HidInputDevice> globalHidInputDevices;
 
 void RegisterHidDevice(HANDLE hidDevice)
 {
+    // HACK: Temporary
+    // For now it seems that we have multiple hid devices for the same controller :/
+    if (globalHidInputDevices.size() > 0)
+    {
+        //return;
+    }
+
     PHIDP_PREPARSED_DATA preparsedData;
         
     if (!HidD_GetPreparsedData(hidDevice, &preparsedData)) 
@@ -138,7 +145,7 @@ DWORD WINAPI InputThread(LPVOID lpParam)
                     return 0;
                 }
 
-                ConvertHidInputDeviceData_XboxOneWirelessOldDriverGamepad(globalInputState, 0, hidInputDevice.ReadBuffer, bytesRead);
+                hidInputDevice.InputDataConvertFunction(globalInputState, 0, hidInputDevice.ReadBuffer, bytesRead);
             }
         }
     }

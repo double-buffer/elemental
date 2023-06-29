@@ -1,20 +1,5 @@
 #pragma once
 
-#pragma warning(disable: 4820)
-#pragma warning(disable: 4668)
-#pragma warning(disable: 4365)
-#pragma warning(disable: 5026)
-#pragma warning(disable: 4625)
-#pragma warning(disable: 4626)
-#pragma warning(disable: 5027)
-#pragma warning(disable: 4061)
-#pragma warning(disable: 5204)
-#pragma warning(disable: 5045)
-
-// Inlining informational warnings
-#pragma warning(disable: 4710)
-#pragma warning(disable: 4711) 
-
 #ifdef _DEBUG
 #undef _DEBUG
 #define _WASDEBUG
@@ -60,13 +45,3 @@ using namespace Microsoft::WRL;
 #define _DEBUG
 #endif
 
-#pragma warning(default: 4820)
-#pragma warning(default: 4668)
-#pragma warning(default: 4365)
-#pragma warning(default: 5026)
-#pragma warning(default: 4625)
-#pragma warning(default: 4626)
-#pragma warning(default: 5027)
-#pragma warning(default: 4061)
-#pragma warning(default: 5204)
-#pragma warning(default: 5045)
