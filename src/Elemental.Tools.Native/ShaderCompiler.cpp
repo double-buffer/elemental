@@ -126,6 +126,8 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsAp
     
 DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
+    // TODO: Rewrite allocations here :(
+
     if (!_platformTargetLanguages.count(graphicsApi))
     {
         return CreateErrorResult(shaderStage, entryPoint, SystemConvertWideCharToUtf8(L"Graphics API is not supported!"));

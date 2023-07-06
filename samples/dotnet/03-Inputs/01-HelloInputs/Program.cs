@@ -149,10 +149,13 @@ applicationService.RunApplication(application, (status) =>
     {
         RotationX = shaderParameters.RotationX + -inputState.Gamepad.LeftStickY.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
         RotationY = shaderParameters.RotationY + inputState.Gamepad.LeftStickX.Value * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
-        CurrentColorIndex = inputState.Gamepad.Button1.Value == 1 ? shaderParameters.CurrentColorIndex + 1 : shaderParameters.CurrentColorIndex
+        RotationZ = shaderParameters.RotationZ + (inputState.Gamepad.RightShoulder.Value - inputState.Gamepad.LeftShoulder.Value) * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
+        TranslationX = shaderParameters.TranslationX + (inputState.Gamepad.RightStickX.Value + (inputState.Gamepad.DpadRight.Value - inputState.Gamepad.DpadLeft.Value)) * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
+        TranslationY = shaderParameters.TranslationY + (inputState.Gamepad.RightStickY.Value + (inputState.Gamepad.DpadUp.Value - inputState.Gamepad.DpadDown.Value)) * 5.0f * (float)frameTimer.Elapsed.TotalSeconds,
+        CurrentColorIndex = inputState.Gamepad.Button2.Value == 1 ? 1u : 0u
     };
 
-    //Console.WriteLine($"Left: {inputState.Gamepad.LeftStickX.Value}");
+    //Console.WriteLine($"Left: {inputState.Gamepad.DpadDown.Value}");
 
     frameTimer.Restart();
 
@@ -178,6 +181,9 @@ readonly record struct ShaderParameters
     public float RotationX { get; init; }
     public float RotationY { get; init; }
     public float RotationZ { get; init; }
+    public float TranslationX { get; init; }
+    public float TranslationY { get; init; }
+    public float TranslationZ { get; init; }
     public float AspectRatio { get; init; }
     public uint CurrentColorIndex { get; init; }
 }

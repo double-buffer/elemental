@@ -148,9 +148,17 @@ typedef enum : uint8_t
     Gamepad1LeftStickY,
     Gamepad1RightStickX,
     Gamepad1RightStickY,
+    Gamepad1DpadUp,
+    Gamepad1DpadRight,
+    Gamepad1DpadDown,
+    Gamepad1DpadLeft,
     Gamepad1Button1,
     Gamepad1Button2,
-    InputObjectKey_MaxValue = Gamepad1Button2
+    Gamepad1Button3,
+    Gamepad1Button4,
+    Gamepad1LeftShoulder,
+    Gamepad1RightShoulder,
+    InputObjectKey_MaxValue = Gamepad1RightShoulder
 } InputObjectKey;
 
 typedef enum : uint8_t

@@ -1,5 +1,25 @@
 
 #include "SystemInputs.h"
+#include "Elemental.h"
+#include <algorithm>
+#include <stdint.h>
+
+bool IsBitSet(uint8_t value, uint8_t bitNumber)
+{
+    return value & (1 << bitNumber);
+}
+
+bool IsRangeSet(uint8_t value, uint8_t mask, uint8_t minValue, uint8_t maxValue, uint8_t countValue)
+{
+    auto maskedValue = value & mask;
+    
+    if (minValue > maxValue)
+    {
+        return (maskedValue >= minValue || maskedValue <= maxValue) && maskedValue != countValue;
+    }
+
+    return maskedValue >= minValue && maskedValue <= maxValue;
+}
 
 float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
 {
@@ -89,8 +109,8 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(InputState* inputState, in
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 65535));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 65535));
-    SetInputObjectDigitalValue(inputState, Gamepad1Button1, inputData->Buttons & 0x01);
-    SetInputObjectDigitalValue(inputState, Gamepad1Button2, inputData->Buttons & 0x02);
+    SetInputObjectDigitalValue(inputState, Gamepad1Button1, inputData->Buttons & (0x01 << 4));
+    SetInputObjectDigitalValue(inputState, Gamepad1Button2, inputData->Buttons & (0x01 << 5));
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -99,14 +119,16 @@ void ConvertHidInputDeviceData_XboxOneWirelessGamepad(InputState* inputState, in
 
 typedef PackedStruct
 {
-    uint8_t report_id;
+    uint8_t ReportId;
     uint8_t LeftStickX;
     uint8_t LeftStickY;
     uint8_t RightStickX;
     uint8_t RightStickY;
-    uint8_t Buttons;
-    uint8_t left_trigger;
-    uint8_t right_trigger;
+    uint8_t Buttons1;
+    uint8_t Buttons2;
+    uint8_t Buttons3;
+    uint8_t LeftTrigger;
+    uint8_t RightTrigger;
     int16_t motion_x;
     int16_t motion_y;
     int16_t motion_z;
@@ -119,14 +141,24 @@ typedef PackedStruct
 
 void ConvertHidInputDeviceData_DualShock4Gamepad(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes)
 {
-    DualShock4GamepadReport* inputData = (DualShock4GamepadReport*)reportData;
+    auto inputData = (DualShock4GamepadReport*)reportData;
 
-    //LogDebugMessage(LogMessageCategory_Inputs, L"LeftStickX: %u", inputData->LeftStickX);
+    //LogDebugMessage(LogMessageCategory_Inputs, L"Dpad: %u", inputData->touchpad);
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 255));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 255));
-    SetInputObjectDigitalValue(inputState, Gamepad1Button1, inputData->Buttons & 0x01);
-    SetInputObjectDigitalValue(inputState, Gamepad1Button2, inputData->Buttons & 0x02);
+    SetInputObjectAnalogValue(inputState, Gamepad1RightStickX, NormalizeInputSigned(inputData->RightStickX, 255));
+    SetInputObjectAnalogValue(inputState, Gamepad1RightStickY, -NormalizeInputSigned(inputData->RightStickY, 255));
+    SetInputObjectDigitalValue(inputState, Gamepad1DpadUp, IsRangeSet(inputData->Buttons1, 0x0F, 7, 1, 8));
+    SetInputObjectDigitalValue(inputState, Gamepad1DpadDown, IsRangeSet(inputData->Buttons1, 0x0F, 3, 5, 8));
+    SetInputObjectDigitalValue(inputState, Gamepad1DpadRight, IsRangeSet(inputData->Buttons1, 0x0F, 1, 3, 8));
+    SetInputObjectDigitalValue(inputState, Gamepad1DpadLeft, IsRangeSet(inputData->Buttons1, 0x0F, 5, 7, 8));
+    SetInputObjectDigitalValue(inputState, Gamepad1Button1, IsBitSet(inputData->Buttons1, 0x04));
+    SetInputObjectDigitalValue(inputState, Gamepad1Button2, IsBitSet(inputData->Buttons1, 0x07));
+    SetInputObjectDigitalValue(inputState, Gamepad1Button3, IsBitSet(inputData->Buttons1, 0x05));
+    SetInputObjectDigitalValue(inputState, Gamepad1Button4, IsBitSet(inputData->Buttons1, 0x06));
+    SetInputObjectDigitalValue(inputState, Gamepad1LeftShoulder, IsBitSet(inputData->Buttons2, 0x00));
+    SetInputObjectDigitalValue(inputState, Gamepad1RightShoulder, IsBitSet(inputData->Buttons2, 0x01));
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -199,8 +231,16 @@ void InitGamepad(int32_t gamePadIndex)
     CreateInputObject(Gamepad1LeftStickY, InputObjectType_Analog);
     CreateInputObject(Gamepad1RightStickX, InputObjectType_Analog);
     CreateInputObject(Gamepad1RightStickY, InputObjectType_Analog);
+    CreateInputObject(Gamepad1DpadUp, InputObjectType_Digital);
+    CreateInputObject(Gamepad1DpadRight, InputObjectType_Digital);
+    CreateInputObject(Gamepad1DpadDown, InputObjectType_Digital);
+    CreateInputObject(Gamepad1DpadLeft, InputObjectType_Digital);
     CreateInputObject(Gamepad1Button1, InputObjectType_Digital);
     CreateInputObject(Gamepad1Button2, InputObjectType_Digital);
+    CreateInputObject(Gamepad1Button3, InputObjectType_Digital);
+    CreateInputObject(Gamepad1Button4, InputObjectType_Digital);
+    CreateInputObject(Gamepad1LeftShoulder, InputObjectType_Digital);
+    CreateInputObject(Gamepad1RightShoulder, InputObjectType_Digital);
 }
 
 // BUG: It seems that sometimes the state is not init on MacOS. We have random gamepad movement

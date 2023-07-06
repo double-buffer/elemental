@@ -1,7 +1,7 @@
 #pragma once
 
-#include "SystemFunctions.h"
 #include "Elemental.h"
+#include "SystemFunctions.h"
 
 float NormalizeInputSigned(uint32_t value, uint32_t maxValue);
 void SetInputObjectAnalogValue(InputState* inputState, InputObjectKey inputObjectKey, float_t value); 

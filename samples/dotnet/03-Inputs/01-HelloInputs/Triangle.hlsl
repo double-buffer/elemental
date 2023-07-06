@@ -1,10 +1,13 @@
-#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=5, b0)"
+#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=8, b0)"
 
 struct ShaderParameters
 {
     float RotationX;
     float RotationY;
     float RotationZ;
+    float TranslationX;
+    float TranslationY;
+    float TranslationZ;
     float AspectRatio;
     uint CurrentColorIndex;
 };
@@ -80,6 +83,16 @@ float4x4 RotationMatrix(float rotationX, float rotationY, float rotationZ)
     return float4x4(row1, row2, row3, row4);
 }
 
+float4x4 TranslationMatrix(float translationX, float translationY, float translationZ)
+{
+    float4 row1 = float4(1.0f, 0.0f, 0.0f, 0.0f);
+    float4 row2 = float4(0.0f, 1.0f, 0.0f, 0.0f);
+    float4 row3 = float4(0.0f, 0.0f, 1.0f, 0.0f);
+    float4 row4 = float4(translationX, translationY, translationZ, 1.0f);
+
+    return float4x4(row1, row2, row3, row4);
+}
+
 [OutputTopology("triangle")]
 [NumThreads(32, 1, 1)]
 void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[3], out indices uint3 indices[1])
@@ -90,7 +103,7 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
 
     if (groupThreadId < meshVertexCount)
     {
-        float4x4 worldMatrix = RotationMatrix(parameters.RotationX, parameters.RotationY, parameters.RotationZ);
+        float4x4 worldMatrix = mul(RotationMatrix(parameters.RotationX, parameters.RotationY, parameters.RotationZ), TranslationMatrix(parameters.TranslationX, parameters.TranslationY, parameters.TranslationZ));
         float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, -2), float3(0, 0, 0), float3(0, 1, 0));
         float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
 

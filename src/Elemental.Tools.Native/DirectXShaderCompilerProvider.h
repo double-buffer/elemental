@@ -1,6 +1,7 @@
 #pragma once
-#include "PreCompiledHeader.h"
+
 #include "ElementalTools.h"
+#include "SystemFunctions.h"
 #include "ShaderCompilerProvider.h"
 
 #include "Interop/DxilRootSignature.h"

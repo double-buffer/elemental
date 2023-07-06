@@ -52,8 +52,16 @@ public enum InputObjectKey
     Gamepad1LeftStickY,
     Gamepad1RightStickX,
     Gamepad1RightStickY,
+    Gamepad1DpadUp,
+    Gamepad1DpadRight,
+    Gamepad1DpadDown,
+    Gamepad1DpadLeft,
     Gamepad1Button1,
     Gamepad1Button2,
+    Gamepad1Button3,
+    Gamepad1Button4,
+    Gamepad1LeftShoulder,
+    Gamepad1RightShoulder
 }
 
 public enum InputObjectType
@@ -124,8 +132,20 @@ public readonly ref struct Gamepad
 
     public InputObjectValue LeftStickX => new InputObjectValue(_inputState, InputObjectKey.Gamepad1LeftStickX);
     public InputObjectValue LeftStickY => new InputObjectValue(_inputState, InputObjectKey.Gamepad1LeftStickY);
-    
+    public InputObjectValue RightStickX => new InputObjectValue(_inputState, InputObjectKey.Gamepad1RightStickX);
+    public InputObjectValue RightStickY => new InputObjectValue(_inputState, InputObjectKey.Gamepad1RightStickY);
+
+    public InputObjectValue DpadUp => new InputObjectValue(_inputState, InputObjectKey.Gamepad1DpadUp);
+    public InputObjectValue DpadRight => new InputObjectValue(_inputState, InputObjectKey.Gamepad1DpadRight);
+    public InputObjectValue DpadDown => new InputObjectValue(_inputState, InputObjectKey.Gamepad1DpadDown);
+    public InputObjectValue DpadLeft => new InputObjectValue(_inputState, InputObjectKey.Gamepad1DpadLeft);
+
     // TODO: Chagne button name
     public InputObjectValue Button1 => new InputObjectValue(_inputState, InputObjectKey.Gamepad1Button1);
     public InputObjectValue Button2 => new InputObjectValue(_inputState, InputObjectKey.Gamepad1Button2);
+    public InputObjectValue Button3 => new InputObjectValue(_inputState, InputObjectKey.Gamepad1Button3);
+    public InputObjectValue Button4 => new InputObjectValue(_inputState, InputObjectKey.Gamepad1Button4);
+
+    public InputObjectValue LeftShoulder => new InputObjectValue(_inputState, InputObjectKey.Gamepad1LeftShoulder);
+    public InputObjectValue RightShoulder => new InputObjectValue(_inputState, InputObjectKey.Gamepad1RightShoulder);
 }

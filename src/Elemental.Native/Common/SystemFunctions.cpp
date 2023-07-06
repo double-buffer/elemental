@@ -86,6 +86,7 @@ void SystemSplitString(const wchar_t* source, const wchar_t separator, wchar_t**
         while (*p != L'\0') {
             if (*p == separator) {
                 *p = L'\0';
+                result[index++] = p;
             } else if (index == 0 || *(p - 1) == L'\0') {
                 result[index++] = p;
             }
@@ -121,7 +122,7 @@ const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source)
 const wchar_t* SystemConvertUtf8ToWideChar(const char* source)
 {
     size_t requiredSize;
-    errno_t error = mbstowcs_s(&requiredSize, NULL, 0, (char *)source, 0);
+    errno_t error = mbstowcs_s(&requiredSize, NULL, 0, (char*)source, 0);
 
     if (error != 0) 
     {

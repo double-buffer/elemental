@@ -1,4 +1,3 @@
-#include "PreCompiledHeader.h"
 #include "DirectXShaderCompilerProvider.h"
 
 DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
@@ -100,6 +99,12 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
 
     ComPtr<IDxcResult> dxilCompileResult;
     AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&dxilCompileResult)));
+
+    if (ProcessLogOutput(logList, dxilCompileResult))
+    {
+        delete entryPointString;
+        return Span<uint8_t>::Empty();
+    }
     
     ComPtr<IDxcResult> compileResult;
 
@@ -130,6 +135,7 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
 
 bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
 {
+    // TODO: Allocations are really bad here :(
     auto hasErrors = false;
 
     ComPtr<IDxcBlobUtf8> pErrors;
@@ -157,16 +163,16 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
                 continue;
             }
 
-            if (line.find(L"warning:", 0) != -1)
+            if (line.find(L"warning:", 0) != std::wstring::npos)
             {
                 currentLogType = ShaderCompilerLogEntryType_Warning;
             }
-            else if (line.find(L"error:", 0) != -1)
+            else if (line.find(L"error:", 0) != std::wstring::npos)
             {
                 currentLogType = ShaderCompilerLogEntryType_Error;
                 hasErrors = true;
             }
-            
+        
             if (line.length() > 0)
             {
                 logList.push_back({ currentLogType, SystemConvertWideCharToUtf8(line.c_str()) });

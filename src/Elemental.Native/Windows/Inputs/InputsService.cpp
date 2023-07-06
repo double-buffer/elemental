@@ -1,10 +1,4 @@
-#include "HidInputDevice.h"
-#include "SystemInputs.h"
-
-#include <vector>
-
-#define GAMEPAD_USAGE_PAGE 0x01
-#define GAMEPAD_USAGE_ID   0x05
+#include "InputsService.h"
 
 static InputState* globalInputState = nullptr;
 static HCMNOTIFICATION globalNotificationHandle = nullptr;
