@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Elemental.h"
+
 struct Win32Application
 {
     HINSTANCE ApplicationInstance;

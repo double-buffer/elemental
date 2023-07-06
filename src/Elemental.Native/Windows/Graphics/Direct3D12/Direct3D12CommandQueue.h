@@ -1,5 +1,9 @@
 #pragma once
 
+#include "GraphicsObject.h"
+
+struct Direct3D12GraphicsDevice;
+
 struct Direct3D12CommandQueue : GraphicsObject
 {
     Direct3D12CommandQueue(Direct3D12GraphicsDevice* graphicsDevice)

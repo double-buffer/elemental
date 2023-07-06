@@ -1,8 +1,11 @@
-#include "PreCompiledHeader.h"
+#include "Dictionary.cpp"
+#include "SystemLogging.h"
+#include "SystemMemory.cpp"
 
 #include "Elemental.h"
-#include "SystemFunctions.h"
-#include "SystemInputs.h"
+
+#include "SystemFunctions.cpp"
+#include "SystemInputs.cpp"
 #include "CircularList.h"
 
 #include "NativeApplicationService.cpp"
@@ -10,4 +13,3 @@
 #include "Vulkan/VulkanGraphicsService.cpp"
 #include "Graphics/GraphicsService.cpp"
 #include "Inputs/InputsService.cpp"
-

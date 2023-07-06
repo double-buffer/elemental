@@ -1,5 +1,12 @@
 #pragma once
 
+#include "Elemental.h"
+#include "CircularList.h"
+#include "Dictionary.h"
+#include "GraphicsObject.h"
+#include "Direct3D12Common.h"
+#include "Direct3D12CommandList.h"
+
 struct CommandAllocatorPoolItem
 {
     ComPtr<ID3D12CommandAllocator> Allocator;

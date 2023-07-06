@@ -2,11 +2,9 @@
 
 #define PsoSubObject(name, subObjectType, subObject) 	struct alignas(void*) Def##name \
 						{ \
-						private: \
 							D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type; \
 							subObject innerObject; \
  \
-						public: \
 							Def##name() noexcept : type(subObjectType), innerObject()  \
 							{ \
 							} \

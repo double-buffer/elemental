@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <io.h>
 
-
 #include <ShellScalingAPI.h>
 #include <Windows.h>
 #include <dwmapi.h>
@@ -17,15 +16,8 @@
 
 #include <wrl/client.h>
 #include "d3d12.h"
-
-#if defined(NTDDI_WIN10_RS2)
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
-#else
-#include <dxgi1_5.h>
-#endif
-
-
 
 #define DllExport extern "C" __declspec(dllexport)
 
@@ -50,4 +42,8 @@ using namespace Microsoft::WRL;
 #pragma comment(lib, "hid.lib")
 #pragma comment(lib, "Cfgmgr32.lib")
 #pragma comment(lib, "SetupAPI") 
+
+
+
+
 

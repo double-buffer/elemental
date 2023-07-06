@@ -1,4 +1,5 @@
 #include "HidInputDevice.h"
+#include "SystemInputs.h"
 
 #include <vector>
 

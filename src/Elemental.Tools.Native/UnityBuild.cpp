@@ -1,7 +1,10 @@
-#include "PreCompiledHeader.h"
+#include "Dictionary.cpp"
+#include "SystemLogging.h"
+#include "SystemMemory.cpp"
 
 #include "ElementalTools.h"
-#include "SystemFunctions.h"
+
+#include "SystemFunctions.cpp"
 
 #include "DirectXShaderCompilerProvider.cpp"
 #include "SpirvCrossShaderCompilerProvider.cpp"

@@ -1,17 +1,6 @@
-#include "PreCompiledHeader.h"
-#include "Win32Application.h"
-#include "Win32Window.h"
+#include "NativeApplicationService.h"
 
-#pragma warning(disable: 4191)
-#include "Libs/Win32DarkMode/DarkMode.h"
-#pragma warning(default: 4191)
-
-// HACK: Remove that
-#include <map>
 HWND globalMainWindow;
-
-void ProcessMessages(Win32Application* application);
-LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
@@ -269,15 +258,6 @@ static std::map<HWND, Win32Window*> windowMap = std::map<HWND, Win32Window*>();
 
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	// TODO: Bind correct application
-	WindowsEvent event
-	{
-		window,
-		message,
-		wParam,
-		lParam
-	};
-
 	switch (message)
 	{
     case WM_CREATE:
@@ -303,7 +283,6 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 			if ((HIWORD(lParam) & KF_ALTDOWN))
 			{
                 auto nativeWindow = windowMap[window];
-                auto size = Native_GetWindowRenderSize(nativeWindow);
                 Native_SetWindowState(nativeWindow, NativeWindowState_FullScreen);
             }
 		}

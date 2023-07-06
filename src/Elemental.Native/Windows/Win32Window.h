@@ -1,4 +1,5 @@
 #pragma once
+#include "Elemental.h"
 
 struct Win32Window
 {

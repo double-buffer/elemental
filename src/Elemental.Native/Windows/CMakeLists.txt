@@ -9,10 +9,13 @@ target_link_libraries(Direct3D12 INTERFACE d3d12)
 
 add_library(Elemental.Native SHARED UnityBuild.cpp)
 
-target_compile_options(Elemental.Native PRIVATE -Wall -EHs)
+target_compile_options(Elemental.Native PRIVATE -W4 -EHs)
+target_compile_options(Elemental.Native PRIVATE -Wno-unused-parameter)
+target_compile_options(Elemental.Native PRIVATE -Wno-missing-field-initializers)
 target_compile_features(Elemental.Native PRIVATE cxx_std_20)
 target_precompile_headers(Elemental.Native PRIVATE PreCompiledHeader.h)
 
+target_include_directories(Elemental.Native PRIVATE .)
 target_link_libraries(Elemental.Native PRIVATE common)
 target_link_libraries(Elemental.Native PRIVATE external_dependencies)
 target_link_libraries(Elemental.Native PRIVATE Direct3D12)

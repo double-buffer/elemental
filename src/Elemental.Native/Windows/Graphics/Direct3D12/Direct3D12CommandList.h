@@ -1,5 +1,9 @@
 #pragma once
 
+#include "GraphicsObject.h"
+#include "Direct3D12Common.h"
+#include "Direct3D12CommandQueue.h"
+
 struct CommandAllocatorPoolItem;
 
 struct Direct3D12CommandList : GraphicsObject
