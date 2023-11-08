@@ -22,7 +22,7 @@ jobs:
 
     - name: Build Windows Platform
       working-directory: ./src/Elemental.Native/Windows
-      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+      run: cmake --build ../../build --target Elemental.Native --config Release
 
     - name: Download Vulkan Loader
       working-directory: ./src/Elemental.Native/Windows
