@@ -20,15 +20,18 @@ jobs:
       with:
         msbuild-architecture: x64
 
+    - name: Setup MSVC
+      uses: TheMrMilchmann/setup-msvc-dev@v3
+      with:
+        arch: x64
+
     - name: Setup Ninja
       uses: ashutoshvarma/setup-ninja@master
       with:
         version: 1.10.0
 
     - name: Build Windows Platform
-      shell: cmd
       run: |
-        call "%MSVC_PATH%\VC\Auxiliary\Build\vcvars64.bat"
         mkdir ./build
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G Ninja -B ./build -S . -DCMAKE_CXX_COMPILER=clang-cl
         cmake --build ./build --target Elemental.Native --config Release
