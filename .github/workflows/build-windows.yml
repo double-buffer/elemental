@@ -59,13 +59,12 @@ jobs:
       working-directory: ./build/src/Elemental.Native/Windows
       shell: bash
       run: |
-        cp ./bin/D3D12/*.dll ./bin/
-        cp ${{ env.vulkan_dll_path }} ./bin/
+        cp ${{ env.vulkan_dll_path }} .
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
         name: WindowsNativex64
         path: |
-            ./build/src/Elemental.Native/Windows/bin/*.dll
+            ./build/src/Elemental.Native/Windows/*.dll
 
