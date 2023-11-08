@@ -26,6 +26,7 @@ jobs:
         version: 1.10.0
 
     - name: Build Windows Platform
+      shell: cmd
       run: |
         call "%MSVC_PATH%\VC\Auxiliary\Build\vcvars64.bat"
         mkdir ./build
