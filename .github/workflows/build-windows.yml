@@ -27,6 +27,7 @@ jobs:
 
     - name: Build Windows Platform
       run: |
+        call "%MSVC_PATH%\VC\Auxiliary\Build\vcvars64.bat"
         mkdir ./build
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G Ninja -B ./build -S . -DCMAKE_CXX_COMPILER=clang-cl
         cmake --build ./build --target Elemental.Native --config Release
