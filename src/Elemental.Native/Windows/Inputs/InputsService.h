@@ -7,7 +7,7 @@
 #define GAMEPAD_USAGE_PAGE 0x01
 #define GAMEPAD_USAGE_ID   0x05
 
-struct HidInputDevice 
+struct WindowsHidInputDevice 
 {
     uint32_t DeviceId; 
     uint32_t ReadBufferSizeInBytes;

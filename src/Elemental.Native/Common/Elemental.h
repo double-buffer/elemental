@@ -163,6 +163,24 @@ typedef enum : uint8_t
 
 typedef enum : uint8_t
 {
+    GamepadLeftStickX,
+    GamepadLeftStickY,
+    GamepadRightStickX,
+    GamepadRightStickY,
+    GamepadDpadUp,
+    GamepadDpadRight,
+    GamepadDpadDown,
+    GamepadDpadLeft,
+    GamepadButton1,
+    GamepadButton2,
+    GamepadButton3,
+    GamepadButton4,
+    GamepadLeftShoulder,
+    GamepadRightShoulder
+} InputsValueId;
+
+typedef enum : uint8_t
+{
     InputObjectType_Digital,
     InputObjectType_Analog
 } InputObjectType;
@@ -179,3 +197,11 @@ typedef struct
     InputObjectValueAddress Value;
     InputObjectValueAddress PreviousValue;
 } InputObject;
+
+typedef struct
+{
+    uint32_t DeviceId;
+    InputsValueId Id;
+    uint64_t Timestamp;
+    float_t Value;
+} InputsValue;

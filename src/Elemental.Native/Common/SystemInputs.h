@@ -3,36 +3,28 @@
 #include "Elemental.h"
 #include "SystemFunctions.h"
 
-float NormalizeInputSigned(uint32_t value, uint32_t maxValue);
-void SetInputObjectAnalogValue(InputState* inputState, InputObjectKey inputObjectKey, float_t value); 
-void SetInputObjectDigitalValue(InputState* inputState, InputObjectKey inputObjectKey, bool value); 
+#define MAX_QUEUE_INPUTSVALUES 255
 
-//---------------------------------------------------------------------------------------------------------------
-// Vendor specific gamepad code
-//---------------------------------------------------------------------------------------------------------------
-
-typedef enum : uint32_t 
+struct NativeInputsQueue
 {
-    HidGamepadVendor_Microsoft = 0x045E,
-    HidGamepadVendor_Sony = 0x054C
-} HidGamepadVendor;
+    InputsValue InputsValues[255];
+    uint32_t ReadIndex;
+    uint32_t WriteIndex;
+    uint32_t Count;
+};
 
-typedef enum : uint32_t 
-{
-    HidGamepadProduct_XboxOneWirelessOldDriver = 0x02E0,
-    HidGamepadProduct_XboxOneWireless = 0x02FD,
-    HidGamepadProduct_DualShock4OldDriver = 0x5C4,
-    HidGamepadProduct_DualShock4 = 0x9cc
-} HidGamepadProduct;
-
-
-//---------------------------------------------------------------------------------------------------------------
-// Vendor gamepad dispatcher
-//---------------------------------------------------------------------------------------------------------------
+NativeInputsQueue* CreateNativeInputsQueue();
+void FreeNativeInputsQueue(NativeInputsQueue* nativeInputsQueue);
+void AddNativeInputsQueueItem(NativeInputsQueue* nativeInputsQueue, InputsValue inputsValue);
 
 typedef void (*ConvertHidInputDeviceDataFuncPtr)(InputState* inputState, int gamepadIndex, void* reportData, uint32_t reportSizeInBytes);
 ConvertHidInputDeviceDataFuncPtr GetConvertHidInputDeviceDataFuncPtr(uint32_t vendorId, uint32_t productId);
 
+
+
+
+
+// TODO: To remove
 void CreateInputObject(InputObjectKey inputObjectKey, InputObjectType inputObjectType);
 void InitGamepad(int32_t gamePadIndex);
 InputState* InitInputState();

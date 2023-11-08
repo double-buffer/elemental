@@ -29,3 +29,4 @@ bld/
 .build/
 .swiftpm/
 external/shader-compilers/
+cmake/

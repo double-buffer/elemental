@@ -60,5 +60,4 @@ jobs:
         dotnet build ./samples/01-HelloWorld
         dotnet build ./samples/02-HelloWindow
         dotnet build ./samples/03-HelloTriangle
-
-
+    

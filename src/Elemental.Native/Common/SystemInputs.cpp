@@ -1,8 +1,34 @@
-
 #include "SystemInputs.h"
-#include "Elemental.h"
-#include <algorithm>
-#include <stdint.h>
+
+static NativeInputsQueue* globalDebugNativeInputsQueue = nullptr;
+
+NativeInputsQueue* CreateNativeInputsQueue()
+{
+    auto nativeInputsQueue = new NativeInputsQueue();
+    globalDebugNativeInputsQueue = nativeInputsQueue; // HACK: Temporary
+    return nativeInputsQueue;
+}
+
+void FreeNativeInputsQueue(NativeInputsQueue* nativeInputsQueue)
+{
+    delete nativeInputsQueue;
+}
+
+void AddNativeInputsQueueItem(NativeInputsQueue* nativeInputsQueue, InputsValue inputsValue)
+{
+    if (nativeInputsQueue->WriteIndex == nativeInputsQueue->Count)
+    {
+        LogErrorMessage(LogMessageCategory_Inputs, L"Native Inputs Queue is full");
+    }
+    
+
+    // TODO: Implement the rest
+}
+
+
+
+
+
 
 bool IsBitSet(uint8_t value, uint8_t bitNumber)
 {
@@ -58,7 +84,34 @@ void SetInputObjectDigitalValue(InputState* inputState, InputObjectKey inputObje
     uint32_t currentValue = ((uint32_t *)inputState->DataPointer)[inputObject.Value.Offset];
     uint32_t mask = 1u << (uint32_t)inputObject.Value.BitPosition;
     ((uint32_t *)inputState->DataPointer)[inputObject.Value.Offset] = (currentValue & ~mask) | ((value ? 1 : 0) << inputObject.Value.BitPosition);
+
+    // TODO: Testing purpose only, to refactor
+    InputsValue inputsValue = {};
+    inputsValue.Id = (InputsValueId)inputObjectKey;
+    inputsValue.Value = value ? 1.0f : 0.0f;
+    inputsValue.Timestamp = 0; // TODO
+    inputsValue.DeviceId = 0; // TODO
+
+    AddNativeInputsQueueItem(globalDebugNativeInputsQueue, inputsValue);
 }
+
+//---------------------------------------------------------------------------------------------------------------
+// Vendor specific gamepad code
+//---------------------------------------------------------------------------------------------------------------
+
+typedef enum : uint32_t 
+{
+    HidGamepadVendor_Microsoft = 0x045E,
+    HidGamepadVendor_Sony = 0x054C
+} HidGamepadVendor;
+
+typedef enum : uint32_t 
+{
+    HidGamepadProduct_XboxOneWirelessOldDriver = 0x02E0,
+    HidGamepadProduct_XboxOneWireless = 0x02FD,
+    HidGamepadProduct_DualShock4OldDriver = 0x5C4,
+    HidGamepadProduct_DualShock4 = 0x9cc
+} HidGamepadProduct;
 
 //---------------------------------------------------------------------------------------------------------------
 // Xbox One Wireless old driver
@@ -159,6 +212,7 @@ void ConvertHidInputDeviceData_DualShock4Gamepad(InputState* inputState, int gam
     SetInputObjectDigitalValue(inputState, Gamepad1Button4, IsBitSet(inputData->Buttons1, 0x06));
     SetInputObjectDigitalValue(inputState, Gamepad1LeftShoulder, IsBitSet(inputData->Buttons2, 0x00));
     SetInputObjectDigitalValue(inputState, Gamepad1RightShoulder, IsBitSet(inputData->Buttons2, 0x01));
+
 }
 
 //---------------------------------------------------------------------------------------------------------------

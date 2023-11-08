@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO: Do we need that data structure?
 template<typename T>
 class CircularList
 {

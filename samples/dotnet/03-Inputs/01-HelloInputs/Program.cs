@@ -21,6 +21,7 @@ static void LogMessageHandler(LogMessageType messageType, LogMessageCategory cat
 using var applicationService = new NativeApplicationService(new() { LogMessageHandler = LogMessageHandler });
 using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = GraphicsDiagnostics.Debug });
 using var inputsService = new InputsService();
+using var inputsQueue = inputsService.CreateInputsQueue();
 
 using var application = applicationService.CreateApplication("Hello Window");
 using var window = applicationService.CreateWindow(application);
@@ -102,6 +103,8 @@ for (var i = 0; i < shaderCompilationResults.Length; i++)
 using var shader = graphicsService.CreateShader(graphicsDevice, shaderParts);
 
 var frameTimer = new Stopwatch();
+var currentFrame = 0u;
+
 var shaderParameters = new ShaderParameters()
 {
     AspectRatio = (float)currentRenderSize.Width / currentRenderSize.Height
@@ -131,18 +134,18 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.WaitForSwapChainOnCpu(swapChain);
     var inputState = inputsService.GetInputState(application);
 
-    //Console.WriteLine($"GamePad LeftX: {inputState.Gamepad.LeftStickX.Value}");
+    var inputsValues = inputsService.ReadInputsQueue(inputsQueue);
 
-    foreach (var state in inputState.InputStateData)
+    if (inputsValues.Length > 0)
     {
-        //Console.Write($"{state} ");
-    }
+        Console.WriteLine($"===== Inputs Queue {currentFrame} =====");
 
-    //Console.WriteLine();
+        foreach (var inputsValue in inputsValues)
+        {
+            Console.WriteLine($"InputsValue: {inputsValue.Id}");
+        }
 
-    foreach (var inputObject in inputState.InputObjects)
-    {
-        //Console.WriteLine($"{inputObject} ");
+        Console.WriteLine("===== End Inputs Queue =====");
     }
 
     shaderParameters = shaderParameters with
@@ -173,6 +176,7 @@ applicationService.RunApplication(application, (status) =>
     graphicsService.ExecuteCommandList(commandQueue, commandList);
 
     graphicsService.PresentSwapChain(swapChain);
+    currentFrame++;
     return true;
 });
 

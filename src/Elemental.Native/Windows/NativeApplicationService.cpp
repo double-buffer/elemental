@@ -11,6 +11,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     if (options->LogMessageHandler)
     {
         globalLogMessageHandler = options->LogMessageHandler;
+        LogDebugMessage(LogMessageCategory_NativeApplication, L"Init OK");
     }
 }
 

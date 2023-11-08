@@ -15,7 +15,7 @@ public delegate void LogMessageHandler(LogMessageType messageType, LogMessageCat
 [CustomMarshaller(typeof(LogMessageHandler), MarshalMode.ManagedToUnmanagedIn, typeof(LogMessageHandlerMarshaller))]
 public static unsafe class LogMessageHandlerMarshaller
 {
-    internal unsafe record InterceptorEntry
+    internal sealed unsafe record InterceptorEntry
     {
         public required LogMessageHandler Callback { get; init; }
         public required GCHandle Handle { get; init; }

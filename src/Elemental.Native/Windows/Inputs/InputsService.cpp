@@ -1,10 +1,11 @@
 #include "InputsService.h"
+#include "SystemInputs.h"
 
 static InputState* globalInputState = nullptr;
 static HCMNOTIFICATION globalNotificationHandle = nullptr;
 
 // TODO: Review data structure
-std::vector<HidInputDevice> globalHidInputDevices;
+std::vector<WindowsHidInputDevice> globalHidInputDevices;
 
 void RegisterHidDevice(HANDLE hidDevice)
 {
@@ -58,7 +59,7 @@ void RegisterHidDevice(HANDLE hidDevice)
         return;
     }
 
-    HidInputDevice hidInputDevice = {};
+    WindowsHidInputDevice hidInputDevice = {};
     hidInputDevice.Device = hidDevice;
     hidInputDevice.DeviceId = (uint32_t)globalHidInputDevices.size();
     hidInputDevice.Event = CreateEvent(nullptr, true, false, nullptr);
@@ -235,4 +236,24 @@ DllExport void Native_FreeInputsService()
 DllExport InputState Native_GetInputState(void* applicationPointer)
 {
     return *globalInputState;
+}
+
+DllExport void* Native_CreateInputsQueue()
+{
+    return CreateNativeInputsQueue();
+}
+
+DllExport void Native_FreeInputsQueue(void* inputsQueue)
+{
+    FreeNativeInputsQueue((NativeInputsQueue*)inputsQueue);
+}
+    
+DllExport void Native_ReadInputsQueue(void* inputsQueue, InputsValue* inputsValues, int32_t* inputsValueCount)
+{
+    inputsValues[0] = {};
+    inputsValues[0].Id = GamepadButton1;
+    inputsValues[0].Value = 0.5f;
+    inputsValues[0].Timestamp = 123;
+
+    *inputsValueCount = 0;
 }
