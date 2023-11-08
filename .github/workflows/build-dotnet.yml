@@ -2,6 +2,12 @@ name: Build Dotnet
 
 on:
   workflow_call:
+    inputs:
+      tag:
+        description: "tag: git tag you want create. (sample 1.0.0)"
+        required: false
+        type: string
+        default: "1.0.0"
     secrets:
       NUGET_APIKEY:
         required: true
