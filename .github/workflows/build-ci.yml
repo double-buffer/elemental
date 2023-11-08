@@ -1,7 +1,8 @@
 name: Build CI
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ input-service ]
 
 jobs:
   build_windows:
