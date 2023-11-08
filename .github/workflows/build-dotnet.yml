@@ -1,0 +1,40 @@
+name: Build Windows
+
+on:
+  workflow_call:
+    secrets:
+      NUGET_APIKEY:
+        required: true
+
+jobs:
+  build_dotnet:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.202
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        msbuild-architecture: x64
+
+    - name: Build Library
+      run: |
+        dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} 
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: DotnetBinaries
+        path: |
+          ./src/Elemental/bin/Release/net7.0/Elemental.dll
+          ./src/Elemental/bin/Release/net7.0/Elemental.xml
+          ./src/Elemental/bin/Release/net7.0/Elemental.Common.dll
+          ./src/Elemental/bin/Release/net7.0/Elemental.Common.xml
