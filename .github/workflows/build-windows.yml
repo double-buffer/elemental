@@ -37,13 +37,13 @@ jobs:
         cmake --build ./build --target Elemental.Native --config Release
 
     - name: Download Vulkan Loader
-      working-directory: ./src/Elemental.Native/Windows
+      working-directory: ./build/src/Elemental.Native/Windows
       run: |
         mkdir ./tmp/
         curl -L -o ./tmp/vulkan-loader.zip https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip
 
     - name: Extract Vulkan Loader
-      working-directory: ./src/Elemental.Native/Windows
+      working-directory: ./build/src/Elemental.Native/Windows
       run: |
         unzip ./tmp/vulkan-loader.zip -d ./bin/
 
