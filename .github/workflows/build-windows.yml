@@ -1,0 +1,59 @@
+name: Build Windows
+
+on:
+  workflow_call:
+    secrets:
+      NUGET_APIKEY:
+        required: true
+
+jobs:
+  build_windows_x64:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        msbuild-architecture: x64
+
+    - name: Build Windows Platform
+      working-directory: ./src/Platforms/Windows
+      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Download Vulkan Loader
+      working-directory: ./src/Platforms/Windows
+      run: |
+        mkdir ./tmp/
+        curl -L -o ./tmp/vulkan-loader.zip https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip
+
+    - name: Extract Vulkan Loader
+      working-directory: ./src/Platforms/Windows
+      run: |
+        unzip ./tmp/vulkan-loader.zip -d ./bin/
+
+    - name: Set Vulkan DLL Path
+      id: set-vulkan-dll-path
+      working-directory: ./src/Platforms/Windows
+      shell: bash
+      run: |
+        dllPath=$(find ./bin -name vulkan-1.dll -type f -print -quit)
+        echo "vulkan_dll_path=$dllPath" >> $GITHUB_ENV
+
+    - name: Copy files
+      working-directory: ./src/Platforms/Windows
+      shell: bash
+      run: |
+        cp ./bin/D3D12/*.dll ./bin/
+        cp ${{ env.vulkan_dll_path }} ./bin/
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: WindowsNativex64
+        path: |
+            ./src/Platforms/Windows/bin/*.dll
+

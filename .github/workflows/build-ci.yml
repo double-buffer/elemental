@@ -5,34 +5,10 @@ on:
     branches: [ input-service ]
 
 jobs:
-  build_windows:
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-
-    - name: Configure MSBuild
-      uses: microsoft/setup-msbuild@v1.1
-      with:
-        vs-version: '[17.0, 17.5)'
-        msbuild-architecture: x64
-
-    - name: Build Windows Platform
-      working-directory: ./src/Platforms/Windows
-      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
-        
-  build_macos:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    # TODO: Change that, we use native swift packages now
-    - name: Build MacOS Platform
-      working-directory: ./src/Platforms/MacOS
-      run: pwsh ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+  build-windows:
+    uses: ./.github/workflows/build-windows.yml
+    name: 'build-windows'
+    secrets: inherit
 
   build_dotnet:
     runs-on: windows-latest
