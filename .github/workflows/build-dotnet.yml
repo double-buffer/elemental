@@ -26,7 +26,7 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet build . -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} -v d 
+        dotnet build . -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} -v d --no-dependencies
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
