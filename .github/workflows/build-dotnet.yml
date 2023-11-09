@@ -31,7 +31,7 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} -v diag 
+        dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} -v d 
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
