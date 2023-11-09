@@ -24,11 +24,6 @@ jobs:
       with:
         dotnet-version: 7.0.402
 
-    - name: Configure MSBuild
-      uses: microsoft/setup-msbuild@v1.1
-      with:
-        msbuild-architecture: x64
-
     - name: Build Library
       run: |
         dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} -v d 
