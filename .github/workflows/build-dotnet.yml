@@ -22,18 +22,15 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 7.0.402
+        dotnet-version: SDK 8.0.100-rc.2.23502.2
 
     - name: Build Library
       run: |
-        dotnet build . -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} -v d --no-dependencies
+        dotnet publish . -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
         name: DotnetBinaries
         path: |
-          ./src/Elemental/bin/Release/net7.0/Elemental.dll
-          ./src/Elemental/bin/Release/net7.0/Elemental.xml
-          ./src/Elemental/bin/Release/net7.0/Elemental.Common.dll
-          ./src/Elemental/bin/Release/net7.0/Elemental.Common.xml
+          ./.artifacts/

@@ -1,0 +1,22 @@
+name: Build Dotnet
+
+on:
+  workflow_call:
+
+jobs:
+  build_nuget:
+    runs-on: windows-latest
+    needs: [build_windows_x64, build_dotnet]
+
+    steps:
+    - name: Download Windows Native x64
+      uses: actions/download-artifact@master
+      with:
+        name: WindowsNativex64
+          
+    - name: Download Dotnet Binaries
+      uses: actions/download-artifact@master
+      with:
+        name: DotnetBinaries
+
+
