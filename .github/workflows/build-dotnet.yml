@@ -24,7 +24,7 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 7.0.202
+        dotnet-version: 7.0.402
 
     - name: Configure MSBuild
       uses: microsoft/setup-msbuild@v1.1
@@ -33,7 +33,7 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False"
+        dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} 
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
