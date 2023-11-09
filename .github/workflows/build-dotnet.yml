@@ -25,12 +25,10 @@ jobs:
         dotnet-version: 8.0.100-rc.1.23455.8
 
     - name: Build Library
-      run: |
-        dotnet publish . -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }}
+      run: dotnet publish -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
         name: DotnetBinaries
-        path: |
-          ./.artifacts/
+        path: ./artifacts/
