@@ -7,9 +7,7 @@ jobs:
   build_native:
     strategy:
       matrix:
-        platform: ${{ fromJSON(vars.Platforms) }}
-        architecture: ${{ fromJSON(vars.Architectures) }}
-        exclude: i${{ fromJSON(vars.Ignored_Architectures) }}
+        include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/build-native.yml
     name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
     secrets: inherit
@@ -25,7 +23,6 @@ jobs:
     strategy:
       matrix:
         platform: ${{ fromJSON(vars.Platforms) }}
-        architecture: ${{ fromJSON(vars.Architectures) }}
     uses: ./.github/workflows/run-tests.yml
     needs: [ build_native, build_dotnet ]
     name: 'run-tests-${{ matrix.platform }}-${{ matrix.architecture }}'
