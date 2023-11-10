@@ -3,7 +3,7 @@ name: Build Dotnet
 on:
   workflow_call:
     inputs:
-      tag:
+      version:
         description: "Version of the assembly (default: 1.0.0)"
         required: false
         type: string
@@ -22,7 +22,7 @@ jobs:
         dotnet-version: 8.0.100-rc.1.23455.8
 
     - name: Build Library
-      run: dotnet publish --no-dependencies -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }}
+      run: dotnet publish --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
