@@ -22,7 +22,7 @@ jobs:
   run_tests:
     strategy:
       matrix:
-        platform: ${{ fromJSON(vars.Platforms) }}
+        include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/run-tests.yml
     needs: [ build_native, build_dotnet ]
     name: 'run-tests-${{ matrix.platform }}-${{ matrix.architecture }}'
