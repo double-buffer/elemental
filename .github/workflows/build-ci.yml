@@ -11,7 +11,9 @@ jobs:
         architecture: ${{ fromJSON(vars.Architectures) }}
     uses: ./.github/workflows/build-native.yml
     name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
-    if: ${{ matrix.platform }} + '-' + ${{ matrix.architecture }} not ${{ fromJSON(vars.IgnoredArchitectures) }}
+    env:
+      MATRIX_IDENTIFIER: ${{ matrix.platform }}-${{ matrix.architecture }}
+    if: env.MATRIX_IDENTIFIER not ${{ fromJSON(vars.IgnoredArchitectures) }}
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
@@ -27,7 +29,7 @@ jobs:
         platform: ${{ fromJSON(vars.Platforms) }}
         architecture: ${{ fromJSON(vars.Architectures) }}
     uses: ./.github/workflows/run-tests.yml
-    needs: [build_native, build_dotnet]
+    needs: [ build_native, build_dotnet ]
     name: 'run-tests-${{ matrix.platform }}-${{ matrix.architecture }}'
     secrets: inherit
     with:
