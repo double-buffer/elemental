@@ -11,11 +11,17 @@ jobs:
     - name: Download Windows Native x64
       uses: actions/download-artifact@master
       with:
-        name: WindowsNativex64
+        name: native.bin.win-x64
           
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
       with:
-        name: DotnetBinaries
+        name: dotnet.bin
 
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.100-rc.1.23455.8
 
+    - name: Run Tests
+      run: dotnet test NativeApplicationTests/release/NativeApplicationTests.dll

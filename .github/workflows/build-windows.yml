@@ -64,7 +64,7 @@ jobs:
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
-        name: WindowsNativex64
+        name: native.bin.win-x64
         path: |
             ./build/src/Elemental.Native/Windows/*.dll
 
