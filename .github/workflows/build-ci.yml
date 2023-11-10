@@ -2,12 +2,19 @@ name: Build CI
 
 on:
   push:
-    branches: [ input-service ]
 
 jobs:
-  build_windows:
-    uses: ./.github/workflows/build-windows.yml
+  build_native:
+    strategy:
+      matrix:
+        platform: [win]
+        architecture: [x64]
+    uses: ./.github/workflows/build-native.yml
+    name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
     secrets: inherit
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
 
   build_dotnet:
     uses: ./.github/workflows/build-dotnet.yml
@@ -15,5 +22,5 @@ jobs:
     
   run_tests:
     uses: ./.github/workflows/run-tests.yml
-    needs: [build_windows, build_dotnet]
+    needs: [build_native, build_dotnet]
     secrets: inherit

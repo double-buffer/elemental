@@ -1,8 +1,15 @@
 on:
   workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
 
 jobs:
-  build_windows_x64:
+  build_native:
     runs-on: windows-latest
 
     steps:
