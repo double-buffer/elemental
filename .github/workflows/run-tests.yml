@@ -4,9 +4,9 @@ on:
   workflow_call:
 
 jobs:
-  build_nuget:
+  run_tests:
     runs-on: windows-latest
-    needs: [build_windows_x64, build_dotnet]
+    needs: [build_windows, build_dotnet]
 
     steps:
     - name: Download Windows Native x64
