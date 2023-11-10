@@ -5,18 +5,15 @@ on:
     branches: [ input-service ]
 
 jobs:
-  build-windows:
+  build_windows:
     uses: ./.github/workflows/build-windows.yml
-    name: 'build-windows'
     secrets: inherit
 
   build_dotnet:
     uses: ./.github/workflows/build-dotnet.yml
-    name: 'build-dotnet'
     secrets: inherit
     
   run_tests:
     uses: ./.github/workflows/run-tests.yml
-    needs: [build-windows, build-dotnet]
-    name: 'run-tests'
+    needs: [build_windows, build_dotnet]
     secrets: inherit
