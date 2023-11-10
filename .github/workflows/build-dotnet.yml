@@ -11,7 +11,7 @@ on:
 
 jobs:
   build_dotnet:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
     - uses: actions/checkout@v3
@@ -21,11 +21,8 @@ jobs:
       with:
         dotnet-version: 8.0.100-rc.1.23455.8
 
-    - name: .NET Restore
-      run: dotnet restore
-          
     - name: Build Library
-      run: dotnet publish --no-restore -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
+      run: dotnet publish -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
