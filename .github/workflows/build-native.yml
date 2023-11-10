@@ -23,9 +23,7 @@ jobs:
         arch: x64
 
     - name: Setup Ninja
-      uses: ashutoshvarma/setup-ninja@master
-      with:
-        version: 1.10.0
+      uses: aseanmiddleditch/gha-setup-ninja@master
 
     - name: Build Windows Platform
       run: |
