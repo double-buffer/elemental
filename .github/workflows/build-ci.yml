@@ -14,3 +14,8 @@ jobs:
     uses: ./.github/workflows/build-dotnet.yml
     name: 'build-dotnet'
     secrets: inherit
+    
+  run_tests:
+    uses: ./.github/workflows/run-tests.yml
+    name: 'run-tests'
+    secrets: inherit

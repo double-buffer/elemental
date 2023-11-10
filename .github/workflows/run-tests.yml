@@ -1,4 +1,4 @@
-name: Build Dotnet
+name: Run Tests
 
 on:
   workflow_call:

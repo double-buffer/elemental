@@ -7,14 +7,24 @@ using Elemental.Tools;
 
 static void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, string function, string message) 
 {
-    Console.ForegroundColor = messageType switch
+    var mainForegroundColor = messageType switch
     {
         LogMessageType.Warning => ConsoleColor.Yellow,
         LogMessageType.Error => ConsoleColor.Red,
         _ => ConsoleColor.Gray
     };
 
-    Console.WriteLine($"{category}: {function}: {message}");
+    Console.Write("[");
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.Write($"{category}");
+    Console.ForegroundColor = ConsoleColor.Gray;
+    Console.Write("]");
+
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.Write($" {function}");
+
+    Console.ForegroundColor = mainForegroundColor;
+    Console.WriteLine($" {message}");
     Console.ForegroundColor = ConsoleColor.Gray;
 }
 
