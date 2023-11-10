@@ -7,7 +7,7 @@ jobs:
   build_native:
     strategy:
       matrix:
-        platform: [win]
+        platform: ${{ fromJSON(vars.Platforms) }}
         architecture: [x64]
     uses: ./.github/workflows/build-native.yml
     name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
@@ -23,7 +23,7 @@ jobs:
   run_tests:
     strategy:
       matrix:
-        platform: [win]
+        platform: ${{ fromJSON(vars.Platforms) }}
         architecture: [x64]
     uses: ./.github/workflows/run-tests.yml
     needs: [build_native, build_dotnet]
