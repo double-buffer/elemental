@@ -132,7 +132,7 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     // HACK
     globalMainWindow = window;
 
-    return nativeWindow;
+    return nullptr;
 }
 
 DllExport void Native_FreeWindow(Win32Window* window)
