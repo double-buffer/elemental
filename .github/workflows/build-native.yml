@@ -20,7 +20,7 @@ jobs:
     - name: Setup MSVC
       uses: TheMrMilchmann/setup-msvc-dev@v3
       with:
-        arch: x64
+        arch: ${{ inputs.architecture }}
 
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
@@ -59,7 +59,6 @@ jobs:
     - name: Upload Binaries
       uses: actions/upload-artifact@v3
       with:
-        name: native.bin.win-x64
+        name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
         path: |
             ./build/src/Elemental.Native/Windows/*.dll
-
