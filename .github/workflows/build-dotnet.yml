@@ -20,7 +20,7 @@ jobs:
         dotnet-version: 8.0.100-rc.1.23455.8
 
     - name: Build Library
-      run: dotnet publish -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
+      run: dotnet publish --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@v3

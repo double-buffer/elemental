@@ -27,6 +27,7 @@ jobs:
         architecture: [x64]
     uses: ./.github/workflows/run-tests.yml
     needs: [build_native, build_dotnet]
+    name: 'run-tests-${{ matrix.platform }}-${{ matrix.architecture }}'
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
