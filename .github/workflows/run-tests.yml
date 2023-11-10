@@ -1,15 +1,22 @@
 on:
   workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
 
 jobs:
   run_tests:
     runs-on: windows-latest
 
     steps:
-    - name: Download Windows Native x64
+    - name: Download Native Binaries ${{ inputs.platform }}-${{ inputs.architecture }}
       uses: actions/download-artifact@master
       with:
-        name: native.bin.win-x64
+        name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./NativeApplicationTests/release/
           
     - name: Download Dotnet Binaries

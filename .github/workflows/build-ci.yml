@@ -24,3 +24,6 @@ jobs:
     uses: ./.github/workflows/run-tests.yml
     needs: [build_native, build_dotnet]
     secrets: inherit
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
