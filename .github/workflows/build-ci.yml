@@ -11,9 +11,7 @@ jobs:
         architecture: ${{ fromJSON(vars.Architectures) }}
     uses: ./.github/workflows/build-native.yml
     name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
-    env:
-      MATRIX_IDENTIFIER: ${{ matrix.platform }}-${{ matrix.architecture }}
-    if: env.MATRIX_IDENTIFIER not ${{ fromJSON(vars.IgnoredArchitectures) }}
+    exclude: i${{ fromJSON(vars.IgnoredArchitectures) }}
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
