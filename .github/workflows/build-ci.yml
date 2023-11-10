@@ -17,5 +17,6 @@ jobs:
     
   run_tests:
     uses: ./.github/workflows/run-tests.yml
+    needs: [build_windows, build_dotnet]
     name: 'run-tests'
     secrets: inherit

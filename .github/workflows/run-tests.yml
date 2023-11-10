@@ -6,7 +6,6 @@ on:
 jobs:
   run_tests:
     runs-on: windows-latest
-    needs: [build_windows, build_dotnet]
 
     steps:
     - name: Download Windows Native x64
