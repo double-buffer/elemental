@@ -8,9 +8,10 @@ jobs:
     strategy:
       matrix:
         platform: ${{ fromJSON(vars.Platforms) }}
-        architecture: [x64]
+        architecture: ${{ fromJSON(vars.Architectures) }}
     uses: ./.github/workflows/build-native.yml
     name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
+    if: matrix.platform + '-' + matrix.architecture not in vars.IgnoredArchitectures
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
@@ -24,7 +25,7 @@ jobs:
     strategy:
       matrix:
         platform: ${{ fromJSON(vars.Platforms) }}
-        architecture: [x64]
+        architecture: ${{ fromJSON(vars.Architectures) }}
     uses: ./.github/workflows/run-tests.yml
     needs: [build_native, build_dotnet]
     name: 'run-tests-${{ matrix.platform }}-${{ matrix.architecture }}'
