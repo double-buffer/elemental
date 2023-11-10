@@ -9,7 +9,7 @@ jobs:
       matrix:
         platform: ${{ fromJSON(vars.Platforms) }}
         architecture: ${{ fromJSON(vars.Architectures) }}
-        exclude: i${{ fromJSON(vars.IgnoredArchitectures) }}
+        exclude: i${{ fromJSON(vars.Ignored_Architectures) }}
     uses: ./.github/workflows/build-native.yml
     name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
     secrets: inherit
