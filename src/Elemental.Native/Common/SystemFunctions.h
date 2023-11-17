@@ -1,11 +1,8 @@
 #pragma once
 
-#include "ElementalCommon.h"
-#include "SystemLogging.h"
 #include "SystemMemory.h"
-// TODO: REVIEW HEADERS
 
-#include <stdbool.h>
+// TODO: REVIEW HEADERS
 #include <stdint.h>
 #include <stdlib.h>
 #include <wchar.h>
@@ -13,8 +10,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include <atomic>
-
-#include "Dictionary.h"
 
 #define PackedStruct struct __attribute__((__packed__))
 
@@ -53,72 +48,31 @@
 
 #ifdef _DEBUG
 #define AssertIfFailed(result) assert(!FAILED(result))
-#else
-#define AssertIfFailed(result) result
-#endif
-
-
-#ifdef _DEBUG
-void* operator new(size_t size, const wchar_t* file, uint32_t lineNumber);
-void* operator new[](size_t size, const wchar_t* file, uint32_t lineNumber);
-void operator delete(void* pointer) noexcept;
-void operator delete[](void* pointer) noexcept;
-void operator delete(void* pointer, const wchar_t* file, uint32_t lineNumber);
-void operator delete[](void* pointer, const wchar_t* file, uint32_t lineNumber);
 
 #define new new(L"" __FILE__, (uint32_t)__LINE__)
 
 #define malloc(size) SystemAllocateMemory(size, L"" __FILE__, (uint32_t)__LINE__)
+
 #define calloc(count, size) SystemAllocateMemoryAndReset(count, size, L"" __FILE__, (uint32_t)__LINE__)
 //TODO: realloc
 #define free(pointer) SystemFreeMemory(pointer)
 
-#ifdef __APPLE__
-
-void AppleMemoryRetain()
-{
-   printf("Retain\n"); 
-}
-
-
+#else
+#define AssertIfFailed(result) result
 #endif
-#endif
-
-//---------------------------------------------------------------------------------------------------------------
-// Foundation structures
-//---------------------------------------------------------------------------------------------------------------
-template<typename T>
-struct Span
-{
-    Span()
-    {
-        Pointer = nullptr;
-        Length = 0;
-    }
-
-    Span(T* pointer, uint32_t length) : Pointer(pointer), Length(length)
-    {
-    }
-
-    T* Pointer;
-    uint32_t Length;
-
-    bool IsEmpty()
-    {
-        return Length == 0;
-    }
-
-    static Span<T> Empty()
-    {
-        return Span<T>();
-    }
-};
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
-char* SystemConcatStrings(const char* str1, const char* str2); 
+template<typename T>
+ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<T> source, T separator);
+
+ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source);
+ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source);
+
+
+// TODO: OLD CODE to remove
 void SystemSplitString(const wchar_t* source, const wchar_t separator, wchar_t** result, uint32_t* resultCount);
 const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source);
 const wchar_t* SystemConvertUtf8ToWideChar(const char* source);

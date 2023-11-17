@@ -1,17 +1,47 @@
 #include "NativeApplicationService.h"
 
+// TODO: To remove
+#include "SystemFunctions.h"
+
 HWND globalMainWindow;
 
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
-    #ifdef _DEBUG
+#ifdef _DEBUG
     SystemInitDebugAllocations();
-    #endif
+#endif
 
     if (options->LogMessageHandler)
     {
         globalLogMessageHandler = options->LogMessageHandler;
         LogDebugMessage(LogMessageCategory_NativeApplication, L"Init OK");
+    }
+
+    // TESTING
+    auto memoryArena = SystemAllocateMemoryArena(1024);
+
+    auto result = SystemConcatBuffers<wchar_t>(memoryArena, L"Test1 Wide ", L"Test2 Wide");
+    printf("Result: %ls\n", result.Pointer);
+    
+    auto utf8 = SystemConvertWideCharToUtf8(memoryArena, result);
+    printf("Result UTF8: %s\n", utf8.Pointer);
+    printf("Result Back wchar: %ls\n", SystemConvertUtf8ToWideChar(memoryArena, utf8).Pointer);
+
+    auto resultSplit = SystemSplitString<wchar_t>(memoryArena, result, L' ');
+
+    for (size_t i = 0; i < resultSplit.Length; i++)
+    {
+        printf("ResultSplit: %ls\n", resultSplit[i].Pointer);
+    }
+    
+    auto result2 = SystemConcatBuffers<char>(memoryArena, "Test1 ", "Test2");
+    printf("Result: %s\n", result2.Pointer);
+
+    auto resultSplit2 = SystemSplitString<char>(memoryArena, result2, ' ');
+
+    for (size_t i = 0; i < resultSplit2.Length; i++)
+    {
+        printf("ResultSplit: %s\n", resultSplit2[i].Pointer);
     }
 }
 

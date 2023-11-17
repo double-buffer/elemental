@@ -17,11 +17,11 @@
 
   <!-- REFACTOR the copying of the tools -->
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildProjectReferences)' == 'true'">
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/Elemental.Tools.Native.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.dll">
       <TargetPath>Elemental.Tools.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/Elemental.Tools.Native.pdb">
+    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.pdb">
       <TargetPath>Elemental.Tools.Native.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -36,7 +36,7 @@
   </ItemGroup>
   
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildProjectReferences)' == 'true'">
-    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/libElemental.Tools.Native.dylib">
+    <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/libElemental.Tools.Native.dylib">
       <TargetPath>Elemental.Tools.Native.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

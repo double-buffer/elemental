@@ -1,12 +1,11 @@
 #include "Dictionary.cpp"
-#include "SystemLogging.h"
+#include "CircularList.h"
+
 #include "SystemMemory.cpp"
-
-#include "Elemental.h"
-
 #include "SystemFunctions.cpp"
 #include "SystemInputs.cpp"
-#include "CircularList.h"
+
+#include "Elemental.h"
 
 #include "NativeApplicationService.cpp"
 #include "Graphics/Direct3D12/Direct3D12GraphicsService.cpp"

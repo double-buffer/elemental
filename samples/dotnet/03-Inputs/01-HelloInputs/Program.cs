@@ -76,6 +76,7 @@ var shaderInputs = new ShaderCompilerInput[]
     new() { ShaderCode = shaderCode, Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", ShaderLanguage = ShaderLanguage.Hlsl }
 };
 
+// BUG: Compilation fail in release mode for now :(
 var shaderCompilationResults = shaderCompiler.CompileShaders(shaderInputs, selectedGraphicsDevice.GraphicsApi);
 
 // TODO: Avoid the array declaration

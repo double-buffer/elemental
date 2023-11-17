@@ -17,7 +17,7 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 8.0.100-rc.1.23455.8
+        dotnet-version: 8.0.100
 
     - name: Build Library
       run: dotnet publish --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}

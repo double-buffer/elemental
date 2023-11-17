@@ -1,43 +1,65 @@
-#include "SystemMemory.h"
-
-#ifdef _DEBUG
-void* operator new(size_t size, const wchar_t* file, uint32_t lineNumber)
-{
-    return SystemAllocateMemory(size, file, lineNumber);
-}
-
-void* operator new[](size_t size, const wchar_t* file, uint32_t lineNumber)
-{
-    return SystemAllocateMemory(size, file, lineNumber);
-}
-
-void operator delete(void* pointer) noexcept
-{
-    return SystemFreeMemory(pointer);
-}
-
-void operator delete[](void* pointer) noexcept
-{
-    return SystemFreeMemory(pointer);
-}
-
-void operator delete(void* pointer, const wchar_t* file, uint32_t lineNumber)
-{
-    SystemFreeMemory(pointer);
-}
-
-void operator delete[](void* pointer, const wchar_t* file, uint32_t lineNumber)
-{
-    SystemFreeMemory(pointer);
-}
-#endif
-
 #include "SystemFunctions.h"
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
+template<typename T>
+ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<T> source, T separator) 
+{
+    auto count = 1;
+
+    for (size_t i = 0; i < source.Length; i++)
+    {
+        if (source[i] == separator)
+        {
+            count++;
+        }
+    }
+
+    auto result = SystemPushArray<ReadOnlySpan<T>>(memoryArena, count);
+    auto currentIndex = 0;
+
+    for (int i = 0; i < count; i++)
+    {
+        auto separatorIndex = source.Length;
+
+        for (size_t j = currentIndex; j < source.Length; j++)
+        {
+            if (source[j] == separator)
+            {
+                separatorIndex = j;
+                break;
+            }
+        }
+
+        auto resultString = SystemPushArray<T>(memoryArena, separatorIndex - currentIndex); 
+        source.Slice(currentIndex, separatorIndex - currentIndex).CopyTo(resultString);
+        result[i] = resultString;
+
+        currentIndex = separatorIndex + 1;
+    }
+
+    return result;
+}
+
+ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source)
+{
+    auto destination = SystemPushArray<char>(memoryArena, source.Length);
+    wcstombs_s(nullptr, destination.Pointer, destination.Length + 1, source.Pointer, source.Length);
+
+    return destination;
+}
+
+ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source)
+{
+    auto destination = SystemPushArray<wchar_t>(memoryArena, source.Length);
+    mbstowcs_s(nullptr, destination.Pointer, destination.Length + 1, (char*)source.Pointer, source.Length);
+
+    return destination;
+}
+
+// TODO: OLD CODE to remove
 char* SystemConcatStrings(const char* str1, const char* str2) 
 {
     size_t len1 = strlen(str1);
@@ -83,7 +105,7 @@ void SystemSplitString(const wchar_t* source, const wchar_t separator, wchar_t**
 
         p = copy;
         uint32_t index = 0;
-        while (*p != L'\0') {
+            while (*p != L'\0') {
             if (*p == separator) {
                 *p = L'\0';
                 result[index++] = p;

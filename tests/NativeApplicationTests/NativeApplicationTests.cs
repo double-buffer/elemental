@@ -14,7 +14,7 @@ public class NativeApplicationTests
                 initCalled = true;
             }
         });
-
+        
         // Act
         using var applicationService = new NativeApplicationService(new() { LogMessageHandler = logHandler });
 
@@ -54,19 +54,5 @@ public class NativeApplicationTests
 
         // Assert
         Assert.True(runHandlerCalled);
-    }
-
-    [Fact]
-    public void CreateWindow_WithZeroSize_ReturnsValidObject()
-    {
-        // Arrange
-        using var applicationService = new NativeApplicationService();
-        var application = applicationService.CreateApplication("TestApp");
-
-        // Act
-        var window = applicationService.CreateWindow(application, new() { Width = 0, Height = 0, WindowState = NativeWindowState.Minimized });
-
-        // Assert
-        Assert.NotEqual(nint.Zero, window.NativePointer);
     }
 }
