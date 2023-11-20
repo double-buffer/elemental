@@ -7,10 +7,6 @@ HWND globalMainWindow;
 
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
-#ifdef _DEBUG
-    SystemInitDebugAllocations();
-#endif
-
     if (options->LogMessageHandler)
     {
         globalLogMessageHandler = options->LogMessageHandler;
@@ -18,7 +14,10 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     }
 
     // TESTING
-    auto memoryArena = SystemAllocateMemoryArena(1024);
+    auto memoryArena = SystemAllocateMemoryArena(102400);
+
+    auto output = SystemExecuteProcess(memoryArena, "dir");
+    printf("Output: %s\n", output.Pointer);
 
     auto result = SystemConcatBuffers<wchar_t>(memoryArena, L"Test1 Wide ", L"Test2 Wide");
     printf("Result: %ls\n", result.Pointer);
@@ -47,9 +46,6 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
 
 DllExport void Native_FreeNativeApplicationService()
 {
-    #ifdef _DEBUG
-    SystemCheckAllocations(L"Elemental");
-    #endif
 }
 
 DllExport void* Native_CreateApplication(wchar_t* applicationName)

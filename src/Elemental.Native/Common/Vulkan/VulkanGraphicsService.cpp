@@ -1319,9 +1319,9 @@ static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags
         messageType = LogMessageType_Warning;
     }
 
-    auto convertedString = SystemConvertUtf8ToWideChar(pMessage);
+    auto convertedString = "To implement"; // TODO: To implement SystemConvertUtf8ToWideChar(pMessage);
     LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString);
-    SystemFreeConvertedString(convertedString);
+    //SystemFreeConvertedString(convertedString);
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {

@@ -222,8 +222,9 @@ void Direct3D12FreeCommandQueue(void* commandQueuePointer)
 
 void Direct3D12SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
-    auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
-    commandQueue->DeviceObject->SetName(SystemConvertUtf8ToWideChar((char*)label));
+    //auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
+    // TODO: implement
+    //commandQueue->DeviceObject->SetName(SystemConvertUtf8ToWideChar((char*)label));
 }
 
 void* Direct3D12CreateCommandList(void* commandQueuePointer)
@@ -249,8 +250,9 @@ void Direct3D12FreeCommandList(void* commandListPointer)
 
 void Direct3D12SetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
-    auto commandList = (Direct3D12CommandList*)commandListPointer;
-    commandList->DeviceObject->SetName(SystemConvertUtf8ToWideChar((char*)label));
+    //auto commandList = (Direct3D12CommandList*)commandListPointer;
+    // TODO: implement
+    //commandList->DeviceObject->SetName(SystemConvertUtf8ToWideChar((char*)label));
 }
 
 void Direct3D12CommitCommandList(void* commandListPointer)
@@ -1082,9 +1084,12 @@ static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12
         messageType = LogMessageType_Error;
     }
 
-    auto convertedString = SystemConvertUtf8ToWideChar(description);
-    LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString);
-    SystemFreeConvertedString(convertedString);
+    // TODO: For the moment we create a memory arena for each log messages
+    // We could use a scratch arena that is reset each frames
+    auto memoryArena = SystemAllocateMemoryArena(255);
+    auto convertedString = SystemConvertUtf8ToWideChar(memoryArena, description);
+    LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString.Pointer);
+    SystemFreeMemoryArena(memoryArena);
 }
 
 static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data)

@@ -19,9 +19,8 @@
 
 #define popen _popen
 #define pclose _pclose
-#define wcsdup _wcsdup
-#define strdup _strdup
-#define mkstemp(value) _mktemp_s(value, MAX_PATH)
+
+#define mkstemp(value) _mktemp_s(value, strlen(value) + 1)
 #else
 #define MAX_PATH 256
 #ifndef NDEBUG
@@ -47,23 +46,17 @@
 #endif
 
 #ifdef _DEBUG
-#define AssertIfFailed(result) assert(!FAILED(result))
-
-#define new new(L"" __FILE__, (uint32_t)__LINE__)
-
-#define malloc(size) SystemAllocateMemory(size, L"" __FILE__, (uint32_t)__LINE__)
-
-#define calloc(count, size) SystemAllocateMemoryAndReset(count, size, L"" __FILE__, (uint32_t)__LINE__)
-//TODO: realloc
-#define free(pointer) SystemFreeMemory(pointer)
-
+    #define AssertIfFailed(result) assert(!FAILED(result))
 #else
-#define AssertIfFailed(result) result
+    #define AssertIfFailed(result) result
 #endif
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------
+
+// TODO: It would be great to have an opaque string type that can be treated as UTF-8 or Unicode based on settings
+// passed to the native application service
 
 template<typename T>
 ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<T> source, T separator);
@@ -73,16 +66,13 @@ ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, Read
 
 
 // TODO: OLD CODE to remove
-void SystemSplitString(const wchar_t* source, const wchar_t separator, wchar_t** result, uint32_t* resultCount);
-const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source);
-const wchar_t* SystemConvertUtf8ToWideChar(const char* source);
 void SystemFreeConvertedString(const wchar_t* value);
 
 //---------------------------------------------------------------------------------------------------------------
 // IO functions
 //---------------------------------------------------------------------------------------------------------------
 
-char* SystemGenerateTempFilename();
+ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena); 
 
 #ifdef _WINDOWS
 
@@ -96,11 +86,12 @@ void SystemDeleteFile(const char* filename);
 //---------------------------------------------------------------------------------------------------------------
 // Library / process functions
 //---------------------------------------------------------------------------------------------------------------
+ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command);
 
+// TODO: Old CODE to remove
 const void* SystemLoadLibrary(const char* libraryName);
 void SystemFreeLibrary(const void* library);
 const void* SystemGetFunctionExport(const void* library, const char* functionName);
-bool SystemExecuteProcess(const char* command, char* result);
 
 //---------------------------------------------------------------------------------------------------------------
 // Threading functions

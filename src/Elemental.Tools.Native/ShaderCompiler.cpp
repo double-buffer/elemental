@@ -1,9 +1,4 @@
-#include "PreCompiledHeader.h"
-#include "ElementalTools.h"
-#include "ShaderCompilerProvider.h"
-#include "DirectXShaderCompilerProvider.h"
-#include "SpirvCrossShaderCompilerProvider.h"
-#include "MetalShaderCompilerProvider.h"
+#include "ShaderCompiler.h"
 
 // TODO: Do we keep std datastructures? Perf is not critical in the tools
 std::vector<ShaderCompilerProvider*> _shaderCompilerProviders;
@@ -80,10 +75,6 @@ DllExport void Native_FreeNativePointer(void* nativePointer)
 
 DllExport void Native_InitShaderCompiler(ShaderCompilerOptions* options)
 {
-    #ifdef _DEBUG
-    SystemInitDebugAllocations();
-    #endif
-
     if (options->LogMessageHandler)
     {
         globalLogMessageHandler = options->LogMessageHandler;
@@ -104,10 +95,6 @@ DllExport void Native_FreeShaderCompiler()
     {
         delete _shaderCompilerProviders[i];
     }
-    
-    #ifdef _DEBUG
-    SystemCheckAllocations(L"Elemental Tools");
-    #endif
 }
 
 DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsApi graphicsApi)
@@ -124,13 +111,15 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsAp
     return result > 0;
 }
     
+// TODO: Why do we use utf 8? all strings needs to be copied and encoded
 DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
-    // TODO: Rewrite allocations here :(
+    // TODO: Temporary: to change, this is never free for the moment!
+    auto memoryArena = SystemAllocateMemoryArena(1024 * 1024 * 1024);
 
     if (!_platformTargetLanguages.count(graphicsApi))
     {
-        return CreateErrorResult(shaderStage, entryPoint, SystemConvertWideCharToUtf8(L"Graphics API is not supported!"));
+        return CreateErrorResult(shaderStage, entryPoint, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, L"Graphics API is not supported!").Pointer);
     }
 
     auto graphicsApiTargetShaderLanguage = _platformTargetLanguages[graphicsApi];
@@ -150,7 +139,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         {
             auto shaderCompilerProvider = shaderCompilerProviders[i];
 
-            auto compilationResult = shaderCompilerProvider->CompileShader(logList, metaDataList, currentShaderData, shaderStage, entryPoint, shaderLanguage, graphicsApi, options);
+            auto compilationResult = shaderCompilerProvider->CompileShader(memoryArena, logList, metaDataList, currentShaderData, shaderStage, entryPoint, shaderLanguage, graphicsApi, options);
 
             isSuccess = !compilationResult.IsEmpty();
             
@@ -189,7 +178,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         return compilerResult;
     } 
         
-    return CreateErrorResult(shaderStage, entryPoint, SystemConvertWideCharToUtf8(L"Cannot find compatible shader compilers toolchain."));
+    return CreateErrorResult(shaderStage, entryPoint, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, L"Cannot find compatible shader compilers toolchain.").Pointer);
 }
     
 DllExport void Native_CompileShaders(ShaderCompilerInput* inputs, int32_t inputCount, GraphicsApi graphicsApi, ShaderCompilationOptions* options, ShaderCompilerResult* results, int32_t* resultCount)
@@ -201,4 +190,19 @@ DllExport void Native_CompileShaders(ShaderCompilerInput* inputs, int32_t inputC
         auto input = inputs[i];
         results[i] = Native_CompileShader(input.ShaderCode, input.Stage, input.EntryPoint, input.ShaderLanguage, graphicsApi, options);
     }
+}
+
+const ShaderCompilerResult CreateErrorResult(ShaderStage stage, const uint8_t* entryPoint, const uint8_t* message)
+{
+    ShaderCompilerResult result = {};
+
+    result.IsSuccess = false;
+    result.Stage = stage;
+    result.EntryPoint = entryPoint;
+    result.LogEntries = new ShaderCompilerLogEntry[1];
+    result.LogEntries[0].Type = ShaderCompilerLogEntryType_Error;
+    result.LogEntries[0].Message = message;
+    result.LogEntryCount = 1;
+
+    return result;
 }

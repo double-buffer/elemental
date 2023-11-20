@@ -55,17 +55,4 @@ typedef struct
     uint32_t MetaDataCount;
 } ShaderCompilerResult;
 
-const ShaderCompilerResult CreateErrorResult(ShaderStage stage, const uint8_t* entryPoint, const uint8_t* message)
-{
-    ShaderCompilerResult result = {};
 
-    result.IsSuccess = false;
-    result.Stage = stage;
-    result.EntryPoint = entryPoint;
-    result.LogEntries = new ShaderCompilerLogEntry[1];
-    result.LogEntries[0].Type = ShaderCompilerLogEntryType_Error;
-    result.LogEntries[0].Message = message;
-    result.LogEntryCount = 1;
-
-    return result;
-}

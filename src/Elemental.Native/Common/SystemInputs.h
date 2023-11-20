@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SystemLogging.h"
 #include "Elemental.h"
 #include "SystemFunctions.h"
 

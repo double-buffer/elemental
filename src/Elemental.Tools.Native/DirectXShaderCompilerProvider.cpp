@@ -35,7 +35,7 @@ bool DirectXShaderCompilerProvider::IsCompilerInstalled()
     return _createInstanceFunc != nullptr;
 }
     
-Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
     assert(_createInstanceFunc != nullptr);
 
@@ -49,8 +49,8 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     //-E for the entry point (eg. PSMain)
     arguments.push_back(L"-E");
     
-    auto entryPointString = SystemConvertUtf8ToWideChar((char*)entryPoint);
-    arguments.push_back(entryPointString);
+    auto entryPointString = SystemConvertUtf8ToWideChar(memoryArena, (char*)entryPoint);
+    arguments.push_back(entryPointString.Pointer);
 
     // TODO: Use defines
     auto shaderTarget = L"ms_6_7";
@@ -100,9 +100,8 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     ComPtr<IDxcResult> dxilCompileResult;
     AssertIfFailed(compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(&dxilCompileResult)));
 
-    if (ProcessLogOutput(logList, dxilCompileResult))
+    if (ProcessLogOutput(memoryArena, logList, dxilCompileResult))
     {
-        delete entryPointString;
         return Span<uint8_t>::Empty();
     }
     
@@ -128,12 +127,10 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(std::vector<ShaderCom
     auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
     memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
 
-    delete entryPointString;
-
     return Span<uint8_t>(outputShaderData, (uint32_t)shaderByteCode->GetBufferSize());
 }
 
-bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
+bool DirectXShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
 {
     // TODO: Allocations are really bad here :(
     auto hasErrors = false;
@@ -143,20 +140,15 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
 
     if (pErrors && pErrors->GetStringLength() > 0)
     {
-        auto errorContent = SystemConvertUtf8ToWideChar((char*)pErrors->GetBufferPointer());
+        auto errorContent = SystemConvertUtf8ToWideChar(memoryArena, (char*)pErrors->GetBufferPointer());
         auto currentLogType = ShaderCompilerLogEntryType_Error;
 
-        uint32_t linesLength;
-        SystemSplitString(errorContent, L'\n', nullptr, &linesLength);
-
-        wchar_t** lines = new wchar_t*[linesLength];
-        SystemSplitString(errorContent, L'\n', lines, &linesLength);
-
+        auto lines = SystemSplitString(memoryArena, errorContent, L'\n');
         std::wstring line;
 
-        for (size_t i = 0; i < linesLength; i++)
+        for (size_t i = 0; i < lines.Length; i++)
         {
-            line = std::wstring(lines[i]);
+            line = std::wstring(lines[i].Pointer);
 
             if (line.length() == 0)
             {
@@ -175,7 +167,7 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerL
         
             if (line.length() > 0)
             {
-                logList.push_back({ currentLogType, SystemConvertWideCharToUtf8(line.c_str()) });
+                logList.push_back({ currentLogType, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, line.c_str()).Pointer });
             }
         }
     }

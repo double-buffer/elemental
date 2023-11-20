@@ -17,14 +17,17 @@ void MetalShaderCompilerProvider::GetTargetShaderLanguages(ShaderLanguage* targe
 bool MetalShaderCompilerProvider::IsCompilerInstalled()
 {
     // TODO: Doesn't work on windows
-    char output[1024];
-    return SystemExecuteProcess("xcrun -f metal", output);
+    auto tempMemoryArena = SystemAllocateMemoryArena(1024);
+    //auto output =  SystemExecuteProcess(tempMemoryArena, "xcrun -f metal");
+
+    SystemFreeMemoryArena(tempMemoryArena);
+    return true;
 }
     
-Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+Span<uint8_t> MetalShaderCompilerProvider::CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
 #ifdef _WINDOWS
-    logList.push_back({ShaderCompilerLogEntryType_Error, SystemConvertWideCharToUtf8(L"Metal shader compiler is not supported on Windows.")});
+    logList.push_back({ShaderCompilerLogEntryType_Error, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, L"Metal shader compiler is not supported on Windows.").Pointer});
     return Span<uint8_t>::Empty();
 #else
     auto inputFilePath = std::string(SystemGenerateTempFilename()) + ".metal";
@@ -80,31 +83,27 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(std::vector<ShaderCompi
     #endif
 }
     
-bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLogEntry>& logList, char* output)
+bool MetalShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, char* output)
 {
     // BUG: 
     return false;
-    auto outputWString = SystemConvertUtf8ToWideChar(output);
+    auto outputWString = SystemConvertUtf8ToWideChar(memoryArena, output);
 
-    if (wcslen(outputWString) == 0)
+    if (outputWString.IsEmpty())
     {
         return false;
     }
     
-    uint32_t linesLength;
-    SystemSplitString(outputWString, L'\n', nullptr, &linesLength);
-
-    wchar_t** lines = new wchar_t*[linesLength];
-    SystemSplitString(outputWString, L'\n', lines, &linesLength);
+    auto lines = SystemSplitString(memoryArena, outputWString, L'\n');
     
     auto hasErrors = false;
     auto currentLogType = ShaderCompilerLogEntryType_Error;
     std::wstring line;
 
     // TODO: Merge error messages and warnings message until next find
-    for (size_t i = 0; i < linesLength; i++)
+    for (size_t i = 0; i < lines.Length; i++)
     {
-        line = lines[i];
+        line = lines[i].Pointer;
 
         if (line.find(L"warning:", 0) != -1)
         {
@@ -118,7 +117,7 @@ bool MetalShaderCompilerProvider::ProcessLogOutput(std::vector<ShaderCompilerLog
 
         if (line.length() > 0)
         { 
-            logList.push_back({ currentLogType, SystemConvertWideCharToUtf8(line.c_str()) });
+            logList.push_back({ currentLogType, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, line.c_str()).Pointer });
         }
     }
 

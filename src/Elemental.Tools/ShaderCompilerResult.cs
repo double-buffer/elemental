@@ -113,7 +113,8 @@ internal static unsafe class ShaderCompilerResultMarshaller
         for (var i = 0; i < unmanaged.LogEntryCount; i++)
         {
             var sourceLogEntry = sourceLogEntriesSpan[i];
-            PlatformServiceInterop.Native_FreeNativePointer((nint)sourceLogEntry.Message);
+            // TODO: We don't need to do this anymore because the string is allocated with a memory arena
+            //PlatformServiceInterop.Native_FreeNativePointer((nint)sourceLogEntry.Message);
         }
         
         Utf8StringMarshaller.Free(unmanaged.EntryPoint);

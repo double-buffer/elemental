@@ -7,7 +7,7 @@
 template<typename T>
 ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<T> source, T separator) 
 {
-    auto count = 1;
+   auto count = 1;
 
     for (size_t i = 0; i < source.Length; i++)
     {
@@ -46,7 +46,7 @@ ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOn
 ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source)
 {
     auto destination = SystemPushArray<char>(memoryArena, source.Length);
-    wcstombs_s(nullptr, destination.Pointer, destination.Length + 1, source.Pointer, source.Length);
+    wcstombs_s(nullptr, destination.Pointer, destination.Length + 1, source.Pointer, source.Length); // TODO: System call to review
 
     return destination;
 }
@@ -54,118 +54,12 @@ ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnl
 ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source)
 {
     auto destination = SystemPushArray<wchar_t>(memoryArena, source.Length);
-    mbstowcs_s(nullptr, destination.Pointer, destination.Length + 1, (char*)source.Pointer, source.Length);
+    mbstowcs_s(nullptr, destination.Pointer, destination.Length + 1, (char*)source.Pointer, source.Length); // TODO: System call to review
 
     return destination;
 }
 
 // TODO: OLD CODE to remove
-char* SystemConcatStrings(const char* str1, const char* str2) 
-{
-    size_t len1 = strlen(str1);
-    size_t len2 = strlen(str2);
-
-    //char* destination = (char*)SystemAllocateMemory(len1 + len2 + 1, str1, 0);
-    char* destination = (char*)malloc(len1 + len2 + 1);
-
-    memcpy(destination, str1, len1);
-    memcpy(destination + len1, str2, len2);
-
-    destination[len1 + len2] = '\0';
-
-    return destination;
-}
-
-void SystemSplitString(const wchar_t* source, const wchar_t separator, wchar_t** result, uint32_t* resultCount) 
-{
-    if (!source || !result || !resultCount) 
-    {
-        return;
-    }
-
-    wchar_t* p = (wchar_t*)source;
-    uint32_t count = 0;
-    while (*p != L'\0') {
-        if (*p == separator) {
-            ++count;
-        }
-        ++p;
-    }
-    ++count;
-
-    *resultCount = count;
-
-    if (result)
-    {
-        wchar_t* copy = wcsdup(source);
-        if (!copy) {
-            *result = NULL;
-            return;
-        }
-
-        p = copy;
-        uint32_t index = 0;
-            while (*p != L'\0') {
-            if (*p == separator) {
-                *p = L'\0';
-                result[index++] = p;
-            } else if (index == 0 || *(p - 1) == L'\0') {
-                result[index++] = p;
-            }
-            ++p;
-        }
-    }
-}
-
-const uint8_t* SystemConvertWideCharToUtf8(const wchar_t* source)
-{
-    size_t requiredSize;
-    errno_t error = wcstombs_s(&requiredSize, NULL, 0, source, 0);
-
-    if (error != 0) 
-    {
-        return NULL;
-    }
-
-    uint8_t* destination = (uint8_t*)malloc(requiredSize + 1);
-    size_t convertedSize;
-    error = wcstombs_s(&convertedSize, (char*)destination, requiredSize, source, requiredSize);
-
-    if (error != 0) 
-    {
-        free(destination);
-        return NULL;
-    }
-
-    destination[convertedSize] = '\0';
-    return destination;
-}
-
-const wchar_t* SystemConvertUtf8ToWideChar(const char* source)
-{
-    size_t requiredSize;
-    errno_t error = mbstowcs_s(&requiredSize, NULL, 0, (char*)source, 0);
-
-    if (error != 0) 
-    {
-        return NULL;
-    }
-
-    //wchar_t* destination = (wchar_t*)SystemAllocateMemory((requiredSize + 1) * sizeof(wchar_t), (const char*)source, 0);
-    wchar_t* destination = (wchar_t*)malloc((requiredSize + 1) * sizeof(wchar_t));
-    size_t convertedSize;
-    error = mbstowcs_s(&convertedSize, destination, requiredSize, (char*)source, requiredSize);
-
-    if (error != 0)
-    {
-        free(destination);
-        return NULL;
-    }
-
-    destination[convertedSize] = L'\0';
-    return destination;
-}
-
 void SystemFreeConvertedString(const wchar_t* value)
 {
     free((void*)value);
@@ -175,17 +69,15 @@ void SystemFreeConvertedString(const wchar_t* value)
 // IO functions
 //---------------------------------------------------------------------------------------------------------------
 
-char* SystemGenerateTempFilename() 
+ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena) 
 {
-    char temp[] = "/tmp/tempfileXXXXXX";
-    int fd = mkstemp(temp);
-    
-    if (fd != -1) 
-    {
-        return strdup(temp);
-    }
+    auto templateName = (ReadOnlySpan<char>)"/tmp/tempfileXXXXXX";
+    auto result = SystemPushArray<char>(memoryArena, templateName.Length);
+    templateName.CopyTo(result);
 
-    return NULL;
+    mkstemp((char*)result.Pointer);
+
+    return result;
 }
 
 #ifdef _WINDOWS
@@ -261,13 +153,41 @@ void SystemDeleteFile(const char* filename)
 // Library / process functions
 //---------------------------------------------------------------------------------------------------------------
 
+ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
+{
+    // TODO: Resize buffer if no more spaces
+
+    auto buffer = SystemPushArray<char>(memoryArena, 128);
+    auto result = SystemPushArray<char>(memoryArena, 2048);
+
+    auto finalCommand = SystemConcatBuffers<char>(memoryArena, command, " 2>&1");
+
+    auto pipe = popen(finalCommand.Pointer, "r");
+    assert(pipe);
+
+    auto currentLength = 0;
+
+    while (fgets(buffer.Pointer, buffer.Length, pipe) != nullptr) 
+    {
+        auto length = strlen(buffer.Pointer);
+        buffer.Slice(0, length).CopyTo(result.Slice(currentLength));
+
+        currentLength += length;
+    }
+
+    pclose(pipe);
+
+    return result;
+}
+
+// TODO: To remove old code
 const void* SystemLoadLibrary(const char* libraryName)
 {
-    char* fullName = SystemConcatStrings(libraryName, libraryExtension);
+    auto memoryArena = SystemAllocateMemoryArena(1024); // TODO: Change that
+    auto fullName = SystemConcatBuffers<char>(memoryArena, libraryName, libraryExtension);
 
 #ifdef _WINDOWS
-    void* library = LoadLibraryA(fullName);
-    free(fullName);
+    void* library = LoadLibraryA(fullName.Pointer);
     return library;
 #else
     char* fullNameUnix = SystemConcatStrings("lib", fullName);
@@ -277,6 +197,8 @@ const void* SystemLoadLibrary(const char* libraryName)
     free(fullNameUnix);
     return library;
 #endif
+
+    SystemFreeMemoryArena(memoryArena); // TODO: Change that 
 }
 
 void SystemFreeLibrary(const void* library)
@@ -295,32 +217,6 @@ const void* SystemGetFunctionExport(const void* library, const char* functionNam
 #else
     return dlsym((void*)library, functionName);
 #endif
-}
-
-// TODO: check for errors
-bool SystemExecuteProcess(const char* command, char* result) 
-{
-    char buffer[128];
-    result[0] = '\0';
-
-    char* finalCommand = SystemConcatStrings(command, " 2>&1");
-
-    FILE* pipe = popen(finalCommand, "r");
-    assert(pipe);
-
-    while (fgets(buffer, sizeof(buffer), pipe) != NULL) 
-    {
-        char* temp = result;
-        temp = SystemConcatStrings(temp, buffer);
-        strcpy_s(result, 1024, temp);
-
-        free(temp);
-    }
-
-    pclose(pipe);
-    free(finalCommand);
-
-    return true;
 }
 
 //---------------------------------------------------------------------------------------------------------------
