@@ -14,11 +14,21 @@ struct MemoryArena
     size_t AllocatedBytes;
 };
 
-MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes);
-void SystemFreeMemoryArena(MemoryArena* memoryArena);
+MemoryArena* SystemMemoryArenaAllocate(size_t sizeInBytes);
+void SystemMemoryArenaFree(MemoryArena* memoryArena);
+void SystemMemoryArenaClear(MemoryArena* memoryArena);
 
+void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes);
+void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes);
 template<typename T>
-Span<T> SystemPushArray(MemoryArena* memoryArena, size_t count); 
+Span<T> SystemPushArray(MemoryArena* memoryArena, size_t count);
+template<typename T>
+Span<T> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
+template<typename T>
+T SystemPushStruct(MemoryArena* memoryArena);
+template<typename T>
+T SystemPushStructZero(MemoryArena* memoryArena);
+void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes);
 
 template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2);

@@ -14,7 +14,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     }
 
     // TESTING
-    auto memoryArena = SystemAllocateMemoryArena(102400);
+    auto memoryArena = SystemMemoryArenaAllocate(102400);
 
     auto output = SystemExecuteProcess(memoryArena, "dir");
     printf("Output: %s\n", output.Pointer);
@@ -32,6 +32,8 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     {
         printf("ResultSplit: %ls\n", resultSplit[i].Pointer);
     }
+
+    SystemMemoryArenaClear(memoryArena);
     
     auto result2 = SystemConcatBuffers<char>(memoryArena, "Test1 ", "Test2");
     printf("Result: %s\n", result2.Pointer);
@@ -42,6 +44,8 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     {
         printf("ResultSplit: %s\n", resultSplit2[i].Pointer);
     }
+
+    printf("Allocated Bytes: %lld\n", memoryArena->AllocatedBytes);
 }
 
 DllExport void Native_FreeNativeApplicationService()

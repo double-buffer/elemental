@@ -70,13 +70,12 @@ var shaderCodeMetal = File.ReadAllText("Triangle.metal");
 
 var meshShaderSourceType = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? ShaderLanguage.Msl : ShaderLanguage.Hlsl;
 
-var shaderInputs = new ShaderCompilerInput[]
-{
+ShaderCompilerInput[] shaderInputs = 
+[
     new() { ShaderCode = selectedGraphicsDevice.GraphicsApi == GraphicsApi.Metal ? shaderCodeMetal : shaderCode, Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", ShaderLanguage = meshShaderSourceType },
     new() { ShaderCode = shaderCode, Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", ShaderLanguage = ShaderLanguage.Hlsl }
-};
+];
 
-// BUG: Compilation fail in release mode for now :(
 var shaderCompilationResults = shaderCompiler.CompileShaders(shaderInputs, selectedGraphicsDevice.GraphicsApi);
 
 // TODO: Avoid the array declaration

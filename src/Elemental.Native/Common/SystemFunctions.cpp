@@ -75,7 +75,7 @@ ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena)
     auto result = SystemPushArray<char>(memoryArena, templateName.Length);
     templateName.CopyTo(result);
 
-    mkstemp((char*)result.Pointer);
+    mkstemp((char*)result.Pointer); // TODO: System call to review
 
     return result;
 }
@@ -155,7 +155,8 @@ void SystemDeleteFile(const char* filename)
 
 ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
 {
-    // TODO: Resize buffer if no more spaces
+    // TODO: We need to use a scratch buffer for temp memory and the
+    // memory arena for the output
 
     auto buffer = SystemPushArray<char>(memoryArena, 128);
     auto result = SystemPushArray<char>(memoryArena, 2048);
@@ -183,7 +184,8 @@ ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<c
 // TODO: To remove old code
 const void* SystemLoadLibrary(const char* libraryName)
 {
-    auto memoryArena = SystemAllocateMemoryArena(1024); // TODO: Change that
+    // TODO: We should use a scratch arena here
+    auto memoryArena = SystemMemoryArenaAllocate(1024); // TODO: Change that
     auto fullName = SystemConcatBuffers<char>(memoryArena, libraryName, libraryExtension);
 
 #ifdef _WINDOWS
@@ -198,7 +200,7 @@ const void* SystemLoadLibrary(const char* libraryName)
     return library;
 #endif
 
-    SystemFreeMemoryArena(memoryArena); // TODO: Change that 
+    SystemMemoryArenaFree(memoryArena); // TODO: Change that 
 }
 
 void SystemFreeLibrary(const void* library)

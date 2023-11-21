@@ -17,10 +17,11 @@ void MetalShaderCompilerProvider::GetTargetShaderLanguages(ShaderLanguage* targe
 bool MetalShaderCompilerProvider::IsCompilerInstalled()
 {
     // TODO: Doesn't work on windows
-    auto tempMemoryArena = SystemAllocateMemoryArena(1024);
+    // TODO: Use a scratch arena
+    auto tempMemoryArena = SystemMemoryArenaAllocate(1024);
     //auto output =  SystemExecuteProcess(tempMemoryArena, "xcrun -f metal");
 
-    SystemFreeMemoryArena(tempMemoryArena);
+    SystemMemoryArenaFree(tempMemoryArena);
     return true;
 }
     

@@ -157,6 +157,10 @@ void* Direct3D12CreateGraphicsDevice(GraphicsDeviceOptions* options)
     }
 
     // HACK: We need to have a kind of manager for that with maybe a freeslot list?
+    // TODO: It seems from an article that RTV and DSV are only allocated on CPU so we could have
+    // only 8 + 2 descriptors and replace them at runtime at no costs!
+    // See: https://asawicki.info/news_1772_secrets_of_direct3d_12_do_rtv_and_dsv_descriptors_make_any_sense
+
     D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc = {};
     rtvDescriptorHeapDesc.NumDescriptors = 1000; //HACK: Change that
     rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -1086,10 +1090,10 @@ static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12
 
     // TODO: For the moment we create a memory arena for each log messages
     // We could use a scratch arena that is reset each frames
-    auto memoryArena = SystemAllocateMemoryArena(255);
+    auto memoryArena = SystemMemoryArenaAllocate(255);
     auto convertedString = SystemConvertUtf8ToWideChar(memoryArena, description);
     LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString.Pointer);
-    SystemFreeMemoryArena(memoryArena);
+    SystemMemoryArenaFree(memoryArena);
 }
 
 static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data)
