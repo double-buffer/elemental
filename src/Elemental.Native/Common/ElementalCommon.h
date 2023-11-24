@@ -28,9 +28,10 @@ typedef enum
 
 typedef enum
 {
-    LogMessageCategory_NativeApplication = 0,
-    LogMessageCategory_Graphics = 1,
-    LogMessageCategory_Inputs = 2
+    LogMessageCategory_Memory = 0,
+    LogMessageCategory_NativeApplication = 1,
+    LogMessageCategory_Graphics = 2,
+    LogMessageCategory_Inputs = 3
 } LogMessageCategory;
 
 typedef void (*LogMessageHandlerPtr)(LogMessageType messageType, LogMessageCategory category, const wchar_t* function, const wchar_t* message);

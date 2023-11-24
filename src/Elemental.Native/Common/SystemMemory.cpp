@@ -1,19 +1,19 @@
 #include "SystemMemory.h"
-
-// TODO: Remove: Temporary
-#include <stdio.h>
+#include "SystemFunctions.h"
+#include "SystemLogging.h"
 
 struct MemoryArenaStorage
 {
     Span<uint8_t> Memory;
     size_t AllocatedBytes;
     uint8_t Level;
+    MemoryArenaStorage* Next;
 };
 
 thread_local MemoryArenaStorage* stackMemoryArenaStorage = nullptr;
 thread_local MemoryArenaStorage* stackMemoryArenaExtraStorage = nullptr;
 
-MemoryArenaStorage* SystemAllocateMemoryArenaStorage(size_t sizeInBytes)
+MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
     // TODO: Review the mallocs?
     auto pointer = (uint8_t*)malloc(sizeInBytes); // TODO: System call to review
@@ -21,61 +21,69 @@ MemoryArenaStorage* SystemAllocateMemoryArenaStorage(size_t sizeInBytes)
     memoryArenaStorage->Memory = Span<uint8_t>(pointer, sizeInBytes);
     memoryArenaStorage->AllocatedBytes = 0;
     memoryArenaStorage->Level = 0;
+    memoryArenaStorage->Next = nullptr;
 
     return memoryArenaStorage;
 }
 
-MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes)
+void FreeMemoryArenaStorage(MemoryArenaStorage* storage)
 {
-    auto memoryArenaStorage = SystemAllocateMemoryArenaStorage(sizeInBytes);
+    free(storage->Memory.Pointer); // TODO: System call to review
+    free(storage);
+}
 
+MemoryArena* AllocateMemoryArena(MemoryArenaStorage* storage, size_t startOffset, uint8_t level)
+{
     // TODO: Review the mallocs?
     auto result = (MemoryArena*)malloc(sizeof(MemoryArena)); // TODO: System call to review
-    result->MemoryArenaStorage = memoryArenaStorage;
-    result->StartOffset = 0;
-    result->Level = 0;
+    result->Storage = storage;
+    result->StartOffset = startOffset;
+    result->AllocatedBytes = 0;
+    result->SizeInBytes = storage->Memory.Length;
+    result->Level = level;
     result->ExtraStorage = nullptr;
 
     return result;
 }
 
+// TODO: Provide an empty one with defaults for the initial size
+MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes)
+{
+    auto storage = AllocateMemoryArenaStorage(sizeInBytes);
+    return AllocateMemoryArena(storage, 0, 0);
+}
+
 void SystemFreeMemoryArena(MemoryArena* memoryArena)
 {
-    free(memoryArena->MemoryArenaStorage->Memory.Pointer); // TODO: System call to review
-    free(memoryArena->MemoryArenaStorage);
+    FreeMemoryArenaStorage(memoryArena->Storage);
     free(memoryArena); // TODO: System call to review
 }
 
 void SystemClearMemoryArena(MemoryArena* memoryArena)
 {
-    memoryArena->MemoryArenaStorage->AllocatedBytes = 0;
+    SystemPopMemory(memoryArena, memoryArena->AllocatedBytes);
 }
 
 size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena* memoryArena)
 {
-    return memoryArena->MemoryArenaStorage->AllocatedBytes;
+    return memoryArena->AllocatedBytes;
 }
 
 StackMemoryArena SystemGetStackMemoryArena()
 {
     if (stackMemoryArenaStorage == nullptr)
     {
-        stackMemoryArenaStorage = SystemAllocateMemoryArenaStorage(1024);
-        stackMemoryArenaExtraStorage = SystemAllocateMemoryArenaStorage(1024);
+        stackMemoryArenaStorage = AllocateMemoryArenaStorage(1024);
+        stackMemoryArenaExtraStorage = AllocateMemoryArenaStorage(1024);
     }
 
-    // TODO: Review the mallocs? And Refactor to a common function
-    auto result = (MemoryArena*)malloc(sizeof(MemoryArena)); // TODO: System call to review
-    result->MemoryArenaStorage = stackMemoryArenaStorage;
-    result->StartOffset = stackMemoryArenaStorage->AllocatedBytes;
-    result->Level = ++stackMemoryArenaStorage->Level;
-    result->ExtraStorage = nullptr;
-
-    return { result };
+    return { AllocateMemoryArena(stackMemoryArenaStorage, stackMemoryArenaStorage->AllocatedBytes, ++stackMemoryArenaStorage->Level)  };
 }
 
 StackMemoryArena::~StackMemoryArena()
 {
+    // BUG: Issue here if we have multiple storages
+    // TODO: Can we use the pop function?
     stackMemoryArenaStorage->Level--;
     stackMemoryArenaStorage->AllocatedBytes = MemoryArenaPointer->StartOffset;
 
@@ -92,52 +100,82 @@ StackMemoryArena::~StackMemoryArena()
 
 void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 {
-    // TODO: Add checks
-    // TODO: Grows the arena if needed
-
-    if (stackMemoryArenaExtraStorage != nullptr)
-    {
-        printf("ExtraStorage: %llu\n", stackMemoryArenaExtraStorage->AllocatedBytes);
-    }
-
     MemoryArena* workingMemoryArena = memoryArena;
 
-    if (memoryArena->Level !=  memoryArena->MemoryArenaStorage->Level)
+    if (memoryArena->Level !=  memoryArena->Storage->Level)
     {
-        printf("PROBLEM: %d - %d\n", memoryArena->Level, memoryArena->MemoryArenaStorage->Level);
-
         if (memoryArena->ExtraStorage == nullptr)
         {
-            // TODO: Review the mallocs? And Refactor to a common function
-            auto result = (MemoryArena*)malloc(sizeof(MemoryArena)); // TODO: System call to review
-            result->MemoryArenaStorage = stackMemoryArenaExtraStorage;
-            result->StartOffset = stackMemoryArenaExtraStorage->AllocatedBytes;
-            result->ExtraStorage = nullptr;
-
-            memoryArena->ExtraStorage = result;
+            memoryArena->ExtraStorage = AllocateMemoryArena(stackMemoryArenaExtraStorage, stackMemoryArenaExtraStorage->AllocatedBytes, 0);
         }
 
         workingMemoryArena = memoryArena->ExtraStorage;
+        LogDebugMessage(LogMessageCategory_Memory, L"Using stack memory arena extra storage. (Extra allocated bytes: %llu)", stackMemoryArenaExtraStorage->AllocatedBytes + sizeInBytes);
     }
 
-    auto storage = workingMemoryArena->MemoryArenaStorage;
+    auto storage = workingMemoryArena->Storage;
 
-    if (storage->AllocatedBytes + sizeInBytes > storage->Memory.Length)
+    if (workingMemoryArena->Storage->AllocatedBytes + sizeInBytes > storage->Memory.Length)
     {
-        printf("SIZE Problem!\n");
+        auto oldSizeInBytes = workingMemoryArena->SizeInBytes;
+        auto newStorageSize = RoundUpToPowerOf2(max(workingMemoryArena->SizeInBytes, sizeInBytes)); 
+        workingMemoryArena->SizeInBytes += newStorageSize;
+        workingMemoryArena->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
+        storage->AllocatedBytes = storage->Memory.Length;
 
-        auto newSize = storage->Memory.Length * 2;
-        auto newMemory = Span<uint8_t>((uint8_t*)malloc(newSize), newSize); // TODO: System call to review
+        LogDebugMessage(LogMessageCategory_Memory, L"Resizing MemoryArena to %llu (Previous size was: %llu) -> SizeInBytes: %llu", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
 
-        storage->Memory.CopyTo(newMemory);
-        free(storage->Memory.Pointer);
-        storage->Memory = newMemory;
+        storage = AllocateMemoryArenaStorage(newStorageSize);
+        storage->Next = workingMemoryArena->Storage;
+        workingMemoryArena->Storage = storage;
     }
 
     auto result = storage->Memory.Pointer + storage->AllocatedBytes;
     storage->AllocatedBytes += sizeInBytes;
+    workingMemoryArena->AllocatedBytes += sizeInBytes;
 
     return result;
+}
+
+void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
+{
+    if (sizeInBytes > memoryArena->AllocatedBytes)
+    {
+        LogErrorMessage(LogMessageCategory_Memory, L"Cannot pop memory arena with: %llu (Allocated size is: %llu)", sizeInBytes, memoryArena->AllocatedBytes);
+        return;
+    }
+
+    auto oldSizeInBytes = memoryArena->SizeInBytes;
+    auto remainingSizeInBytes = sizeInBytes;
+
+    auto storage = memoryArena->Storage;
+    auto storageCount = 0;
+
+    while (storage != nullptr && remainingSizeInBytes != 0)
+    {
+        if (storage->AllocatedBytes < remainingSizeInBytes)
+        {
+            remainingSizeInBytes -= storage->AllocatedBytes;
+            memoryArena->SizeInBytes -= storage->Memory.Length;
+
+            storageCount++;
+            auto storageToFree = storage;
+            storage = storage->Next;
+
+            FreeMemoryArenaStorage(storageToFree);
+        }
+        else 
+        {
+            storage->AllocatedBytes -= remainingSizeInBytes;
+            remainingSizeInBytes = 0;
+        }
+    }
+
+    assert(storage);
+    memoryArena->Storage = storage;
+    memoryArena->AllocatedBytes -= sizeInBytes;
+
+    LogDebugMessage(LogMessageCategory_Memory, L"Popping MemoryArena to %llu (New size: %llu, Previous size was: %llu) -> Deleted Memory Storages: %d, Allocated Bytes: %llu", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, storageCount, memoryArena->AllocatedBytes);
 }
 
 void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes)
@@ -186,11 +224,6 @@ template<typename T>
 T* SystemPushStructZero(MemoryArena* memoryArena)
 {
     return (T*)SystemPushMemoryZero(memoryArena, sizeof(T));
-}
-
-void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
-{
-    memoryArena->MemoryArenaStorage->AllocatedBytes = memoryArena->MemoryArenaStorage->AllocatedBytes - sizeInBytes;
 }
 
 template<typename T>

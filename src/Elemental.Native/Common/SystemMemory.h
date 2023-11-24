@@ -12,8 +12,10 @@ struct MemoryArenaStorage;
 
 struct MemoryArena
 {
-    MemoryArenaStorage* MemoryArenaStorage;
+    MemoryArenaStorage* Storage;
     size_t StartOffset;
+    size_t AllocatedBytes;
+    size_t SizeInBytes;
     uint8_t Level;
     MemoryArena* ExtraStorage;
 };
@@ -37,6 +39,8 @@ size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena* memoryArena);
 StackMemoryArena SystemGetStackMemoryArena();
 
 void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes);
+void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes);
+
 void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes);
 template<typename T>
 Span<T> SystemPushArray(MemoryArena* memoryArena, size_t count);
@@ -46,7 +50,6 @@ template<typename T>
 T* SystemPushStruct(MemoryArena* memoryArena);
 template<typename T>
 T* SystemPushStructZero(MemoryArena* memoryArena);
-void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes);
 
 template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2);

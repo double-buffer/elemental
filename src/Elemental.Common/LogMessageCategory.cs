@@ -6,6 +6,11 @@ namespace Elemental;
 public enum LogMessageCategory
 {
     /// <summary>
+    /// Memory log message category.
+    /// </summary>
+    Memory,
+
+    /// <summary>
     /// Native application log message category.
     /// </summary>
     NativeApplication,
