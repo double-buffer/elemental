@@ -13,6 +13,9 @@
 #include "Direct3D12Shader.h"
 #include "Direct3D12GraphicsDevice.h"
 
+// TODO: To remove -> Temporary
+#include <string>
+
 // TODO: We need to forward declare all the other functions
 // TODO: Split that in multiple files
 

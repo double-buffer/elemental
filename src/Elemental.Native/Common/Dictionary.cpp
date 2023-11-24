@@ -1,5 +1,8 @@
 #include "Dictionary.h"
 
+// TODO: To remove -> Temporary
+#include <stdio.h>
+
 // TODO: Don't malloc items, use a unified malloc here with an array
 
 // TODO: Use byte array instead

@@ -8,15 +8,33 @@
 //#define calloc(count, size) NOT_IMPLEMENTED(count, size)
 //#define free(pointer) NOT_IMPLEMENTED(pointer)
 
+struct MemoryArenaStorage;
+
 struct MemoryArena
 {
-    Span<uint8_t> Memory;
-    size_t AllocatedBytes;
+    MemoryArenaStorage* MemoryArenaStorage;
+    size_t StartOffset;
+    uint8_t Level;
+    MemoryArena* ExtraStorage;
 };
 
-MemoryArena* SystemMemoryArenaAllocate(size_t sizeInBytes);
-void SystemMemoryArenaFree(MemoryArena* memoryArena);
-void SystemMemoryArenaClear(MemoryArena* memoryArena);
+struct StackMemoryArena
+{
+    MemoryArena* MemoryArenaPointer;
+
+    ~StackMemoryArena();
+
+    operator MemoryArena*() const 
+    {
+        return MemoryArenaPointer;
+    }
+};
+
+MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes);
+void SystemFreeMemoryArena(MemoryArena* memoryArena);
+void SystemClearMemoryArena(MemoryArena* memoryArena);
+size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena* memoryArena);
+StackMemoryArena SystemGetStackMemoryArena();
 
 void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes);
 void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes);
@@ -25,9 +43,9 @@ Span<T> SystemPushArray(MemoryArena* memoryArena, size_t count);
 template<typename T>
 Span<T> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
 template<typename T>
-T SystemPushStruct(MemoryArena* memoryArena);
+T* SystemPushStruct(MemoryArena* memoryArena);
 template<typename T>
-T SystemPushStructZero(MemoryArena* memoryArena);
+T* SystemPushStructZero(MemoryArena* memoryArena);
 void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes);
 
 template<typename T>

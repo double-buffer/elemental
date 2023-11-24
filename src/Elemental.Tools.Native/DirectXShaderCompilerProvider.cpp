@@ -39,6 +39,8 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena* memoryAr
 {
     assert(_createInstanceFunc != nullptr);
 
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     ComPtr<IDxcCompiler3> compiler;
     AssertIfFailed(_createInstanceFunc(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
 
@@ -49,7 +51,7 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena* memoryAr
     //-E for the entry point (eg. PSMain)
     arguments.push_back(L"-E");
     
-    auto entryPointString = SystemConvertUtf8ToWideChar(memoryArena, (char*)entryPoint);
+    auto entryPointString = SystemConvertUtf8ToWideChar(stackMemoryArena, (char*)entryPoint);
     arguments.push_back(entryPointString.Pointer);
 
     // TODO: Use defines

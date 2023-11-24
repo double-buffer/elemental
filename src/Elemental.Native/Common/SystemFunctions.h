@@ -9,7 +9,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
-#include <atomic>
+
+// TODO: To remove -> Temporary
+#include <string>
 
 #define PackedStruct struct __attribute__((__packed__))
 

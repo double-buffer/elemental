@@ -1088,12 +1088,9 @@ static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12
         messageType = LogMessageType_Error;
     }
 
-    // TODO: For the moment we create a memory arena for each log messages
-    // We could use a scratch arena that is reset each frames
-    auto memoryArena = SystemMemoryArenaAllocate(255);
-    auto convertedString = SystemConvertUtf8ToWideChar(memoryArena, description);
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto convertedString = SystemConvertUtf8ToWideChar(stackMemoryArena, description);
     LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString.Pointer);
-    SystemMemoryArenaFree(memoryArena);
 }
 
 static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data)

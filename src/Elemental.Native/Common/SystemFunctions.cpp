@@ -33,7 +33,7 @@ ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOn
             }
         }
 
-        auto resultString = SystemPushArray<T>(memoryArena, separatorIndex - currentIndex); 
+        auto resultString = SystemPushArrayZero<T>(memoryArena, separatorIndex - currentIndex); 
         source.Slice(currentIndex, separatorIndex - currentIndex).CopyTo(resultString);
         result[i] = resultString;
 
@@ -45,7 +45,7 @@ ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOn
 
 ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source)
 {
-    auto destination = SystemPushArray<char>(memoryArena, source.Length);
+    auto destination = SystemPushArrayZero<char>(memoryArena, source.Length);
     wcstombs_s(nullptr, destination.Pointer, destination.Length + 1, source.Pointer, source.Length); // TODO: System call to review
 
     return destination;
@@ -53,7 +53,7 @@ ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnl
 
 ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source)
 {
-    auto destination = SystemPushArray<wchar_t>(memoryArena, source.Length);
+    auto destination = SystemPushArrayZero<wchar_t>(memoryArena, source.Length);
     mbstowcs_s(nullptr, destination.Pointer, destination.Length + 1, (char*)source.Pointer, source.Length); // TODO: System call to review
 
     return destination;
@@ -72,7 +72,7 @@ void SystemFreeConvertedString(const wchar_t* value)
 ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena) 
 {
     auto templateName = (ReadOnlySpan<char>)"/tmp/tempfileXXXXXX";
-    auto result = SystemPushArray<char>(memoryArena, templateName.Length);
+    auto result = SystemPushArrayZero<char>(memoryArena, templateName.Length);
     templateName.CopyTo(result);
 
     mkstemp((char*)result.Pointer); // TODO: System call to review
@@ -155,13 +155,11 @@ void SystemDeleteFile(const char* filename)
 
 ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
 {
-    // TODO: We need to use a scratch buffer for temp memory and the
-    // memory arena for the output
+    auto result = SystemPushArrayZero<char>(memoryArena, 2048);
 
-    auto buffer = SystemPushArray<char>(memoryArena, 128);
-    auto result = SystemPushArray<char>(memoryArena, 2048);
-
-    auto finalCommand = SystemConcatBuffers<char>(memoryArena, command, " 2>&1");
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto buffer = SystemPushArrayZero<char>(stackMemoryArena, 128);
+    auto finalCommand = SystemConcatBuffers<char>(stackMemoryArena, command, " 2>&1");
 
     auto pipe = popen(finalCommand.Pointer, "r");
     assert(pipe);
@@ -184,9 +182,8 @@ ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<c
 // TODO: To remove old code
 const void* SystemLoadLibrary(const char* libraryName)
 {
-    // TODO: We should use a scratch arena here
-    auto memoryArena = SystemMemoryArenaAllocate(1024); // TODO: Change that
-    auto fullName = SystemConcatBuffers<char>(memoryArena, libraryName, libraryExtension);
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto fullName = SystemConcatBuffers<char>(stackMemoryArena, libraryName, libraryExtension);
 
 #ifdef _WINDOWS
     void* library = LoadLibraryA(fullName.Pointer);
@@ -199,8 +196,6 @@ const void* SystemLoadLibrary(const char* libraryName)
     free(fullNameUnix);
     return library;
 #endif
-
-    SystemMemoryArenaFree(memoryArena); // TODO: Change that 
 }
 
 void SystemFreeLibrary(const void* library)

@@ -15,6 +15,9 @@ struct VulkanGraphicsDevice;
 #include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
 
+// TODO: To remove -> Temporary
+#include <string>
+
 GraphicsDiagnostics _vulkanGraphicsDiagnostics;
 VkInstance _vulkanInstance = nullptr;
 VkDebugReportCallbackEXT _vulkanDebugCallback = nullptr;
