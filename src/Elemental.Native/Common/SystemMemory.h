@@ -32,6 +32,7 @@ struct StackMemoryArena
     }
 };
 
+MemoryArena* SystemAllocateMemoryArena();
 MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes);
 void SystemFreeMemoryArena(MemoryArena* memoryArena);
 void SystemClearMemoryArena(MemoryArena* memoryArena);

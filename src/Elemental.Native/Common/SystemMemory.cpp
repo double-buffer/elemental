@@ -2,6 +2,8 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
+#define MEMORYARENA_DEFAULT_SIZE 1024
+
 struct MemoryArenaStorage
 {
     Span<uint8_t> Memory;
@@ -10,8 +12,22 @@ struct MemoryArenaStorage
     MemoryArenaStorage* Next;
 };
 
+struct ShrinkMemoryArenaStorageResult
+{
+    MemoryArenaStorage* Storage;
+    uint32_t StoragesDeleted;
+    size_t NewSizeInBytes;
+};
+
 thread_local MemoryArenaStorage* stackMemoryArenaStorage = nullptr;
 thread_local MemoryArenaStorage* stackMemoryArenaExtraStorage = nullptr;
+
+void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena);
+
+StackMemoryArena::~StackMemoryArena()
+{
+    SystemReleaseStackMemoryArena(MemoryArenaPointer);
+}
 
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
@@ -32,9 +48,50 @@ void FreeMemoryArenaStorage(MemoryArenaStorage* storage)
     free(storage);
 }
 
+ShrinkMemoryArenaStorageResult ShrinkMemoryArenaStorage(MemoryArenaStorage* storage, size_t sizeInBytes)
+{
+    size_t newSizeInBytes = 0;
+    auto resultStorage = storage;
+    auto storageCount = 0;
+    auto remainingSizeInBytes = sizeInBytes;
+
+    while (storage != nullptr)
+    {
+        if (storage->AllocatedBytes < remainingSizeInBytes)
+        {
+            remainingSizeInBytes -= storage->AllocatedBytes;
+
+            storageCount++;
+            auto storageToFree = storage;
+
+            storage = storage->Next;
+            FreeMemoryArenaStorage(storageToFree);
+        }
+        else if (remainingSizeInBytes != 0) 
+        {
+            storage->AllocatedBytes -= remainingSizeInBytes;
+            remainingSizeInBytes = 0;
+            resultStorage = storage;
+            newSizeInBytes += storage->Memory.Length;
+            storage = storage->Next;
+        }
+        else 
+        {
+            newSizeInBytes += storage->Memory.Length;
+            storage = storage->Next;
+        }
+    }
+
+    auto result = ShrinkMemoryArenaStorageResult();
+    result.Storage = resultStorage;
+    result.StoragesDeleted = storageCount;
+    result.NewSizeInBytes = newSizeInBytes;
+
+    return result;
+}
+
 MemoryArena* AllocateMemoryArena(MemoryArenaStorage* storage, size_t startOffset, uint8_t level)
 {
-    // TODO: Review the mallocs?
     auto result = (MemoryArena*)malloc(sizeof(MemoryArena)); // TODO: System call to review
     result->Storage = storage;
     result->StartOffset = startOffset;
@@ -46,7 +103,11 @@ MemoryArena* AllocateMemoryArena(MemoryArenaStorage* storage, size_t startOffset
     return result;
 }
 
-// TODO: Provide an empty one with defaults for the initial size
+MemoryArena* SystemAllocateMemoryArena()
+{
+    return SystemAllocateMemoryArena(MEMORYARENA_DEFAULT_SIZE);
+}
+
 MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes)
 {
     auto storage = AllocateMemoryArenaStorage(sizeInBytes);
@@ -73,29 +134,24 @@ StackMemoryArena SystemGetStackMemoryArena()
 {
     if (stackMemoryArenaStorage == nullptr)
     {
-        stackMemoryArenaStorage = AllocateMemoryArenaStorage(1024);
-        stackMemoryArenaExtraStorage = AllocateMemoryArenaStorage(1024);
+        stackMemoryArenaStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
+        stackMemoryArenaExtraStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
     }
 
     return { AllocateMemoryArena(stackMemoryArenaStorage, stackMemoryArenaStorage->AllocatedBytes, ++stackMemoryArenaStorage->Level)  };
 }
 
-StackMemoryArena::~StackMemoryArena()
+void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena)
 {
-    // BUG: Issue here if we have multiple storages
-    // TODO: Can we use the pop function?
-    stackMemoryArenaStorage->Level--;
-    stackMemoryArenaStorage->AllocatedBytes = MemoryArenaPointer->StartOffset;
-
-    if (MemoryArenaPointer->ExtraStorage != nullptr)
+    if (stackMemoryArena->ExtraStorage != nullptr)
     {
-        stackMemoryArenaExtraStorage->AllocatedBytes = MemoryArenaPointer->ExtraStorage->StartOffset;
-        // TODO: Refactor
-        free(MemoryArenaPointer->ExtraStorage);
+        SystemPopMemory(stackMemoryArena->ExtraStorage, stackMemoryArena->ExtraStorage->AllocatedBytes);
+        free(stackMemoryArena->ExtraStorage); // TODO: System call to review
     }
 
-    // TODO: Refactor
-    free(MemoryArenaPointer);
+    stackMemoryArenaStorage->Level--;
+    SystemPopMemory(stackMemoryArena, stackMemoryArena->AllocatedBytes);
+    free(stackMemoryArena); // TODO: System call to review
 }
 
 void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
@@ -145,37 +201,19 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
         return;
     }
 
+    auto shrinkResult = ShrinkMemoryArenaStorage(memoryArena->Storage, sizeInBytes);
+
     auto oldSizeInBytes = memoryArena->SizeInBytes;
-    auto remainingSizeInBytes = sizeInBytes;
 
-    auto storage = memoryArena->Storage;
-    auto storageCount = 0;
-
-    while (storage != nullptr && remainingSizeInBytes != 0)
-    {
-        if (storage->AllocatedBytes < remainingSizeInBytes)
-        {
-            remainingSizeInBytes -= storage->AllocatedBytes;
-            memoryArena->SizeInBytes -= storage->Memory.Length;
-
-            storageCount++;
-            auto storageToFree = storage;
-            storage = storage->Next;
-
-            FreeMemoryArenaStorage(storageToFree);
-        }
-        else 
-        {
-            storage->AllocatedBytes -= remainingSizeInBytes;
-            remainingSizeInBytes = 0;
-        }
-    }
-
-    assert(storage);
-    memoryArena->Storage = storage;
+    assert(shrinkResult.Storage);
+    memoryArena->Storage = shrinkResult.Storage;
     memoryArena->AllocatedBytes -= sizeInBytes;
+    memoryArena->SizeInBytes = shrinkResult.NewSizeInBytes;
 
-    LogDebugMessage(LogMessageCategory_Memory, L"Popping MemoryArena to %llu (New size: %llu, Previous size was: %llu) -> Deleted Memory Storages: %d, Allocated Bytes: %llu", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, storageCount, memoryArena->AllocatedBytes);
+    if (shrinkResult.StoragesDeleted > 0)
+    {
+        LogDebugMessage(LogMessageCategory_Memory, L"Shrinking MemoryArena storage to %llu (New size: %llu, Previous size was: %llu) -> Deleted Memory Storages: %d, Allocated Bytes: %llu", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, shrinkResult.StoragesDeleted, memoryArena->AllocatedBytes);
+    }
 }
 
 void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes)

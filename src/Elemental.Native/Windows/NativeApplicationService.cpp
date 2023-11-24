@@ -31,6 +31,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
             auto stackMemoryArena2 = SystemGetStackMemoryArena();
 
             string2 = SystemConcatBuffers<char>(stackMemoryArena1, "Test2", "Stack1");
+            SystemPushMemory(stackMemoryArena1, 10000);
             auto string3 = SystemConcatBuffers<char>(stackMemoryArena2, "Test", "Stack2");
             printf("Stack2 String: %s\n", string3.Pointer);
 
