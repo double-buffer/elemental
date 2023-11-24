@@ -2,6 +2,8 @@
 
 #include "SystemSpan.h"
 
+// TODO: Get rid of all mallocs and new
+
 //#define new NOT_IMPLEMENTED()
 
 //#define malloc(size) NOT_IMPLEMENTED(size)

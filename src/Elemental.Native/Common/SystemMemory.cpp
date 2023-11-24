@@ -1,6 +1,7 @@
 #include "SystemMemory.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
+#include "SystemPlatformFunctions.h"
 
 #define MEMORYARENA_DEFAULT_SIZE 1024
 
@@ -31,9 +32,8 @@ StackMemoryArena::~StackMemoryArena()
 
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
-    // TODO: Review the mallocs?
-    auto pointer = (uint8_t*)malloc(sizeInBytes); // TODO: System call to review
-    auto memoryArenaStorage = (MemoryArenaStorage*)malloc(sizeof(MemoryArenaStorage));
+    auto pointer = (uint8_t*)SystemPlatformAllocateMemory(sizeInBytes);
+    auto memoryArenaStorage = (MemoryArenaStorage*)SystemPlatformAllocateMemory(sizeof(MemoryArenaStorage));
     memoryArenaStorage->Memory = Span<uint8_t>(pointer, sizeInBytes);
     memoryArenaStorage->AllocatedBytes = 0;
     memoryArenaStorage->Level = 0;
@@ -44,8 +44,8 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 
 void FreeMemoryArenaStorage(MemoryArenaStorage* storage)
 {
-    free(storage->Memory.Pointer); // TODO: System call to review
-    free(storage);
+    SystemPlatformFreeMemory(storage->Memory.Pointer);
+    SystemPlatformFreeMemory(storage);
 }
 
 ShrinkMemoryArenaStorageResult ShrinkMemoryArenaStorage(MemoryArenaStorage* storage, size_t sizeInBytes)
@@ -92,7 +92,7 @@ ShrinkMemoryArenaStorageResult ShrinkMemoryArenaStorage(MemoryArenaStorage* stor
 
 MemoryArena* AllocateMemoryArena(MemoryArenaStorage* storage, size_t startOffset, uint8_t level)
 {
-    auto result = (MemoryArena*)malloc(sizeof(MemoryArena)); // TODO: System call to review
+    auto result = (MemoryArena*)SystemPlatformAllocateMemory(sizeof(MemoryArena));
     result->Storage = storage;
     result->StartOffset = startOffset;
     result->AllocatedBytes = 0;
@@ -117,7 +117,7 @@ MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes)
 void SystemFreeMemoryArena(MemoryArena* memoryArena)
 {
     FreeMemoryArenaStorage(memoryArena->Storage);
-    free(memoryArena); // TODO: System call to review
+    SystemPlatformFreeMemory(memoryArena);
 }
 
 void SystemClearMemoryArena(MemoryArena* memoryArena)
@@ -146,12 +146,12 @@ void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena)
     if (stackMemoryArena->ExtraStorage != nullptr)
     {
         SystemPopMemory(stackMemoryArena->ExtraStorage, stackMemoryArena->ExtraStorage->AllocatedBytes);
-        free(stackMemoryArena->ExtraStorage); // TODO: System call to review
+        SystemPlatformFreeMemory(stackMemoryArena->ExtraStorage);
     }
 
     stackMemoryArenaStorage->Level--;
     SystemPopMemory(stackMemoryArena, stackMemoryArena->AllocatedBytes);
-    free(stackMemoryArena); // TODO: System call to review
+    SystemPlatformFreeMemory(stackMemoryArena);
 }
 
 void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
@@ -218,7 +218,7 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes)
 {
     auto result = SystemPushMemory(memoryArena, sizeInBytes);
-    memset(result, 0, sizeInBytes); // TODO: System call to review
+    SystemPlatformClearMemory(result, sizeInBytes);
 
     return result;
 }

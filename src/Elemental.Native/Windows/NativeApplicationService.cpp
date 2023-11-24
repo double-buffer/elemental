@@ -13,66 +13,6 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         globalLogMessageHandler = options->LogMessageHandler;
         LogDebugMessage(LogMessageCategory_NativeApplication, L"Init OK");
     }
-
-    // TESTING
-    auto memoryArena = SystemAllocateMemoryArena(1024);
-
-    {
-        auto stackMemoryArena1 = SystemGetStackMemoryArena();
-        auto string1 = SystemConcatBuffers<char>(stackMemoryArena1, "Test", "Stack1");
-        ReadOnlySpan<char> string2;
-        ReadOnlySpan<char> string5;
-
-        {
-            auto stackMemoryArena2 = SystemGetStackMemoryArena();
-
-            string2 = SystemConcatBuffers<char>(stackMemoryArena1, "Test2", "Stack1");
-            SystemPushMemory(stackMemoryArena1, 10000);
-            auto string3 = SystemConcatBuffers<char>(stackMemoryArena2, "Test", "Stack2");
-            printf("Stack2 String: %s\n", string3.Pointer);
-
-            {
-                auto stackMemoryArena3 = SystemGetStackMemoryArena();
-                string5 = SystemConcatBuffers<char>(stackMemoryArena1, "Test4", "Stack1");
-            }
-        }
-
-        auto string4 = SystemConcatBuffers<char>(stackMemoryArena1, "Test3", "Stack1");
-
-        printf("Stack1 String: %s\n", string1.Pointer);
-        printf("Stack1 String2: %s\n", string2.Pointer);
-        printf("Stack1 String3: %s\n", string4.Pointer);
-        printf("Stack1 String4: %s\n", string5.Pointer);
-    }
-
-    auto result = SystemConcatBuffers<wchar_t>(memoryArena, L"Test1 Wide ", L"Test2 Wide");
-    printf("Result: %ls\n", result.Pointer);
-    
-    auto utf8 = SystemConvertWideCharToUtf8(memoryArena, result);
-    printf("Result UTF8: %s\n", utf8.Pointer);
-    printf("Result Back wchar: %ls\n", SystemConvertUtf8ToWideChar(memoryArena, utf8).Pointer);
-
-    auto resultSplit = SystemSplitString<wchar_t>(memoryArena, result, L' ');
-
-    for (size_t i = 0; i < resultSplit.Length; i++)
-    {
-        printf("ResultSplit: %ls\n", resultSplit[i].Pointer);
-    }
-
-    //SystemPopMemory(memoryArena, 2500);
-    SystemClearMemoryArena(memoryArena);
-    
-    auto result2 = SystemConcatBuffers<char>(memoryArena, "Test1 ", "Test2");
-    printf("Result: %s\n", result2.Pointer);
-
-    auto resultSplit2 = SystemSplitString<char>(memoryArena, result2, ' ');
-
-    for (size_t i = 0; i < resultSplit2.Length; i++)
-    {
-        printf("ResultSplit: %s\n", resultSplit2[i].Pointer);
-    }
-
-    printf("Allocated Bytes: %lld\n", SystemGetMemoryArenaAllocatedBytes(memoryArena));
 }
 
 DllExport void Native_FreeNativeApplicationService()

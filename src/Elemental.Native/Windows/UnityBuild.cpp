@@ -1,6 +1,7 @@
 #include "Dictionary.cpp"
 #include "CircularList.h"
 
+#include "SystemPlatformFunctions.cpp"
 #include "SystemMemory.cpp"
 #include "SystemFunctions.cpp"
 #include "SystemInputs.cpp"
