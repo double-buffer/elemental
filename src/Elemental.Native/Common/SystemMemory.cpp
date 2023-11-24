@@ -202,10 +202,9 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
     }
 
     auto shrinkResult = ShrinkMemoryArenaStorage(memoryArena->Storage, sizeInBytes);
+    assert(shrinkResult.Storage);
 
     auto oldSizeInBytes = memoryArena->SizeInBytes;
-
-    assert(shrinkResult.Storage);
     memoryArena->Storage = shrinkResult.Storage;
     memoryArena->AllocatedBytes -= sizeInBytes;
     memoryArena->SizeInBytes = shrinkResult.NewSizeInBytes;

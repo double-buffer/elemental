@@ -17,9 +17,9 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     // TESTING
     auto memoryArena = SystemAllocateMemoryArena(1024);
 
-    auto output = SystemExecuteProcess(memoryArena, "dir");
-    printf("Allocated Bytes: %lld\n", SystemGetMemoryArenaAllocatedBytes(memoryArena));
-    printf("Output: %s\n", output.Pointer);
+    //auto output = SystemExecuteProcess(memoryArena, "dir");
+    //printf("Allocated Bytes: %lld\n", SystemGetMemoryArenaAllocatedBytes(memoryArena));
+    //printf("Output: %s\n", output.Pointer);
 
     {
         auto stackMemoryArena1 = SystemGetStackMemoryArena();
