@@ -3,7 +3,7 @@
 #include "SystemLogging.h"
 #include "SystemPlatformFunctions.h"
 
-#define MEMORYARENA_DEFAULT_SIZE 1024
+#define MEMORYARENA_DEFAULT_SIZE 1048576
 
 struct MemoryArenaStorage
 {

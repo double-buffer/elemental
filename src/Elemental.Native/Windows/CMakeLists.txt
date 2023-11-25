@@ -1,5 +1,5 @@
 add_library(Direct3D12 INTERFACE)
-download_and_extract_nuget_package(Direct3D12 "Microsoft.Direct3D.D3D12" "1.610.2")
+download_and_extract_nuget_package(Direct3D12 "Microsoft.Direct3D.D3D12" "1.611.2")
 target_link_libraries(Direct3D12 INTERFACE dxgi dxguid)
 
 
@@ -24,5 +24,5 @@ target_compile_definitions(Elemental.Native PRIVATE UNICODE _UNICODE _WINDOWS _W
 
 add_custom_command(TARGET Elemental.Native POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/packages/Microsoft.Direct3D.D3D12_1.610.2/build/native/bin/${CMAKE_SYSTEM_PROCESSOR}"
+        "${CMAKE_CURRENT_BINARY_DIR}/packages/Microsoft.Direct3D.D3D12_1.611.2/build/native/bin/${CMAKE_SYSTEM_PROCESSOR}"
         $<TARGET_FILE_DIR:Elemental.Native>)
