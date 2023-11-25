@@ -1,6 +1,6 @@
 #pragma once
 
-#define D3D12SDKVersion 610
+#define D3D12SDKVersion 611
 
 #define MAX_DIRECT3D12_GRAPHICS_DEVICES 64
 #define MAX_DIRECT3D12_COMMAND_ALLOCATORS 64

@@ -195,6 +195,9 @@ DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, wchar_t* title)
     
 DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState windowState)
 {
+    // BUG: When we first maximize and then switch to fullscreen, we have borders
+    // It is ok when we switch to fullscren from a normal window
+
     LONG windowStyle = GetWindowLong(window->WindowHandle, GWL_STYLE);
 
     if (windowState == NativeWindowState_FullScreen && (windowStyle & WS_OVERLAPPEDWINDOW))
