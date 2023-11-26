@@ -28,8 +28,8 @@ bool MetalShaderCompilerProvider::IsCompilerInstalled()
 Span<uint8_t> MetalShaderCompilerProvider::CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
 #ifdef _WINDOWS
-    logList.push_back({ShaderCompilerLogEntryType_Error, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, L"Metal shader compiler is not supported on Windows.").Pointer});
-    return Span<uint8_t>::Empty();
+    logList.push_back({ShaderCompilerLogEntryType_Error, (uint8_t*)"Metal shader compiler is not supported on Windows."});
+    return Span<uint8_t>();
 #else
     auto inputFilePath = std::string(SystemGenerateTempFilename()) + ".metal";
     auto airFilePath = std::string(SystemGenerateTempFilename());
@@ -88,29 +88,23 @@ bool MetalShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, std
 {
     // BUG: 
     return false;
-    auto outputWString = SystemConvertUtf8ToWideChar(memoryArena, output);
 
-    if (outputWString.IsEmpty())
-    {
-        return false;
-    }
-    
-    auto lines = SystemSplitString(memoryArena, outputWString, L'\n');
+    auto lines = SystemSplitString(memoryArena, output, '\n');
     
     auto hasErrors = false;
     auto currentLogType = ShaderCompilerLogEntryType_Error;
-    std::wstring line;
+    std::string line;
 
     // TODO: Merge error messages and warnings message until next find
     for (size_t i = 0; i < lines.Length; i++)
     {
         line = lines[i].Pointer;
 
-        if (line.find(L"warning:", 0) != -1)
+        if (line.find("warning:", 0) != -1)
         {
             currentLogType = ShaderCompilerLogEntryType_Warning;
         }
-        else if (line.find(L"error:", 0) != -1)
+        else if (line.find("error:", 0) != -1)
         {
             currentLogType = ShaderCompilerLogEntryType_Error;
             hasErrors = true;
@@ -118,7 +112,7 @@ bool MetalShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, std
 
         if (line.length() > 0)
         { 
-            logList.push_back({ currentLogType, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, line.c_str()).Pointer });
+            logList.push_back({ currentLogType, (uint8_t*)line.c_str() });
         }
     }
 

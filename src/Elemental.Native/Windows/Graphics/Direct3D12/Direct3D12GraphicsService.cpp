@@ -492,19 +492,21 @@ void* Direct3D12CreateShader(void* graphicsDevicePointer, ShaderPart* shaderPart
 
 void Direct3D12FreeShader(void* shaderPointer)
 {
+    // TODO: Remove delete[]
+
     auto shader = (Direct3D12Shader*)shaderPointer;
 
-    if (!shader->AmplificationShader.IsEmpty())
+    if (shader->AmplificationShader.Length > 0)
     {
         delete[] shader->AmplificationShader.Pointer;
     }
 
-    if (!shader->MeshShader.IsEmpty())
+    if (shader->MeshShader.Length > 0)
     {
         delete[] shader->MeshShader.Pointer;
     }
     
-    if (!shader->PixelShader.IsEmpty())
+    if (shader->PixelShader.Length > 0)
     {
         delete[] shader->PixelShader.Pointer;
     }
@@ -1043,14 +1045,14 @@ ComPtr<ID3D12PipelineState> Direct3D12CreateRenderPipelineState(Direct3D12Shader
     
     psoDesc.RootSignature = shader->RootSignature.Get();
 
-    if (!shader->AmplificationShader.IsEmpty())
+    if (shader->AmplificationShader.Length > 0)
     {
         psoDesc.AS = { shader->AmplificationShader.Pointer, shader->AmplificationShader.Length };
     }
 
     psoDesc.MS = { shader->MeshShader.Pointer, shader->MeshShader.Length };
 
-    if (!shader->PixelShader.IsEmpty())
+    if (shader->PixelShader.Length > 0)
     {
         psoDesc.PS = { shader->PixelShader.Pointer, shader->PixelShader.Length };
     }

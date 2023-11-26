@@ -55,4 +55,6 @@ template<typename T>
 T* SystemPushStructZero(MemoryArena* memoryArena);
 
 template<typename T>
+void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source);
+template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2);

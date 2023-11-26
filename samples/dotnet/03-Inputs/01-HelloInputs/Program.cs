@@ -33,7 +33,7 @@ using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = Gr
 using var inputsService = new InputsService();
 using var inputsQueue = inputsService.CreateInputsQueue();
 
-using var application = applicationService.CreateApplication("Hello Window");
+using var application = applicationService.CreateApplication("Hello Inputs");
 using var window = applicationService.CreateWindow(application);
 
 var availableGraphicsDevices = graphicsService.GetAvailableGraphicsDevices();
@@ -53,7 +53,7 @@ foreach (var availableGraphicsDevice in availableGraphicsDevices)
 using var graphicsDevice = graphicsService.CreateGraphicsDevice(new() { DeviceId = selectedGraphicsDevice.DeviceId });
 using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
 
-applicationService.SetWindowTitle(window, $"Hello Inputs! (GraphicsDevice: {graphicsService.GetGraphicsDeviceInfo(graphicsDevice)})");
+applicationService.SetWindowTitle(window, $"Hello Inputs éé かたな刀 ! (GraphicsDevice: {graphicsService.GetGraphicsDeviceInfo(graphicsDevice)})");
 
 using var swapChain = graphicsService.CreateSwapChain(window, commandQueue, new() { MaximumFrameLatency = 1 });
 var currentRenderSize = applicationService.GetWindowRenderSize(window);

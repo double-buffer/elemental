@@ -110,16 +110,12 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsAp
     auto result = FindShaderCompilersChain(shaderCompilerProviders, 0, shaderLanguage, graphicsApiTargetShaderLanguage);
     return result > 0;
 }
-    
-// TODO: Why do we use utf 8? all strings needs to be copied and encoded
-DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
-{
-    // TODO: Temporary: to change, this is never free for the moment!
-    auto memoryArena = SystemAllocateMemoryArena(1024 * 1024 * 1024);
 
+ShaderCompilerResult CompileShader(MemoryArena* memoryArena, uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+{
     if (!_platformTargetLanguages.count(graphicsApi))
     {
-        return CreateErrorResult(shaderStage, entryPoint, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, L"Graphics API is not supported!").Pointer);
+        return CreateErrorResult(shaderStage, entryPoint, (uint8_t*)"Graphics API is not supported!");
     }
 
     auto graphicsApiTargetShaderLanguage = _platformTargetLanguages[graphicsApi];
@@ -130,7 +126,7 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
     if (result > 0)
     {
         auto isSuccess = false;
-        auto logList = std::vector<ShaderCompilerLogEntry>();
+        auto logList = std::vector<ShaderCompilerLogEntry>(); // TODO: To Remove
         auto metaDataList = std::vector<ShaderMetaData>();
 
         auto currentShaderData = Span<uint8_t>(shaderCode, (uint32_t)strlen((char*)shaderCode));
@@ -141,35 +137,31 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
 
             auto compilationResult = shaderCompilerProvider->CompileShader(memoryArena, logList, metaDataList, currentShaderData, shaderStage, entryPoint, shaderLanguage, graphicsApi, options);
 
-            isSuccess = !compilationResult.IsEmpty();
+            isSuccess = compilationResult.Length > 0;
             
             if (!isSuccess)
             {
-                currentShaderData = Span<uint8_t>::Empty();
+                currentShaderData = Span<uint8_t>();
                 break;
-            }
-
-            if (currentShaderData.Pointer != shaderCode)
-            {
-                delete[] currentShaderData.Pointer;
             }
 
             currentShaderData = compilationResult;
         }
 
-        auto logEntriesData = new ShaderCompilerLogEntry[logList.size()];
-        memcpy(logEntriesData, logList.data(), logList.size() * sizeof(ShaderCompilerLogEntry));
-        
+        auto logListSpan = Span<ShaderCompilerLogEntry>(logList.data(), logList.size());
+        auto logEntriesData = SystemPushArray<ShaderCompilerLogEntry>(memoryArena, logList.size());
+        SystemCopyBuffer<ShaderCompilerLogEntry>(logEntriesData, logListSpan);
+
         auto metaDataListData = new ShaderMetaData[metaDataList.size()];
         memcpy(metaDataListData, metaDataList.data(), metaDataList.size() * sizeof(ShaderMetaData));
-        
+
         ShaderCompilerResult compilerResult = {};
 
         compilerResult.IsSuccess = isSuccess;
         compilerResult.Stage = shaderStage;
         compilerResult.EntryPoint = entryPoint;
-        compilerResult.LogEntries = logEntriesData;
-        compilerResult.LogEntryCount = (uint32_t)logList.size();
+        compilerResult.LogEntries = logEntriesData.Pointer;
+        compilerResult.LogEntryCount = logEntriesData.Length;
         compilerResult.ShaderData = currentShaderData.Pointer;
         compilerResult.ShaderDataCount = (uint32_t)currentShaderData.Length;
         compilerResult.MetaData = metaDataListData;
@@ -178,17 +170,25 @@ DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderS
         return compilerResult;
     } 
         
-    return CreateErrorResult(shaderStage, entryPoint, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, L"Cannot find compatible shader compilers toolchain.").Pointer);
+    return CreateErrorResult(shaderStage, entryPoint, (uint8_t*)"Cannot find compatible shader compilers toolchain.");
 }
-    
+
+// TODO: Why do we use utf 8? all strings needs to be copied and encoded
+DllExport ShaderCompilerResult Native_CompileShader(uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+{
+    auto memoryArena = SystemGetStackMemoryArena();
+    return CompileShader(memoryArena, shaderCode, shaderStage, entryPoint, shaderLanguage, graphicsApi, options);
+}
+
 DllExport void Native_CompileShaders(ShaderCompilerInput* inputs, int32_t inputCount, GraphicsApi graphicsApi, ShaderCompilationOptions* options, ShaderCompilerResult* results, int32_t* resultCount)
 {
+    auto memoryArena = SystemGetStackMemoryArena();
     *resultCount = inputCount;
 
     for (int32_t i = 0; i < inputCount; i++)
     {
         auto input = inputs[i];
-        results[i] = Native_CompileShader(input.ShaderCode, input.Stage, input.EntryPoint, input.ShaderLanguage, graphicsApi, options);
+        results[i] = CompileShader(memoryArena, input.ShaderCode, input.Stage, input.EntryPoint, input.ShaderLanguage, graphicsApi, options);
     }
 }
 

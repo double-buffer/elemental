@@ -14,3 +14,8 @@ void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes)
 {
     memset(pointer, 0, sizeInBytes);
 }
+
+void SystemPlatformCopyMemory(void* destination, const void* source, size_t sizeInBytes)
+{
+    memcpy(destination, source, sizeInBytes);
+}

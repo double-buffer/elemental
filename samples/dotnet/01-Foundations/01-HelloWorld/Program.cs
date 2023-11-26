@@ -26,7 +26,7 @@ static void LogMessageHandler(LogMessageType messageType, LogMessageCategory cat
 var counter = 0;
 
 using var applicationService = new NativeApplicationService(new() { LogMessageHandler = LogMessageHandler });
-using var application = applicationService.CreateApplication("Hello World");
+using var application = applicationService.CreateApplication("Hello World ééé");
 
 applicationService.RunApplication(application, (status) =>
 {

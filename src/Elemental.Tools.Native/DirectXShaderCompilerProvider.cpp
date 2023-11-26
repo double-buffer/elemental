@@ -104,7 +104,7 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena* memoryAr
 
     if (ProcessLogOutput(memoryArena, logList, dxilCompileResult))
     {
-        return Span<uint8_t>::Empty();
+        return Span<uint8_t>();
     }
     
     ComPtr<IDxcResult> compileResult;
@@ -121,15 +121,16 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena* memoryAr
         compileResult = dxilCompileResult;
     }
 
-    ComPtr<IDxcBlob> shaderByteCode;
-    AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), nullptr));
+    ComPtr<IDxcBlob> shaderByteCodeComPtr;
+    AssertIfFailed(compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
 
     ExtractMetaData(metaDataList, dxilCompileResult);
 
-    auto outputShaderData = new uint8_t[shaderByteCode->GetBufferSize()];
-    memcpy(outputShaderData, shaderByteCode->GetBufferPointer(), shaderByteCode->GetBufferSize());
+    auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
+    auto outputShaderData = SystemPushArray<uint8_t>(memoryArena, shaderByteCode.Length);
+    SystemCopyBuffer<uint8_t>(outputShaderData, shaderByteCode);
 
-    return Span<uint8_t>(outputShaderData, (uint32_t)shaderByteCode->GetBufferSize());
+    return outputShaderData;
 }
 
 bool DirectXShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
@@ -137,40 +138,39 @@ bool DirectXShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, s
     // TODO: Allocations are really bad here :(
     auto hasErrors = false;
 
+    // TODO: We cannot use the normal string find methods here because we work directly in UTF8
+
     ComPtr<IDxcBlobUtf8> pErrors;
     AssertIfFailed(compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr));
 
     if (pErrors && pErrors->GetStringLength() > 0)
     {
-        auto errorContent = SystemConvertUtf8ToWideChar(memoryArena, (char*)pErrors->GetBufferPointer());
         auto currentLogType = ShaderCompilerLogEntryType_Error;
 
-        auto lines = SystemSplitString(memoryArena, errorContent, L'\n');
-        std::wstring line;
+        auto lines = SystemSplitString(memoryArena, (const char*)pErrors->GetBufferPointer(), '\n');
+        std::string line;
 
         for (size_t i = 0; i < lines.Length; i++)
         {
-            line = std::wstring(lines[i].Pointer);
+            auto line = lines[i];
+            auto lineStd = std::string(lines[i].Pointer); // TODO: To remove
 
-            if (line.length() == 0)
+            if (line.Length == 0)
             {
                 continue;
             }
 
-            if (line.find(L"warning:", 0) != std::wstring::npos)
+            if (lineStd.find("warning:", 0) != std::string::npos)
             {
                 currentLogType = ShaderCompilerLogEntryType_Warning;
             }
-            else if (line.find(L"error:", 0) != std::wstring::npos)
+            else if (lineStd.find("error:", 0) != std::string::npos)
             {
                 currentLogType = ShaderCompilerLogEntryType_Error;
                 hasErrors = true;
             }
         
-            if (line.length() > 0)
-            {
-                logList.push_back({ currentLogType, (uint8_t*)SystemConvertWideCharToUtf8(memoryArena, line.c_str()).Pointer });
-            }
+            logList.push_back({ currentLogType, (uint8_t*)line.Pointer });
         }
     }
 

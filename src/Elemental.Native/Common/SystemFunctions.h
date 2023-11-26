@@ -2,12 +2,6 @@
 
 #include "SystemMemory.h"
 
-// TODO: REVIEW HEADERS
-#include <stdint.h>
-#include <stdlib.h>
-#include <wchar.h>
-#include <string.h>
-#include <stdio.h>
 #include <assert.h>
 
 // TODO: To remove -> Temporary
@@ -31,9 +25,6 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #define fopen_s(pFile, filename, mode) ((*(pFile))=fopen((filename),(mode)))==NULL
-#define wcstombs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=wcstombs((destination), (source), (size)))==-1
-#define mbstowcs_s(returnValue, destination, size, source, maxSize) ((*(returnValue))=mbstowcs((destination), (source), (size)))==-1
-#define strcpy_s(destination, size, source) strcpy(destination, source)
 #define errno_t uint64_t
 #define DllExport extern "C" __attribute__((visibility("default"))) 
 #endif
@@ -47,30 +38,21 @@
     const char* libraryExtension = ".so";
 #endif
 
+// TODO: Remove AssertIfFailed, only use assert is some specific places
 #ifdef _DEBUG
     #define AssertIfFailed(result) assert(!FAILED(result))
 #else
     #define AssertIfFailed(result) result
 #endif
 
-size_t RoundUpToPowerOf2(size_t value);
+size_t SystemRoundUpToPowerOf2(size_t value);
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
-// TODO: It would be great to have an opaque string type that can be treated as UTF-8 or Unicode based on settings
-// passed to the native application service
-
-template<typename T>
-ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<T> source, T separator);
-
-ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source);
+ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<char> source, char separator);
 ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source);
-
-
-// TODO: OLD CODE to remove
-void SystemFreeConvertedString(const wchar_t* value);
 
 //---------------------------------------------------------------------------------------------------------------
 // IO functions

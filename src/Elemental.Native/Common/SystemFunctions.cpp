@@ -1,7 +1,6 @@
 #include "SystemFunctions.h"
 
-
-size_t RoundUpToPowerOf2(size_t value) 
+size_t SystemRoundUpToPowerOf2(size_t value) 
 {
     size_t result = 1;
 
@@ -17,8 +16,7 @@ size_t RoundUpToPowerOf2(size_t value)
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
-template<typename T>
-ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<T> source, T separator) 
+ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<char> source, char separator) 
 {
    auto count = 1;
 
@@ -30,7 +28,7 @@ ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOn
         }
     }
 
-    auto result = SystemPushArray<ReadOnlySpan<T>>(memoryArena, count);
+    auto result = SystemPushArray<ReadOnlySpan<char>>(memoryArena, count);
     auto currentIndex = 0;
 
     for (int i = 0; i < count; i++)
@@ -46,8 +44,9 @@ ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOn
             }
         }
 
-        auto resultString = SystemPushArrayZero<T>(memoryArena, separatorIndex - currentIndex); 
-        source.Slice(currentIndex, separatorIndex - currentIndex).CopyTo(resultString);
+        auto resultString = SystemPushArrayZero<char>(memoryArena, separatorIndex - currentIndex);
+        SystemCopyBuffer(resultString, source.Slice(currentIndex, separatorIndex - currentIndex));
+
         result[i] = resultString;
 
         currentIndex = separatorIndex + 1;
@@ -56,26 +55,65 @@ ReadOnlySpan<ReadOnlySpan<T>> SystemSplitString(MemoryArena* memoryArena, ReadOn
     return result;
 }
 
-ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source)
-{
-    auto destination = SystemPushArrayZero<char>(memoryArena, source.Length);
-    wcstombs_s(nullptr, destination.Pointer, destination.Length + 1, source.Pointer, source.Length); // TODO: System call to review
-
-    return destination;
-}
-
 ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source)
 {
-    auto destination = SystemPushArrayZero<wchar_t>(memoryArena, source.Length);
-    mbstowcs_s(nullptr, destination.Pointer, destination.Length + 1, (char*)source.Pointer, source.Length); // TODO: System call to review
+    size_t size = 0;
+    auto sourceSpan = source;
+
+    while (sourceSpan[0] != '\0')
+    {
+        if ((sourceSpan[0] & 0b10000000) == 0b00000000) 
+        {
+            sourceSpan = sourceSpan.Slice(1);
+        } 
+        else if ((sourceSpan[0] & 0b11100000) == 0b11000000) 
+        {
+            sourceSpan = sourceSpan.Slice(2);
+        } 
+        else if ((sourceSpan[0] & 0b11110000) == 0b11100000) 
+        {
+            sourceSpan = sourceSpan.Slice(3);
+        } 
+        else if ((sourceSpan[0] & 0b11111000) == 0b11110000) 
+        {
+            sourceSpan = sourceSpan.Slice(4);
+        }
+
+        size++;
+    }
+
+    auto destination = SystemPushArrayZero<wchar_t>(memoryArena, size);
+    auto destinationSpan = destination;
+
+    sourceSpan = source;
+
+    while (sourceSpan[0] != '\0')
+    {
+        if ((sourceSpan[0] & 0b10000000) == 0b00000000) 
+        {
+            destinationSpan[0] = sourceSpan[0];
+            sourceSpan = sourceSpan.Slice(1);
+        } 
+        else if ((sourceSpan[0] & 0b11100000) == 0b11000000) 
+        {
+            destinationSpan[0] = ((sourceSpan[0] & 0b00011111) << 6) | (sourceSpan[1] & 0b00111111);
+            sourceSpan = sourceSpan.Slice(2);
+        } 
+        else if ((sourceSpan[0] & 0b11110000) == 0b11100000) 
+        {
+            destinationSpan[0] = ((sourceSpan[0] & 0b00001111) << 12) | ((sourceSpan[1] & 0b00111111) << 6) | (sourceSpan[2] & 0b00111111);
+            sourceSpan = sourceSpan.Slice(3);
+        } 
+        else if ((sourceSpan[0] & 0b11111000) == 0b11110000) 
+        {
+            destinationSpan[0] = ((sourceSpan[0] & 0b00000111) << 18) | ((sourceSpan[1] & 0b00111111) << 12) | ((sourceSpan[2] & 0b00111111) << 6) | (sourceSpan[3] & 0b00111111);
+            sourceSpan = sourceSpan.Slice(4);
+        }
+
+        destinationSpan = destinationSpan.Slice(1);
+    }
 
     return destination;
-}
-
-// TODO: OLD CODE to remove
-void SystemFreeConvertedString(const wchar_t* value)
-{
-    free((void*)value);
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -86,7 +124,7 @@ ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena)
 {
     auto templateName = (ReadOnlySpan<char>)"/tmp/tempfileXXXXXX";
     auto result = SystemPushArrayZero<char>(memoryArena, templateName.Length);
-    templateName.CopyTo(result);
+    SystemCopyBuffer(result, templateName);
 
     mkstemp((char*)result.Pointer); // TODO: System call to review
 
@@ -182,7 +220,7 @@ ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<c
     while (fgets(buffer.Pointer, buffer.Length, pipe) != nullptr) 
     {
         auto length = strlen(buffer.Pointer);
-        buffer.Slice(0, length).CopyTo(result.Slice(currentLength));
+        SystemCopyBuffer<char>(result.Slice(currentLength), buffer.Slice(0, length));
 
         currentLength += length;
     }

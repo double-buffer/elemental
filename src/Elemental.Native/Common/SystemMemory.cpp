@@ -174,7 +174,7 @@ void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
     if (workingMemoryArena->Storage->AllocatedBytes + sizeInBytes > storage->Memory.Length)
     {
         auto oldSizeInBytes = workingMemoryArena->SizeInBytes;
-        auto newStorageSize = RoundUpToPowerOf2(max(workingMemoryArena->SizeInBytes, sizeInBytes)); 
+        auto newStorageSize = SystemRoundUpToPowerOf2(max(workingMemoryArena->SizeInBytes, sizeInBytes)); 
         workingMemoryArena->SizeInBytes += newStorageSize;
         workingMemoryArena->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
         storage->AllocatedBytes = storage->Memory.Length;
@@ -264,12 +264,19 @@ T* SystemPushStructZero(MemoryArena* memoryArena)
 }
 
 template<typename T>
+void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source)
+{
+    // TODO: Add checks
+    SystemPlatformCopyMemory(destination.Pointer, source.Pointer, source.Length * sizeof(T));
+}
+
+template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2)
 {
     auto result = SystemPushArray<T>(memoryArena, buffer1.Length + buffer2.Length);
 
-    buffer1.CopyTo(result);
-    buffer2.CopyTo(result.Slice(buffer1.Length));
+    SystemCopyBuffer(result, buffer1);
+    SystemCopyBuffer(result.Slice(buffer1.Length), buffer2);
 
     return result;
 }
@@ -279,8 +286,8 @@ Span<char> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<char> buff
 {
     auto result = SystemPushArrayZero<char>(memoryArena, buffer1.Length + buffer2.Length);
 
-    buffer1.CopyTo(result);
-    buffer2.CopyTo(result.Slice(buffer1.Length));
+    SystemCopyBuffer(result, buffer1);
+    SystemCopyBuffer(result.Slice(buffer1.Length), buffer2);
 
     return result;
 }
@@ -290,8 +297,8 @@ Span<wchar_t> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<wchar_t
 {
     auto result = SystemPushArrayZero<wchar_t>(memoryArena, buffer1.Length + buffer2.Length);
 
-    buffer1.CopyTo(result);
-    buffer2.CopyTo(result.Slice(buffer1.Length));
+    SystemCopyBuffer(result, buffer1);
+    SystemCopyBuffer(result.Slice(buffer1.Length), buffer2);
 
     return result;
 }

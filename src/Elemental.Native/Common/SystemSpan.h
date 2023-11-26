@@ -24,23 +24,6 @@ struct Span
         return Pointer[index];
     }
 
-    bool IsEmpty()
-    {
-        return Length == 0;
-    }
-
-    template<typename U>
-    Span<U> Cast()
-    {
-        return Span<U>((U*)Pointer, Length);
-    }
-
-    void CopyTo(Span<T> destination)
-    {
-        // TODO: Add checks
-        memcpy(destination.Pointer, Pointer, Length * sizeof(T));
-    }
-
     Span<T> Slice(size_t start)
     {
         // TODO: Add checks
@@ -51,11 +34,6 @@ struct Span
     {
         // TODO: Add checks
         return Span<T>(Pointer + start, length);
-    }
-
-    static Span<T> Empty()
-    {
-        return Span<T>();
     }
 };
 
@@ -77,7 +55,9 @@ struct ReadOnlySpan
     ReadOnlySpan(const char* stringValue)
     {
         Pointer = stringValue;
-        Length = strlen(stringValue);
+        Length = 0;
+
+        while (stringValue[Length++] != '\0');
     }
 
     ReadOnlySpan(const char* stringValue, size_t length)
@@ -89,7 +69,9 @@ struct ReadOnlySpan
     ReadOnlySpan(const wchar_t* stringValue)
     {
         Pointer = stringValue;
-        Length = wcslen(stringValue);
+        Length = 0;
+
+        while (stringValue[Length++] != '\0');
     }
 
     ReadOnlySpan(const wchar_t* stringValue, size_t length)
@@ -113,23 +95,6 @@ struct ReadOnlySpan
         return Pointer[index];
     }
 
-    bool IsEmpty()
-    {
-        return Length == 0;
-    }
-
-    template<typename U>
-    ReadOnlySpan<U> Cast()
-    {
-        return ReadOnlySpan<U>((U*)Pointer, Length);
-    }
-
-    void CopyTo(Span<T> destination)
-    {
-        // TODO: Add checks
-        memcpy(destination.Pointer, Pointer, Length * sizeof(T));
-    }
-
     ReadOnlySpan<T> Slice(size_t start)
     {
         // TODO: Add checks
@@ -140,11 +105,6 @@ struct ReadOnlySpan
     {
         // TODO: Add checks
         return ReadOnlySpan<T>(Pointer + start, length);
-    }
-
-    static ReadOnlySpan<T> Empty()
-    {
-        return Span<T>();
     }
 };
 

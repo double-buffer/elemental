@@ -19,8 +19,10 @@ DllExport void Native_FreeNativeApplicationService()
 {
 }
 
-DllExport void* Native_CreateApplication(wchar_t* applicationName)
+DllExport void* Native_CreateApplication(char* applicationName)
 {
+    printf("Test: %s\n", applicationName);
+
     auto application = new Win32Application();
     application->ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
 
@@ -188,9 +190,11 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
     return result;
 }
 
-DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, wchar_t* title)
+DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, char* title)
 {
-    SetWindowText(nativeWindow->WindowHandle, title);
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto wideTitle = SystemConvertUtf8ToWideChar(stackMemoryArena, title);
+    SetWindowText(nativeWindow->WindowHandle, wideTitle.Pointer);
 }
     
 DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState windowState)

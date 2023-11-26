@@ -65,18 +65,19 @@ internal static unsafe class ShaderCompilerResultMarshaller
         public uint MetaDataCount { get; init; }
     }
 
-    public static ShaderCompilerResultUnmanaged ConvertToUnmanaged(ShaderCompilerResult managed)
+    public static ShaderCompilerResultUnmanaged ConvertToUnmanaged(ShaderCompilerResult _)
     {
         throw new NotImplementedException();
     }
     
     public static ShaderCompilerResult ConvertToManaged(ShaderCompilerResultUnmanaged unmanaged)
     {
-        // TODO: Can we avoid the copy here?
+        // TODO: Avoid the string conversions
+
         var shaderData = unmanaged.ShaderDataPointer != null ? new byte[unmanaged.ShaderDataCount] : Array.Empty<byte>();
         var sourceShaderDataSpan = new Span<byte>(unmanaged.ShaderDataPointer, (int)unmanaged.ShaderDataCount);
         sourceShaderDataSpan.CopyTo(shaderData);
-        
+
         var logEntries = unmanaged.LogEntryPointer != null ? new ShaderCompilerLogEntry[unmanaged.LogEntryCount] : Array.Empty<ShaderCompilerLogEntry>();
         var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, (int)unmanaged.LogEntryCount);
 
@@ -91,35 +92,22 @@ internal static unsafe class ShaderCompilerResultMarshaller
             logEntries[i] = new ShaderCompilerLogEntry
             {
                 Type = sourceLogEntry.Type,
-                Message = Utf8StringMarshaller.ConvertToManaged(sourceLogEntry.Message) ?? string.Empty
+                     Message = Utf8StringMarshaller.ConvertToManaged(sourceLogEntry.Message) ?? string.Empty
             };
         }
 
         return new ShaderCompilerResult
         {
             IsSuccess = unmanaged.IsSuccess,
-            Stage = unmanaged.Stage,
-            EntryPoint = Utf8StringMarshaller.ConvertToManaged(unmanaged.EntryPoint) ?? string.Empty,
-            ShaderData = shaderData,
-            LogEntries = logEntries,
-            MetaData = shaderMetaData
-    };
+                      Stage = unmanaged.Stage,
+                      EntryPoint = Utf8StringMarshaller.ConvertToManaged(unmanaged.EntryPoint) ?? string.Empty,
+                      ShaderData = shaderData,
+                      LogEntries = logEntries,
+                      MetaData = shaderMetaData
+        };
     }
 
-    public static void Free(ShaderCompilerResultUnmanaged unmanaged)
+    public static void Free(ShaderCompilerResultUnmanaged _)
     {
-        var sourceLogEntriesSpan = new Span<ShaderCompilerLogEntryUnmanaged>(unmanaged.LogEntryPointer, (int)unmanaged.LogEntryCount);
-
-        for (var i = 0; i < unmanaged.LogEntryCount; i++)
-        {
-            var sourceLogEntry = sourceLogEntriesSpan[i];
-            // TODO: We don't need to do this anymore because the string is allocated with a memory arena
-            //PlatformServiceInterop.Native_FreeNativePointer((nint)sourceLogEntry.Message);
-        }
-        
-        Utf8StringMarshaller.Free(unmanaged.EntryPoint);
-        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.MetaDataPointer);
-        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.ShaderDataPointer);
-        PlatformServiceInterop.Native_FreeNativePointer((nint)unmanaged.LogEntryPointer);
     }
 }

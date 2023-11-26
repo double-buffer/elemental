@@ -10,7 +10,7 @@ internal static partial class PlatformServiceInterop
     [LibraryImport("Elemental.Native")]
     internal static partial void Native_FreeNativeApplicationService();
 
-    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf16)]
+    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial NativeApplication Native_CreateApplication(string applicationName);
 
     [LibraryImport("Elemental.Native")]
@@ -28,7 +28,7 @@ internal static partial class PlatformServiceInterop
     [LibraryImport("Elemental.Native")]
     internal static partial NativeWindowSize Native_GetWindowRenderSize(NativeWindow window);
     
-    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf16)]
+    [LibraryImport("Elemental.Native", StringMarshalling = StringMarshalling.Utf8)]
     internal static partial void Native_SetWindowTitle(NativeWindow window, string title);
     
     [LibraryImport("Elemental.Native")]
