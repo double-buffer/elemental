@@ -28,7 +28,10 @@ void Direct3D12InitGraphicsService(GraphicsServiceOptions* options)
     AssertIfFailed(_sdkConfiguration->SetSDKVersion(D3D12SDKVersion, ".\\"));
 
     UINT createFactoryFlags = 0;
-    bool sdkLayerExists = _waccess((SystemGetExecutableFolderPath() + L".\\D3D12SDKLayers.dll").c_str(), 0) == 0;
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto sdkDllPath = SystemConcatBuffers<char>(stackMemoryArena, SystemGetExecutableFolderPath(stackMemoryArena), "D3D12SDKLayers.dll");
+    bool sdkLayerExists = SystemFileExists(sdkDllPath);
  
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && sdkLayerExists)
     {

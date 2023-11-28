@@ -13,6 +13,12 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         globalLogMessageHandler = options->LogMessageHandler;
         LogDebugMessage(LogMessageCategory_NativeApplication, L"Init OK");
     }
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    //auto test = SystemFormatString(stackMemoryArena, "This is a test format %d blabla %s blabla %f blabla", 45123, "TestArgString", -28.65f);
+    //printf("Test: %s\n", test.Pointer);
+
 }
 
 DllExport void Native_FreeNativeApplicationService()
@@ -194,6 +200,7 @@ DllExport void Native_SetWindowTitle(Win32Window* nativeWindow, char* title)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto wideTitle = SystemConvertUtf8ToWideChar(stackMemoryArena, title);
+
     SetWindowText(nativeWindow->WindowHandle, wideTitle.Pointer);
 }
     

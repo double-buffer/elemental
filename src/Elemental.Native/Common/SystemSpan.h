@@ -57,7 +57,10 @@ struct ReadOnlySpan
         Pointer = stringValue;
         Length = 0;
 
-        while (stringValue[Length++] != '\0');
+        while (stringValue[Length] != '\0')
+        {
+            Length++;
+        }
     }
 
     ReadOnlySpan(const char* stringValue, size_t length)
@@ -71,7 +74,10 @@ struct ReadOnlySpan
         Pointer = stringValue;
         Length = 0;
 
-        while (stringValue[Length++] != '\0');
+        while (stringValue[Length] != '\0')
+        {
+            Length++;
+        }
     }
 
     ReadOnlySpan(const wchar_t* stringValue, size_t length)

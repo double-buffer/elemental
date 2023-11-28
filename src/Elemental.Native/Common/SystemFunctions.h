@@ -4,9 +4,6 @@
 
 #include <assert.h>
 
-// TODO: To remove -> Temporary
-#include <string>
-
 #define PackedStruct struct __attribute__((__packed__))
 
 #ifdef _WINDOWS
@@ -16,7 +13,6 @@
 #define popen _popen
 #define pclose _pclose
 
-#define mkstemp(value) _mktemp_s(value, strlen(value) + 1)
 #else
 #define MAX_PATH 256
 #ifndef NDEBUG
@@ -45,39 +41,56 @@
     #define AssertIfFailed(result) result
 #endif
 
+
+//---------------------------------------------------------------------------------------------------------------
+// Math functions
+//---------------------------------------------------------------------------------------------------------------
+
 size_t SystemRoundUpToPowerOf2(size_t value);
+double SystemRound(double value);
+template<typename T>
+T SystemAbs(T value);
+
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
+ReadOnlySpan<char> SystemConvertIntToString(MemoryArena* memoryArena, int32_t value);
+ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double value);
+ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, ...);
+
 ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<char> source, char separator);
+int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator);
+
 ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source);
+ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source);
+
 
 //---------------------------------------------------------------------------------------------------------------
 // IO functions
 //---------------------------------------------------------------------------------------------------------------
 
-ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena); 
+ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnlySpan<char> prefix); 
+ReadOnlySpan<char> SystemGetExecutableFolderPath(MemoryArena* memoryArena);
 
-#ifdef _WINDOWS
-
-std::wstring SystemGetExecutableFolderPath(); 
-#endif
-
+bool SystemFileExists(ReadOnlySpan<char> path);
 void SystemWriteBytesToFile(const char* filename, uint8_t* data, uint32_t dataSizeInBytes); 
 void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataSizeInBytes);
 void SystemDeleteFile(const char* filename);
 
+
 //---------------------------------------------------------------------------------------------------------------
 // Library / process functions
 //---------------------------------------------------------------------------------------------------------------
+
 ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command);
 
 // TODO: Old CODE to remove
 const void* SystemLoadLibrary(const char* libraryName);
 void SystemFreeLibrary(const void* library);
 const void* SystemGetFunctionExport(const void* library, const char* functionName);
+
 
 //---------------------------------------------------------------------------------------------------------------
 // Threading functions
