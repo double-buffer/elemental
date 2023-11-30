@@ -2,6 +2,7 @@
 #include "CircularList.h"
 
 #include "SystemPlatformFunctions.cpp"
+#include "SystemLogging.cpp"
 #include "SystemMemory.cpp"
 #include "SystemFunctions.cpp"
 #include "SystemInputs.cpp"

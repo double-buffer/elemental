@@ -35,7 +35,7 @@ void Direct3D12InitGraphicsService(GraphicsServiceOptions* options)
  
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && sdkLayerExists)
     {
-        LogDebugMessage(LogMessageCategory_Graphics, L"DirectX12 Debug Mode");
+        SystemLogDebugMessage(LogMessageCategory_Graphics, "DirectX12 Debug Mode");
 
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
@@ -321,7 +321,7 @@ void Direct3D12WaitForFenceOnCpu(Fence fence)
 
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
     {
-        LogDebugMessage(LogMessageCategory_Graphics, L"Wait for Fence on CPU...");
+        SystemLogDebugMessage(LogMessageCategory_Graphics, "Wait for Fence on CPU...");
         commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
         WaitForSingleObject(_globalFenceEvent, INFINITE);
     }
@@ -650,7 +650,7 @@ void Direct3D12SetShader(void* commandListPointer, void* shaderPointer)
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
             // TODO: Review allocators
-            LogDebugMessage(LogMessageCategory_Graphics, L"Create PipelineState for shader %llu...", hash);
+            SystemLogDebugMessage(LogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
             auto pipelineStateCacheItem = new PipelineStateCacheItem();
             pipelineStateCacheItem->PipelineState = Direct3D12CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
@@ -806,7 +806,7 @@ Direct3D12CommandList* Direct3D12GetCommandList(Direct3D12CommandQueue* commandQ
 
         if (commandList->IsUsed)
         {
-            LogWarningMessage(LogMessageCategory_Graphics, L"Warning: Not enough command list objects in the pool. Performance may decrease...");
+            SystemLogWarningMessage(LogMessageCategory_Graphics, "Warning: Not enough command list objects in the pool. Performance may decrease...");
             auto commandListResult = new Direct3D12CommandList(commandQueue, commandQueue->GraphicsDevice);
             commandListResult->IsUsed = true;
 
@@ -1094,8 +1094,7 @@ static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12
     }
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto convertedString = SystemConvertUtf8ToWideChar(stackMemoryArena, description);
-    LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString.Pointer);
+    SystemLogMessage(messageType, LogMessageCategory_Graphics, "%s", description);
 }
 
 static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data)

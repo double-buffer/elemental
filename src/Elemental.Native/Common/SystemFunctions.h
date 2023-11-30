@@ -56,9 +56,11 @@ T SystemAbs(T value);
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
-ReadOnlySpan<char> SystemConvertIntToString(MemoryArena* memoryArena, int32_t value);
+template<typename T>
+ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value);
 ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double value);
 ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, ...);
+ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments);
 
 ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<char> source, char separator);
 int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator);
@@ -75,7 +77,7 @@ ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnly
 ReadOnlySpan<char> SystemGetExecutableFolderPath(MemoryArena* memoryArena);
 
 bool SystemFileExists(ReadOnlySpan<char> path);
-void SystemWriteBytesToFile(const char* filename, uint8_t* data, uint32_t dataSizeInBytes); 
+void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
 void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataSizeInBytes);
 void SystemDeleteFile(const char* filename);
 

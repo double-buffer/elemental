@@ -18,7 +18,7 @@ void AddNativeInputsQueueItem(NativeInputsQueue* nativeInputsQueue, InputsValue 
 {
     if (nativeInputsQueue->WriteIndex == nativeInputsQueue->Count)
     {
-        LogErrorMessage(LogMessageCategory_Inputs, L"Native Inputs Queue is full");
+        SystemLogErrorMessage(LogMessageCategory_Inputs, "Native Inputs Queue is full");
     }
     
 
@@ -196,7 +196,7 @@ void ConvertHidInputDeviceData_DualShock4Gamepad(InputState* inputState, int gam
 {
     auto inputData = (DualShock4GamepadReport*)reportData;
 
-    //LogDebugMessage(LogMessageCategory_Inputs, L"Dpad: %u", inputData->touchpad);
+    //SystemLogDebugMessage(LogMessageCategory_Inputs, L"Dpad: %u", inputData->touchpad);
 
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickX, NormalizeInputSigned(inputData->LeftStickX, 255));
     SetInputObjectAnalogValue(inputState, Gamepad1LeftStickY, -NormalizeInputSigned(inputData->LeftStickY, 255));

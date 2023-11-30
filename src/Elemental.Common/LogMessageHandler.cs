@@ -23,14 +23,14 @@ public static unsafe class LogMessageHandlerMarshaller
 
     private static InterceptorEntry? _interceptorEntry;
 
-    private static unsafe void Interceptor(LogMessageType messageType, LogMessageCategory category, void* function, void* message)
+    private static unsafe void Interceptor(LogMessageType messageType, LogMessageCategory category, byte* function, byte* message)
     {
-        if (_interceptorEntry == null)
+        if (_interceptorEntry == null || function == null || message == null)
         {
             return;
         }
 
-        _interceptorEntry.Callback(messageType, category, Marshal.PtrToStringUni(new nint(function)) ?? "", Marshal.PtrToStringUni(new nint(message)) ?? "");
+        _interceptorEntry.Callback(messageType, category, Utf8StringMarshaller.ConvertToManaged(function) ?? "", Utf8StringMarshaller.ConvertToManaged(message) ?? "");
     }
 
     /// <summary>

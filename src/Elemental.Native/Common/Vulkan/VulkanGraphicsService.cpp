@@ -66,7 +66,7 @@ void VulkanInitGraphicsService(GraphicsServiceOptions* options)
 
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
-        LogDebugMessage(LogMessageCategory_Graphics, L"Vulkan Debug Mode");
+        SystemLogDebugMessage(LogMessageCategory_Graphics, "Vulkan Debug Mode");
 
         const char* layers[] =
         {
@@ -549,7 +549,7 @@ void VulkanWaitForFenceOnCpu(Fence fence)
 
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
     {
-        LogDebugMessage(LogMessageCategory_Graphics, L"Wait for fence on CPU...");
+        SystemLogDebugMessage(LogMessageCategory_Graphics, "Wait for fence on CPU...");
 
         VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
         waitInfo.semaphoreCount = 1;
@@ -928,7 +928,7 @@ void VulkanSetShader(void* commandListPointer, void* shaderPointer)
         // TODO: We should have a kind of GetOrAdd method 
         if (!graphicsDevice->PipelineStates.ContainsKey(hash))
         {
-            LogDebugMessage(LogMessageCategory_Graphics, L"Create PipelineState for shader %llu...", hash);
+            SystemLogDebugMessage(LogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
             auto pipelineStateCacheItem = VulkanCreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
             graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
@@ -1078,7 +1078,7 @@ VulkanCommandList* VulkanGetCommandList(VulkanCommandQueue* commandQueue, Vulkan
     {
         if (!isFromCommandPoolItem)
         {
-            LogWarningMessage(LogMessageCategory_Graphics, L"Warning: Not enough command buffer objects in the pool. Performance may decrease...");
+            SystemLogWarningMessage(LogMessageCategory_Graphics, "Warning: Not enough command buffer objects in the pool. Performance may decrease...");
         } 
 
         commandList = new VulkanCommandList(commandQueue->GraphicsDevice);
@@ -1322,9 +1322,7 @@ static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags
         messageType = LogMessageType_Warning;
     }
 
-    auto convertedString = "To implement"; // TODO: To implement SystemConvertUtf8ToWideChar(pMessage);
-    LogMessage(messageType, LogMessageCategory_Graphics, L"%ls", convertedString);
-    //SystemFreeConvertedString(convertedString);
+    SystemLogMessage(messageType, LogMessageCategory_Graphics, "%s", pMessage);
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {

@@ -166,7 +166,6 @@ void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
         }
 
         workingMemoryArena = memoryArena->ExtraStorage;
-        LogDebugMessage(LogMessageCategory_Memory, L"Using stack memory arena extra storage. (Extra allocated bytes: %llu)", stackMemoryArenaExtraStorage->AllocatedBytes + sizeInBytes);
     }
 
     auto storage = workingMemoryArena->Storage;
@@ -179,7 +178,7 @@ void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
         workingMemoryArena->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
         storage->AllocatedBytes = storage->Memory.Length;
 
-        LogDebugMessage(LogMessageCategory_Memory, L"Resizing MemoryArena to %llu (Previous size was: %llu) -> SizeInBytes: %llu", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
+        SystemLogDebugMessage(LogMessageCategory_Memory, "Resizing MemoryArena to %llu (Previous size was: %llu) -> SizeInBytes: %u", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
 
         storage = AllocateMemoryArenaStorage(newStorageSize);
         storage->Next = workingMemoryArena->Storage;
@@ -197,7 +196,7 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 {
     if (sizeInBytes > memoryArena->AllocatedBytes)
     {
-        LogErrorMessage(LogMessageCategory_Memory, L"Cannot pop memory arena with: %llu (Allocated size is: %llu)", sizeInBytes, memoryArena->AllocatedBytes);
+        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot pop memory arena with: %llu (Allocated size is: %lu)", sizeInBytes, memoryArena->AllocatedBytes);
         return;
     }
 
@@ -211,7 +210,7 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 
     if (shrinkResult.StoragesDeleted > 0)
     {
-        LogDebugMessage(LogMessageCategory_Memory, L"Shrinking MemoryArena storage to %llu (New size: %llu, Previous size was: %llu) -> Deleted Memory Storages: %d, Allocated Bytes: %llu", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, shrinkResult.StoragesDeleted, memoryArena->AllocatedBytes);
+        SystemLogDebugMessage(LogMessageCategory_Memory, "Shrinking MemoryArena storage to %u (New size: %u, Previous size was: %u) -> Deleted Memory Storages: %d, Allocated Bytes: %u", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, shrinkResult.StoragesDeleted, memoryArena->AllocatedBytes);
     }
 }
 

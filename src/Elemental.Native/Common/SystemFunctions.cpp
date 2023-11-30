@@ -34,7 +34,8 @@ T SystemAbs(T value)
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
-ReadOnlySpan<char> SystemConvertIntToString(MemoryArena* memoryArena, int32_t value)
+template<typename T>
+ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value)
 {
     auto isNegative = value < 0;
     auto length = isNegative ? 1 : 0;
@@ -69,14 +70,25 @@ ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double v
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    auto integerPart = SystemConvertIntToString(stackMemoryArena, (int32_t)value);
-    auto fractionalPart = SystemConvertIntToString(stackMemoryArena, -SystemAbs((int32_t)SystemRound((value - (int32_t)value) * 100.0)));
+    auto integerPart = SystemConvertNumberToString(stackMemoryArena, (int32_t)value);
+    auto fractionalPart = SystemConvertNumberToString(stackMemoryArena, -SystemAbs((int32_t)SystemRound((value - (int32_t)value) * 100.0)));
     ((char*)fractionalPart.Pointer)[0] = '.';
 
     return SystemConcatBuffers<char>(memoryArena, integerPart, fractionalPart);
 }
 
 ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, ...)
+{
+    __builtin_va_list arguments;
+
+    __builtin_va_start(arguments, format);
+    auto result = SystemFormatString(memoryArena, format, arguments);    
+    __builtin_va_end(arguments);
+
+    return result;
+}
+
+ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments)
 {
     bool insideFormat = true;
     size_t elementCount = 0;
@@ -101,15 +113,13 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
             case 'd':
             case 's':
             case 'f':
+            case 'u':
                 elementCount++;
                 insideFormat = true;
                 break;
             }
         }
     }
-
-    __builtin_va_list arguments;
-    __builtin_va_start(arguments, format); 
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto resultParts = SystemPushArray<ReadOnlySpan<char>>(stackMemoryArena, elementCount);
@@ -131,10 +141,13 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
             switch (format[++i])
             {
                 case 'd':
-                    formatedArgument = SystemConvertIntToString(stackMemoryArena, __builtin_va_arg(arguments, int));
+                    formatedArgument = SystemConvertNumberToString(stackMemoryArena, __builtin_va_arg(arguments, long long));
                     break;
                 case 'f':
                     formatedArgument = SystemConvertFloatToString(stackMemoryArena, __builtin_va_arg(arguments, double));
+                    break;
+                case 'u':
+                    formatedArgument = SystemConvertNumberToString(stackMemoryArena, __builtin_va_arg(arguments, unsigned long long));
                     break;
                 case 's':
                     formatedArgument = (ReadOnlySpan<char>)__builtin_va_arg(arguments, const char*);
@@ -159,8 +172,6 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
         finalCount += partLength;
         resultParts[currentPartIndex++] = format.Slice(startPartIndex, partLength);
     }
-
-    __builtin_va_end(arguments);
 
     auto result = SystemPushArrayZero<char>(memoryArena, finalCount);
     auto resultSpan = result;
@@ -396,19 +407,9 @@ bool SystemFileExists(ReadOnlySpan<char> path)
     return SystemPlatformFileExists(path);
 }
 
-void SystemWriteBytesToFile(const char* filename, uint8_t* data, uint32_t dataSizeInBytes) 
+void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data)
 {
-    FILE *file;
-   
-    errno_t error = fopen_s(&file, filename, "wb");
-
-    if (error != 0)
-    {
-        return;
-    }
-
-    fwrite(data, sizeof(uint8_t), dataSizeInBytes, file);
-    fclose(file);
+    SystemPlatformFileWriteBytes(path, data);
 }
 
 void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataSizeInBytes)

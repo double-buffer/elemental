@@ -10,8 +10,8 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
 {
     if (options->LogMessageHandler)
     {
-        globalLogMessageHandler = options->LogMessageHandler;
-        LogDebugMessage(LogMessageCategory_NativeApplication, L"Init OK");
+        SystemRegisterLogMessageHandler(options->LogMessageHandler);
+        SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
     }
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -19,6 +19,9 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     //auto test = SystemFormatString(stackMemoryArena, "This is a test format %d blabla %s blabla %f blabla", 45123, "TestArgString", -28.65f);
     //printf("Test: %s\n", test.Pointer);
 
+    auto path = SystemConcatBuffers<char>(stackMemoryArena, SystemGetExecutableFolderPath(stackMemoryArena), "Test.txt");
+    auto content = ReadOnlySpan<char>("Test Content2 かたな");
+    SystemFileWriteBytes(path, Span<uint8_t>((uint8_t*)content.Pointer, content.Length));
 }
 
 DllExport void Native_FreeNativeApplicationService()
@@ -27,8 +30,6 @@ DllExport void Native_FreeNativeApplicationService()
 
 DllExport void* Native_CreateApplication(char* applicationName)
 {
-    printf("Test: %s\n", applicationName);
-
     auto application = new Win32Application();
     application->ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
 

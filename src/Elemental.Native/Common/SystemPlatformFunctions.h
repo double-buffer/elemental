@@ -27,3 +27,4 @@ void SystemPlatformCopyMemory(void* destination, const void* source, size_t size
 
 ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena* memoryArena);
 bool SystemPlatformFileExists(ReadOnlySpan<char> path);
+void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);

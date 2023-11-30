@@ -34,7 +34,7 @@ typedef enum
     LogMessageCategory_Inputs = 3
 } LogMessageCategory;
 
-typedef void (*LogMessageHandlerPtr)(LogMessageType messageType, LogMessageCategory category, const wchar_t* function, const wchar_t* message);
+typedef void (*LogMessageHandlerPtr)(LogMessageType messageType, LogMessageCategory category, const char* function, const char* message);
 
 typedef enum
 {
