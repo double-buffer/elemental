@@ -46,8 +46,29 @@
 // Math functions
 //---------------------------------------------------------------------------------------------------------------
 
+/**
+ * Rounds up the given value to the nearest power of 2.
+ *
+ * @param value The input value.
+ * @return The rounded-up value to the nearest power of 2.
+ */
 size_t SystemRoundUpToPowerOf2(size_t value);
+
+/**
+ * Rounds the given double value to the nearest integer.
+ *
+ * @param value The input value.
+ * @return The rounded value.
+ */
 double SystemRound(double value);
+
+/**
+ * Calculates the absolute value of the given input.
+ *
+ * @tparam T The type of the input value.
+ * @param value The input value.
+ * @return The absolute value of the input.
+ */
 template<typename T>
 T SystemAbs(T value);
 
@@ -56,16 +77,81 @@ T SystemAbs(T value);
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
+/**
+ * Converts a number to a string using the provided memory arena.
+ *
+ * @tparam T The type of the input value.
+ * @param memoryArena The memory arena for string conversion.
+ * @param value The input value.
+ * @return A read-only span containing the converted string.
+ */
 template<typename T>
 ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value);
+
+/**
+ * Converts a double value to a string using the provided memory arena.
+ *
+ * @param memoryArena The memory arena for string conversion.
+ * @param value The input value.
+ * @return A read-only span containing the converted string.
+ */
 ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double value);
+
+/**
+ * Formats a string using the provided memory arena and format specifier.
+ *
+ * @param memoryArena The memory arena for string formatting.
+ * @param format The format specifier.
+ * @param ... Additional arguments for formatting.
+ * @return A read-only span containing the formatted string.
+ */
 ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, ...);
+
+/**
+ * Formats a string using the provided memory arena, format specifier, and variable arguments.
+ *
+ * @param memoryArena The memory arena for string formatting.
+ * @param format The format specifier.
+ * @param arguments The variable arguments for formatting.
+ * @return A read-only span containing the formatted string.
+ */
 ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments);
 
+/**
+ * Splits a string into substrings based on the specified separator.
+ *
+ * @param memoryArena The memory arena for string splitting.
+ * @param source The source string to split.
+ * @param separator The character used as a separator.
+ * @return A read-only span of read-only spans containing the split substrings.
+ */
 ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<char> source, char separator);
+
+/**
+ * Finds the last index of the specified character in the given string.
+ *
+ * @param source The source string to search.
+ * @param separator The character to search for.
+ * @return The last index of the specified character, or -1 if not found.
+ */
 int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator);
 
+/**
+ * Converts a UTF-8 encoded string to a wide character (UTF-16) string.
+ *
+ * @param memoryArena The memory arena for string conversion.
+ * @param source The UTF-8 encoded source string.
+ * @return A read-only span containing the wide character string.
+ */
 ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source);
+
+/**
+ * Converts a wide character (UTF-16) string to UTF-8 encoding.
+ *
+ * @param memoryArena The memory arena for string conversion.
+ * @param source The wide character source string.
+ * @return A read-only span containing the UTF-8 encoded string.
+ */
 ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source);
 
 
@@ -73,13 +159,54 @@ ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnl
 // IO functions
 //---------------------------------------------------------------------------------------------------------------
 
-ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnlySpan<char> prefix); 
+/**
+ * Generates a temporary filename with the specified prefix.
+ *
+ * @param memoryArena Pointer to the memory arena for dynamic memory allocation.
+ * @param prefix The prefix for the temporary filename.
+ * @return A read-only span containing the generated temporary filename.
+ */
+ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnlySpan<char> prefix);
+
+/**
+ * Retrieves the executable folder path.
+ *
+ * @param memoryArena Pointer to the memory arena for dynamic memory allocation.
+ * @return A read-only span containing the executable folder path.
+ */
 ReadOnlySpan<char> SystemGetExecutableFolderPath(MemoryArena* memoryArena);
 
+/**
+ * Checks if a file exists at the specified path.
+ *
+ * @param path The path to the file.
+ * @return True if the file exists; otherwise, false.
+ */
 bool SystemFileExists(ReadOnlySpan<char> path);
+
+/**
+ * Writes an array of bytes to a file at the specified path.
+ *
+ * @param path The path to the file.
+ * @param data A read-only span containing the data to be written.
+ */
 void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
-void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataSizeInBytes);
-void SystemDeleteFile(const char* filename);
+
+/**
+ * Reads the contents of a file into a span of bytes.
+ *
+ * @param memoryArena Pointer to the memory arena for dynamic memory allocation.
+ * @param path The path to the file.
+ * @return A span containing the read bytes.
+ */
+Span<uint8_t> SystemFileReadBytes(MemoryArena* memoryArena, ReadOnlySpan<char> path);
+
+/**
+ * Deletes the file at the specified path.
+ *
+ * @param path The path to the file to be deleted.
+ */
+void SystemFileDelete(ReadOnlySpan<char> path);
 
 
 //---------------------------------------------------------------------------------------------------------------

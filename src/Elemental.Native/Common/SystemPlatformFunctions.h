@@ -26,5 +26,8 @@ void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes);
 void SystemPlatformCopyMemory(void* destination, const void* source, size_t sizeInBytes);
 
 ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena* memoryArena);
+size_t SystemPlatformFileGetSizeInBytes(ReadOnlySpan<char> path);
 bool SystemPlatformFileExists(ReadOnlySpan<char> path);
 void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
+void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data);
+void SystemPlatformFileDelete(ReadOnlySpan<char> path);

@@ -412,35 +412,19 @@ void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data)
     SystemPlatformFileWriteBytes(path, data);
 }
 
-void SystemReadBytesFromFile(const char* filename, uint8_t** data, size_t* dataSizeInBytes)
+Span<uint8_t> SystemFileReadBytes(MemoryArena* memoryArena, ReadOnlySpan<char> path)
 {
-    FILE *file;
-   
-    errno_t error = fopen_s(&file, filename, "rb");
+    auto fileSizeInBytes = SystemPlatformFileGetSizeInBytes(path);
+    auto fileData = SystemPushArray<uint8_t>(memoryArena, fileSizeInBytes);
 
-    if (error != 0)
-    {
-        *data = NULL;
-        *dataSizeInBytes = 0;
-    }
+    SystemPlatformFileReadBytes(path, fileData);
 
-    fseek(file, 0, SEEK_END);
-    size_t fileSize = (size_t)ftell(file);
-    rewind(file);
-
-    uint8_t* outputData = (uint8_t*)malloc(fileSize);
-
-    size_t bytesRead = fread(outputData, sizeof(uint8_t), fileSize, file);
-    assert(bytesRead == fileSize);
-    fclose(file);
-
-    *data = outputData;
-    *dataSizeInBytes = bytesRead;
+    return fileData;
 }
 
-void SystemDeleteFile(const char* filename)
+void SystemFileDelete(ReadOnlySpan<char> path)
 {
-   remove(filename); 
+    SystemPlatformFileDelete(path);
 }
 
 //---------------------------------------------------------------------------------------------------------------
