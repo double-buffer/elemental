@@ -1,8 +1,5 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-
 // TODO: Don't malloc items, use a unified malloc here with an array
 
 typedef struct _DictionaryEntry

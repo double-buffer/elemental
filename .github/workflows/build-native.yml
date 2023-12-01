@@ -28,30 +28,30 @@ jobs:
     - name: Build Windows Platform
       run: |
         mkdir ./build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G Ninja -B ./build -S . -DCMAKE_CXX_COMPILER=clang-cl
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=clang-cl
         cmake --build ./build --target Elemental.Native --config Release
 
     - name: Download Vulkan Loader
-      working-directory: ./build/src/Elemental.Native/Windows
+      working-directory: ./build/src/Elemental.Native/Windows/Release
       run: |
         mkdir ./tmp/
         curl -L -o ./tmp/vulkan-loader.zip https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip
 
     - name: Extract Vulkan Loader
-      working-directory: ./build/src/Elemental.Native/Windows
+      working-directory: ./build/src/Elemental.Native/Windows/Release
       run: |
         unzip ./tmp/vulkan-loader.zip -d ./bin/
 
     - name: Set Vulkan DLL Path
       id: set-vulkan-dll-path
-      working-directory: ./build/src/Elemental.Native/Windows
+      working-directory: ./build/src/Elemental.Native/Windows/Release
       shell: bash
       run: |
         dllPath=$(find ./bin -name vulkan-1.dll -type f -print -quit)
         echo "vulkan_dll_path=$dllPath" >> $GITHUB_ENV
 
     - name: Copy files
-      working-directory: ./build/src/Elemental.Native/Windows
+      working-directory: ./build/src/Elemental.Native/Windows/Release
       shell: bash
       run: |
         cp ${{ env.vulkan_dll_path }} .
@@ -61,4 +61,4 @@ jobs:
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
         path: |
-            ./build/src/Elemental.Native/Windows/*.dll
+            ./build/src/Elemental.Native/Windows/Release/*.dll

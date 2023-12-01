@@ -3,8 +3,6 @@
 // TODO: To remove
 #include "SystemFunctions.h"
 
-HWND globalMainWindow;
-
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
     if (options->LogMessageHandler)
@@ -12,8 +10,6 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         SystemRegisterLogMessageHandler(options->LogMessageHandler);
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
     }
-
-    assert(false);
 }
 
 DllExport void Native_FreeNativeApplicationService()
@@ -89,8 +85,8 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     RECT clientRectangle;
     clientRectangle.left = 0;
     clientRectangle.top = 0;
-    clientRectangle.right = (LONG)((float_t)width * mainScreenScaling);
-    clientRectangle.bottom = (LONG)((float_t)height * mainScreenScaling);
+    clientRectangle.right = (LONG)((float)width * mainScreenScaling);
+    clientRectangle.bottom = (LONG)((float)height * mainScreenScaling);
 
     AdjustWindowRectExForDpi(&clientRectangle, WS_OVERLAPPEDWINDOW, false, 0, mainScreenDpi);
 
@@ -126,9 +122,6 @@ DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeW
     nativeWindow->WindowPlacement = windowPlacement;
 
     Native_SetWindowState(nativeWindow, options->WindowState);
-
-    // HACK
-    globalMainWindow = window;
 
     return nativeWindow;
 }
@@ -259,7 +252,7 @@ void ProcessMessages(Win32Application* application)
 }
 
 // TODO: Change that
-static std::map<HWND, Win32Window*> windowMap = std::map<HWND, Win32Window*>();
+//static std::map<HWND, Win32Window*> windowMap = std::map<HWND, Win32Window*>();
 
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -269,7 +262,7 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
     {
         auto createParameters = (LPCREATESTRUCT)lParam;
         auto nativeWindow = (Win32Window*)createParameters->lpCreateParams;
-        windowMap[window] = nativeWindow;
+        //windowMap[window] = nativeWindow;
         break;
     }
 
@@ -287,7 +280,7 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 		{
 			if ((HIWORD(lParam) & KF_ALTDOWN))
 			{
-                auto nativeWindow = windowMap[window];
+                auto nativeWindow = nullptr;//windowMap[window];
                 Native_SetWindowState(nativeWindow, NativeWindowState_FullScreen);
             }
 		}

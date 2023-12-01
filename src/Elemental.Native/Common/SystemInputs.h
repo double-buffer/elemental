@@ -6,6 +6,12 @@
 
 #define MAX_QUEUE_INPUTSVALUES 255
 
+
+// TODO: Put that in an input folder like vulkan
+
+
+
+
 struct NativeInputsQueue
 {
     InputsValue InputsValues[255];

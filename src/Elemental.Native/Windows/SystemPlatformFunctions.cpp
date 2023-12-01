@@ -30,12 +30,12 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena* memoryAren
 
 void* SystemPlatformAllocateMemory(size_t sizeInBytes)
 {
-    return malloc(sizeInBytes);
+    return HeapAlloc(GetProcessHeap(), 0, sizeInBytes);
 }
 
 void SystemPlatformFreeMemory(void* pointer)
 {
-    free(pointer);
+    HeapFree(GetProcessHeap(), 0, pointer);
 }
 
 void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes)

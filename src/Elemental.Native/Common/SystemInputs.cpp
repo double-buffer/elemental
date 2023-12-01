@@ -50,8 +50,8 @@ bool IsRangeSet(uint8_t value, uint8_t mask, uint8_t minValue, uint8_t maxValue,
 float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
 {
     // TODO: Allows the configuration of deadzone
-    float_t deadZone = 0.25f;
-    float_t normalizedValue = ((float_t)value / (float_t)maxValue) * 2.0f - 1.0f;
+    float deadZone = 0.25f;
+    float normalizedValue = ((float)value / (float)maxValue) * 2.0f - 1.0f;
 
     if (normalizedValue < deadZone && normalizedValue > -deadZone)
     {
@@ -61,7 +61,7 @@ float NormalizeInputSigned(uint32_t value, uint32_t maxValue)
     return normalizedValue;
 }
 
-void SetInputObjectAnalogValue(InputState* inputState, InputObjectKey inputObjectKey, float_t value) 
+void SetInputObjectAnalogValue(InputState* inputState, InputObjectKey inputObjectKey, float value) 
 {
     if (inputState->DataPointer == NULL)
     {
@@ -69,7 +69,7 @@ void SetInputObjectAnalogValue(InputState* inputState, InputObjectKey inputObjec
     }
 
     InputObject inputObject = ((InputObject*)inputState->InputObjectsPointer)[inputObjectKey];
-    ((float_t*)inputState->DataPointer)[inputObject.Value.Offset] = value;
+    ((float*)inputState->DataPointer)[inputObject.Value.Offset] = value;
 }
 
 void SetInputObjectDigitalValue(InputState* inputState, InputObjectKey inputObjectKey, bool value) 

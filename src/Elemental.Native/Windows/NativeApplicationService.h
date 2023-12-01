@@ -10,7 +10,6 @@
 #pragma warning(default: 4191)
 
 // HACK: Remove that
-#include <map>
 
 void ProcessMessages(Win32Application* application);
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam);

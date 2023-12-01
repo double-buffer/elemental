@@ -1,7 +1,4 @@
 #pragma once
-#include <stdbool.h>
-#include <stdint.h>
-#include <math.h>
 #include "ElementalCommon.h"
 
 typedef struct 
@@ -43,7 +40,7 @@ typedef struct
 {
     uint32_t Width;
     uint32_t Height;
-    float_t UIScale;
+    float UIScale;
     NativeWindowState WindowState;
 } NativeWindowSize;
 
@@ -203,5 +200,5 @@ typedef struct
     uint32_t DeviceId;
     InputsValueId Id;
     uint64_t Timestamp;
-    float_t Value;
+    float Value;
 } InputsValue;
