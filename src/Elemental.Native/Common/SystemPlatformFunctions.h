@@ -31,3 +31,11 @@ bool SystemPlatformFileExists(ReadOnlySpan<char> path);
 void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
 void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data);
 void SystemPlatformFileDelete(ReadOnlySpan<char> path);
+
+ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command);
+void* SystemPlatformLoadLibrary(ReadOnlySpan<char> libraryName);
+void SystemPlatformFreeLibrary(const void* library);
+void* SystemPlatformGetFunctionExport(const void* library, ReadOnlySpan<char> functionName);
+
+void* SystemPlatformCreateThread(void* threadFunction, void* parameters);
+void SystemPlatformFreeThread(void* thread);

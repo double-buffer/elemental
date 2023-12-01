@@ -1,7 +1,5 @@
 #include "Dictionary.h"
 
-// TODO: To remove -> Temporary
-#include <stdio.h>
 
 // TODO: Don't malloc items, use a unified malloc here with an array
 
@@ -188,21 +186,21 @@ void DictionaryPrint(DictionaryStruct* dictionary)
     {
         if (dictionary->DictionaryEntries[i] != NULL)
         {
-            printf("Dictionary %zu: %llu", i, dictionary->DictionaryEntries[i]->Key);
+            //printf("Dictionary %zu: %llu", i, dictionary->DictionaryEntries[i]->Key);
 
             DictionaryEntry* nextEntry = dictionary->DictionaryEntries[i]->Next;
 
             while (nextEntry != NULL)
             {
-                printf(" -> %llu", nextEntry->Key);
+                //printf(" -> %llu", nextEntry->Key);
                 nextEntry = nextEntry->Next;
             }
 
-            printf("\n");
+            //printf("\n");
         }
         else
         {
-            printf("Dictionary %zu: ---\n", i);
+            //printf("Dictionary %zu: ---\n", i);
         }
     }
 }

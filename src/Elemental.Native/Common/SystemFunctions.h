@@ -2,45 +2,14 @@
 
 #include "SystemMemory.h"
 
-#include <assert.h>
-
-#define PackedStruct struct __attribute__((__packed__))
-
-#ifdef _WINDOWS
-
-#include <io.h>
-
-#define popen _popen
-#define pclose _pclose
-
+#ifdef _DEBUG
+    #define assert(expression) if (!(expression)) { int* ptr = 0; *ptr = 0; }
 #else
-#define MAX_PATH 256
-#ifndef NDEBUG
-    #define _DEBUG
-#endif
-#include <unistd.h>
-#include <dlfcn.h>
-#define fopen_s(pFile, filename, mode) ((*(pFile))=fopen((filename),(mode)))==NULL
-#define errno_t uint64_t
-#define DllExport extern "C" __attribute__((visibility("default"))) 
-#endif
-#ifdef _WINDOWS
-    static const char* libraryExtension = ".dll";
-#elif __APPLE__
-    const char* libraryExtension = ".dylib";
-    //HACK
-    //#define size_t uint64_t
-#else
-    const char* libraryExtension = ".so";
+    #define assert(expression)
 #endif
 
 // TODO: Remove AssertIfFailed, only use assert is some specific places
-#ifdef _DEBUG
-    #define AssertIfFailed(result) assert(!FAILED(result))
-#else
-    #define AssertIfFailed(result) result
-#endif
-
+#define AssertIfFailed(result) result
 
 //---------------------------------------------------------------------------------------------------------------
 // Math functions
@@ -210,42 +179,80 @@ void SystemFileDelete(ReadOnlySpan<char> path);
 
 
 //---------------------------------------------------------------------------------------------------------------
-// Library / process functions
+// Library / Process Functions
 //---------------------------------------------------------------------------------------------------------------
 
+/**
+ * Represents a dynamic-link library handle.
+ */
+struct SystemLibrary
+{
+    void* Handle;
+};
+
+/**
+ * Executes a system process with the specified command.
+ *
+ * @param memoryArena The memory arena for allocating temporary memory.
+ * @param command The command to be executed.
+ * @return A read-only span containing the output of the executed process.
+ */
 ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command);
 
-// TODO: Old CODE to remove
-const void* SystemLoadLibrary(const char* libraryName);
-void SystemFreeLibrary(const void* library);
-const void* SystemGetFunctionExport(const void* library, const char* functionName);
+/**
+ * Loads a dynamic-link library with the given library name.
+ *
+ * @param libraryName The name of the library to be loaded.
+ * @return A SystemLibrary structure representing the loaded library.
+ */
+SystemLibrary SystemLoadLibrary(ReadOnlySpan<char> libraryName);
+
+/**
+ * Frees the specified dynamic-link library.
+ *
+ * @param library A SystemLibrary structure representing the loaded library.
+ */
+void SystemFreeLibrary(SystemLibrary library);
+
+/**
+ * Retrieves the address of an exported function from the specified dynamic-link library.
+ *
+ * @param library A SystemLibrary structure representing the loaded library.
+ * @param functionName The name of the function to be retrieved.
+ * @return A pointer to the exported function.
+ */
+void* SystemGetFunctionExport(SystemLibrary library, ReadOnlySpan<char> functionName);
 
 
 //---------------------------------------------------------------------------------------------------------------
 // Threading functions
 //---------------------------------------------------------------------------------------------------------------
 
-// TODO: windows functions
-#ifndef _WINDOWS
+/**
+ * Represents a system thread handle.
+ */
 struct SystemThread
 {
-    pthread_t ThreadHandle;
+    void* Handle;
 };
 
-typedef void* (*SystemThreadFunction)(void* parameters);
+/**
+ * Function signature for a system thread.
+ */
+typedef void (*SystemThreadFunction)(void* parameters);
 
-SystemThread SystemCreateThread(SystemThreadFunction threadFunction)
-{
-    SystemThread result = {};
+/**
+ * Creates a system thread with the specified thread function and parameters.
+ *
+ * @param threadFunction The function to be executed by the created thread.
+ * @param parameters The parameters to be passed to the thread function.
+ * @return A SystemThread structure representing the created thread.
+ */
+SystemThread SystemCreateThread(SystemThreadFunction threadFunction, void* parameters);
 
-    auto resultCode = pthread_create(&result.ThreadHandle, nullptr, threadFunction, nullptr);
-
-    if (resultCode != 0)
-    {
-        printf("error: Create Thread: cannot create system thread.\n");
-        return {};
-    }
-
-    return result;
-}
-#endif
+/**
+ * Frees the resources associated with the specified system thread.
+ *
+ * @param thread A SystemThread structure representing the thread to be freed.
+ */
+void SystemFreeThread(SystemThread thread);

@@ -62,7 +62,7 @@ void VulkanInitGraphicsService(GraphicsServiceOptions* options)
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     createInfo.pApplicationInfo = &appInfo;
 
-    auto isSdkInstalled = SystemLoadLibrary("VkLayer_khronos_validation") != nullptr;
+    auto isSdkInstalled = SystemLoadLibrary("VkLayer_khronos_validation").Handle != nullptr;
 
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {

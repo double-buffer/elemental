@@ -1,7 +1,6 @@
 #include "NativeApplicationService.h"
 
 // TODO: To remove
-#include "SystemMemory.h"
 #include "SystemFunctions.h"
 
 HWND globalMainWindow;
@@ -14,10 +13,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
     }
 
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-
-    //auto test = SystemFormatString(stackMemoryArena, "This is a test format %d blabla %s blabla %f blabla", 45123, "TestArgString", -28.65f);
-    //printf("Test: %s\n", test.Pointer);
+    assert(false);
 }
 
 DllExport void Native_FreeNativeApplicationService()

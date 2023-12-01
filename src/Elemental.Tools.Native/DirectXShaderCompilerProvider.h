@@ -20,7 +20,7 @@ public:
     Span<uint8_t> CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options) override;
 
 private:
-    const void* _dxcompilerDll = nullptr;
+    SystemLibrary _dxcompilerDll;
     DxcCreateInstanceProc _createInstanceFunc = nullptr;
     
     bool ProcessLogOutput(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult);

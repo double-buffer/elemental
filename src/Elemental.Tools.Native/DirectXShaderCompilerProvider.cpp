@@ -4,7 +4,7 @@ DirectXShaderCompilerProvider::DirectXShaderCompilerProvider()
 {
     _dxcompilerDll = SystemLoadLibrary("dxcompiler");
 
-    if (_dxcompilerDll != nullptr)
+    if (_dxcompilerDll.Handle != nullptr)
     {
         _createInstanceFunc = (DxcCreateInstanceProc)SystemGetFunctionExport(_dxcompilerDll, "DxcCreateInstance");
     }

@@ -1,8 +1,6 @@
 #include "SystemFunctions.h"
 #include "SystemPlatformFunctions.h"
 
-#include <stdio.h> // TODO: Temporary
-
 //---------------------------------------------------------------------------------------------------------------
 // Math functions
 //---------------------------------------------------------------------------------------------------------------
@@ -433,93 +431,34 @@ void SystemFileDelete(ReadOnlySpan<char> path)
 
 ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
 {
-    auto result = SystemPushArrayZero<char>(memoryArena, 2048);
-
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto buffer = SystemPushArrayZero<char>(stackMemoryArena, 128);
-    auto finalCommand = SystemConcatBuffers<char>(stackMemoryArena, command, " 2>&1");
-
-    // TODO: Remove sys calls
-    auto pipe = popen(finalCommand.Pointer, "r");
-    assert(pipe);
-
-    auto currentLength = 0;
-
-    while (fgets(buffer.Pointer, buffer.Length, pipe) != nullptr) 
-    {
-        auto length = strlen(buffer.Pointer);
-        SystemCopyBuffer<char>(result.Slice(currentLength), buffer.Slice(0, length));
-
-        currentLength += length;
-    }
-
-    pclose(pipe);
-
-    return result;
+    return SystemPlatformExecuteProcess(memoryArena, command);
 }
 
-// TODO: To remove old code
-const void* SystemLoadLibrary(const char* libraryName)
+SystemLibrary SystemLoadLibrary(ReadOnlySpan<char> libraryName)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto fullName = SystemConcatBuffers<char>(stackMemoryArena, libraryName, libraryExtension);
-
-#ifdef _WINDOWS
-    void* library = LoadLibraryA(fullName.Pointer);
-    return library;
-#else
-    char* fullNameUnix = SystemConcatStrings("lib", fullName);
-    void* library = dlopen(fullNameUnix, RTLD_LAZY);
-    
-    free(fullName);
-    free(fullNameUnix);
-    return library;
-#endif
+    return { SystemPlatformLoadLibrary(libraryName) };
 }
 
-void SystemFreeLibrary(const void* library)
+void SystemFreeLibrary(SystemLibrary library)
 {
-#ifdef _WINDOWS
-    FreeLibrary((HMODULE)library);
-#else
-    dlclose((void*)library);
-#endif
+    SystemPlatformFreeLibrary(library.Handle);
 }
 
-const void* SystemGetFunctionExport(const void* library, const char* functionName)
+void* SystemGetFunctionExport(SystemLibrary library, ReadOnlySpan<char> functionName)
 {
-#ifdef _WINDOWS
-    return (void*)GetProcAddress((HMODULE)library, functionName);
-#else
-    return dlsym((void*)library, functionName);
-#endif
+    return SystemPlatformGetFunctionExport(library.Handle, functionName);
 }
 
 //---------------------------------------------------------------------------------------------------------------
 // Threading functions
 //---------------------------------------------------------------------------------------------------------------
 
-// TODO: windows functions
-#ifndef _WINDOWS
-struct SystemThread
+SystemThread SystemCreateThread(SystemThreadFunction threadFunction, void* parameters)
 {
-    pthread_t ThreadHandle;
-};
-
-typedef void* (*SystemThreadFunction)(void* parameters);
-
-SystemThread SystemCreateThread(SystemThreadFunction threadFunction)
-{
-    SystemThread result = {};
-
-    auto resultCode = pthread_create(&result.ThreadHandle, nullptr, threadFunction, nullptr);
-
-    if (resultCode != 0)
-    {
-        printf("error: Create Thread: cannot create system thread.\n");
-        return {};
-    }
-
-    return result;
+    return { SystemPlatformCreateThread((void*)threadFunction, parameters) };
 }
-#endif
+
+void SystemFreeThread(SystemThread thread)
+{
+    SystemPlatformFreeThread(thread.Handle);
+}

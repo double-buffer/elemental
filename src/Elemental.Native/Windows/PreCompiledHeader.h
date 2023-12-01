@@ -14,6 +14,7 @@
 
 // TODO: Include vulkan headers if needed
 
+#define PackedStruct struct __attribute__((__packed__))
 #define DllExport extern "C" __declspec(dllexport)
 
 struct WindowsEvent

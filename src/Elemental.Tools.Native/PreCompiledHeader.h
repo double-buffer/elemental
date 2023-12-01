@@ -25,7 +25,6 @@ using namespace Microsoft::WRL;
 // TODO: Cleanup includes
 #include <ctype.h>
 #include <assert.h>
-#include <stdio.h>
 #include <stdint.h>
 
 #include <locale>
