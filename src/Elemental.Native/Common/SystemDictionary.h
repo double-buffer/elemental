@@ -1,5 +1,48 @@
 #pragma once
 
+#include "SystemMemory.h"
+
+template<typename TValue>
+struct SystemDictionaryStorage;
+
+template<typename TKey, typename TValue>
+struct SystemDictionary
+{
+    SystemDictionaryStorage<TValue>* Storage;
+    
+    TValue& operator[](TKey key);
+};
+
+template<typename TKey, typename TValue>
+SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena* memoryArena, size_t maxItemsCount);
+
+template<typename TKey, typename TValue>
+void SystemAddDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key, TValue value);
+
+template<typename TValue>
+void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key, TValue value);
+
+template<typename TValue>
+void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<uint8_t>, TValue> dictionary, ReadOnlySpan<uint8_t> key, TValue value);
+
+template<typename TKey, typename TValue>
+void SystemRemoveDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key);
+
+template<typename TValue>
+void SystemRemoveDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key);
+
+template<typename TKey, typename TValue>
+TValue* SystemGetDictionaryValue(SystemDictionary<TKey, TValue> dictionary, TKey key);
+
+// TODO: ContainsKey
+// TODO: Enumerate?
+
+template<typename TKey, typename TValue>
+void DebugDictionary(SystemDictionary<TKey, TValue> dictionary);
+
+
+
+
 // TODO: Don't malloc items, use a unified malloc here with an array
 
 typedef struct _DictionaryEntry

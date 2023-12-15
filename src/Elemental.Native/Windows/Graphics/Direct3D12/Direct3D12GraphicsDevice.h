@@ -2,7 +2,7 @@
 
 #include "Elemental.h"
 #include "CircularList.h"
-#include "Dictionary.h"
+#include "SystemDictionary.h"
 #include "GraphicsObject.h"
 #include "Direct3D12Common.h"
 #include "Direct3D12CommandList.h"

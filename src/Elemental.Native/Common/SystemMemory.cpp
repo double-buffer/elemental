@@ -154,6 +154,7 @@ void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena)
     SystemPlatformFreeMemory(stackMemoryArena);
 }
 
+// TODO: Do we need to align memory?
 void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 {
     MemoryArena* workingMemoryArena = memoryArena;

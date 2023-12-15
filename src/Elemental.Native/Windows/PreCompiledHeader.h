@@ -1,5 +1,7 @@
 #pragma once
 
+#include <xxh3.h>
+
 #include <stdint.h>
 
 #include <ShellScalingAPI.h>
