@@ -30,10 +30,15 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     SystemAddDictionaryEntry(dictionary, "TestOneMore", 28);
     SystemAddDictionaryEntry(dictionary, "TestOneMore2", 29);
     SystemAddDictionaryEntry(dictionary, "TestOneMore3", 30);
+    SystemAddDictionaryEntry(dictionary, "TestOneMore4", 31);
+    SystemAddDictionaryEntry(dictionary, "TestOneMore5", 32);
     
     SystemRemoveDictionaryEntry(dictionary, "TestOneMore");
     SystemRemoveDictionaryEntry(dictionary, "TestOneMore2");
 
+    auto testValue2 = dictionary["TestOneMore5"];
+    printf("Test Value2: %d\n", testValue2);
+    
     DebugDictionary(dictionary);
 }
 

@@ -8,13 +8,16 @@ struct SystemDictionaryEntryIndex
     // TODO: Remove constructors
     SystemDictionaryEntryIndex()
     {
+        PartitionIndex = -1;
         Index = -1;
     }
     SystemDictionaryEntryIndex(int32_t index)
     {
+        PartitionIndex = 0;
         Index = index;
     }
 
+    int32_t PartitionIndex;
     int32_t Index;
 };
 
@@ -39,6 +42,7 @@ struct SystemDictionaryStorage
     MemoryArena* MemoryArena;
     Span<SystemDictionaryEntryIndex> Buckets;
     Span<SystemDictionaryStoragePartition<TValue>*> Partitions;
+    int32_t CurrentPartitionIndex;
     SystemDictionaryEntryIndex FreeListIndex;
 };
 
@@ -79,8 +83,8 @@ SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena* memoryArena, 
 {
     // TODO: We need to have to initial size parameters, the entries and buckets ones
     // BUG: All here is wrong
-    auto maxPartitionsCount = 1;
-    auto partitionSize = maxItemsCount;//maxItemsCount / maxPartitionsCount;
+    auto maxPartitionsCount = 2;
+    auto partitionSize = maxItemsCount / maxPartitionsCount;
 
     if (partitionSize == 0)
     {
@@ -92,7 +96,8 @@ SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena* memoryArena, 
     auto storage = SystemPushStruct<SystemDictionaryStorage<TValue>>(memoryArena);
     storage->MemoryArena = memoryArena;
     storage->Partitions = SystemPushArrayZero<SystemDictionaryStoragePartition<TValue>*>(memoryArena, maxPartitionsCount);
-    storage->Partitions[0] = SystemCreateDictionaryPartition<TValue>(memoryArena, partitionSize); // TODO: Find a proper initial size
+    storage->CurrentPartitionIndex = 0;
+    storage->Partitions[storage->CurrentPartitionIndex++] = SystemCreateDictionaryPartition<TValue>(memoryArena, partitionSize); // TODO: Find a proper initial size
     
     storage->FreeListIndex = -1;
     storage->Buckets = SystemPushArrayZero<SystemDictionaryEntryIndex>(memoryArena, maxItemsCount);
@@ -118,7 +123,7 @@ void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dicti
 {
     auto hashInfo = SystemDictionaryComputeHashInfo(dictionary, key);
     auto storage = dictionary.Storage;
-    auto partition = dictionary.Storage->Partitions[0];
+    auto partition = dictionary.Storage->Partitions[storage->CurrentPartitionIndex - 1];
     SystemDictionaryEntryIndex entryIndex = -1;
     SystemDictionaryEntry<TValue>* entry;
 
@@ -130,15 +135,20 @@ void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dicti
     }
     else 
     {
-        entryIndex = partition->CurrentEntryIndex++;
+        entryIndex.PartitionIndex = storage->CurrentPartitionIndex - 1;
+        entryIndex.Index = partition->CurrentEntryIndex++;
         entry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex);
     }
 
     if (entryIndex.Index == (int32_t)partition->Entries.Length)
     {
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Dictionary is full");
+        partition = SystemCreateDictionaryPartition<TValue>(storage->MemoryArena, 10); // TODO: Find a proper initial size
+        storage->Partitions[storage->CurrentPartitionIndex++] = partition;
 
-        // TODO: Grow the partition
+        entryIndex.PartitionIndex = storage->CurrentPartitionIndex - 1;
+        entryIndex.Index = partition->CurrentEntryIndex++;
+        entry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex);
     }
 
     // TODO: Retrieve the buckets with a function
@@ -257,7 +267,7 @@ SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionary<TKe
 
     while (currentIndex.Index != -1) 
     {
-        auto currentEntry = SystemGetDictionaryEntryByIndex(dictionary, currentIndex.Index);
+        auto currentEntry = SystemGetDictionaryEntryByIndex(dictionary, currentIndex);
 
         if (currentEntry->Hash == hashInfo.Hash)
         {
@@ -284,7 +294,7 @@ SystemDictionaryEntry<TValue>* SystemGetDictionaryEntryByIndex(SystemDictionary<
         return nullptr;
     }
 
-    return &dictionary.Storage->Partitions[0]->Entries[index.Index];
+    return &(dictionary.Storage->Partitions[index.PartitionIndex]->Entries[index.Index]);
 }
 
 template<typename TKey, typename TValue>
@@ -306,8 +316,8 @@ void DebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 
             while (entryIndex.Index != -1)
             {
-                auto entry = storage->Partitions[0]->Entries[entryIndex.Index]; 
-                printf(" => %lu (Value: %d, Index: %d)", entry.Hash, entry.Value, entryIndex);
+                auto entry = storage->Partitions[entryIndex.PartitionIndex]->Entries[entryIndex.Index]; 
+                printf(" => %lu (Value: %d, Partition: %d, Index: %d)", entry.Hash, entry.Value, entryIndex.PartitionIndex, entryIndex.Index);
 
                 entryIndex = entry.Next;
             }
@@ -322,7 +332,7 @@ void DebugDictionary(SystemDictionary<TKey, TValue> dictionary)
     while (currentFreeListIndex.Index != -1)
     {
         printf(" => %d", currentFreeListIndex);
-        currentFreeListIndex = storage->Partitions[0]->Entries[currentFreeListIndex.Index].Next;
+        currentFreeListIndex = storage->Partitions[currentFreeListIndex.PartitionIndex]->Entries[currentFreeListIndex.Index].Next;
     }
 
     printf("\n");
@@ -330,13 +340,24 @@ void DebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 
     for (int32_t p = 0; p < dictionary.Storage->Partitions.Length; p++)
     {
+        printf("Partition %d: ", p);
         auto partition = dictionary.Storage->Partitions[p];
 
-        printf("===== Partition %d =====\n", p);
+        if (partition != nullptr)
+        {
+            printf("%d\n", partition->CurrentEntryIndex);
 
-        printf("Current Entry Index: %d\n", partition->CurrentEntryIndex);
+            for (int32_t j = 0; j < partition->Entries.Length; j++)
+            {
+                printf("%lu =>", partition->Entries[j].Hash);
+            }
 
-
+            printf("\n");
+        }
+        else 
+        {
+            printf("(EMPTY)\n"); 
+        }
     }
 }
 
