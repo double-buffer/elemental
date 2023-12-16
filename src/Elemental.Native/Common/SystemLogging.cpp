@@ -11,6 +11,11 @@ void SystemRegisterLogMessageHandler(LogMessageHandlerPtr logMessageHandler)
 
 void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType type, LogMessageCategory category, ReadOnlySpan<char> format, ...)
 {
+    if (systemLogMessageHandler == nullptr)
+    {
+        return;
+    }
+
     __builtin_va_list arguments;
     __builtin_va_start(arguments, format); 
 
