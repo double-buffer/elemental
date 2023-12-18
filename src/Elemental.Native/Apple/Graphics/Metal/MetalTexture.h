@@ -1,12 +1,10 @@
 #pragma once
 
-struct MetalTexture : MetalBaseGraphicsObject
+#include "MetalGraphicsDevice.h"
+
+struct MetalTexture
 {
-    MetalTexture(BaseGraphicsService* graphicsService, MetalGraphicsDevice* graphicsDevice) : MetalBaseGraphicsObject(graphicsService, graphicsDevice) 
-    {
-        IsPresentTexture = false;
-    }
-    
+    MetalGraphicsDevice* GraphicsDevice;
     NS::SharedPtr<MTL::Texture> DeviceObject;
     bool IsPresentTexture;
 };

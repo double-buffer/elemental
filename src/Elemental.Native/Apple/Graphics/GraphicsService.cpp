@@ -1,5 +1,5 @@
-#include "PreCompiledHeader.h"
-#include "BaseGraphicsObject.h"
+/*#include "PreCompiledHeader.h"
+#include "GraphicsObject.h"
 #include "BaseGraphicsService.h"
 #include "Metal/MetalGraphicsService.h"
 
@@ -213,4 +213,4 @@ DllExport void Native_DispatchMesh(void* commandListPointer, uint32_t threadGrou
 {
     auto graphicsService = ((BaseGraphicsObject*)commandListPointer)->GraphicsService;
     graphicsService->DispatchMesh(commandListPointer, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
-}
+}*/

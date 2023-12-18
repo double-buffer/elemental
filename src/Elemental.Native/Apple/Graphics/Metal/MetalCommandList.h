@@ -1,14 +1,12 @@
 #pragma once
 
-struct MetalShader;
+#include "Elemental.h"
+#include "MetalGraphicsDevice.h"
+#include "MetalShader.h"
 
-struct MetalCommandList : MetalBaseGraphicsObject
+struct MetalCommandList
 {
-    MetalCommandList(BaseGraphicsService* graphicsService, MetalGraphicsDevice* graphicsDevice) : MetalBaseGraphicsObject(graphicsService, graphicsDevice) 
-    {
-        IsRenderPassActive = false;
-    }
-    
+    MetalGraphicsDevice* GraphicsDevice;
     NS::SharedPtr<MTL::CommandBuffer> DeviceObject;
     NS::SharedPtr<MTL::CommandEncoder> CommandEncoder;
     

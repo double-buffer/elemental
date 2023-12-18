@@ -1,16 +1,23 @@
 #include "MetalGraphicsService.h"
+#include "MetalGraphicsDevice.h"
+#include "MetalCommandQueue.h"
+#include "MetalCommandList.h"
+#include "MetalSwapChain.h"
+#include "MetalTexture.h"
 
-MetalGraphicsService::MetalGraphicsService(GraphicsServiceOptions* options)
+static NS::SharedPtr<MTL::SharedEventListener> _sharedEventListener;
+
+DllExport void Native_InitGraphicsService(GraphicsServiceOptions* options)
 {
     _sharedEventListener = NS::TransferPtr(MTL::SharedEventListener::alloc()->init());
 }
 
-MetalGraphicsService::~MetalGraphicsService()
+DllExport void Native_FreeGraphicsService()
 {
     _sharedEventListener.reset();
 }
 
-void MetalGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
+DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
     auto devices = NS::TransferPtr(MTLCopyAllDevices());
     auto finalDevices = new NS::SharedPtr<MTL::Device>[64];
@@ -69,7 +76,7 @@ void MetalGraphicsService::GetAvailableGraphicsDevices(GraphicsDeviceInfo* graph
     delete[] finalDevices;
 }
 
-void* MetalGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
+DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
 {
     auto devices = NS::TransferPtr(MTLCopyAllDevices());
     NS::SharedPtr<MTL::Device> metalDevice;
@@ -90,25 +97,25 @@ void* MetalGraphicsService::CreateGraphicsDevice(GraphicsDeviceOptions* options)
         return nullptr;
     }
 
-    auto graphicsDevice = new MetalGraphicsDevice(this);
+    auto graphicsDevice = new MetalGraphicsDevice();
     graphicsDevice->MetalDevice = metalDevice; 
     return graphicsDevice;
 }
 
-void MetalGraphicsService::FreeGraphicsDevice(void* graphicsDevicePointer)
+DllExport void Native_FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (MetalGraphicsDevice*)graphicsDevicePointer;
     graphicsDevice->PipelineStates.EnumerateEntries(MetalDeletePipelineCacheItem);
     delete graphicsDevice;
 }
 
-GraphicsDeviceInfo MetalGraphicsService::GetGraphicsDeviceInfo(void* graphicsDevicePointer)
+DllExport GraphicsDeviceInfo Native_GetGraphicsDeviceInfo(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (MetalGraphicsDevice*)graphicsDevicePointer;
     return ConstructGraphicsDeviceInfo(graphicsDevice->MetalDevice);
 }
 
-void* MetalGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
+DllExport void* Native_CreateCommandQueue(void* graphicsDevicePointer, CommandQueueType type)
 {
     auto graphicsDevice = (MetalGraphicsDevice*)graphicsDevicePointer;
     auto metalCommandQueue = NS::TransferPtr(graphicsDevice->MetalDevice->newCommandQueue(64));
@@ -121,26 +128,28 @@ void* MetalGraphicsService::CreateCommandQueue(void* graphicsDevicePointer, Comm
     // TODO: If CPU sync is not needed we can use something faster
     auto metalSharedEvent = NS::TransferPtr(graphicsDevice->MetalDevice->newSharedEvent());
 
-    auto commandQueue = new MetalCommandQueue(this, graphicsDevice);
+    auto commandQueue = new MetalCommandQueue();
+    commandQueue->GraphicsDevice = graphicsDevice;
+    commandQueue->FenceValue = 0;
     commandQueue->DeviceObject = metalCommandQueue;
     commandQueue->Fence = metalSharedEvent;
 
     return commandQueue;
 }
 
-void MetalGraphicsService::FreeCommandQueue(void* commandQueuePointer)
+DllExport void Native_FreeCommandQueue(void* commandQueuePointer)
 {
     auto commandQueue = (MetalCommandQueue*)commandQueuePointer;
     delete commandQueue;
 }
 
-void MetalGraphicsService::SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
+DllExport void Native_SetCommandQueueLabel(void* commandQueuePointer, uint8_t* label)
 {
     auto commandQueue = (MetalCommandQueue*)commandQueuePointer;
     commandQueue->DeviceObject->setLabel(NS::String::string((const char*)label, NS::UTF8StringEncoding));
 }
 
-void* MetalGraphicsService::CreateCommandList(void* commandQueuePointer)
+DllExport void* Native_CreateCommandList(void* commandQueuePointer)
 {
     // TODO: Create an autoreleasePool
 
@@ -154,26 +163,28 @@ void* MetalGraphicsService::CreateCommandList(void* commandQueuePointer)
         return nullptr;
     }
 
-    auto commandList = new MetalCommandList(this, commandQueue->GraphicsDevice);
+    auto commandList = new MetalCommandList();
+    commandList->GraphicsDevice = commandQueue->GraphicsDevice;
+    commandList->IsRenderPassActive = 0;
     commandList->DeviceObject = metalCommandBuffer;
 
     return commandList;
 }
 
-void MetalGraphicsService::FreeCommandList(void* commandListPointer)
+DllExport void Native_FreeCommandList(void* commandListPointer)
 {
     // TODO: Release autoreleasePool if not released
     auto commandList = (MetalCommandList*)commandListPointer;
     delete commandList;
 }
 
-void MetalGraphicsService::SetCommandListLabel(void* commandListPointer, uint8_t* label)
+DllExport void Native_SetCommandListLabel(void* commandListPointer, uint8_t* label)
 {
     auto commandList = (MetalCommandList*)commandListPointer;
     commandList->DeviceObject->setLabel(NS::String::string((const char*)label, NS::UTF8StringEncoding));
 }
 
-void MetalGraphicsService::CommitCommandList(void* commandListPointer)
+DllExport void Native_CommitCommandList(void* commandListPointer)
 {
     // TODO: Release autoreleasePool
     auto commandList = (MetalCommandList*)commandListPointer;
@@ -185,7 +196,7 @@ void MetalGraphicsService::CommitCommandList(void* commandListPointer)
     }
 }
     
-Fence MetalGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
+DllExport Fence Native_ExecuteCommandLists(void* commandQueuePointer, void** commandLists, int32_t commandListCount, Fence* fencesToWait, int32_t fenceToWaitCount)
 {
     auto commandQueue = (MetalCommandQueue*)commandQueuePointer;
 
@@ -236,7 +247,7 @@ Fence MetalGraphicsService::ExecuteCommandLists(void* commandQueuePointer, void*
     return fence;
 }
 
-void MetalGraphicsService::WaitForFenceOnCpu(Fence fence)
+DllExport void Native_WaitForFenceOnCpu(Fence fence)
 {
     auto commandQueueToWait = (MetalCommandQueue*)fence.CommandQueuePointer;
 
@@ -254,17 +265,17 @@ void MetalGraphicsService::WaitForFenceOnCpu(Fence fence)
     }
 }
     
-void MetalGraphicsService::ResetCommandAllocation(void* graphicsDevicePointer)
+DllExport void Native_ResetCommandAllocation(void* graphicsDevicePointer)
 {
 }
 
-void MetalGraphicsService::FreeTexture(void* texturePointer)
+DllExport void Native_FreeTexture(void* texturePointer)
 {
     auto texture = (MetalTexture*)texturePointer;
     delete texture;
 }
 
-void* MetalGraphicsService::CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
+DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
     auto commandQueue = (MetalCommandQueue*)commandQueuePointer;
     auto graphicsDevice = commandQueue->GraphicsDevice;
@@ -293,7 +304,8 @@ void* MetalGraphicsService::CreateSwapChain(void* windowPointer, void* commandQu
     metalLayer->setFramebufferOnly(true);
     metalLayer->setDrawableSize(CGSizeMake(renderSize.Width, renderSize.Height));
 
-    auto swapChain = new MetalSwapChain(this, graphicsDevice, options->MaximumFrameLatency);
+    auto swapChain = new MetalSwapChain();
+    swapChain->GraphicsDevice = graphicsDevice;
     swapChain->DeviceObject = metalLayer;
     swapChain->CommandQueue = commandQueue;
     swapChain->PresentSemaphore = dispatch_semaphore_create(options->MaximumFrameLatency);
@@ -301,20 +313,20 @@ void* MetalGraphicsService::CreateSwapChain(void* windowPointer, void* commandQu
     return swapChain;
 }
 
-void MetalGraphicsService::FreeSwapChain(void* swapChainPointer)
+DllExport void Native_FreeSwapChain(void* swapChainPointer)
 {
     auto swapChain = (MetalSwapChain*)swapChainPointer;
     free(swapChain->PresentSemaphore);
     delete swapChain;
 }
     
-void MetalGraphicsService::ResizeSwapChain(void* swapChainPointer, int width, int height)
+DllExport void Native_ResizeSwapChain(void* swapChainPointer, int width, int height)
 {
     auto swapChain = (MetalSwapChain*)swapChainPointer;
     swapChain->DeviceObject->setDrawableSize(CGSizeMake(width, height));
 }
     
-void* MetalGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer)
+DllExport void* Native_GetSwapChainBackBufferTexture(void* swapChainPointer)
 {
     auto swapChain = (MetalSwapChain*)swapChainPointer;
 
@@ -324,14 +336,15 @@ void* MetalGraphicsService::GetSwapChainBackBufferTexture(void* swapChainPointer
         return nullptr;
     }
 
-    auto texture = new MetalTexture(this, swapChain->GraphicsDevice);
+    auto texture = new MetalTexture();
+    texture->GraphicsDevice = swapChain->GraphicsDevice;
     texture->DeviceObject = NS::RetainPtr(swapChain->BackBufferDrawable->texture());
     texture->IsPresentTexture = true;
     
     return texture;
 }
 
-void MetalGraphicsService::PresentSwapChain(void* swapChainPointer)
+DllExport void Native_PresentSwapChain(void* swapChainPointer)
 {
     auto swapChain = (MetalSwapChain*)swapChainPointer;
 
@@ -366,7 +379,7 @@ void MetalGraphicsService::PresentSwapChain(void* swapChainPointer)
     commandBuffer->commit();
 }
 
-void MetalGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
+DllExport void Native_WaitForSwapChainOnCpu(void* swapChainPointer)
 {
     auto swapChain = (MetalSwapChain*)swapChainPointer;
 
@@ -384,11 +397,12 @@ void MetalGraphicsService::WaitForSwapChainOnCpu(void* swapChainPointer)
     swapChain->BackBufferDrawable = nextMetalDrawable;
 }
 
-void* MetalGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
+DllExport void* Native_CreateShader(void* graphicsDevicePointer, ShaderPart* shaderParts, int32_t shaderPartCount)
 {
     auto graphicsDevice = (MetalGraphicsDevice*)graphicsDevicePointer;
     
-    auto shader = new MetalShader(this, graphicsDevice);
+    auto shader = new MetalShader();
+    shader->GraphicsDevice = graphicsDevice;
 
     for (uint32_t i = 0; i < shaderPartCount; i++)
     {
@@ -468,13 +482,13 @@ void* MetalGraphicsService::CreateShader(void* graphicsDevicePointer, ShaderPart
     return shader;
 }
 
-void MetalGraphicsService::FreeShader(void* shaderPointer)
+DllExport void Native_FreeShader(void* shaderPointer)
 {
     auto shader = (MetalShader*)shaderPointer;
     delete shader;
 }
 
-void MetalGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
+DllExport void Native_BeginRenderPass(void* commandListPointer, RenderPassDescriptor* renderPassDescriptor)
 {
     if (renderPassDescriptor == nullptr)
     {
@@ -559,7 +573,7 @@ void MetalGraphicsService::BeginRenderPass(void* commandListPointer, RenderPassD
         }*/
 }
     
-void MetalGraphicsService::EndRenderPass(void* commandListPointer)
+DllExport void Native_EndRenderPass(void* commandListPointer)
 {
     auto commandList = (MetalCommandList*)commandListPointer;
     
@@ -575,7 +589,7 @@ void MetalGraphicsService::EndRenderPass(void* commandListPointer)
     commandList->CurrentRenderPassDescriptor = {};
 }
 
-void MetalGraphicsService::SetShader(void* commandListPointer, void* shaderPointer)
+DllExport void Native_SetShader(void* commandListPointer, void* shaderPointer)
 {
     auto commandList = (MetalCommandList*)commandListPointer;
     auto graphicsDevice = commandList->GraphicsDevice;
@@ -608,7 +622,7 @@ void MetalGraphicsService::SetShader(void* commandListPointer, void* shaderPoint
     }
 }
     
-void MetalGraphicsService::SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
+DllExport void Native_SetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
 {
     auto commandList = (MetalCommandList*)commandListPointer;
     
@@ -646,7 +660,7 @@ void MetalGraphicsService::SetShaderConstants(void* commandListPointer, uint32_t
     }
 }
     
-void MetalGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+DllExport void Native_DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
     auto commandList = (MetalCommandList*)commandListPointer;
 
@@ -679,7 +693,7 @@ void MetalGraphicsService::DispatchMesh(void* commandListPointer, uint32_t threa
         commandList->CurrentShader->MeshShader.get() ? commandList->CurrentShader->MeshThreadCount : MTL::Size(32, 1, 1));
 }
     
-GraphicsDeviceInfo MetalGraphicsService::ConstructGraphicsDeviceInfo(NS::SharedPtr<MTL::Device> device)
+GraphicsDeviceInfo ConstructGraphicsDeviceInfo(NS::SharedPtr<MTL::Device> device)
 {
     uint32_t deviceNameLength = device->name()->length();
     uint8_t* deviceName = (uint8_t*)malloc(deviceNameLength);
@@ -687,14 +701,15 @@ GraphicsDeviceInfo MetalGraphicsService::ConstructGraphicsDeviceInfo(NS::SharedP
     
     GraphicsDeviceInfo result = {};
     result.DeviceId = device->registryID();
-    result.DeviceName = deviceName;
+    wcscpy(result.DeviceName, L"TO REPLACE");
+    //result.DeviceName = L"Test TO REPLACE"; // TODO: To implement //(char*)deviceName;
     result.GraphicsApi = GraphicsApi_Metal;
     result.AvailableMemory = device->recommendedMaxWorkingSetSize();
 
     return result;
 }
 
-void MetalGraphicsService::InitRenderPassDescriptor(MTL::RenderPassColorAttachmentDescriptor* metalDescriptor, RenderPassRenderTarget* renderTargetDescriptor)
+void InitRenderPassDescriptor(MTL::RenderPassColorAttachmentDescriptor* metalDescriptor, RenderPassRenderTarget* renderTargetDescriptor)
 {
     auto texture = (MetalTexture*)renderTargetDescriptor->TexturePointer;
     metalDescriptor->setTexture(texture->DeviceObject.get());
@@ -749,7 +764,7 @@ void MetalGraphicsService::InitRenderPassDescriptor(MTL::RenderPassColorAttachme
         }*/
 }
 
-uint64_t MetalGraphicsService::ComputeRenderPipelineStateHash(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor)
+uint64_t ComputeRenderPipelineStateHash(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
     // TODO: For the moment the hash of the shader is base on the pointer
     // Maybe we should base it on the hash of each shader parts data? 
@@ -762,7 +777,7 @@ uint64_t MetalGraphicsService::ComputeRenderPipelineStateHash(MetalShader* shade
     return (uint64_t)shader;
 }
 
-MetalPipelineStateCacheItem* MetalGraphicsService::CreateRenderPipelineState(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor)
+MetalPipelineStateCacheItem* CreateRenderPipelineState(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
     auto pipelineStateDescriptor = NS::TransferPtr(MTL::MeshRenderPipelineDescriptor::alloc()->init());
 
@@ -847,7 +862,7 @@ MetalPipelineStateCacheItem* MetalGraphicsService::CreateRenderPipelineState(Met
     return result;
 }
 
-static void MetalDeletePipelineCacheItem(uint64_t key, void* data)
+void MetalDeletePipelineCacheItem(uint64_t key, void* data)
 {
     auto cacheItem = (MetalPipelineStateCacheItem*)data;
     delete cacheItem;

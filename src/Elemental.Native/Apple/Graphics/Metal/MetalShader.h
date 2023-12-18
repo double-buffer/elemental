@@ -1,11 +1,10 @@
 #pragma once
 
-struct MetalShader : MetalBaseGraphicsObject
+#include "MetalGraphicsDevice.h"
+
+struct MetalShader
 {
-    MetalShader(BaseGraphicsService* graphicsService, MetalGraphicsDevice* graphicsDevice) : MetalBaseGraphicsObject(graphicsService, graphicsDevice) 
-    {
-    }
-    
+    MetalGraphicsDevice* GraphicsDevice;
     NS::SharedPtr<MTL::Function> AmplificationShader;
     MTL::Size AmplificationThreadCount;
     NS::SharedPtr<MTL::Function> MeshShader;
