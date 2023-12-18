@@ -2,6 +2,8 @@
 
 // TODO: To remove
 #include "SystemFunctions.h"
+#include "SystemDictionary.h"
+#include <stdio.h>
 
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
@@ -10,6 +12,34 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         SystemRegisterLogMessageHandler(options->LogMessageHandler);
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
     }
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(stackMemoryArena, 24);
+    
+    for (size_t i = 0; i < 10; i++)
+    {
+        SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), (int32_t)i);
+    }
+
+    SystemRemoveDictionaryEntry(dictionary, "Test2");
+    SystemRemoveDictionaryEntry(dictionary, "Test8");
+
+    auto testValue = dictionary["Test9"];
+    printf("Test Value: %d\n", testValue);
+
+    SystemAddDictionaryEntry(dictionary, "TestOneMore", 28);
+    SystemAddDictionaryEntry(dictionary, "TestOneMore2", 29);
+    SystemAddDictionaryEntry(dictionary, "TestOneMore3", 30);
+    SystemAddDictionaryEntry(dictionary, "TestOneMore4", 31);
+    SystemAddDictionaryEntry(dictionary, "TestOneMore5", 32);
+    
+    SystemRemoveDictionaryEntry(dictionary, "TestOneMore");
+    SystemRemoveDictionaryEntry(dictionary, "TestOneMore2");
+
+    auto testValue2 = dictionary["TestOneMore5"];
+    printf("Test Value2: %d\n", testValue2);
+    
+    DebugDictionary(dictionary);
 }
 
 DllExport void Native_FreeNativeApplicationService()
@@ -253,6 +283,8 @@ void ProcessMessages(Win32Application* application)
 
 // TODO: Change that
 //static std::map<HWND, Win32Window*> windowMap = std::map<HWND, Win32Window*>();
+
+// BUG: Next assignment
 
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {

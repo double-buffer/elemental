@@ -57,7 +57,7 @@ jobs:
         cp ${{ env.vulkan_dll_path }} .
 
     - name: Upload Binaries
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@master
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
         path: |

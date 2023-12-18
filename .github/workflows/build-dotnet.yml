@@ -23,7 +23,7 @@ jobs:
       run: dotnet publish --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
 
     - name: Upload Binaries
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@master
       with:
         name: dotnet.bin
         path: ./artifacts/publish

@@ -1,4 +1,4 @@
-#include "Dictionary.cpp"
+#include "SystemDictionary.cpp"
 #include "SystemLogging.h"
 #include "../Elemental.Native/Windows/SystemPlatformFunctions.cpp" // TODO: To review
 #include "SystemLogging.cpp"

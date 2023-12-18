@@ -42,6 +42,12 @@ target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compile
 #=======================================================================
 # Volk
 #=======================================================================
+add_library(xxHash INTERFACE)
+target_include_directories(xxHash INTERFACE ./xxHash/)
+
+#=======================================================================
+# Volk
+#=======================================================================
 add_library(volk INTERFACE)
 target_include_directories(volk INTERFACE ./volk/)
 
@@ -63,7 +69,7 @@ endif()
 # External Dependencies
 #=======================================================================
 add_library(external_dependencies INTERFACE)
-target_link_libraries(external_dependencies INTERFACE volk vulkan_headers)
+target_link_libraries(external_dependencies INTERFACE xxHash volk vulkan_headers)
 
 if(APPLE)
     target_link_libraries(external_dependencies INTERFACE metal_cpp)
