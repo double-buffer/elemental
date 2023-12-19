@@ -36,6 +36,6 @@ jobs:
         dotnet-version: 8.0.100
 
     - name: Run Tests
-      run:
+      run: |
         ./NativeApplicationTests/release/Elemental.Tests.NativeSystemFunctionsTests
         dotnet test ./NativeApplicationTests/release/NativeApplicationTests.dll
