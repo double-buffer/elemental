@@ -30,7 +30,7 @@ jobs:
         mkdir ./build
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=clang-cl
         cmake --build ./build --target Elemental.Native --config Release
-        cmake --build ./build --target Elemental.Tests.NativeSystemFunctionTests --config Release
+        cmake --build ./build --target Elemental.Tests.NativeSystemFunctionsTests --config Release
 
     - name: Download Vulkan Loader
       working-directory: ./build/src/Elemental.Native/Windows/Release
@@ -69,4 +69,4 @@ jobs:
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: |
-            ./build/src/Elemental.Tests.NativeSystemFunctionTests/Release/*
+            ./build/src/Elemental.Tests.NativeSystemFunctionsTests/Release/*

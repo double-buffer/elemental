@@ -10,7 +10,7 @@
         <ProjectReference Include="..\..\src\Elemental\Elemental.csproj" />
     </ItemGroup>
 
-    <Target Name="BuildTestsNative" BeforeTargets="CoreCompile">
+    <Target Name="BuildTestsNative" BeforeTargets="CoreCompile" Condition="'$(RunNativeTests)' == 'true'">
         <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build --target Elemental.Tests.NativeSystemFunctionsTests" />
     </Target>
     
