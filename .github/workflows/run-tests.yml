@@ -18,7 +18,13 @@ jobs:
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./NativeApplicationTests/release/
-          
+ 
+    - name: Download Native Binaries
+      uses: actions/download-artifact@master
+      with:
+        name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./NativeApplicationTests/release/
+
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
       with:
