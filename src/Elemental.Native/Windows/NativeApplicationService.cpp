@@ -40,7 +40,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
 
     auto testValue2 = dictionary["TestOneMore5"];
     printf("Test Value2: %d\n", testValue2);
-    
+
     DebugDictionary(dictionary);
 }
 

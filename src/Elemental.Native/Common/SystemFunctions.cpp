@@ -22,19 +22,6 @@ double SystemRound(double value)
     return (value < 0.0) ? (int32_t)(value - 0.5) : (int32_t)(value + 0.5);
 }
 
-template<typename T>
-T SystemAbs(T value)
-{
-    return (value < 0) ? -value : value;
-}
-
-template<typename T>
-T SystemMax(T value1, T value2)
-{
-    return value1 > value2 ? value1 : value2;
-}
-
-
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------
@@ -146,7 +133,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
             switch (format[++i])
             {
                 case 'd':
-                    formatedArgument = SystemConvertNumberToString(stackMemoryArena, __builtin_va_arg(arguments, long long));
+                    formatedArgument = SystemConvertNumberToString(stackMemoryArena, __builtin_va_arg(arguments, long));
                     break;
                 case 'f':
                     formatedArgument = SystemConvertFloatToString(stackMemoryArena, __builtin_va_arg(arguments, double));

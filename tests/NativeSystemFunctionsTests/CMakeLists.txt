@@ -6,9 +6,16 @@ target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -Wno-u
 target_compile_features(Elemental.Tests.NativeSystemFunctionsTests PRIVATE cxx_std_20)
 
 target_link_libraries(Elemental.Tests.NativeSystemFunctionsTests PRIVATE common)
+target_link_libraries(Elemental.Tests.NativeSystemFunctionsTests PRIVATE external_dependencies)
 target_link_libraries(Elemental.Tests.NativeSystemFunctionsTests PRIVATE utest)
 
 if(WIN32)
     target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -EHs -MD)
     target_compile_definitions(Elemental.Tests.NativeSystemFunctionsTests PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
+    target_include_directories(Elemental.Tests.NativeSystemFunctionsTests PRIVATE ../../src/Elemental.Native/Windows/)
+    target_precompile_headers(Elemental.Tests.NativeSystemFunctionsTests PRIVATE ../../src/Elemental.Native/Windows/PreCompiledHeader.h)
+elseif(APPLE)
+    target_include_directories(Elemental.Tests.NativeSystemFunctionsTests PRIVATE ../../src/Elemental.Native/Apple/)
+    target_precompile_headers(Elemental.Tests.NativeSystemFunctionsTests PRIVATE ../../src/Elemental.Native/Apple/PreCompiledHeader.h)
+    target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -fms-extensions -fno-objc-arc)
 endif()

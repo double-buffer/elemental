@@ -48,7 +48,10 @@ double SystemRound(double value);
  * @return The absolute value of the input. The return type is the same as the input type.
  */
 template<typename T>
-T SystemAbs(T value);
+T SystemAbs(T value)
+{
+    return (value < 0) ? -value : value;
+}
 
 /**
  * Returns the maximum of two given values.
@@ -61,8 +64,10 @@ T SystemAbs(T value);
  * @return The greater of the two input values. The return type is the same as the input types.
  */
 template<typename T>
-T SystemMax(T value1, T value2);
-
+T SystemMax(T value1, T value2)
+{
+    return (value1 > value2) ? value1 : value2;
+}
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
