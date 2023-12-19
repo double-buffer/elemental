@@ -1,8 +1,6 @@
-#include "MacOSApplication.h"
+#include "NativeApplicationService.h"
 #include "MacOSWindow.h"
-
-static void ProcessEvents(MacOSApplication* application);
-static void CreateApplicationMenu(uint8_t* applicationName);
+#include "MacOSApplicationDelegate.h"
 
 DllExport void Native_InitNativeApplicationService()
 {
@@ -27,7 +25,7 @@ DllExport void Native_FreeNativePointer(void* nativePointer)
 
 // TODO: Important convert all uint8_t* for strings to wchar_t
 
-DllExport void* Native_CreateApplication(wchar_t* applicationName)
+DllExport void* Native_CreateApplication(char* applicationName)
 {
     // TODO: Is it really needed? 
     ProcessSerialNumber processSerialNumber = {0, kCurrentProcess};
@@ -181,7 +179,7 @@ DllExport void Native_SetWindowState(MacOSWindow* window, NativeWindowState wind
     }
 }
 
-static void ProcessEvents(MacOSApplication* application) 
+void ProcessEvents(MacOSApplication* application) 
 {
     NS::SharedPtr<NS::Event> rawEvent; 
 
@@ -204,7 +202,7 @@ static void ProcessEvents(MacOSApplication* application)
     } while (rawEvent.get() != nullptr);
 }
 
-static void CreateApplicationMenu(uint8_t* applicationName)
+void CreateApplicationMenu(uint8_t* applicationName)
 {
     using NS::StringEncoding::UTF8StringEncoding;
 

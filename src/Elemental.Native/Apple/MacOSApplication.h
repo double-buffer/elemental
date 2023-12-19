@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Elemental.h"
+
 class MacOSApplicationDelegate;
 
 struct MacOSApplication

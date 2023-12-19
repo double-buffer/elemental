@@ -117,7 +117,7 @@ void* CheckInputDevicesThread(void* parameters)
 DllExport void Native_InitInputsService()
 {
     globalInputState = InitInputState();
-    SystemCreateThread(CheckInputDevicesThread);
+    //SystemCreateThread(CheckInputDevicesThread);
 }
     
 DllExport void Native_FreeInputsService()

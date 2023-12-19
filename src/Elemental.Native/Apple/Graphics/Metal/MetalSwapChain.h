@@ -1,11 +1,11 @@
 #pragma once
 
-struct MetalSwapChain : MetalBaseGraphicsObject
+#include "MetalGraphicsDevice.h"
+#include "MetalCommandQueue.h"
+
+struct MetalSwapChain
 {
-    MetalSwapChain(BaseGraphicsService* graphicsService, MetalGraphicsDevice* graphicsDevice, uint32_t maxFrameLatency) : MetalBaseGraphicsObject(graphicsService, graphicsDevice)
-    {
-    }
-    
+    MetalGraphicsDevice* GraphicsDevice;
     NS::SharedPtr<CA::MetalLayer> DeviceObject;
     NS::SharedPtr<CA::MetalDrawable> BackBufferDrawable;
     MetalCommandQueue* CommandQueue;

@@ -107,7 +107,7 @@ SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena* memoryArena, 
 template<typename TKey, typename TValue>
 void SystemAddDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key, TValue value)
 {
-    auto hashInfo = SystemDictionaryComputeHashInfo(ReadOnlySpan<uint8_t>(&key, sizeof(key)));
+    //auto hashInfo = SystemDictionaryComputeHashInfo(ReadOnlySpan<uint8_t>(&key, sizeof(key)));
 }
 
 template<typename TValue>

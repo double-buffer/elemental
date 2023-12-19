@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 struct MetalBaseGraphicsObject : BaseGraphicsObject
 {
@@ -8,4 +8,4 @@ struct MetalBaseGraphicsObject : BaseGraphicsObject
     }
 
     MetalGraphicsDevice* GraphicsDevice;
-};
+};*/

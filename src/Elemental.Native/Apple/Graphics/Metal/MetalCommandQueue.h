@@ -1,12 +1,10 @@
 #pragma once
 
-struct MetalCommandQueue : MetalBaseGraphicsObject
+#include "MetalGraphicsDevice.h"
+
+struct MetalCommandQueue
 {
-    MetalCommandQueue(BaseGraphicsService* graphicsService, MetalGraphicsDevice* graphicsDevice) : MetalBaseGraphicsObject(graphicsService, graphicsDevice) 
-    {
-        FenceValue = 0;
-    }
-    
+    MetalGraphicsDevice* GraphicsDevice;
     NS::SharedPtr<MTL::CommandQueue> DeviceObject;
     NS::SharedPtr<MTL::SharedEvent> Fence;
     std::atomic_uint64_t FenceValue;
