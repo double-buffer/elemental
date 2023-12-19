@@ -38,4 +38,4 @@ jobs:
     - name: Run Tests
       run: |
         ./NativeApplicationTests/release/Elemental.Tests.NativeSystemFunctionsTests
-        dotnet test ./NativeApplicationTests/release/NativeApplicationTests.dll
+        dotnet run ./NativeApplicationTests/release/NativeApplicationTests.dll
