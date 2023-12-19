@@ -69,4 +69,4 @@ jobs:
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: |
-            ./build/tests/Elemental.Tests.NativeSystemFunctionsTests/Release/*
+            ./build/tests/NativeSystemFunctionsTests/Release/*
