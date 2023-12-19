@@ -20,6 +20,7 @@ include(functions)
 add_subdirectory(external)
 add_subdirectory(src/Elemental.Native/Common)
 add_subdirectory(src/Elemental.Tools.Native)
+add_subdirectory(tests/NativeSystemFunctionsTests)
 
 if(WIN32)
     add_subdirectory(src/Elemental.Native/Windows)

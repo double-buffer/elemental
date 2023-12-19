@@ -13,3 +13,6 @@
 [submodule "external/xxHash"]
 	path = external/xxHash
 	url = https://github.com/Cyan4973/xxHash
+[submodule "external/utest"]
+	path = external/utest
+	url = https://github.com/sheredom/utest.h.git

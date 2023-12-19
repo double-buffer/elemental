@@ -40,7 +40,7 @@ add_library(tools_external_dependencies INTERFACE)
 target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers)
 
 #=======================================================================
-# Volk
+# xxHash
 #=======================================================================
 add_library(xxHash INTERFACE)
 target_include_directories(xxHash INTERFACE ./xxHash/)
@@ -74,3 +74,9 @@ target_link_libraries(external_dependencies INTERFACE xxHash volk vulkan_headers
 if(APPLE)
     target_link_libraries(external_dependencies INTERFACE metal_cpp)
 endif()
+
+#=======================================================================
+# UTest
+#=======================================================================
+add_library(utest INTERFACE)
+target_include_directories(utest INTERFACE ./utest/)
