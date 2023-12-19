@@ -30,12 +30,7 @@ jobs:
       with:
         name: dotnet.bin
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.100
-
     - name: Run Tests
       run: |
         ./NativeApplicationTests/release/Elemental.Tests.NativeSystemFunctionsTests
-        dotnet run ./NativeApplicationTests/release/NativeApplicationTests.dll
+        ./NativeApplicationTests/release/NativeApplicationTests
