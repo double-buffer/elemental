@@ -1,5 +1,4 @@
-aux_source_directory(. SRC_LIST)
-add_executable(Elemental.Tests.NativeSystemFunctionsTests ${SRC_LIST})
+add_executable(Elemental.Tests.NativeSystemFunctionsTests UnityBuild.cpp)
 
 target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -W4)
 target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -Wno-unused-parameter)

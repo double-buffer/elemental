@@ -48,10 +48,7 @@ double SystemRound(double value);
  * @return The absolute value of the input. The return type is the same as the input type.
  */
 template<typename T>
-T SystemAbs(T value)
-{
-    return (value < 0) ? -value : value;
-}
+T SystemAbs(T value);
 
 /**
  * Returns the maximum of two given values.
@@ -64,10 +61,7 @@ T SystemAbs(T value)
  * @return The greater of the two input values. The return type is the same as the input types.
  */
 template<typename T>
-T SystemMax(T value1, T value2)
-{
-    return (value1 > value2) ? value1 : value2;
-}
+T SystemMax(T value1, T value2);
 
 //---------------------------------------------------------------------------------------------------------------
 // String functions
@@ -82,36 +76,7 @@ T SystemMax(T value1, T value2)
  * @return A read-only span containing the converted string.
  */
 template<typename T>
-ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value)
-{
-    auto isNegative = value < 0;
-    auto length = isNegative ? 1 : 0;
-    auto temp = value;
-
-    do 
-    {
-        temp /= 10;
-        length++;
-    } while (temp != 0);
-
-    auto numString = SystemPushArrayZero<char>(memoryArena, length);
-    auto startIndex = 0;
-
-    if (isNegative)
-    {
-        value = -value;
-        numString[0] = '-';
-        startIndex = 1;
-    }
-
-    for (int32_t i = length - 1; i >= startIndex; i--)
-    {
-        numString[i] = '0' + (value % 10);
-        value /= 10;
-    }
-
-    return numString;
-}
+ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value);
 
 /**
  * Converts a double value to a string using the provided memory arena.
