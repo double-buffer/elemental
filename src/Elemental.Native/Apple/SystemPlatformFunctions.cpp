@@ -3,6 +3,7 @@
 #include "SystemLogging.h"
 
 #include <time.h> // TODO: To review
+#define MAX_PATH 255
 
 SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena)
 {
@@ -35,7 +36,7 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena* memoryAren
 
 void* SystemPlatformAllocateMemory(size_t sizeInBytes)
 {
-    vm_size_t size = (vm_size_t)sizeInBytes;
+    auto size = (vm_size_t)sizeInBytes;
     vm_size_t pageSize;
     host_page_size(mach_host_self(), &pageSize);
     size = (size + pageSize - 1) & ~(pageSize - 1);
@@ -51,10 +52,15 @@ void* SystemPlatformAllocateMemory(size_t sizeInBytes)
     return (void*)address;
 }
 
-void SystemPlatformFreeMemory(void* pointer)
+void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
 {
-    //vm_deallocate(vm_map_t target_task, vm_address_t address, vm_size_t size)
-    HeapFree(GetProcessHeap(), 0, pointer);
+    auto size = (vm_size_t)sizeInBytes;
+    vm_size_t pageSize;
+    host_page_size(mach_host_self(), &pageSize);
+    size = (size + pageSize - 1) & ~(pageSize - 1);
+
+    auto address = (vm_address_t)pointer;
+    vm_deallocate(mach_task_self(), address, size);
 }
 
 void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes)
@@ -69,143 +75,130 @@ void SystemPlatformCopyMemory(void* destination, const void* source, size_t size
 
 ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena* memoryArena)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto path = SystemPushArray<wchar_t>(stackMemoryArena, MAX_PATH);
+    auto path = (ReadOnlySpan<char>)NS::Bundle::mainBundle()->executablePath()->utf8String();
+    auto result = SystemPushArrayZero<char>(memoryArena, path.Length);
 
-    GetModuleFileName(nullptr, path.Pointer, MAX_PATH);
+    SystemCopyBuffer(result, path);
 
-    return SystemConvertWideCharToUtf8(memoryArena, path);
+    return result;
 }
 
 bool SystemPlatformFileExists(ReadOnlySpan<char> path)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
-    auto attributes = GetFileAttributes(pathWide.Pointer);
-
-    return (attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY));
+    struct stat buffer;
+    return (stat(path.Pointer, &buffer) == 0);
 }
 
 size_t SystemPlatformFileGetSizeInBytes(ReadOnlySpan<char> path)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
+    struct stat buffer;
 
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-
-    if (fileHandle == INVALID_HANDLE_VALUE) 
+    if (stat(path.Pointer, &buffer) != 0) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for reading.", path.Pointer);
         return 0;
     }
-    
-    auto fileSize = GetFileSize(fileHandle, nullptr);
-    
-    CloseHandle(fileHandle);
-    return fileSize;
+
+    return buffer.st_size;
 }
 
 void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
-    
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    auto fileHandle = open(path.Pointer, O_WRONLY | O_CREAT, 0644);
 
-    if (fileHandle == INVALID_HANDLE_VALUE) 
+    if (fileHandle < 0) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for writing. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for writing.", path.Pointer);
         return;
     }
-
-    DWORD bytesWritten;
-    if (!WriteFile(fileHandle, data.Pointer, data.Length, &bytesWritten, nullptr) || bytesWritten != data.Length) 
+    
+    if (write(fileHandle, data.Pointer, data.Length) < 0) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Error writing to file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Error writing to file %s.", path.Pointer);
     }
 
-    CloseHandle(fileHandle);
+    close(fileHandle);
 }
 
 void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
+    auto fileHandle = open(path.Pointer, O_WRONLY | O_CREAT, 0644);
 
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-
-    if (fileHandle == INVALID_HANDLE_VALUE) 
+    if (fileHandle < 0) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for reading.", path.Pointer);
         return;
     }
-    
-    DWORD bytesRead;
-    if (!ReadFile(fileHandle, data.Pointer, data.Length, &bytesRead, nullptr) || bytesRead != data.Length) 
+
+    auto bytesRead = read(fileHandle, data.Pointer, data.Length);
+
+    if (bytesRead < 0) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Error reading file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Error reading file %s.", path.Pointer);
     }
-    
-    CloseHandle(fileHandle);
+
+    close(fileHandle);
 }
 
 void SystemPlatformFileDelete(ReadOnlySpan<char> path)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
-
-    if (!DeleteFile(pathWide.Pointer))
+    if (unlink(path.Pointer) != 0) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot delete file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot delete file %s.", path.Pointer);
     }
 }
 
 ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
 {
+    // TODO: To review
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto commandWide = SystemConvertUtf8ToWideChar(stackMemoryArena, command);
 
-    SECURITY_ATTRIBUTES pipeAttributes {};
-    pipeAttributes.nLength = sizeof(SECURITY_ATTRIBUTES);
-    pipeAttributes.bInheritHandle = false;
-    pipeAttributes.bInheritHandle = true;
+    int pipefd[2];
 
-    HANDLE readPipe, writePipe;
-    if (!CreatePipe(&readPipe, &writePipe, &pipeAttributes, 0)) 
+    if (pipe(pipefd) == -1) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open read/write pipe for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open pipe for launching command: %s", command.Pointer);
         return ReadOnlySpan<char>();
     }
 
-    STARTUPINFO startupInfo {};
-    startupInfo.cb = sizeof(startupInfo);
-    startupInfo.hStdOutput = writePipe;
-    startupInfo.hStdError = writePipe;
-    startupInfo.dwFlags |= STARTF_USESTDHANDLES;
-
-    PROCESS_INFORMATION processInfo {};
-    if (!CreateProcess(nullptr, (LPWSTR)commandWide.Pointer, nullptr, nullptr, true, 0, nullptr, nullptr, &startupInfo, &processInfo)) 
+    pid_t pid = fork();
+    if (pid == -1) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot create process for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot fork process for launching command: %s", command.Pointer);
+        close(pipefd[0]);
+        close(pipefd[1]);
         return ReadOnlySpan<char>();
+    } 
+    else if (pid == 0) 
+    {
+        // Child process
+        close(pipefd[0]); // Close unused read end
+        dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to write end of the pipe
+        dup2(pipefd[1], STDERR_FILENO); // Redirect stderr to write end of the pipe
+        close(pipefd[1]);
+
+        // Convert command from ReadOnlySpan<char> to a null-terminated string if necessary
+        // Execute the command
+        execl("/bin/sh", "sh", "-c", command.Pointer, nullptr);
+        exit(EXIT_FAILURE); // execl only returns on error
     }
 
-    CloseHandle(writePipe);
+    // Parent process
+    close(pipefd[1]); // Close unused write end
 
     auto result = SystemPushArrayZero<char>(memoryArena, 4096);
     auto buffer = SystemPushArrayZero<char>(stackMemoryArena, 1024);
     auto currentLength = 0;
+    ssize_t bytesRead;
 
-    DWORD bytesRead;
-    while (ReadFile(readPipe, buffer.Pointer, buffer.Length, &bytesRead, nullptr) != 0 && bytesRead != 0) 
+    while ((bytesRead = read(pipefd[0], buffer.Pointer, buffer.Length)) > 0) 
     {
         SystemCopyBuffer<char>(result.Slice(currentLength), buffer.Slice(0, bytesRead));
         currentLength += bytesRead;
     }
 
-    CloseHandle(readPipe);
-    CloseHandle(processInfo.hProcess);
-    CloseHandle(processInfo.hThread);
+    close(pipefd[0]);
+    waitpid(pid, nullptr, 0); // Wait for child process to finish
 
     return result;
 }
@@ -213,36 +206,36 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena* memoryArena, ReadOn
 void* SystemPlatformLoadLibrary(ReadOnlySpan<char> libraryName)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto fullName = SystemConcatBuffers<char>(stackMemoryArena, libraryName, ".dll");
-    auto fullNameWide = SystemConvertUtf8ToWideChar(stackMemoryArena, fullName);
+    auto fullName = SystemConcatBuffers<char>(stackMemoryArena, libraryName, "dylib");
 
-    return LoadLibrary(fullNameWide.Pointer);
+    return dlopen(fullName.Pointer, RTLD_NOW);
 }
 
 void SystemPlatformFreeLibrary(const void* library)
 {
-    FreeLibrary((HMODULE)library);
+    dlclose((void*)library);
 }
 
 void* SystemPlatformGetFunctionExport(const void* library, ReadOnlySpan<char> functionName)
 {
-    return (void*)GetProcAddress((HMODULE)library, functionName.Pointer);
+    return dlsym((void*)library, functionName.Pointer);
 }
 
 void* SystemPlatformCreateThread(void* threadFunction, void* parameters)
 {
-    auto threadHandle = CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)threadFunction, parameters, 0, nullptr); 
+    pthread_t thread;
+    auto result = pthread_create(&thread, nullptr, (void* (*)(void*))threadFunction, parameters);
 
-    if (threadHandle == nullptr)
+    if (result != 0) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot create thread (Error code: %d)", GetLastError());
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot create thread (Error code: %d)", result);
         return nullptr;
     }
 
-    return threadHandle;
+    pthread_detach(thread);
+    return *(void**)(&thread);
 }
 
 void SystemPlatformFreeThread(void* thread)
 {
-    CloseHandle(thread);
 }

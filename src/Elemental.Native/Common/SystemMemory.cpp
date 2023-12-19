@@ -44,8 +44,8 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 
 void FreeMemoryArenaStorage(MemoryArenaStorage* storage)
 {
-    SystemPlatformFreeMemory(storage->Memory.Pointer);
-    SystemPlatformFreeMemory(storage);
+    SystemPlatformFreeMemory(storage->Memory.Pointer, storage->Memory.Length);
+    SystemPlatformFreeMemory(storage, sizeof(MemoryArenaStorage));
 }
 
 ShrinkMemoryArenaStorageResult ShrinkMemoryArenaStorage(MemoryArenaStorage* storage, size_t sizeInBytes)
@@ -117,7 +117,7 @@ MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes)
 void SystemFreeMemoryArena(MemoryArena* memoryArena)
 {
     FreeMemoryArenaStorage(memoryArena->Storage);
-    SystemPlatformFreeMemory(memoryArena);
+    SystemPlatformFreeMemory(memoryArena, sizeof(MemoryArena));
 }
 
 void SystemClearMemoryArena(MemoryArena* memoryArena)
@@ -146,12 +146,12 @@ void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena)
     if (stackMemoryArena->ExtraStorage != nullptr)
     {
         SystemPopMemory(stackMemoryArena->ExtraStorage, stackMemoryArena->ExtraStorage->AllocatedBytes);
-        SystemPlatformFreeMemory(stackMemoryArena->ExtraStorage);
+        SystemPlatformFreeMemory(stackMemoryArena->ExtraStorage, sizeof(MemoryArena));
     }
 
     stackMemoryArenaStorage->Level--;
     SystemPopMemory(stackMemoryArena, stackMemoryArena->AllocatedBytes);
-    SystemPlatformFreeMemory(stackMemoryArena);
+    SystemPlatformFreeMemory(stackMemoryArena, sizeof(MemoryArena));
 }
 
 // TODO: Do we need to align memory?
@@ -174,7 +174,7 @@ void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
     if (workingMemoryArena->Storage->AllocatedBytes + sizeInBytes > storage->Memory.Length)
     {
         auto oldSizeInBytes = workingMemoryArena->SizeInBytes;
-        auto newStorageSize = SystemRoundUpToPowerOf2(max(workingMemoryArena->SizeInBytes, sizeInBytes)); 
+        auto newStorageSize = SystemRoundUpToPowerOf2(SystemMax(workingMemoryArena->SizeInBytes, sizeInBytes)); 
         workingMemoryArena->SizeInBytes += newStorageSize;
         workingMemoryArena->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
         storage->AllocatedBytes = storage->Memory.Length;

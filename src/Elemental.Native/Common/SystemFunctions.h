@@ -2,6 +2,8 @@
 
 #include "SystemMemory.h"
 
+#undef assert
+
 #ifdef _DEBUG
     #define assert(expression) if (!(expression)) { int* ptr = 0; *ptr = 0; }
 #else
@@ -18,28 +20,48 @@
 /**
  * Rounds up the given value to the nearest power of 2.
  *
+ * This function calculates the smallest power of 2 that is greater than or equal to the input value.
+ *
  * @param value The input value.
- * @return The rounded-up value to the nearest power of 2.
+ * @return The rounded-up value to the nearest power of 2. If the input is already a power of 2, 
+ *         it returns the same value.
  */
 size_t SystemRoundUpToPowerOf2(size_t value);
 
 /**
  * Rounds the given double value to the nearest integer.
  *
- * @param value The input value.
- * @return The rounded value.
+ * This function rounds a double value to the nearest integer using the standard half-away-from-zero rule.
+ *
+ * @param value The input double value.
+ * @return The rounded value as an integer. 
  */
 double SystemRound(double value);
 
 /**
  * Calculates the absolute value of the given input.
  *
- * @tparam T The type of the input value.
+ * This template function returns the absolute (non-negative) value of any numeric type.
+ *
+ * @tparam T The type of the input value. Must support unary '-' operator.
  * @param value The input value.
- * @return The absolute value of the input.
+ * @return The absolute value of the input. The return type is the same as the input type.
  */
 template<typename T>
 T SystemAbs(T value);
+
+/**
+ * Returns the maximum of two given values.
+ *
+ * This template function compares two values of the same type and returns the greater one.
+ *
+ * @tparam T The type of the input values. Must support the '<' operator.
+ * @param value1 The first input value.
+ * @param value2 The second input value.
+ * @return The greater of the two input values. The return type is the same as the input types.
+ */
+template<typename T>
+T SystemMax(T value1, T value2);
 
 
 //---------------------------------------------------------------------------------------------------------------

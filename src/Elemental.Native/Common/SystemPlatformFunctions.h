@@ -44,9 +44,12 @@ void* SystemPlatformAllocateMemory(size_t sizeInBytes);
 /**
  * Frees a previously allocated memory block.
  *
+ * This function releases the memory block pointed to by 'pointer', which must have been returned by a previous call to a memory allocation function.
+ *
  * @param pointer A pointer to the memory block to free.
+ * @param sizeInBytes The size of the memory block in bytes. This parameter may be used for custom memory management purposes.
  */
-void SystemPlatformFreeMemory(void* pointer);
+void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes);
 
 /**
  * Clears the contents of a memory block.

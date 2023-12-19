@@ -1,7 +1,13 @@
 #pragma once
 
+#include <xxh3.h>
+
 // Include mach.h?
 #include <Carbon/Carbon.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pthread.h>
 
 #define NS_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION
