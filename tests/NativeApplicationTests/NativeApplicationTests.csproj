@@ -3,16 +3,20 @@
     <PropertyGroup>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
-        </PropertyGroup>
+        <RunNativeTests Condition="'$(RunNativeTests)' == ''">true</RunNativeTests>
+    </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Elemental\Elemental.csproj" />
-        </ItemGroup>
+    </ItemGroup>
 
-    <Target Name="RunTestsNative" BeforeTargets="CoreCompile">
-        <Exec Command="cmake --build ..\..\build\ --target Elemental.Tests.NativeSystemFunctionsTests" />
-        <Exec Command="..\..\build\tests\NativeSystemFunctionsTests\Debug\Elemental.Tests.NativeSystemFunctionsTests.exe" />
-        </Target>
+    <Target Name="BuildTestsNative" BeforeTargets="CoreCompile">
+        <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build --target Elemental.Tests.NativeSystemFunctionsTests" />
+    </Target>
+    
+    <Target Name="RunTestsNative" AfterTargets="Build" Condition="'$(RunNativeTests)' == 'true'">
+        <Exec Command="$(MSBuildProjectDirectory)/../../build/tests/NativeSystemFunctionsTests/Debug/Elemental.Tests.NativeSystemFunctionsTests" />
+    </Target>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
