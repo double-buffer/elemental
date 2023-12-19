@@ -11,5 +11,6 @@
 #include "StringTests.cpp"
 #include "IOTests.cpp"
 #include "LibraryProcessTests.cpp"
+#include "DictionaryTests.cpp"
 
 UTEST_MAIN();
