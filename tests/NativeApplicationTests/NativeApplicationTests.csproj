@@ -1,35 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <IsPackable>false</IsPackable>
-        <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
         <RunNativeTests Condition="'$(RunNativeTests)' == ''">true</RunNativeTests>
+        <NoWarn>CA1707</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <OutputPath>./bin/$(Configuration)/$(AssemblyName).app/Contents/MacOS</OutputPath>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Elemental\Elemental.csproj" />
     </ItemGroup>
 
-    <Target Name="BuildTestsNative" BeforeTargets="CoreCompile" Condition="'$(RunNativeTests)' == 'true'">
-        <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build --target Elemental.Tests.NativeSystemFunctionsTests" />
-    </Target>
-    
-    <Target Name="RunTestsNative" AfterTargets="Build" Condition="'$(RunNativeTests)' == 'true'">
-        <Exec Command="$(MSBuildProjectDirectory)/../../build/tests/NativeSystemFunctionsTests/Debug/Elemental.Tests.NativeSystemFunctionsTests" />
-    </Target>
-
     <ItemGroup>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.analyzers" />
-        <PackageReference Include="xunit.runner.visualstudio">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="coverlet.collector">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
+        <PackageReference Include="xunit.runner.utility" />
     </ItemGroup>
 
 </Project>
