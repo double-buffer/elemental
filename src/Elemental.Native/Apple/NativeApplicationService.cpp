@@ -1,29 +1,31 @@
 #include "NativeApplicationService.h"
 #include "MacOSWindow.h"
 #include "MacOSApplicationDelegate.h"
+#include "SystemLogging.h"
 
-DllExport void Native_InitNativeApplicationService()
+DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
-    #ifdef _DEBUG
-    SystemInitDebugAllocations();
-    #endif
-    
+    if (options->LogMessageHandler)
+    {
+        SystemRegisterLogMessageHandler(options->LogMessageHandler);
+        SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
+
+        #ifdef _DEBUG
+        SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Debug Mode");
+        #endif
+    }
+
     NS::ProcessInfo::processInfo()->disableSuddenTermination();
 }
 
 DllExport void Native_FreeNativeApplicationService()
 {
-    #ifdef _DEBUG
-    SystemCheckAllocations("Elemental");
-    #endif
 }
 
 DllExport void Native_FreeNativePointer(void* nativePointer)
 {
     free(nativePointer);
 }
-
-// TODO: Important convert all uint8_t* for strings to wchar_t
 
 DllExport void* Native_CreateApplication(char* applicationName)
 {
@@ -37,6 +39,11 @@ DllExport void* Native_CreateApplication(char* applicationName)
     NS::Application* pSharedApplication = NS::Application::sharedApplication();
     pSharedApplication->setDelegate(application->ApplicationDelegate);
     pSharedApplication->setActivationPolicy(NS::ActivationPolicy::ActivationPolicyRegular);
+
+    // TODO: It is not needed it seems
+    ProcessSerialNumber psn = { 0, kCurrentProcess }; 
+	TransformProcessType(& psn, kProcessTransformToForegroundApplication);
+
     pSharedApplication->activateIgnoringOtherApps(true);
     pSharedApplication->finishLaunching();
 
@@ -81,7 +88,13 @@ DllExport void* Native_CreateWindow(MacOSApplication* nativeApplication, NativeW
         NS::BackingStoreBuffered,
         false ));
 
-    windowHandle->setTitle(NS::String::string((const char*)options->Title, NS::StringEncoding::UTF16StringEncoding));
+    SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Title %s", options->Title);
+
+    // BUG: String conversion is not working for now :(
+    auto titleTest = "Test Title TEMP";
+
+    windowHandle->setTitle(NS::String::string(titleTest, NS::StringEncoding::UTF8StringEncoding));
+    //windowHandle->setTitle(NS::String::string((const char*)options->Title, NS::StringEncoding::UnicodeStringEncoding));
     windowHandle->center();
     windowHandle->makeKeyAndOrderFront(nullptr);
 
@@ -136,7 +149,8 @@ DllExport NativeWindowSize Native_GetWindowRenderSize(MacOSWindow* nativeWindow)
 
 DllExport void Native_SetWindowTitle(MacOSWindow* nativeWindow, wchar_t* title)
 {
-    nativeWindow->WindowHandle->setTitle(NS::String::string((const char*)title, NS::StringEncoding::UTF16StringEncoding));
+    // BUG: String conversion is not working for now :(
+    //nativeWindow->WindowHandle->setTitle(NS::String::string((const char*)title, NS::StringEncoding::UTF16StringEncoding));
 }
     
 DllExport void Native_SetWindowState(MacOSWindow* window, NativeWindowState windowState)
@@ -202,11 +216,11 @@ void ProcessEvents(MacOSApplication* application)
     } while (rawEvent.get() != nullptr);
 }
 
-void CreateApplicationMenu(uint8_t* applicationName)
+void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
 {
     using NS::StringEncoding::UTF8StringEncoding;
 
-    auto applicationNameString = NS::String::string((char*)applicationName, UTF8StringEncoding);
+    auto applicationNameString = NS::String::string(applicationName.Pointer, UTF8StringEncoding);
 
     auto mainMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("MainMenu")));
     auto applicationMenuItem = NS::TransferPtr(mainMenu->addItem(MTLSTR("ApplicationMenu"), nullptr, MTLSTR("")));

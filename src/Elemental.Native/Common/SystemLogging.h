@@ -36,7 +36,7 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogMessage(type, category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, type, category, format, __VA_ARGS__)
+#define SystemLogMessage(type, category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, type, category, format, ##__VA_ARGS__)
 
 /**
  * Macro for logging a debug-level log message.
@@ -47,7 +47,7 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogDebugMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Debug, category, format, __VA_ARGS__)
+#define SystemLogDebugMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Debug, category, format, ##__VA_ARGS__)
 
 /**
  * Macro for logging a warning-level log message.
@@ -58,7 +58,7 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogWarningMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Warning, category, format, __VA_ARGS__)
+#define SystemLogWarningMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Warning, category, format, ##__VA_ARGS__)
 
 /**
  * Macro for logging an error-level log message.
@@ -69,4 +69,4 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogErrorMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Error, category, format, __VA_ARGS__)
+#define SystemLogErrorMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Error, category, format, ##__VA_ARGS__)

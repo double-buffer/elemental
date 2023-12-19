@@ -7,6 +7,10 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
     {
         SystemRegisterLogMessageHandler(options->LogMessageHandler);
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
+
+        #ifdef _DEBUG
+        SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Debug Mode");
+        #endif
     }
 }
 

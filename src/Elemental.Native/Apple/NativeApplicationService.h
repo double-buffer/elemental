@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: Refactor
+
 #include "SystemSpan.h"
 #include "MacOSApplication.h"
 

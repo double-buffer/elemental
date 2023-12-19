@@ -17,7 +17,7 @@ UTEST(IOFunctions, GeneralIO)
 
     // Assert
     ASSERT_TRUE(fileExists);
-    ASSERT_STREQ((char*)result.Pointer, fileContent.Pointer);
+    ASSERT_STREQ(fileContent.Pointer, (char*)result.Pointer);
     ASSERT_FALSE(fileExistsAfterDelete);
 }
 

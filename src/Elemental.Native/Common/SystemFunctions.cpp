@@ -145,7 +145,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
             switch (format[++i])
             {
                 case 'd':
-                    formatedArgument = SystemConvertNumberToString(stackMemoryArena, __builtin_va_arg(arguments, long));
+                    formatedArgument = SystemConvertNumberToString(stackMemoryArena, __builtin_va_arg(arguments, int32_t));
                     break;
                 case 'f':
                     formatedArgument = SystemConvertFloatToString(stackMemoryArena, __builtin_va_arg(arguments, double));

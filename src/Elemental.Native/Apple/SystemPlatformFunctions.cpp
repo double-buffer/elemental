@@ -1,5 +1,4 @@
 #include "SystemPlatformFunctions.h"
-#include "SystemFunctions.h"
 #include "SystemLogging.h"
 
 #include <time.h> // TODO: To review
@@ -122,7 +121,7 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
 
 void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
 {
-    auto fileHandle = open(path.Pointer, O_WRONLY | O_CREAT, 0644);
+    auto fileHandle = open(path.Pointer, O_RDONLY, 0644);
 
     if (fileHandle < 0) 
     {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Dictionary.h"
+#include "SystemDictionary.h"
 
 struct MetalPipelineStateCacheItem
 {

@@ -17,4 +17,7 @@ elseif(APPLE)
     target_include_directories(Elemental.Tests.NativeSystemFunctionsTests PRIVATE ../../src/Elemental.Native/Apple/)
     target_precompile_headers(Elemental.Tests.NativeSystemFunctionsTests PRIVATE ../../src/Elemental.Native/Apple/PreCompiledHeader.h)
     target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -fms-extensions -fno-objc-arc)
+
+    target_compile_definitions(Elemental.Tests.NativeSystemFunctionsTests PRIVATE __BLOCKS__)
+    target_link_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
 endif()
