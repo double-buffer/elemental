@@ -7,8 +7,9 @@
 
 #include "utest.h"
 
-#include "IOTests.cpp"
 #include "MathTests.cpp"
 #include "StringTests.cpp"
+#include "IOTests.cpp"
+#include "LibraryProcessTests.cpp"
 
 UTEST_MAIN();

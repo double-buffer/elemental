@@ -20,3 +20,15 @@ UTEST(IOFunctions, GeneralIO)
     ASSERT_STREQ((char*)result.Pointer, fileContent.Pointer);
     ASSERT_FALSE(fileExistsAfterDelete);
 }
+
+UTEST(IOFunctions, SystemGetExecutableFolderPath) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    
+    // Act
+    auto result = SystemGetExecutableFolderPath(stackMemoryArena);
+
+    // Assert
+    ASSERT_GT((int32_t)result.Length, 0);
+}
