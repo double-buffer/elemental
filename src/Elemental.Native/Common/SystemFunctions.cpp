@@ -26,38 +26,6 @@ double SystemRound(double value)
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
-template<typename T>
-ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value)
-{
-    auto isNegative = value < 0;
-    auto length = isNegative ? 1 : 0;
-    auto temp = value;
-
-    do 
-    {
-        temp /= 10;
-        length++;
-    } while (temp != 0);
-
-    auto numString = SystemPushArrayZero<char>(memoryArena, length);
-    auto startIndex = 0;
-
-    if (isNegative)
-    {
-        value = -value;
-        numString[0] = '-';
-        startIndex = 1;
-    }
-
-    for (int32_t i = length - 1; i >= startIndex; i--)
-    {
-        numString[i] = '0' + (value % 10);
-        value /= 10;
-    }
-
-    return numString;
-}
-
 ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double value)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
