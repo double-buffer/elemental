@@ -29,7 +29,7 @@ public class NativeApplicationTests
         using var applicationService = new NativeApplicationService();
 
         // Act
-        var application = applicationService.CreateApplication("TestApp");
+        using var application = applicationService.CreateApplication("TestApp");
 
         // Assert
         Assert.NotEqual(nint.Zero, application.NativePointer);
@@ -40,7 +40,7 @@ public class NativeApplicationTests
     {
         // Arrange
         using var applicationService = new NativeApplicationService();
-        var application = applicationService.CreateApplication("TestApp");
+        using var application = applicationService.CreateApplication("TestApp");
 
         var runHandlerCalled = false;
         var runHandler = new RunHandler((status) => 

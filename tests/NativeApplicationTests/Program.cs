@@ -22,7 +22,7 @@ class Program
         runner.OnTestSkipped = OnTestSkipped;
 
         Console.WriteLine("Scanning tests...");
-        runner.Start();
+        runner.Start(parallel: false);
         Console.WriteLine("Done");
 
         finished.WaitOne();

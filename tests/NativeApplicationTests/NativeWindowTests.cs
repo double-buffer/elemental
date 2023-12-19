@@ -1,4 +1,3 @@
-
 namespace Elemental.Tests;
 
 public class NativeWindowTests
@@ -9,10 +8,10 @@ public class NativeWindowTests
         // Arrange
         // BUG: Crash here because tests are ran in parrallel inside the same process
         using var applicationService = new NativeApplicationService();
-        var application = applicationService.CreateApplication("TestApp");
+        using var application = applicationService.CreateApplication("TestApp");
 
         // Act
-        var window = applicationService.CreateWindow(application, new() { Width = 0, Height = 0, WindowState = NativeWindowState.Minimized });
+        using var window = applicationService.CreateWindow(application, new() { Width = 0, Height = 0, WindowState = NativeWindowState.Minimized });
 
         // Assert
         Assert.NotEqual(nint.Zero, window.NativePointer);
