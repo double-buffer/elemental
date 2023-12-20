@@ -31,7 +31,7 @@ jobs:
         name: dotnet.tests.${{ inputs.platform }}-${{ inputs.architecture }}
 
     - name: Copy files
-      run: cp ./Elemental.Tests.NativeApplicationTests/release_win-x64/* ./Tests/
+      run: cp ./Elemental.Tests.NativeApplicationTests/release_${{ inputs.platform }}-${{ inputs.architecture }}/* ./Tests/
 
     - name: Run Native System Functions Tests
       run: ./Tests/Elemental.Tests.NativeSystemFunctionsTests
