@@ -30,7 +30,7 @@ jobs:
     - name: Build
       run: |
         mkdir ./build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang' }}
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }}
         cmake --build ./build --target Elemental.Native --config Release
         cmake --build ./build --target Elemental.Tests.NativeSystemFunctionsTests --config Release
 
