@@ -13,37 +13,45 @@ jobs:
     runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform }}-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@master
       with:
         submodules: recursive
 
+    # Conditional setup for MSVC on Windows
     - name: Setup MSVC
-      uses: TheMrMilchmann/setup-msvc-dev@v3
+      if: inputs.platform == 'win'
+      uses: TheMrMilchmann/setup-msvc-dev@master
       with:
         arch: ${{ inputs.architecture }}
 
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
-    - name: Build Windows Platform
+    - name: Build
       run: |
         mkdir ./build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=clang-cl
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
         cmake --build ./build --target Elemental.Native --config Release
         cmake --build ./build --target Elemental.Tests.NativeSystemFunctionsTests --config Release
+      env:
+        compiler: ${{ inputs.platform == 'win' && 'clang-cl' || 'clang' }}
 
+    # Conditional Vulkan Loader steps for Windows
     - name: Download Vulkan Loader
+      if: inputs.platform == 'win'
       working-directory: ./build/src/Elemental.Native/Windows/Release
       run: |
         mkdir ./tmp/
         curl -L -o ./tmp/vulkan-loader.zip https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip
 
     - name: Extract Vulkan Loader
+      if: inputs.platform == 'win'
       working-directory: ./build/src/Elemental.Native/Windows/Release
       run: |
         unzip ./tmp/vulkan-loader.zip -d ./bin/
 
     - name: Set Vulkan DLL Path
+      if: inputs.platform == 'win'
       id: set-vulkan-dll-path
       working-directory: ./build/src/Elemental.Native/Windows/Release
       shell: bash
@@ -52,21 +60,22 @@ jobs:
         echo "vulkan_dll_path=$dllPath" >> $GITHUB_ENV
 
     - name: Copy files
+      if: inputs.platform == 'win'
       working-directory: ./build/src/Elemental.Native/Windows/Release
       shell: bash
       run: |
         cp ${{ env.vulkan_dll_path }} .
 
+    # Upload steps for binaries and tests are common for all platforms
     - name: Upload Binaries
       uses: actions/upload-artifact@master
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: |
-            ./build/src/Elemental.Native/Windows/Release/*.dll
+        path: ./build/src/Elemental.Native/${{ inputs.platform }}/Release/*.dll
 
     - name: Upload Tests Binaries
       uses: actions/upload-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: |
-            ./build/tests/Elemental.Tests.Native.SystemFunctionsTests/Release/*
+        path: ./build/tests/Elemental.Tests.Native.SystemFunctionsTests/Release/*
+
