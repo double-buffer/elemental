@@ -15,12 +15,12 @@ jobs:
     runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform }}-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@master
       with:
         submodules: recursive
 
     - name: Restore Dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@master
       id: cache-dependencies
       with:
         path: |
@@ -57,7 +57,7 @@ jobs:
 
     - name: Upload Binaries Windows
       if: inputs.platform == 'windows'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@master
       with:
         name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
         path: |
@@ -65,7 +65,7 @@ jobs:
             
     - name: Upload Binaries MacOS
       if: inputs.platform == 'macos'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@master
       with:
         name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
         path: |
@@ -73,7 +73,7 @@ jobs:
 
     - name: Save Dependencies to Cache
       if: steps.cache-dependencies.outputs.cache-hit != 'true'
-      uses: actions/cache@v2
+      uses: actions/cache@master
       with:
         path: |
           external/shader-compilers
