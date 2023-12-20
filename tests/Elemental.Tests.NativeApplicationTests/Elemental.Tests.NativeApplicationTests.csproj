@@ -3,7 +3,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <PublishAot>True</PublishAot>
-        <NoWarn>CA1707</NoWarn>
+        <NoWarn>CA1707;CA1822</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
