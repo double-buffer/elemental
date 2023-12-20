@@ -10,13 +10,13 @@ on:
 
 jobs:
   build_dotnet:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform }}-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@master
 
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@master
       with:
         dotnet-version: 8.0.100
 

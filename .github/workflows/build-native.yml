@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_native:
-    runs-on: windows-latest
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform }}-latest
 
     steps:
     - uses: actions/checkout@v3
