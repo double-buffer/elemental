@@ -10,7 +10,7 @@ on:
 
 jobs:
   run_tests:
-    runs-on: windows-latest
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform }}-latest
 
     steps:
     - name: Download Native Binaries ${{ inputs.platform }}-${{ inputs.architecture }}
@@ -28,7 +28,7 @@ jobs:
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
       with:
-        name: dotnet.bin
+        name: dotnet.tests.${{ inputs.platform }}-${{ inputs.architecture }}
 
     - name: Run Tests
       run: |
