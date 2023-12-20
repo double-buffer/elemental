@@ -17,20 +17,21 @@ jobs:
       uses: actions/download-artifact@master
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./NativeApplicationTests/release/
+        path: ./Tests/
  
     - name: Download Native Binaries
       uses: actions/download-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./NativeApplicationTests/release/
+        path: ./Tests/
 
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
       with:
         name: dotnet.tests.${{ inputs.platform }}-${{ inputs.architecture }}
 
-    - name: Run Tests
-      run: |
-        ./NativeApplicationTests/release/Elemental.Tests.NativeSystemFunctionsTests
-        ./NativeApplicationTests/release/Elemental.Tests.NativeApplicationTests
+    - name: Run Native System Functions Tests
+      run: ./Tests/Elemental.Tests.NativeSystemFunctionsTests
+    
+    - name: Run NativeApplication Tests
+      run: ./Tests/Elemental.Tests.NativeApplicationTests
