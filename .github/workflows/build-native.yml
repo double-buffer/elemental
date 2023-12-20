@@ -69,7 +69,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./build/src/Elemental.Native/${{ inputs.platform == 'win' && 'Windows' || inputs.platform }}}/Release/*.dll
+        path: ./build/src/Elemental.Native/${{ inputs.platform == 'win' && 'Windows' || inputs.platform }}/Release/*.dll
 
     - name: Upload Tests Binaries
       uses: actions/upload-artifact@master
