@@ -22,7 +22,7 @@ jobs:
 
     - name: Build Tests
       run: |
-        dotnet publish ./tests/Elemental.Tests.NativeApplicationTests --self-container -r ${{ inputs.platform }}-${{ inputs.architecture }} --disable-build-servers -p:BuildProjectReferences="False"
+        dotnet publish ./tests/Elemental.Tests.NativeApplicationTests --self-contained -r ${{ inputs.platform }}-${{ inputs.architecture }} --disable-build-servers -p:BuildProjectReferences="False"
 
     - name: Upload Binaries
       uses: actions/upload-artifact@master
