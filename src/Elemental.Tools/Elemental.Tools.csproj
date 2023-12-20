@@ -4,6 +4,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <BuildNative>true</BuildNative>
   </PropertyGroup>
   
   <ItemGroup>
@@ -11,12 +12,12 @@
     <ProjectReference Include="../Elemental.SourceGenerators/Elemental.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   
-  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(BuildProjectReferences)' == 'true'">
+  <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(BuildNative)' == 'true'">
     <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../build --target Elemental.Tools.Native --config $(Configuration)" />
   </Target>
 
   <!-- REFACTOR the copying of the tools -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildProjectReferences)' == 'true'">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildNative)' == 'true'">
     <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/Elemental.Tools.Native.dll">
       <TargetPath>Elemental.Tools.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -35,7 +36,7 @@
     </Content>
   </ItemGroup>
   
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildProjectReferences)' == 'true'">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildNative)' == 'true'">
     <Content Include="$(MSBuildProjectDirectory)/../../build/src/Elemental.Tools.Native/$(Configuration)/libElemental.Tools.Native.dylib">
       <TargetPath>Elemental.Tools.Native.dylib</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
