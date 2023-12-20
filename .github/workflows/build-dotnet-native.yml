@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_dotnet:
-    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform }}-latest
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform }}-latest
 
     steps:
     - uses: actions/checkout@master
