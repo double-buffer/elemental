@@ -10,7 +10,7 @@ on:
 
 jobs:
   run_tests:
-    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform }}-latest
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform == 'osx' && 'macos' || inputs.platform }}-latest
 
     steps:
     - name: Download Native Binaries ${{ inputs.platform }}-${{ inputs.architecture }}
