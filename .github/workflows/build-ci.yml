@@ -18,6 +18,17 @@ jobs:
   build_dotnet:
     uses: ./.github/workflows/build-dotnet.yml
     secrets: inherit
+
+  build_dotnet_native:
+    strategy:
+      matrix:
+        include: ${{ fromJSON(vars.Platforms) }}
+    uses: ./.github/workflows/build-dotnet-native.yml
+    name: 'build-dotnet-native-${{ matrix.platform }}-${{ matrix.architecture }}'
+    secrets: inherit
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
     
   run_tests:
     strategy:

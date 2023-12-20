@@ -1,0 +1,31 @@
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
+
+jobs:
+  build_dotnet:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.100
+
+    - name: Build Tests
+      run: |
+        dotnet publish ./tests/Elemental.Tests.NativeApplicationTests --self-container -r ${{ inputs.platform }}-${{ inputs.architecture }} --disable-build-servers -p:BuildProjectReferences="False"
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@master
+      with:
+        name: dotnet.tests.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./artifacts/publish

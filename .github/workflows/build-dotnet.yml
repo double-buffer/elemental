@@ -20,7 +20,9 @@ jobs:
         dotnet-version: 8.0.100
 
     - name: Build Library
-      run: dotnet publish --disable-build-servers -p:BuildProjectReferences="False" -p:RunNativeTests="False" -p:Version=${{ inputs.version }}
+      run: |
+        dotnet publish ./src/Elemental --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
+        dotnet publish ./src/Elemental.Tools --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@master
