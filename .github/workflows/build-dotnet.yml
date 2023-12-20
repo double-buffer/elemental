@@ -21,8 +21,8 @@ jobs:
 
     - name: Build Library
       run: |
-        dotnet publish ./src/Elemental --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
-        dotnet publish ./src/Elemental.Tools --disable-build-servers -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
+        dotnet publish ./src/Elemental -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }} -v normal
+        dotnet publish ./src/Elemental.Tools -p:BuildProjectReferences="False" -p:Version=${{ inputs.version }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@master
