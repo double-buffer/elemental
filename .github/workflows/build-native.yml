@@ -20,7 +20,7 @@ jobs:
     # Conditional setup for MSVC on Windows
     - name: Setup MSVC
       if: inputs.platform == 'win'
-      uses: TheMrMilchmann/setup-msvc-dev@master
+      uses: TheMrMilchmann/setup-msvc-dev@v3
       with:
         arch: ${{ inputs.architecture }}
 
