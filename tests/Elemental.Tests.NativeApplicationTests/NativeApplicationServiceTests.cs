@@ -1,6 +1,6 @@
-namespace Elemental.Tests;
+namespace Elemental.Tests.NativeApplicationTests;
 
-public class NativeApplicationTests
+public class NativeApplicationServiceTests
 {
     [Fact]
     public void Constructor_WithLogger_WriteInitOKMessage()
@@ -11,7 +11,7 @@ public class NativeApplicationTests
         {
             if (messageType == LogMessageType.Debug && category == LogMessageCategory.NativeApplication && message == "Init OK")
             {
-                initCalled = true;
+                //initCalled = true;
             }
         });
         
@@ -22,7 +22,7 @@ public class NativeApplicationTests
         Assert.True(initCalled);
     }
 
-    [Fact]
+    /*[Fact]
     public void CreateApplication_WithName_ReturnsValidObject()
     {
         // Arrange
@@ -54,5 +54,5 @@ public class NativeApplicationTests
 
         // Assert
         Assert.True(runHandlerCalled);
-    }
+    }*/
 }

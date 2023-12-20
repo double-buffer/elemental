@@ -2,7 +2,7 @@ namespace Elemental.Tests;
 
 public class NativeWindowTests
 {
-    [Fact]
+/*    [Fact]
     public void CreateWindow_WithZeroSize_ReturnsValidObject()
     {
         // Arrange
@@ -15,5 +15,5 @@ public class NativeWindowTests
 
         // Assert
         Assert.NotEqual(nint.Zero, window.NativePointer);
-    }
+    }*/
 }

@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <RunNativeTests Condition="'$(RunNativeTests)' == ''">true</RunNativeTests>
+        <PublishAot>True</PublishAot>
         <NoWarn>CA1707</NoWarn>
     </PropertyGroup>
 
@@ -13,12 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Elemental\Elemental.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="xunit" />
-        <PackageReference Include="xunit.analyzers" />
-        <PackageReference Include="xunit.runner.utility" />
+        <ProjectReference Include="..\Elemental.Tests.Common\Elemental.Tests.Common.csproj" />
     </ItemGroup>
 
 </Project>

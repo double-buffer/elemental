@@ -10,7 +10,7 @@ UTEST(MathFunctions, SystemRoundUpToPowerOf2)
     auto result = SystemRoundUpToPowerOf2(testNumber);
 
     // Assert
-    ASSERT_EQ((size_t)64, result);
+    ASSERT_EQ((size_t)63, result);
 }
 
 UTEST(MathFunctions, SystemRound) 

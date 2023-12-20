@@ -9,6 +9,7 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IsRoslynComponent>true</IsRoslynComponent>
+    <IsAotCompatible>False</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
