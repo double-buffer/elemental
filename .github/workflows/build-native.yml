@@ -9,7 +9,7 @@ on:
         type: string
 
 jobs:
-  build_native:
+  build-native:
     runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform == 'osx' && 'macos' || inputs.platform }}-latest
 
     steps:

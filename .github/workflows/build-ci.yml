@@ -9,7 +9,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/build-native.yml
-    name: 'build-native-${{ matrix.platform }}-${{ matrix.architecture }}'
+    name: 'build-native'
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
@@ -17,6 +17,7 @@ jobs:
 
   build_dotnet:
     uses: ./.github/workflows/build-dotnet.yml
+    name: 'build-dotnet'
     secrets: inherit
 
   build_dotnet_native:
@@ -36,7 +37,7 @@ jobs:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/run-tests.yml
     needs: [ build_native, build_dotnet, build_dotnet_native ]
-    name: 'run-tests-${{ matrix.platform }}-${{ matrix.architecture }}'
+    name: 'run-tests'
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
