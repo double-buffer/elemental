@@ -9,7 +9,8 @@ on:
         type: string
 
 jobs:
-  build_dotnet:
+  build_dotnet_native:
+    name: 'build-dotnet-native-${{ inputs.platform }}-${{ inputs.architecture }}'
     runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform == 'osx' && 'macos' || inputs.platform }}-latest
 
     steps:
