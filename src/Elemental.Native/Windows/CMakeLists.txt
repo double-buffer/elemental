@@ -24,5 +24,5 @@ target_compile_definitions(Elemental.Native PRIVATE UNICODE _UNICODE _WINDOWS _W
 
 add_custom_command(TARGET Elemental.Native POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/packages/Microsoft.Direct3D.D3D12_1.611.2/build/native/bin/${CMAKE_SYSTEM_PROCESSOR}"
+        "${CMAKE_CURRENT_BINARY_DIR}/packages/Microsoft.Direct3D.D3D12_1.611.2/build/native/bin/x64"
         $<TARGET_FILE_DIR:Elemental.Native>)

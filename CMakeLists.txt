@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.26)
-project(Elemental LANGUAGES CXX)
 
-if(MSVC)
-    set(CMAKE_SYSTEM_PROCESSOR ${MSVC_CXX_ARCHITECTURE_ID})
+if(WIN32)
+    set(CMAKE_SYSTEM_PROCESSOR "x64")
+    set(CMAKE_CXX_COMPILER "clang-cl")
 endif()
     
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+project(Elemental LANGUAGES CXX)
 
 # Set Global properties like C++ Version etc.
 

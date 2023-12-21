@@ -20,6 +20,24 @@ UTEST(Dictionary, AddValue)
     ASSERT_EQ(9, testValue);
 }
 
+UTEST(Dictionary, AddValue_KeyStruct) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, 24);
+    
+    // Act
+    for (size_t i = 0; i < 10; i++)
+    {
+        SystemAddDictionaryEntry(dictionary, (int32_t)i, (int32_t)i);
+    }
+    
+    auto testValue = dictionary[9];
+
+    // Assert
+    ASSERT_EQ(9, testValue);
+}
+
 UTEST(Dictionary, RemoveValue) 
 {
     // Arrange
@@ -34,6 +52,25 @@ UTEST(Dictionary, RemoveValue)
     
     SystemRemoveDictionaryEntry(dictionary, "Test9");
     auto testValue = dictionary["Test9"];
+
+    // Assert
+    ASSERT_EQ(0, testValue);
+}
+
+UTEST(Dictionary, RemoveValue_KeyStruct) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, 24);
+    
+    // Act
+    for (size_t i = 0; i < 10; i++)
+    {
+        SystemAddDictionaryEntry(dictionary, (int32_t)i, (int32_t)i);
+    }
+    
+    SystemRemoveDictionaryEntry(dictionary, 9);
+    auto testValue = dictionary[9];
 
     // Assert
     ASSERT_EQ(0, testValue);

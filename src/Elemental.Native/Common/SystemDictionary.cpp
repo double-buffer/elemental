@@ -2,16 +2,33 @@
 #include "SystemLogging.h"
 
 #define SYSTEM_DICTIONARY_HASH_SEED 123456789
+#define SYSTEM_DICTIONARY_PARTITION_BITS 10
+#define SYSTEM_DICTIONARY_INDEX_BITS 22
+#define SYSTEM_DICTIONARY_MAX_PARTITION_INDEX ((1 << SYSTEM_DICTIONARY_PARTITION_BITS) - 1)
+#define SYSTEM_DICTIONARY_MAX_INDEX ((1 << SYSTEM_DICTIONARY_INDEX_BITS) - 1)
 
-// TODO: Pack this index because the bucket list will have the max amount of items
-// Compute the size for 1.000.000 items
 struct SystemDictionaryEntryIndex
+{
+    int32_t CombinedIndex;
+
+    bool operator==(const SystemDictionaryEntryIndex& other) const 
+    {
+        return CombinedIndex == other.CombinedIndex;
+    }
+
+    bool operator!=(const SystemDictionaryEntryIndex& other) const 
+    {
+        return CombinedIndex != other.CombinedIndex;
+    }
+};
+
+struct SystemDictionaryEntryIndexFull
 {
     int32_t PartitionIndex;
     int32_t Index;
 };
     
-SystemDictionaryEntryIndex SYSTEM_DICTIONARY_INDEX_EMPTY = { -1, -1 };
+SystemDictionaryEntryIndex SYSTEM_DICTIONARY_INDEX_EMPTY = { -1 };
 
 template<typename TValue>
 struct SystemDictionaryEntry
@@ -51,18 +68,30 @@ struct SystemDictionaryHashInfo
     int32_t BucketIndex;
 };
 
+SystemDictionaryEntryIndex SystemCreateDictionaryEntryIndex(int32_t partitionIndex, int32_t index);
+SystemDictionaryEntryIndexFull SystemGetDictionaryEntryIndexFull(SystemDictionaryEntryIndex index);
+
+template<typename TValue>
+void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo, TValue value);
+
+template<typename TValue>
+void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo);
+
+template<typename TValue>
+TValue* SystemGetDictionaryValue(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo);
+
 // TODO: Change the signature to take the max items count
 template<typename TValue>
 SystemDictionaryStoragePartition<TValue>* SystemCreateDictionaryPartition(MemoryArena* memoryArena, size_t partitionSize);
 
-template<typename TKey, typename TValue, typename T>
-SystemDictionaryHashInfo SystemDictionaryComputeHashInfo(SystemDictionary<TKey, TValue> dictionary, ReadOnlySpan<T> data);
+template<typename TValue, typename T>
+SystemDictionaryHashInfo SystemDictionaryComputeHashInfo(SystemDictionaryStorage<TValue>* storage, ReadOnlySpan<T> data);
 
-template<typename TKey, typename TValue>
-SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionary<TKey, TValue> dictionary, TKey key);
+template<typename TValue>
+SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo);
 
-template<typename TKey, typename TValue>
-SystemDictionaryEntry<TValue>* SystemGetDictionaryEntryByIndex(SystemDictionary<TKey, TValue> dictionary, SystemDictionaryEntryIndex index);
+template<typename TValue>
+SystemDictionaryEntry<TValue>* SystemGetDictionaryEntryByIndex(SystemDictionaryStorage<TValue>* storage, SystemDictionaryEntryIndex index);
 
 template<typename TKey, typename TValue>
 TValue& SystemDictionary<TKey, TValue>::operator[](TKey key)
@@ -102,61 +131,128 @@ SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena* memoryArena, 
     return { storage };
 }
 
-// TODO: What will happens in case we need to grow the storage?
-// How the old storage will be reused in the memory arena?
 template<typename TKey, typename TValue>
 void SystemAddDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key, TValue value)
 {
-    //auto hashInfo = SystemDictionaryComputeHashInfo(ReadOnlySpan<uint8_t>(&key, sizeof(key)));
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, ReadOnlySpan<uint8_t>((uint8_t*)&key, sizeof(key)));
+    SystemAddDictionaryEntry(dictionary.Storage, hashInfo, value);
 }
 
 template<typename TValue>
 void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key, TValue value)
 {
-    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary, key);
-    auto storage = dictionary.Storage;
-    auto partition = dictionary.Storage->Partitions[storage->CurrentPartitionIndex - 1];
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, key);
+    SystemAddDictionaryEntry(dictionary.Storage, hashInfo, value);
+}
+
+template<typename TValue, typename T>
+void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<T>, TValue> dictionary, ReadOnlySpan<T> key, TValue value)
+{
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, key);
+    SystemAddDictionaryEntry(dictionary.Storage, hashInfo, value);
+}
+
+template<typename TKey, typename TValue>
+void SystemRemoveDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key)
+{
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, ReadOnlySpan<uint8_t>((uint8_t*)&key, sizeof(key)));
+    SystemRemoveDictionaryEntry(dictionary.Storage, hashInfo);
+}
+
+template<typename TValue>
+void SystemRemoveDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key)
+{
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, key);
+    SystemRemoveDictionaryEntry(dictionary.Storage, hashInfo);
+}
+
+template<typename TValue, typename T>
+void SystemRemoveDictionaryEntry(SystemDictionary<ReadOnlySpan<T>, TValue> dictionary, ReadOnlySpan<T> key)
+{
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, key);
+    SystemRemoveDictionaryEntry(dictionary.Storage, hashInfo);
+}
+
+template<typename TKey, typename TValue>
+TValue* SystemGetDictionaryValue(SystemDictionary<TKey, TValue> dictionary, TKey key)
+{
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, ReadOnlySpan<uint8_t>((uint8_t*)&key, sizeof(key)));
+    return SystemGetDictionaryValue(dictionary.Storage, hashInfo);
+}
+
+template<typename TValue>
+TValue* SystemGetDictionaryValue(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key)
+{
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, key);
+    return SystemGetDictionaryValue(dictionary.Storage, hashInfo);
+}
+
+template<typename TValue, typename T>
+TValue* SystemGetDictionaryValue(SystemDictionary<ReadOnlySpan<T>, TValue> dictionary, ReadOnlySpan<T> key)
+{
+    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary.Storage, key);
+    return SystemGetDictionaryValue(dictionary.Storage, hashInfo);
+}
+
+SystemDictionaryEntryIndex SystemCreateDictionaryEntryIndex(int32_t partitionIndex, int32_t index)
+{
+    return { (partitionIndex & SYSTEM_DICTIONARY_MAX_PARTITION_INDEX) << SYSTEM_DICTIONARY_INDEX_BITS | (index & SYSTEM_DICTIONARY_MAX_INDEX) };
+}
+
+SystemDictionaryEntryIndexFull SystemGetDictionaryEntryIndexFull(SystemDictionaryEntryIndex index)
+{
+    return 
+    { 
+        index.CombinedIndex == -1 ? -1 : (index.CombinedIndex >> SYSTEM_DICTIONARY_INDEX_BITS) & SYSTEM_DICTIONARY_MAX_PARTITION_INDEX, 
+        index.CombinedIndex == -1 ? -1 : index.CombinedIndex & SYSTEM_DICTIONARY_MAX_INDEX 
+    };
+}
+
+template<typename TValue>
+void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo, TValue value)
+{
+    auto partition = storage->Partitions[storage->CurrentPartitionIndex - 1];
     auto entryIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
     SystemDictionaryEntry<TValue>* entry;
 
-    if (storage->FreeListIndex.Index != -1)
+    if (storage->FreeListIndex != SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
         entryIndex = storage->FreeListIndex;
-        entry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex);
+        entry = SystemGetDictionaryEntryByIndex(storage, entryIndex);
         storage->FreeListIndex = entry->Next;
     }
     else 
     {
-        entryIndex.PartitionIndex = storage->CurrentPartitionIndex - 1;
-        entryIndex.Index = partition->CurrentEntryIndex++;
-        entry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex);
+        auto newPartitionIndex = storage->CurrentPartitionIndex - 1;
+        auto newIndex = partition->CurrentEntryIndex++;
+
+        if (newIndex == (int32_t)partition->Entries.Length)
+        {
+            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Dictionary is full");
+            partition = SystemCreateDictionaryPartition<TValue>(storage->MemoryArena, 10); // TODO: Find a proper initial size
+            storage->Partitions[storage->CurrentPartitionIndex++] = partition;
+
+            newPartitionIndex = storage->CurrentPartitionIndex - 1;
+            newIndex = partition->CurrentEntryIndex++;
+        }
+
+        entryIndex = SystemCreateDictionaryEntryIndex(newPartitionIndex, newIndex);
+        entry = SystemGetDictionaryEntryByIndex(storage, entryIndex);
     }
 
-    if (entryIndex.Index == (int32_t)partition->Entries.Length)
-    {
-        SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Dictionary is full");
-        partition = SystemCreateDictionaryPartition<TValue>(storage->MemoryArena, 10); // TODO: Find a proper initial size
-        storage->Partitions[storage->CurrentPartitionIndex++] = partition;
-
-        entryIndex.PartitionIndex = storage->CurrentPartitionIndex - 1;
-        entryIndex.Index = partition->CurrentEntryIndex++;
-        entry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex);
-    }
-
-    // TODO: Retrieve the buckets with a function
-    if (storage->Buckets[hashInfo.BucketIndex].Index == -1)
+    if (storage->Buckets[hashInfo.BucketIndex] == SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
         storage->Buckets[hashInfo.BucketIndex] = entryIndex;
     }
     else
     {
         auto indexStorage = storage->Buckets[hashInfo.BucketIndex];
-        auto indexEntry = SystemGetDictionaryEntryByIndex(dictionary, indexStorage);
+        auto indexEntry = SystemGetDictionaryEntryByIndex(storage, indexStorage);
 
-        while (indexEntry->Next.Index != -1)
+        while (indexEntry->Next != SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
             indexStorage = indexEntry->Next;
-            indexEntry = SystemGetDictionaryEntryByIndex(dictionary, indexStorage);
+            indexEntry = SystemGetDictionaryEntryByIndex(storage, indexStorage);
         }
 
         indexEntry->Next = entryIndex;
@@ -168,30 +264,18 @@ void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dicti
 }
 
 template<typename TValue>
-void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<uint8_t>, TValue> dictionary, ReadOnlySpan<uint8_t> key, TValue value)
+void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
-}
+    auto entryIndex = SystemGetDictionaryEntryIndexInfo(storage, hashInfo);
 
-template<typename TKey, typename TValue>
-void SystemRemoveDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key)
-{
-
-}
-
-template<typename TValue>
-void SystemRemoveDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key)
-{
-    auto entryIndex = SystemGetDictionaryEntryIndexInfo(dictionary, key);
-    auto storage = dictionary.Storage;
-
-    if (entryIndex.Index.Index != -1)
+    if (entryIndex.Index != SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
-        auto entry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex.Index);
+        auto entry = SystemGetDictionaryEntryByIndex(storage, entryIndex.Index);
         auto nextEntry = entry->Next;
 
-        if (entryIndex.ParentIndex.Index != -1)
+        if (entryIndex.ParentIndex != SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
-            auto parentEntry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex.ParentIndex);
+            auto parentEntry = SystemGetDictionaryEntryByIndex(storage, entryIndex.ParentIndex);
             parentEntry->Next = nextEntry;
         }
         else 
@@ -205,11 +289,11 @@ void SystemRemoveDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> di
     }
 }
 
-template<typename TKey, typename TValue>
-TValue* SystemGetDictionaryValue(SystemDictionary<TKey, TValue> dictionary, TKey key)
+template<typename TValue>
+TValue* SystemGetDictionaryValue(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
-    auto entryIndex = SystemGetDictionaryEntryIndexInfo(dictionary, key);
-    auto entry = SystemGetDictionaryEntryByIndex(dictionary, entryIndex.Index);
+    auto entryIndex = SystemGetDictionaryEntryIndexInfo(storage, hashInfo);
+    auto entry = SystemGetDictionaryEntryByIndex(storage, entryIndex.Index);
 
     if (entry != nullptr)
     {
@@ -235,11 +319,11 @@ SystemDictionaryStoragePartition<TValue>* SystemCreateDictionaryPartition(Memory
     return partition;
 }
 
-template<typename TKey, typename TValue, typename T>
-SystemDictionaryHashInfo SystemDictionaryComputeHashInfo(SystemDictionary<TKey, TValue> dictionary, ReadOnlySpan<T> data)
+template<typename TValue, typename T>
+SystemDictionaryHashInfo SystemDictionaryComputeHashInfo(SystemDictionaryStorage<TValue>* storage, ReadOnlySpan<T> data)
 {
     auto hash = XXH64(data.Pointer, data.Length, SYSTEM_DICTIONARY_HASH_SEED);
-    auto bucketIndex = (int32_t)(hash % dictionary.Storage->Buckets.Length);
+    auto bucketIndex = (int32_t)(hash % storage->Buckets.Length);
 
     SystemDictionaryHashInfo result = {};
     result.Hash = hash;
@@ -248,20 +332,15 @@ SystemDictionaryHashInfo SystemDictionaryComputeHashInfo(SystemDictionary<TKey, 
     return result;
 }
 
-template<typename TKey, typename TValue>
-SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionary<TKey, TValue> dictionary, TKey key)
+template<typename TValue>
+SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
-    auto hashInfo = SystemDictionaryComputeHashInfo(dictionary, key); 
-    auto storage = dictionary.Storage;
-
-    SystemDictionaryEntryIndex parentIndex = {};
-    parentIndex.PartitionIndex = -1;
-    parentIndex.Index = -1;
+    auto parentIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
     auto currentIndex = storage->Buckets[hashInfo.BucketIndex];
 
-    while (currentIndex.Index != -1) 
+    while (currentIndex != SYSTEM_DICTIONARY_INDEX_EMPTY) 
     {
-        auto currentEntry = SystemGetDictionaryEntryByIndex(dictionary, currentIndex);
+        auto currentEntry = SystemGetDictionaryEntryByIndex(storage, currentIndex);
 
         if (currentEntry->Hash == hashInfo.Hash)
         {
@@ -280,15 +359,45 @@ SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionary<TKe
     return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY };
 }
 
-template<typename TKey, typename TValue>
-SystemDictionaryEntry<TValue>* SystemGetDictionaryEntryByIndex(SystemDictionary<TKey, TValue> dictionary, SystemDictionaryEntryIndex index)
+template<typename TValue>
+SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionaryStorage<TValue>* storage, ReadOnlySpan<char> key)
 {
-    if (index.Index == -1)
+    auto hashInfo = SystemDictionaryComputeHashInfo(storage, key); 
+
+    auto parentIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
+    auto currentIndex = storage->Buckets[hashInfo.BucketIndex];
+
+    while (currentIndex != SYSTEM_DICTIONARY_INDEX_EMPTY) 
+    {
+        auto currentEntry = SystemGetDictionaryEntryByIndex(storage, currentIndex);
+
+        if (currentEntry->Hash == hashInfo.Hash)
+        {
+            SystemDictionaryIndexInfo result = {};
+            result.BucketIndex = hashInfo.BucketIndex;
+            result.ParentIndex = parentIndex;
+            result.Index = currentIndex;
+
+            return result;
+        }
+
+        parentIndex = currentIndex;
+        currentIndex = currentEntry->Next;
+    }
+
+    return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY };
+}
+
+template<typename TValue>
+SystemDictionaryEntry<TValue>* SystemGetDictionaryEntryByIndex(SystemDictionaryStorage<TValue>* storage, SystemDictionaryEntryIndex index)
+{
+    if (index == SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
         return nullptr;
     }
 
-    return &(dictionary.Storage->Partitions[index.PartitionIndex]->Entries[index.Index]);
+    auto indexFull = SystemGetDictionaryEntryIndexFull(index);
+    return &(storage->Partitions[indexFull.PartitionIndex]->Entries[indexFull.Index]);
 }
 
 template<typename TKey, typename TValue>
@@ -298,20 +407,21 @@ void DebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 
     for (int32_t i = 0; i < storage->Buckets.Length; i++)
     {
-        if (storage->Buckets[i].Index == -1)
+        if (storage->Buckets[i] == SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
             printf("Bucket %d => (EMPTY)\n");
         }
         else 
-    {
+        {
             printf("Bucket %d", i);
 
             auto entryIndex = storage->Buckets[i]; 
 
-            while (entryIndex.Index != -1)
+            while (entryIndex != SYSTEM_DICTIONARY_INDEX_EMPTY)
             {
-                auto entry = storage->Partitions[entryIndex.PartitionIndex]->Entries[entryIndex.Index]; 
-                printf(" => %lu (Value: %d, Partition: %d, Index: %d)", entry.Hash, entry.Value, entryIndex.PartitionIndex, entryIndex.Index);
+                auto entryIndexFull = SystemGetDictionaryEntryIndexFull(entryIndex);
+                auto entry = storage->Partitions[entryIndexFull.PartitionIndex]->Entries[entryIndexFull.Index]; 
+                printf(" => %lu (Value: %d, Partition: %d, Index: %d)", entry.Hash, entry.Value, entryIndexFull.PartitionIndex, entryIndexFull.Index);
 
                 entryIndex = entry.Next;
             }
@@ -323,10 +433,11 @@ void DebugDictionary(SystemDictionary<TKey, TValue> dictionary)
     auto currentFreeListIndex = storage->FreeListIndex;
     printf("FreeList");
 
-    while (currentFreeListIndex.Index != -1)
+    while (currentFreeListIndex != SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
-        printf(" => Partition: %d, Index: %d", currentFreeListIndex.PartitionIndex, currentFreeListIndex.Index);
-        currentFreeListIndex = storage->Partitions[currentFreeListIndex.PartitionIndex]->Entries[currentFreeListIndex.Index].Next;
+        auto indexFull = SystemGetDictionaryEntryIndexFull(currentFreeListIndex);
+        printf(" => Partition: %d, Index: %d", indexFull.PartitionIndex, indexFull.Index);
+        currentFreeListIndex = storage->Partitions[indexFull.PartitionIndex]->Entries[indexFull.Index].Next;
     }
 
     printf("\n");
@@ -353,7 +464,6 @@ void DebugDictionary(SystemDictionary<TKey, TValue> dictionary)
         }
     }
 }
-
 
 
 

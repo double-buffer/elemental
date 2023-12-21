@@ -1,5 +1,11 @@
 #include "NativeApplicationService.h"
+#include "SystemMemory.h"
 #include "SystemFunctions.h"
+#include "SystemDictionary.h"
+
+// TODO: Review that
+static MemoryArena* nativeApplicationMemoryArena;
+static SystemDictionary<HWND, Win32Window*> windowMap;
 
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
@@ -11,7 +17,11 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         #ifdef _DEBUG
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Debug Mode");
         #endif
-    }
+    } 
+
+    // TODO: Review that
+    nativeApplicationMemoryArena = SystemAllocateMemoryArena();
+    windowMap = SystemCreateDictionary<HWND, Win32Window*>(nativeApplicationMemoryArena, 16);
 }
 
 DllExport void Native_FreeNativeApplicationService()
@@ -253,11 +263,6 @@ void ProcessMessages(Win32Application* application)
     }
 }
 
-// TODO: Change that
-//static std::map<HWND, Win32Window*> windowMap = std::map<HWND, Win32Window*>();
-
-// BUG: Next assignment
-
 LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -266,7 +271,8 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
     {
         auto createParameters = (LPCREATESTRUCT)lParam;
         auto nativeWindow = (Win32Window*)createParameters->lpCreateParams;
-        //windowMap[window] = nativeWindow;
+
+        SystemAddDictionaryEntry(windowMap, window, nativeWindow);
         break;
     }
 
@@ -284,7 +290,7 @@ LRESULT CALLBACK Win32WindowCallBack(HWND window, UINT message, WPARAM wParam, L
 		{
 			if ((HIWORD(lParam) & KF_ALTDOWN))
 			{
-                auto nativeWindow = nullptr;//windowMap[window];
+                auto nativeWindow = windowMap[window];
                 Native_SetWindowState(nativeWindow, NativeWindowState_FullScreen);
             }
 		}

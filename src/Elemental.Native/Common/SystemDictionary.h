@@ -22,8 +22,8 @@ void SystemAddDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey ke
 template<typename TValue>
 void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key, TValue value);
 
-template<typename TValue>
-void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<uint8_t>, TValue> dictionary, ReadOnlySpan<uint8_t> key, TValue value);
+template<typename TValue, typename T>
+void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<T>, TValue> dictionary, ReadOnlySpan<T> key, TValue value);
 
 template<typename TKey, typename TValue>
 void SystemRemoveDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key);
@@ -31,14 +31,40 @@ void SystemRemoveDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey
 template<typename TValue>
 void SystemRemoveDictionaryEntry(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key);
 
+template<typename TValue, typename T>
+void SystemRemoveDictionaryEntry(SystemDictionary<ReadOnlySpan<T>, TValue> dictionary, ReadOnlySpan<T> key);
+
 template<typename TKey, typename TValue>
 TValue* SystemGetDictionaryValue(SystemDictionary<TKey, TValue> dictionary, TKey key);
 
+template<typename TValue>
+TValue* SystemGetDictionaryValue(SystemDictionary<ReadOnlySpan<char>, TValue> dictionary, ReadOnlySpan<char> key);
+
+template<typename TValue, typename T>
+TValue* SystemGetDictionaryValue(SystemDictionary<ReadOnlySpan<T>, TValue> dictionary, ReadOnlySpan<T> key);
+
 // TODO: ContainsKey
+
 // TODO: Enumerate?
 
 template<typename TKey, typename TValue>
 void DebugDictionary(SystemDictionary<TKey, TValue> dictionary);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
