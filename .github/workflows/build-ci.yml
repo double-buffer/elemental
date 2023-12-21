@@ -24,7 +24,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/build-dotnet-native.yml
-    name: 'build-dotnet-native-${{ matrix.platform }}-${{ matrix.architecture }}'
+    name: 'build-dotnet-native'
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
