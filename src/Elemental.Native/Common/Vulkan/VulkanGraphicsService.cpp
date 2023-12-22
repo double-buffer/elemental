@@ -15,6 +15,9 @@ struct VulkanGraphicsDevice;
 #include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
 
+#include "SystemMemory.h"
+
+MemoryArena* vulkanMemoryArena;
 // TODO: To remove -> Temporary
 #include <string>
 
@@ -36,17 +39,18 @@ Fence VulkanCreateCommandQueueFence(VulkanCommandQueue* commandQueue);
 void VulkanCreateSwapChainBackBuffers(VulkanSwapChain* swapChain, int32_t width, int32_t height);
 
 uint64_t VulkanComputeRenderPipelineStateHash(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor);
-VulkanPipelineStateCacheItem* VulkanCreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor);
+VulkanPipelineStateCacheItem VulkanCreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor);
 
 void VulkanTransitionTextureToState(VulkanCommandList* commandList, VulkanTexture* texture, VkImageLayout sourceState, VkImageLayout destinationState, bool isTransfer = false);
 
 static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix, const char *pMessage, void *pUserData);
-static void VulkanDeletePipelineCacheItem(uint64_t key, void* data);
 
 thread_local VulkanDeviceCommandPools CommandPools[MAX_VULKAN_GRAPHICS_DEVICES];
 
 void VulkanInitGraphicsService(GraphicsServiceOptions* options)
 {
+    vulkanMemoryArena = SystemAllocateMemoryArena();
+
     // HACK: For the moment, the app will run only if Vulkan SDK 1.3 is installed
     // We need to package the runtime
     // TODO: If the vulkan loader is not here, don't proceed
@@ -323,6 +327,8 @@ void* VulkanCreateGraphicsDevice(GraphicsDeviceOptions* options)
     {
         delete queueCreateInfos[i].pQueuePriorities;
     }
+    
+    graphicsDevice->PipelineStates = SystemCreateDictionary<uint64_t, VulkanPipelineStateCacheItem>(vulkanMemoryArena, 10);
 
     return graphicsDevice;
 }
@@ -330,9 +336,17 @@ void* VulkanCreateGraphicsDevice(GraphicsDeviceOptions* options)
 void VulkanFreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (VulkanGraphicsDevice*)graphicsDevicePointer;
-    VulkanCommandPoolItem* item;
 
-    graphicsDevice->PipelineStates.EnumerateEntries(VulkanDeletePipelineCacheItem);
+    auto cacheEnumerator = SystemGetDictionaryEnumerator(graphicsDevice->PipelineStates);
+    auto cacheEnumItem = SystemGetDictionaryEnumeratorNextValue(&cacheEnumerator);
+    
+    while (cacheEnumItem != nullptr)
+    {
+        vkDestroyPipeline(cacheEnumItem->Device, cacheEnumItem->PipelineState, nullptr);
+        cacheEnumItem = SystemGetDictionaryEnumeratorNextValue(&cacheEnumerator);
+    }
+
+    VulkanCommandPoolItem* item;
 
     for (uint32_t i = 0; i < MAX_VULKAN_COMMAND_POOLS; i++)
     {
@@ -921,23 +935,24 @@ void VulkanSetShader(void* commandListPointer, void* shaderPointer)
         // TODO: Have a separate GetShaderStatus method
         // TODO: Block for this method, because it means the user wants to use the shader and wants to wait on purpose
 
+        // TODO: Don't compute the hash manually, pass the struct directly
         auto renderPassDescriptor = &commandList->CurrentRenderPassDescriptor;
         auto hash = VulkanComputeRenderPipelineStateHash(shader, renderPassDescriptor);
 
         // TODO: This is not thread-safe!
         // TODO: We should have a kind of GetOrAdd method 
-        if (!graphicsDevice->PipelineStates.ContainsKey(hash))
+        if (!SystemDictionaryContainsKey(graphicsDevice->PipelineStates, hash))
         {
             SystemLogDebugMessage(LogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
             auto pipelineStateCacheItem = VulkanCreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
-            graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
+            SystemAddDictionaryEntry(graphicsDevice->PipelineStates, hash, pipelineStateCacheItem);
         }
 
         auto pipelineState = graphicsDevice->PipelineStates[hash];
-        assert(pipelineState->PipelineState != nullptr);
+        assert(pipelineState.PipelineState != nullptr);
 
-        vkCmdBindPipeline(commandList->DeviceObject, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineState->PipelineState);
+        vkCmdBindPipeline(commandList->DeviceObject, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineState.PipelineState);
         commandList->CurrentPipelineState = pipelineState;
         commandList->CurrentShader = shader;
     }
@@ -1187,7 +1202,7 @@ uint64_t VulkanComputeRenderPipelineStateHash(VulkanShader* shader, RenderPassDe
     return (uint64_t)shader;
 }
 
-VulkanPipelineStateCacheItem* VulkanCreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
+VulkanPipelineStateCacheItem VulkanCreateRenderPipelineState(VulkanShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
     auto graphicsDevice = shader->GraphicsDevice;
 
@@ -1266,9 +1281,9 @@ VulkanPipelineStateCacheItem* VulkanCreateRenderPipelineState(VulkanShader* shad
     VkPipeline pipelineState = nullptr;
     AssertIfFailed(vkCreateGraphicsPipelines(graphicsDevice->Device, nullptr, 1, &createInfo, 0, &pipelineState));
 
-    VulkanPipelineStateCacheItem* cacheItem = new VulkanPipelineStateCacheItem();
-    cacheItem->PipelineState = pipelineState;
-    cacheItem->Device = graphicsDevice->Device;
+    VulkanPipelineStateCacheItem cacheItem = VulkanPipelineStateCacheItem();
+    cacheItem.PipelineState = pipelineState;
+    cacheItem.Device = graphicsDevice->Device;
 
     return cacheItem;
 }
@@ -1332,9 +1347,4 @@ static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags
     return VK_FALSE;
 }
 
-static void VulkanDeletePipelineCacheItem(uint64_t key, void* data)
-{
-    auto cacheItem = (VulkanPipelineStateCacheItem*)data;
-    vkDestroyPipeline(cacheItem->Device, cacheItem->PipelineState, nullptr);
-    delete cacheItem;
-}
+

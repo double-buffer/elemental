@@ -1,5 +1,7 @@
 #pragma once
 
+struct VulkanCommandList;
+
 struct VulkanCommandPoolItem
 {
     VulkanCommandPoolItem()
@@ -21,7 +23,8 @@ struct VulkanCommandPoolItem
         {
             if (CommandLists[i])
             {
-                delete CommandLists[i];
+                // TODO:
+                //delete CommandLists[i];
             }
         }
     }
@@ -64,7 +67,8 @@ struct VulkanGraphicsDevice : GraphicsObject
     CircularList<VulkanCommandPoolItem> CopyCommandPool;
     uint64_t CommandPoolGeneration = 0;
     
-    Dictionary<uint64_t, VulkanPipelineStateCacheItem> PipelineStates;
+    // TODO: Don't compute the hash manually, pass the struct directly
+    SystemDictionary<uint64_t, VulkanPipelineStateCacheItem> PipelineStates;
 };
 
 struct VulkanDeviceCommandPools

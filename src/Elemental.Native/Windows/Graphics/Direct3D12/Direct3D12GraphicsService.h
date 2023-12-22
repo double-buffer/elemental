@@ -21,7 +21,6 @@
 
 NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
 static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
-static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data);
 
 void Direct3D12WaitForFenceOnCpu(Fence fence);
 Fence Direct3D12CreateCommandQueueFence(Direct3D12CommandQueue* commandQueue);

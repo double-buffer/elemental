@@ -1,7 +1,8 @@
 #pragma once
 
+#include "VulkanGraphicsDevice.h"
+
 struct VulkanCommandPoolItem;
-struct VulkanPipelineStateCacheItem;
 struct VulkanShader;
 
 struct VulkanCommandList : GraphicsObject
@@ -13,7 +14,7 @@ struct VulkanCommandList : GraphicsObject
         IsFromCommandPool = false;
         IsRenderPassActive = false;
         CommandPoolItem = nullptr;
-        CurrentPipelineState = nullptr;
+        CurrentPipelineState = {};
         CurrentShader = nullptr;
     }
 
@@ -24,6 +25,6 @@ struct VulkanCommandList : GraphicsObject
     bool IsRenderPassActive;
     VulkanCommandPoolItem* CommandPoolItem;
     RenderPassDescriptor CurrentRenderPassDescriptor;
-    VulkanPipelineStateCacheItem* CurrentPipelineState;
+    VulkanPipelineStateCacheItem CurrentPipelineState;
     VulkanShader* CurrentShader;
 };

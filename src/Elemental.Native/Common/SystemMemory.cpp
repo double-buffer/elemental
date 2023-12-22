@@ -179,7 +179,7 @@ void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
         workingMemoryArena->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
         storage->AllocatedBytes = storage->Memory.Length;
 
-        SystemLogDebugMessage(LogMessageCategory_Memory, "Resizing MemoryArena to %llu (Previous size was: %llu) -> SizeInBytes: %u", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
+        SystemLogDebugMessage(LogMessageCategory_Memory, "Resizing MemoryArena to %u (Previous size was: %u) -> SizeInBytes: %u", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
 
         storage = AllocateMemoryArenaStorage(newStorageSize);
         storage->Next = workingMemoryArena->Storage;
@@ -197,7 +197,7 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 {
     if (sizeInBytes > memoryArena->AllocatedBytes)
     {
-        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot pop memory arena with: %llu (Allocated size is: %lu)", sizeInBytes, memoryArena->AllocatedBytes);
+        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", sizeInBytes, memoryArena->AllocatedBytes);
         return;
     }
 

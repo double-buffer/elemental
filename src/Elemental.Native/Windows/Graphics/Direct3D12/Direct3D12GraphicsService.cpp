@@ -1,4 +1,7 @@
 #include "Direct3D12GraphicsService.h"
+#include "SystemMemory.h"
+
+MemoryArena* direct3D12MemoryArena;
 
 GraphicsDiagnostics _graphicsDiagnostics;
 ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;
@@ -52,6 +55,7 @@ void Direct3D12InitGraphicsService(GraphicsServiceOptions* options)
     AssertIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(_dxgiFactory.GetAddressOf())));
 
     _graphicsDiagnostics = options->GraphicsDiagnostics;
+    direct3D12MemoryArena = SystemAllocateMemoryArena();
 }
 
 void Direct3D12FreeGraphicsService()
@@ -173,13 +177,24 @@ void* Direct3D12CreateGraphicsDevice(GraphicsDeviceOptions* options)
     graphicsDevice->RtvDescriptorHandleSize = graphicsDevice->Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     graphicsDevice->CurrentRtvDescriptorOffset = 0;
 
+    graphicsDevice->PipelineStates = SystemCreateDictionary<uint64_t, PipelineStateCacheItem>(direct3D12MemoryArena, 1024);
+
     return graphicsDevice;
 }
 
 void Direct3D12FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (Direct3D12GraphicsDevice*)graphicsDevicePointer;
-    graphicsDevice->PipelineStates.EnumerateEntries(Direct3D12DeletePipelineCacheItem);
+
+    auto cacheEnumerator = SystemGetDictionaryEnumerator(graphicsDevice->PipelineStates);
+    auto cacheEnumItem = SystemGetDictionaryEnumeratorNextValue(&cacheEnumerator);
+    
+    while (cacheEnumItem != nullptr)
+    {
+        cacheEnumItem->PipelineState.Reset();
+        cacheEnumItem = SystemGetDictionaryEnumeratorNextValue(&cacheEnumerator);
+    }
+
     delete graphicsDevice;
 }
 
@@ -647,17 +662,18 @@ void Direct3D12SetShader(void* commandListPointer, void* shaderPointer)
 
         // TODO: This is not thread-safe!
         // TODO: We should have a kind of GetOrAdd method 
-        if (!graphicsDevice->PipelineStates.ContainsKey(hash))
+        // TODO: Pass the struct directly, the add function will create the hash
+        if (!SystemDictionaryContainsKey(graphicsDevice->PipelineStates, hash))
         {
             // TODO: Review allocators
             SystemLogDebugMessage(LogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
-            auto pipelineStateCacheItem = new PipelineStateCacheItem();
-            pipelineStateCacheItem->PipelineState = Direct3D12CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
+            auto pipelineStateCacheItem = PipelineStateCacheItem();
+            pipelineStateCacheItem.PipelineState = Direct3D12CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
-            graphicsDevice->PipelineStates.Add(hash, pipelineStateCacheItem);
+            SystemAddDictionaryEntry(graphicsDevice->PipelineStates, hash, pipelineStateCacheItem);
         }
 
-        auto pipelineState = graphicsDevice->PipelineStates[hash]->PipelineState;
+        auto pipelineState = graphicsDevice->PipelineStates[hash].PipelineState;
         assert(pipelineState != nullptr);
 
         commandList->DeviceObject->SetPipelineState(pipelineState.Get());
@@ -1095,10 +1111,4 @@ static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemLogMessage(messageType, LogMessageCategory_Graphics, "%s", description);
-}
-
-static void Direct3D12DeletePipelineCacheItem(uint64_t key, void* data)
-{
-    auto cacheItem = (PipelineStateCacheItem*)data;
-    delete cacheItem;
 }
