@@ -84,15 +84,89 @@ ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena* memoryArena);
  */
 size_t SystemPlatformFileGetSizeInBytes(ReadOnlySpan<char> path);
 
+/**
+ * Checks if a file exists.
+ *
+ * @param path A ReadOnlySpan<char> representing the path of the file to check.
+ * @return True if the file exists, false otherwise.
+ */
 bool SystemPlatformFileExists(ReadOnlySpan<char> path);
+
+/**
+ * Writes bytes to a file.
+ *
+ * @param path A ReadOnlySpan<char> representing the path of the file where bytes are to be written.
+ * @param data A ReadOnlySpan<uint8_t> containing the data to be written to the file.
+ */
 void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
+
+/**
+ * Reads bytes from a file.
+ *
+ * @param path A ReadOnlySpan<char> representing the path of the file from which bytes are to be read.
+ * @param data A Span<uint8_t> where the read data will be stored.
+ */
 void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data);
+
+/**
+ * Deletes a file.
+ *
+ * @param path A ReadOnlySpan<char> representing the path of the file to be deleted.
+ */
 void SystemPlatformFileDelete(ReadOnlySpan<char> path);
 
+/**
+ * Executes a process based on a command.
+ *
+ * @param memoryArena A pointer to a MemoryArena struct used for memory allocation.
+ * @param command A ReadOnlySpan<char> representing the command to execute.
+ * @return A ReadOnlySpan<char> containing the output of the executed command.
+ */
 ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command);
+
+/**
+ * Loads a dynamic library.
+ *
+ * @param libraryName A ReadOnlySpan<char> representing the name of the library to load.
+ * @return A pointer to the loaded library.
+ */
 void* SystemPlatformLoadLibrary(ReadOnlySpan<char> libraryName);
+
+/**
+ * Frees a loaded dynamic library.
+ *
+ * @param library A pointer to the library to free.
+ */
 void SystemPlatformFreeLibrary(const void* library);
+
+/**
+ * Retrieves a function export from a loaded library.
+ *
+ * @param library A pointer to the loaded library.
+ * @param functionName A ReadOnlySpan<char> representing the name of the function to retrieve.
+ * @return A pointer to the retrieved function.
+ */
 void* SystemPlatformGetFunctionExport(const void* library, ReadOnlySpan<char> functionName);
 
+/**
+ * Creates a new thread.
+ *
+ * @param threadFunction A pointer to the function that the thread will execute.
+ * @param parameters A pointer to the parameters to be passed to the thread function.
+ * @return A pointer to the created thread.
+ */
 void* SystemPlatformCreateThread(void* threadFunction, void* parameters);
+
+/**
+ * Waits for a thread to finish execution.
+ *
+ * @param thread A pointer to the thread to wait for.
+ */
+void SystemPlatformWaitThread(void* thread);
+
+/**
+ * Frees a thread.
+ *
+ * @param thread A pointer to the thread to free.
+ */
 void SystemPlatformFreeThread(void* thread);

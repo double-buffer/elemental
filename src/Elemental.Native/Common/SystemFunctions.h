@@ -265,15 +265,29 @@ typedef void (*SystemThreadFunction)(void* parameters);
 /**
  * Creates a system thread with the specified thread function and parameters.
  *
- * @param threadFunction The function to be executed by the created thread.
- * @param parameters The parameters to be passed to the thread function.
- * @return A SystemThread structure representing the created thread.
+ * This function initializes a new thread, setting up its execution context with the provided function and parameters.
+ *
+ * @param threadFunction The function to be executed by the created thread. This is a pointer to a function of type SystemThreadFunction.
+ * @param parameters A void pointer representing the parameters to be passed to the thread function.
+ * @return A SystemThread structure representing the created thread. This structure contains a handle to the new thread.
  */
 SystemThread SystemCreateThread(SystemThreadFunction threadFunction, void* parameters);
 
 /**
+ * Waits for the specified system thread to complete its execution.
+ *
+ * This function blocks the calling thread until the specified thread has finished executing. It should be used to synchronize the end of a thread's lifecycle.
+ *
+ * @param thread A SystemThread structure representing the thread to wait for. It should have been created using SystemCreateThread.
+ */
+void SystemWaitThread(SystemThread thread);
+
+/**
  * Frees the resources associated with the specified system thread.
  *
- * @param thread A SystemThread structure representing the thread to be freed.
+ * This function should be called after the thread has completed its execution or when it's no longer needed. It ensures that any resources allocated to the thread are properly released.
+ *
+ * @param thread A SystemThread structure representing the thread to be freed. This thread should have been created using SystemCreateThread.
  */
 void SystemFreeThread(SystemThread thread);
+

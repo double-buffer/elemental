@@ -2,7 +2,6 @@ add_executable(Elemental.Tests.NativeSystemFunctionsTests UnityBuild.cpp)
 
 target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -W4)
 target_compile_options(Elemental.Tests.NativeSystemFunctionsTests PRIVATE -Wno-unused-parameter)
-target_compile_features(Elemental.Tests.NativeSystemFunctionsTests PRIVATE cxx_std_20)
 
 target_link_libraries(Elemental.Tests.NativeSystemFunctionsTests PRIVATE common)
 target_link_libraries(Elemental.Tests.NativeSystemFunctionsTests PRIVATE external_dependencies)

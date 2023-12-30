@@ -48,6 +48,7 @@ void FreeMemoryArenaStorage(MemoryArenaStorage* storage)
     SystemPlatformFreeMemory(storage, sizeof(MemoryArenaStorage));
 }
 
+// TODO: We need to find a way to make all the memory functions thread safe
 ShrinkMemoryArenaStorageResult ShrinkMemoryArenaStorage(MemoryArenaStorage* storage, size_t sizeInBytes)
 {
     size_t newSizeInBytes = 0;

@@ -464,6 +464,11 @@ SystemThread SystemCreateThread(SystemThreadFunction threadFunction, void* param
     return { SystemPlatformCreateThread((void*)threadFunction, parameters) };
 }
 
+void SystemWaitThread(SystemThread thread)
+{
+    SystemPlatformWaitThread(thread.Handle);
+}
+
 void SystemFreeThread(SystemThread thread)
 {
     SystemPlatformFreeThread(thread.Handle);

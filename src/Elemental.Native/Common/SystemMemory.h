@@ -10,6 +10,8 @@
 //#define calloc(count, size) NOT_IMPLEMENTED(count, size)
 //#define free(pointer) NOT_IMPLEMENTED(pointer)
 
+//#define new NOT_IMPLEMENTED
+
 /**
  * Represents the storage structure for MemoryArena.
  */

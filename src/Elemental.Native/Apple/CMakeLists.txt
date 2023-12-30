@@ -1,7 +1,6 @@
 add_library(Elemental.Native SHARED UnityBuild.cpp)
 
 target_compile_options(Elemental.Native PRIVATE -Wall -fno-objc-arc)
-target_compile_features(Elemental.Native PRIVATE cxx_std_20)
 target_include_directories(Elemental.Native PRIVATE .)
 target_precompile_headers(Elemental.Native PRIVATE PreCompiledHeader.h)
 

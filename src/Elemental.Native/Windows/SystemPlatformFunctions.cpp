@@ -223,6 +223,22 @@ void* SystemPlatformCreateThread(void* threadFunction, void* parameters)
     return threadHandle;
 }
 
+void SystemPlatformWaitThread(void* thread)
+{
+    if (thread == nullptr)
+    {
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Invalid thread handle provided.");
+        return;
+    }
+
+    DWORD waitResult = WaitForSingleObject(thread, INFINITE);
+
+    if (waitResult != WAIT_OBJECT_0)
+    {
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Failed to wait on thread (Error code: %d)", GetLastError());
+    }
+}
+
 void SystemPlatformFreeThread(void* thread)
 {
     CloseHandle(thread);

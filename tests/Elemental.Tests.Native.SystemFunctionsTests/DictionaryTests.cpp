@@ -2,11 +2,39 @@
 #include "SystemFunctions.h"
 #include "utest.h"
 
+struct ThreadParameter
+{
+    SystemDictionary<int32_t, int32_t> Dictionary;
+    int32_t ThreadId;
+};
+
 struct TestStruct
 {
     int64_t Value1;
     int64_t Value2;
 };
+
+void ConcurrentAddFunction(void* parameter)
+{
+    auto threadParameter = (ThreadParameter*)parameter;
+    auto dictionary = threadParameter->Dictionary;
+
+    for (int32_t i = 0; i < 1000; i++)
+    {
+        SystemAddDictionaryEntry(dictionary, threadParameter->ThreadId * 1000 + i, i);
+    }
+}
+
+void ConcurrentRemoveFunction(void* parameter)
+{
+    auto threadParameter = (ThreadParameter*)parameter;
+    auto dictionary = threadParameter->Dictionary;
+
+    for (int32_t i = 0; i < 1000; i++)
+    {
+        SystemRemoveDictionaryEntry(dictionary, threadParameter->ThreadId * 1000 + i);
+    }
+}
 
 UTEST(Dictionary, AddValue) 
 {
@@ -19,7 +47,6 @@ UTEST(Dictionary, AddValue)
     {
         SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), i);
     }
-    
 
     // Assert
     auto testValue = dictionary["Test9"];
@@ -59,11 +86,23 @@ UTEST(Dictionary, RemoveValue)
     }    
     
     // Act
-    SystemRemoveDictionaryEntry(dictionary, "Test9");
+    SystemRemoveDictionaryEntry(dictionary, "Test6");
+    SystemDebugDictionary(dictionary);
 
     // Assert
-    auto testValue = dictionary["Test9"];
-    ASSERT_EQ(0, testValue);
+    for (int32_t i = 0; i < 10; i++)
+    {
+        auto testValue = dictionary[SystemFormatString(stackMemoryArena, "Test%d", i)];
+
+        if (i == 6)
+        {
+            ASSERT_EQ(0, testValue);
+        }
+        else 
+        {
+            ASSERT_EQ(i, testValue);
+        }
+    }   
 }
 
 UTEST(Dictionary, RemoveValue_KeyStruct) 
@@ -84,6 +123,9 @@ UTEST(Dictionary, RemoveValue_KeyStruct)
     auto testValue = dictionary[9];
     ASSERT_EQ(0, testValue);
 }
+
+// TODO: Add tests for ADD same key normal/concurrent
+// TODO: Add tests for REMOVE same key normal/concurrent 
 
 UTEST(Dictionary, GrowStorage) 
 {
@@ -135,6 +177,28 @@ UTEST(Dictionary, NotEnoughStorage)
     ASSERT_EQ(0, testValue);
 }
 
+UTEST(Dictionary, RemoveValuesAfterFull) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(stackMemoryArena, 24);
+
+    for (int32_t i = 0; i < 24; i++)
+    {
+        SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), i);
+    }
+
+    SystemRemoveDictionaryEntry(dictionary, "Test0");
+    
+    // Act
+    SystemAddDictionaryEntry(dictionary, "TestNew", 28);
+    SystemDebugDictionary(dictionary);
+
+    // Assert
+    auto testValue = dictionary["TestNew"];
+    ASSERT_EQ(28, testValue);
+}
+
 UTEST(Dictionary, BigDictionary) 
 {
     // Arrange
@@ -148,8 +212,84 @@ UTEST(Dictionary, BigDictionary)
     }
 
     // Assert
-    auto testValue = dictionary["Test9999"];
-    ASSERT_EQ(9999, testValue);
+    for (int32_t i = 0; i < 10000; i++)
+    {
+        auto testValue = dictionary[SystemFormatString(stackMemoryArena, "Test%d", i)];
+        ASSERT_EQ(i, testValue);
+    }
+}
+
+UTEST(Dictionary, ConcurrentAdd) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, 10000);
+    
+    // Act
+    SystemThread threads[10];
+
+    for (int32_t i = 0; i < 10; i++)
+    {
+        ThreadParameter parameter = { dictionary, i };
+        threads[i] = SystemCreateThread(ConcurrentAddFunction, &parameter);
+    }
+
+    for (int32_t i = 0; i < 10; i++)
+    {
+        SystemWaitThread(threads[i]);
+    }
+
+    // Assert
+    auto testEnumerator = SystemGetDictionaryEnumerator(dictionary);
+    auto count = 0;
+    auto testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
+
+    while (testValue != nullptr)
+    {
+        count++;
+        testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
+    }
+
+    ASSERT_EQ(10000, count);
+}
+
+UTEST(Dictionary, ConcurrentRemove) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, 10000);
+    
+    for (int32_t i = 0; i < 10000; i++)
+    {
+        SystemAddDictionaryEntry(dictionary, i, i);
+    }
+    
+    // Act
+    SystemThread threads[5];
+
+    for (int32_t i = 0; i < 5; i++)
+    {
+        ThreadParameter parameter = { dictionary, i };
+        threads[i] = SystemCreateThread(ConcurrentRemoveFunction, &parameter);
+        SystemWaitThread(threads[i]);
+    }
+
+    for (int32_t i = 0; i < 5; i++)
+    {
+    }
+
+    // Assert
+    auto testEnumerator = SystemGetDictionaryEnumerator(dictionary);
+    auto count = 0;
+    auto testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
+
+    while (testValue != nullptr)
+    {
+        count++;
+        testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
+    }
+
+    ASSERT_EQ(5000, count);
 }
 
 UTEST(Dictionary, ContainsKey) 

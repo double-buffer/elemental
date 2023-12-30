@@ -2,7 +2,6 @@ add_library(Elemental.Tools.Native SHARED UnityBuild.cpp)
 
 target_compile_options(Elemental.Tools.Native PRIVATE -W4)
 target_compile_options(Elemental.Tools.Native PRIVATE -Wno-unused-parameter)
-target_compile_features(Elemental.Tools.Native PRIVATE cxx_std_20)
 target_precompile_headers(Elemental.Tools.Native PRIVATE PreCompiledHeader.h)
 
 target_link_libraries(Elemental.Tools.Native PRIVATE common)
