@@ -5,11 +5,16 @@
 #include "MetalSwapChain.h"
 #include "MetalTexture.h"
 
+#include "SystemMemory.h"
+
+MemoryArena* metalMemoryArena;
+
 static NS::SharedPtr<MTL::SharedEventListener> _sharedEventListener;
 
 DllExport void Native_InitGraphicsService(GraphicsServiceOptions* options)
 {
     _sharedEventListener = NS::TransferPtr(MTL::SharedEventListener::alloc()->init());
+    metalMemoryArena = SystemAllocateMemoryArena();
 }
 
 DllExport void Native_FreeGraphicsService()
@@ -99,13 +104,22 @@ DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
 
     auto graphicsDevice = new MetalGraphicsDevice();
     graphicsDevice->MetalDevice = metalDevice; 
+    graphicsDevice->PipelineStates = SystemCreateDictionary<uint64_t, MetalPipelineStateCacheItem>(metalMemoryArena, 1024);
     return graphicsDevice;
 }
 
 DllExport void Native_FreeGraphicsDevice(void* graphicsDevicePointer)
 {
     auto graphicsDevice = (MetalGraphicsDevice*)graphicsDevicePointer;
-    graphicsDevice->PipelineStates.EnumerateEntries(MetalDeletePipelineCacheItem);
+    auto cacheEnumerator = SystemGetDictionaryEnumerator(graphicsDevice->PipelineStates);
+    auto cacheEnumItem = SystemGetDictionaryEnumeratorNextValue(&cacheEnumerator);
+    
+    while (cacheEnumItem != nullptr)
+    {
+        cacheEnumItem->PipelineState.reset();
+        cacheEnumItem = SystemGetDictionaryEnumeratorNextValue(&cacheEnumerator);
+    }
+
     delete graphicsDevice;
 }
 
@@ -606,14 +620,14 @@ DllExport void Native_SetShader(void* commandListPointer, void* shaderPointer)
         // TODO: This method is not thread-safe!
         auto hash = ComputeRenderPipelineStateHash(shader, &commandList->CurrentRenderPassDescriptor);
 
-        if (!graphicsDevice->PipelineStates.ContainsKey(hash))
+        if (!SystemDictionaryContainsKey(graphicsDevice->PipelineStates, hash))
         {
             printf("Create PipelineState for shader %llu...\n", hash);
             auto pipelineState = CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
-            graphicsDevice->PipelineStates.Add(hash, pipelineState);
+            SystemAddDictionaryEntry(graphicsDevice->PipelineStates, hash, pipelineState);
         }
 
-        auto pipelineState = graphicsDevice->PipelineStates[hash]->PipelineState;
+        auto pipelineState = graphicsDevice->PipelineStates[hash].PipelineState;
         auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandList->CommandEncoder.get();
         renderCommandEncoder->setRenderPipelineState(pipelineState.get());
 
@@ -777,7 +791,7 @@ uint64_t ComputeRenderPipelineStateHash(MetalShader* shader, RenderPassDescripto
     return (uint64_t)shader;
 }
 
-MetalPipelineStateCacheItem* CreateRenderPipelineState(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor)
+MetalPipelineStateCacheItem CreateRenderPipelineState(MetalShader* shader, RenderPassDescriptor* renderPassDescriptor)
 {
     auto pipelineStateDescriptor = NS::TransferPtr(MTL::MeshRenderPipelineDescriptor::alloc()->init());
 
@@ -838,10 +852,12 @@ MetalPipelineStateCacheItem* CreateRenderPipelineState(MetalShader* shader, Rend
         initBlendState(pipelineStateDescriptor.colorAttachments[3]!, metalRenderPassDescriptor.RenderTarget4BlendOperation.Value)
     }*/
     
+    // TODO: Review this!
     auto dispatchGroup = dispatch_group_create();
     dispatch_group_enter(dispatchGroup);
 
-    auto result = new MetalPipelineStateCacheItem();
+    auto result = MetalPipelineStateCacheItem();
+    auto tmp = &result;
 
     shader->GraphicsDevice->MetalDevice->newRenderPipelineState(pipelineStateDescriptor.get(), MTL::PipelineOptionNone, ^(MTL::RenderPipelineState* metalPipelineStatePointer, MTL::RenderPipelineReflection* reflectionPointer, NS::Error* errorPointer)
     {
@@ -853,17 +869,11 @@ MetalPipelineStateCacheItem* CreateRenderPipelineState(MetalShader* shader, Rend
             return;
         }
     
-        result->PipelineState = NS::RetainPtr(metalPipelineStatePointer);
+        tmp->PipelineState = NS::RetainPtr(metalPipelineStatePointer);
         dispatch_group_leave(dispatchGroup);
     });
 
     dispatch_group_wait(dispatchGroup, DISPATCH_TIME_FOREVER);
         
     return result;
-}
-
-void MetalDeletePipelineCacheItem(uint64_t key, void* data)
-{
-    auto cacheItem = (MetalPipelineStateCacheItem*)data;
-    delete cacheItem;
 }
