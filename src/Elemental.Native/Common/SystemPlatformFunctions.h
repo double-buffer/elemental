@@ -165,6 +165,15 @@ void* SystemPlatformCreateThread(void* threadFunction, void* parameters);
 void SystemPlatformWaitThread(void* thread);
 
 /**
+ * Yields execution of the current thread to another thread.
+ *
+ * This function allows the current thread to offer its remaining execution time slice to another thread that is ready to run on the same processor.
+ * It's a beneficial approach in a multi-threaded environment to optimize resource usage, especially useful when the current thread has no immediate work to perform.
+ * By yielding, the thread can help reduce CPU usage, avoiding unnecessary occupation of processor time when it is essentially idle or in a waiting state.
+ */
+void SystemPlatformYieldThread();
+
+/**
  * Frees a thread.
  *
  * @param thread A pointer to the thread to free.

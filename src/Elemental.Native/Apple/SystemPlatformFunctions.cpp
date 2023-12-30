@@ -3,6 +3,23 @@
 
 #include <time.h> // TODO: To review
 #define MAX_PATH 255
+#define MAX_THREADS 10  // Maximum number of threads
+
+enum ThreadStatus
+{
+    THREAD_STATUS_RUNNING,
+    THREAD_STATUS_FINISHED
+};
+
+struct ThreadInfo
+{
+    pthread_t thread;
+    ThreadStatus status;
+    bool isUsed;
+};
+
+static ThreadInfo threadArray[MAX_THREADS];
+static bool isInitialized = false;
 
 SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena)
 {
@@ -220,21 +237,81 @@ void* SystemPlatformGetFunctionExport(const void* library, ReadOnlySpan<char> fu
     return dlsym((void*)library, functionName.Pointer);
 }
 
-void* SystemPlatformCreateThread(void* threadFunction, void* parameters)
+static void initializeThreadArray() 
 {
-    pthread_t thread;
-    auto result = pthread_create(&thread, nullptr, (void* (*)(void*))threadFunction, parameters);
-
-    if (result != 0) 
+    if (!isInitialized) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot create thread (Error code: %d)", result);
+        for (int32_t i = 0; i < MAX_THREADS; ++i) 
+        {
+            threadArray[i].isUsed = false;
+            threadArray[i].status = THREAD_STATUS_FINISHED;
+        }
+
+        isInitialized = true;
+    }
+}
+
+void* SystemPlatformCreateThread(void* threadFunction, void* parameters) 
+{
+    // Initialize the thread array on first use
+    initializeThreadArray();
+
+    pthread_t thread;
+    int32_t i;
+
+    // Find an unused thread slot
+    for (i = 0; i < MAX_THREADS; i++) 
+    {
+        if (!threadArray[i].isUsed) 
+        {
+            break;
+        }
+    }
+
+    if (i == MAX_THREADS) 
+    {
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Maximum thread limit reached");
         return nullptr;
     }
 
-    pthread_detach(thread);
-    return *(void**)(&thread);
+    if (pthread_create(&thread, NULL, (void* (*)(void*))threadFunction, parameters) != 0) 
+    {
+        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot create thread");
+        return nullptr;
+    }
+
+    // Store thread information
+    threadArray[i].thread = thread;
+    threadArray[i].status = THREAD_STATUS_RUNNING;
+    threadArray[i].isUsed = true;
+
+    return (void*)&threadArray[i];
 }
 
-void SystemPlatformFreeThread(void* thread)
+
+void SystemPlatformWaitThread(void* thread) 
 {
+    auto threadInfo = (ThreadInfo*)thread;
+
+    if (threadInfo && threadInfo->isUsed) 
+    {
+        pthread_join(threadInfo->thread, NULL);
+        threadInfo->status = THREAD_STATUS_FINISHED;
+    }
+}
+
+void SystemPlatformYieldThread()
+{
+    sched_yield(); 
+}
+
+void SystemPlatformFreeThread(void* thread) 
+{
+    auto threadInfo = (ThreadInfo*)thread;
+
+    if (threadInfo && threadInfo->isUsed) 
+    {
+        threadInfo->isUsed = false;
+        threadInfo->status = THREAD_STATUS_FINISHED;
+    }
 }

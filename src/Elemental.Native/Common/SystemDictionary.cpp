@@ -400,8 +400,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
             waitCount++;
             expected = false;
             
-            // TODO: Extract platform specific
-            Sleep(0);
+            SystemPlatformYieldThread();
         }
             
         printf("WAIT count: %d\n", waitCount);
@@ -473,7 +472,6 @@ void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, Syste
 
     if (entryIndex.Index != SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
-        // TODO: In order to make it atomic all the 2 cases need to be part of the while loop where we try to replace everything at once
         auto entry = SystemGetDictionaryEntryByIndex(storage, entryIndex.Index);
         //auto nextEntry = entry->Next;
 
