@@ -3,7 +3,7 @@
 
 #include <time.h> // TODO: To review
 #define MAX_PATH 255
-#define MAX_THREADS 10  // Maximum number of threads
+#define MAX_THREADS 64  // Maximum number of threads
 
 enum ThreadStatus
 {
