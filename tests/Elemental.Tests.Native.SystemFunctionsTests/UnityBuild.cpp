@@ -14,4 +14,19 @@
 #include "LibraryProcessTests.cpp"
 #include "DictionaryTests.cpp"
 
-UTEST_MAIN();
+#ifdef _DEBUG
+void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, const char* function, const char* message)
+{
+    printf("%s: %s\n", function, message);
+}
+#endif
+
+UTEST_STATE();
+
+int main(int argc, const char *const argv[]) 
+{
+    #ifdef _DEBUG
+    SystemRegisterLogMessageHandler(LogMessageHandler);
+    #endif
+    return utest_main(argc, argv);
+}

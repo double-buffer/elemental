@@ -239,6 +239,11 @@ void SystemPlatformWaitThread(void* thread)
     }
 }
 
+void SystemPlatformYieldThread()
+{
+    Sleep(0); 
+}
+
 void SystemPlatformFreeThread(void* thread)
 {
     CloseHandle(thread);

@@ -60,6 +60,7 @@ struct SystemDictionaryIndexInfo
 {
     int32_t BucketIndex;
     SystemDictionaryEntryIndex RootIndex;
+    SystemDictionaryEntryIndex ParentIndex;
     SystemDictionaryEntryIndex Index;
 };
 
@@ -394,24 +395,17 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
     if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
     {
         auto expected = false;
-        int32_t waitCount = 0;
         while (!__atomic_compare_exchange_n(&storage->IsPartitionBeingCreated, &expected, true, true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE))
         {
-            waitCount++;
             expected = false;
-            
             SystemPlatformYieldThread();
         }
             
-        printf("WAIT count: %d\n", waitCount);
-
         size_t currentPartitionIndex;
         __atomic_load(&storage->CurrentPartitionIndex, &currentPartitionIndex, __ATOMIC_ACQUIRE);
 
         if (currentPartitionIndex == partitionIndex)
         {
-            printf("Creating Partition\n");
-
             if ((storage->CurrentPartitionIndex + 1) == 2) // TODO: Remove hardcoded value
             {
                 SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
@@ -439,6 +433,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
     SystemDictionaryEntryIndex bucketHead;
     __atomic_load(&storage->Buckets[hashInfo.BucketIndex].CombinedIndex, &bucketHead.CombinedIndex, __ATOMIC_ACQUIRE);
 
+    // TODO: Convert this to a while struct and use yield?
     do
     {
         if (bucketHead != SYSTEM_DICTIONARY_INDEX_EMPTY)
@@ -468,24 +463,40 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
 template<typename TValue>
 void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
-    auto entryIndex = SystemGetDictionaryEntryIndexInfo(storage, hashInfo);
+    SystemDictionaryIndexInfo entryIndex = {};
+    SystemDictionaryEntry<TValue>* entry = nullptr;
+    SystemDictionaryEntryIndex* parentNextEntryIndex = nullptr;
 
-    if (entryIndex.Index != SYSTEM_DICTIONARY_INDEX_EMPTY)
+    // TODO: Convert this to a while struct and use yield?
+    do
     {
-        auto entry = SystemGetDictionaryEntryByIndex(storage, entryIndex.Index);
-        //auto nextEntry = entry->Next;
+        entryIndex = SystemGetDictionaryEntryIndexInfo(storage, hashInfo);
+
+        if (entryIndex.Index == SYSTEM_DICTIONARY_INDEX_EMPTY)
+        {
+            printf("No result found\n");
+            return;
+        }
+
+        entry = SystemGetDictionaryEntryByIndex(storage, entryIndex.Index);
 
         if (entryIndex.RootIndex != entryIndex.Index)
         {
-            printf("Remove with parent\n");
-            //auto parentEntry = SystemGetDictionaryEntryByIndex(storage, entryIndex.ParentIndex);
-            //parentEntry->Next = nextEntry;
+            auto parentEntry = SystemGetDictionaryEntryByIndex(storage, entryIndex.ParentIndex);
+            parentNextEntryIndex = &parentEntry->Next;
+        }
+        else 
+        {
+            parentNextEntryIndex = &storage->Buckets[hashInfo.BucketIndex];
         }
 
-        entry->Hash = 0;
-        entry->Value = {};
-        SystemInsertFreeListEntry(storage, entryIndex.Index, entry);
+        SystemPlatformYieldThread();
     }
+    while (!__atomic_compare_exchange_n(&parentNextEntryIndex->CombinedIndex, &entryIndex.Index.CombinedIndex, entry->Next.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+
+    entry->Hash = 0;
+    entry->Value = {};
+    SystemInsertFreeListEntry(storage, entryIndex.Index, entry);
 }
 
 template<typename TValue>
@@ -537,6 +548,7 @@ SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionaryStor
     __atomic_load(&storage->Buckets[hashInfo.BucketIndex].CombinedIndex, &currentIndex.CombinedIndex, __ATOMIC_ACQUIRE);
 
     auto rootIndex = currentIndex;
+    auto parentIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
 
     while (currentIndex != SYSTEM_DICTIONARY_INDEX_EMPTY) 
     {
@@ -547,15 +559,17 @@ SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionaryStor
             SystemDictionaryIndexInfo result = {};
             result.BucketIndex = hashInfo.BucketIndex;
             result.RootIndex = rootIndex;
+            result.ParentIndex = parentIndex;
             result.Index = currentIndex;
 
             return result;
         }
 
+        parentIndex = currentIndex;
         __atomic_load(&currentEntry->Next.CombinedIndex, &currentIndex.CombinedIndex, __ATOMIC_ACQUIRE);
     }
 
-    return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY };
+    return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY };
 }
 
 // TODO: Check thread safe?
