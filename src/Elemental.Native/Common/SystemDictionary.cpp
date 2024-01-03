@@ -406,6 +406,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
 
         if (currentPartitionIndex == partitionIndex)
         {
+            // BUG: Bug of random test fealures for concurrent add is caused here
             if ((storage->CurrentPartitionIndex + 1) == 2) // TODO: Remove hardcoded value
             {
                 SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");

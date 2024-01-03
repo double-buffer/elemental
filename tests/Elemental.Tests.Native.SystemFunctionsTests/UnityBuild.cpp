@@ -17,7 +17,20 @@
 #ifdef _DEBUG
 void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, const char* function, const char* message)
 {
-    printf("%s: %s\n", function, message);
+    if (messageType == LogMessageType_Error)
+    {
+        printf("\033[31mERROR: ");
+    }
+    else if (messageType == LogMessageType_Warning)
+    {
+        printf("\033[33mWARNING: ");
+    }
+    else if (messageType == LogMessageType_Debug)
+    {
+        printf("\033[36mDEBUG: ");
+    }
+
+    printf("%s: %s\n\033[0m", function, message);
 }
 #endif
 

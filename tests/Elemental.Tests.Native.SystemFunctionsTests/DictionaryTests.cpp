@@ -250,22 +250,25 @@ UTEST(Dictionary, BigDictionary)
 
 UTEST(Dictionary, ConcurrentAdd) 
 {
+    // TODO: Debug memory bug when more than 80000
+
     // Arrange
     const int32_t itemCount = 80000;
+    const int32_t threadCount = 32;
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, itemCount);
     
     // Act
-    SystemThread threads[10];
-    ThreadParameter threadParameters[10];
+    SystemThread threads[threadCount];
+    ThreadParameter threadParameters[threadCount];
 
-    for (int32_t i = 0; i < 10; i++)
+    for (int32_t i = 0; i < threadCount; i++)
     {
-        threadParameters[i] = { dictionary, i, itemCount / 10 };
+        threadParameters[i] = { dictionary, i, itemCount / threadCount };
         threads[i] = SystemCreateThread(ConcurrentAddFunction, &threadParameters[i]);
     }
 
-    for (int32_t i = 0; i < 10; i++)
+    for (int32_t i = 0; i < threadCount; i++)
     {
         SystemWaitThread(threads[i]);
     }
