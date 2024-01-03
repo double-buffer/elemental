@@ -271,6 +271,7 @@ UTEST(Dictionary, ConcurrentAdd)
     for (int32_t i = 0; i < threadCount; i++)
     {
         SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
     }
 
     // Assert
@@ -291,6 +292,7 @@ UTEST(Dictionary, ConcurrentRemove)
 {
     // Arrange
     const int32_t itemCount = 10000;
+    const int32_t threadCount = 5;
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, itemCount);
     
@@ -300,18 +302,19 @@ UTEST(Dictionary, ConcurrentRemove)
     }
     
     // Act
-    SystemThread threads[5];
-    ThreadParameter threadParameters[5];
+    SystemThread threads[threadCount];
+    ThreadParameter threadParameters[threadCount];
 
-    for (int32_t i = 0; i < 5; i++)
+    for (int32_t i = 0; i < threadCount; i++)
     {
-        threadParameters[i] = { dictionary, i, (itemCount / 2) / 5 };
+        threadParameters[i] = { dictionary, i, (itemCount / 2) / threadCount };
         threads[i] = SystemCreateThread(ConcurrentRemoveFunction, &threadParameters[i]);
     }
 
-    for (int32_t i = 0; i < 5; i++)
+    for (int32_t i = 0; i < threadCount; i++)
     {
         SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
     }
 
     // Assert

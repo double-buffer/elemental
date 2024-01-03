@@ -282,6 +282,8 @@ SystemThread SystemCreateThread(SystemThreadFunction threadFunction, void* param
  */
 void SystemWaitThread(SystemThread thread);
 
+void SystemYieldThread();
+
 /**
  * Frees the resources associated with the specified system thread.
  *

@@ -469,6 +469,11 @@ void SystemWaitThread(SystemThread thread)
     SystemPlatformWaitThread(thread.Handle);
 }
 
+void SystemYieldThread()
+{
+    SystemPlatformYieldThread();
+}
+
 void SystemFreeThread(SystemThread thread)
 {
     SystemPlatformFreeThread(thread.Handle);

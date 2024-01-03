@@ -1,4 +1,5 @@
 #include "SystemDictionary.h"
+#include "SystemFunctions.h"
 #include "SystemLogging.h"
 
 #define SYSTEM_DICTIONARY_HASH_SEED 123456789
@@ -398,7 +399,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
         while (!__atomic_compare_exchange_n(&storage->IsPartitionBeingCreated, &expected, true, true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE))
         {
             expected = false;
-            SystemPlatformYieldThread();
+            SystemYieldThread();
         }
             
         size_t currentPartitionIndex;
@@ -491,7 +492,7 @@ void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, Syste
             parentNextEntryIndex = &storage->Buckets[hashInfo.BucketIndex];
         }
 
-        SystemPlatformYieldThread();
+        SystemYieldThread();
     }
     while (!__atomic_compare_exchange_n(&parentNextEntryIndex->CombinedIndex, &entryIndex.Index.CombinedIndex, entry->Next.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 
