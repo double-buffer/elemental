@@ -22,7 +22,7 @@ void ConcurrentAddFunction(void* parameter)
 
     for (int32_t i = 0; i < threadParameter->ItemCount; i++)
     {
-        SystemAddDictionaryEntry(dictionary, threadParameter->ThreadId * threadParameter->ItemCount + i, i);
+        SystemAddDictionaryEntry(dictionary, threadParameter->ThreadId * threadParameter->ItemCount + i, threadParameter->ThreadId * threadParameter->ItemCount + i);
     }
 }
 
@@ -292,7 +292,7 @@ UTEST(Dictionary, ConcurrentRemove)
 {
     // Arrange
     const int32_t itemCount = 10000;
-    const int32_t threadCount = 5;
+    const int32_t threadCount = 20;
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, itemCount);
     

@@ -391,7 +391,6 @@ template<typename TValue>
 void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo, TValue value)
 {
     auto entryIndex = SystemGetFreeListEntry(storage); 
-    size_t partitionIndex = *(volatile size_t*)&storage->CurrentPartitionIndex;
 
     if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
     {
@@ -402,12 +401,10 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
             SystemYieldThread();
         }
             
-        size_t currentPartitionIndex;
-        __atomic_load(&storage->CurrentPartitionIndex, &currentPartitionIndex, __ATOMIC_ACQUIRE);
+        entryIndex = SystemGetFreeListEntry(storage);
 
-        if (currentPartitionIndex == partitionIndex)
+        if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
         {
-            // BUG: Bug of random test fealures for concurrent add is caused here
             if ((storage->CurrentPartitionIndex + 1) == 2) // TODO: Remove hardcoded value
             {
                 SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
@@ -422,11 +419,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
 
             entryIndex = SystemCreateDictionaryEntryIndex(storage->CurrentPartitionIndex, 0);
         }
-        else 
-        {
-            entryIndex = SystemGetFreeListEntry(storage);
-        }
-            
+
         __atomic_store_n(&storage->IsPartitionBeingCreated, false, __ATOMIC_RELEASE);
     }
     
@@ -465,6 +458,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
 template<typename TValue>
 void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
+    // BUG: There seems sometimes we have some bug when one is not found
     SystemDictionaryIndexInfo entryIndex = {};
     SystemDictionaryEntry<TValue>* entry = nullptr;
     SystemDictionaryEntryIndex* parentNextEntryIndex = nullptr;
