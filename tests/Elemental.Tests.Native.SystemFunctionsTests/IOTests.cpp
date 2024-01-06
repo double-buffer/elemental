@@ -11,7 +11,9 @@ UTEST(IOFunctions, GeneralIO)
     auto fileName = SystemGenerateTempFilename(stackMemoryArena, "TestFile");
     SystemFileWriteBytes(fileName, Span<uint8_t>((uint8_t*)fileContent.Pointer, fileContent.Length + 1));
     auto fileExists = SystemFileExists(fileName);
+    printf("Test: %s, %llu\n", fileName.Pointer, stackMemoryArena.MemoryArenaPointer->AllocatedBytes);
     auto result = SystemFileReadBytes(stackMemoryArena, fileName);
+    printf("Test: %s, %llu\n", fileName.Pointer, stackMemoryArena.MemoryArenaPointer->AllocatedBytes);
     SystemFileDelete(fileName);
     auto fileExistsAfterDelete = SystemFileExists(fileName);
 

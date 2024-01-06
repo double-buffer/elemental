@@ -63,6 +63,19 @@ T SystemAbs(T value);
 template<typename T>
 T SystemMax(T value1, T value2);
 
+/**
+ * Returns the minimum of two given values.
+ *
+ * This template function compares two values of the same type and returns the lesser one.
+ *
+ * @tparam T The type of the input values. Must support the '<' operator.
+ * @param value1 The first input value.
+ * @param value2 The second input value.
+ * @return The lesser of the two input values. The return type is the same as the input types.
+ */
+template<typename T>
+T SystemMin(T value1, T value2);
+
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------

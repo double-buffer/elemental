@@ -23,19 +23,23 @@ struct MemoryArenaStorage;
 struct MemoryArena
 {
     MemoryArenaStorage* Storage;    ///< Pointer to the storage structure.
-    size_t StartOffset;             ///< Starting offset of the allocated memory.
     size_t AllocatedBytes;          ///< Total bytes currently allocated.
     size_t SizeInBytes;             ///< Total size of the memory arena.
     uint8_t Level;                  ///< Memory arena level.
     MemoryArena* ExtraStorage;      ///< Pointer to extra memory storage.
+    uint8_t MinAllocatedLevel;
 };
 
+#include <stdio.h>
 /**
  * Represents a stack-based memory arena.
  */
 struct StackMemoryArena
 {
     MemoryArena* MemoryArenaPointer; ///< Pointer to the associated MemoryArena.
+    uint8_t Level; ///< Current stack level
+    size_t StartOffsetInBytes;
+    size_t StartExtraOffsetInBytes;
 
     /**
      * Destructor for StackMemoryArena.
@@ -48,6 +52,8 @@ struct StackMemoryArena
      */
     operator MemoryArena*() const 
     {
+        MemoryArenaPointer->Level = Level;
+        printf("STACK to MEMORY Level: %d\n", MemoryArenaPointer->Level);
         return MemoryArenaPointer;
     }
 };

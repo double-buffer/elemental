@@ -34,6 +34,12 @@ T SystemMax(T value1, T value2)
     return (value1 > value2) ? value1 : value2;
 }
 
+template<typename T>
+T SystemMin(T value1, T value2)
+{
+    return (value1 < value2) ? value1 : value2;
+}
+
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------

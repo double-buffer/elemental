@@ -20,14 +20,13 @@ struct ShrinkMemoryArenaStorageResult
     size_t NewSizeInBytes;
 };
 
-thread_local MemoryArenaStorage* stackMemoryArenaStorage = nullptr;
-thread_local MemoryArenaStorage* stackMemoryArenaExtraStorage = nullptr;
+thread_local MemoryArena* stackMemoryArena = nullptr;
 
-void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena);
+void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena, size_t startOffsetInBytes, size_t startExtraOffsetInBytes);
 
 StackMemoryArena::~StackMemoryArena()
 {
-    SystemReleaseStackMemoryArena(MemoryArenaPointer);
+    SystemReleaseStackMemoryArena(MemoryArenaPointer, StartOffsetInBytes, StartExtraOffsetInBytes);
 }
 
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
@@ -91,15 +90,15 @@ ShrinkMemoryArenaStorageResult ShrinkMemoryArenaStorage(MemoryArenaStorage* stor
     return result;
 }
 
-MemoryArena* AllocateMemoryArena(MemoryArenaStorage* storage, size_t startOffset, uint8_t level)
+MemoryArena* AllocateMemoryArena(MemoryArenaStorage* storage)
 {
     auto result = (MemoryArena*)SystemPlatformAllocateMemory(sizeof(MemoryArena));
     result->Storage = storage;
-    result->StartOffset = startOffset;
     result->AllocatedBytes = 0;
     result->SizeInBytes = storage->Memory.Length;
-    result->Level = level;
+    result->Level = 0;
     result->ExtraStorage = nullptr;
+    result->MinAllocatedLevel = 255;
 
     return result;
 }
@@ -112,7 +111,7 @@ MemoryArena* SystemAllocateMemoryArena()
 MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes)
 {
     auto storage = AllocateMemoryArenaStorage(sizeInBytes);
-    return AllocateMemoryArena(storage, 0, 0);
+    return AllocateMemoryArena(storage);
 }
 
 void SystemFreeMemoryArena(MemoryArena* memoryArena)
@@ -131,28 +130,40 @@ size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena* memoryArena)
     return memoryArena->AllocatedBytes;
 }
 
+#include <stdio.h>
 StackMemoryArena SystemGetStackMemoryArena()
 {
-    if (stackMemoryArenaStorage == nullptr)
+    if (stackMemoryArena == nullptr)
     {
-        stackMemoryArenaStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
-        stackMemoryArenaExtraStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
+        auto stackMemoryArenaStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
+        stackMemoryArena = AllocateMemoryArena(stackMemoryArenaStorage);
     }
+    
+    stackMemoryArena->Storage->Level++;
+    auto extraStorageAllocatedBytes = 0llu;
 
-    return { AllocateMemoryArena(stackMemoryArenaStorage, stackMemoryArenaStorage->AllocatedBytes, ++stackMemoryArenaStorage->Level)  };
-}
-
-void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena)
-{
     if (stackMemoryArena->ExtraStorage != nullptr)
     {
-        SystemPopMemory(stackMemoryArena->ExtraStorage, stackMemoryArena->ExtraStorage->AllocatedBytes);
-        SystemPlatformFreeMemory(stackMemoryArena->ExtraStorage, sizeof(MemoryArena));
+        extraStorageAllocatedBytes = stackMemoryArena->ExtraStorage->AllocatedBytes;
+    }
+    printf("Stack ARENA %llu: %llu %d\n", stackMemoryArena, stackMemoryArena->AllocatedBytes, stackMemoryArena->Storage->Level);
+    return { stackMemoryArena, stackMemoryArena->Storage->Level, stackMemoryArena->AllocatedBytes, extraStorageAllocatedBytes };
+}
+
+void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena, size_t startOffsetInBytes, size_t startExtraOffsetInBytes)
+{
+    printf("Release STACK: ExtraMinLevel=%d, CurrentLevel=%d\n", stackMemoryArena->MinAllocatedLevel, stackMemoryArena->Level);
+    if (stackMemoryArena->ExtraStorage != nullptr)
+    {
+        if (stackMemoryArena->ExtraStorage->AllocatedBytes > 0 && stackMemoryArena->MinAllocatedLevel >= stackMemoryArena->Level)
+        {
+            SystemPopMemory(stackMemoryArena->ExtraStorage, stackMemoryArena->ExtraStorage->AllocatedBytes - startExtraOffsetInBytes);
+            stackMemoryArena->MinAllocatedLevel = 255;
+        } 
     }
 
-    stackMemoryArenaStorage->Level--;
-    SystemPopMemory(stackMemoryArena, stackMemoryArena->AllocatedBytes);
-    SystemPlatformFreeMemory(stackMemoryArena, sizeof(MemoryArena));
+    stackMemoryArena->Storage->Level--;
+    SystemPopMemory(stackMemoryArena, stackMemoryArena->AllocatedBytes - startOffsetInBytes);
 }
 
 // TODO: Do we need to align memory?
@@ -160,31 +171,39 @@ void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 {
     MemoryArena* workingMemoryArena = memoryArena;
 
-    if (memoryArena->Level !=  memoryArena->Storage->Level)
+    if (memoryArena->Level != memoryArena->Storage->Level)
     {
         if (memoryArena->ExtraStorage == nullptr)
         {
-            memoryArena->ExtraStorage = AllocateMemoryArena(stackMemoryArenaExtraStorage, stackMemoryArenaExtraStorage->AllocatedBytes, 0);
+            auto stackMemoryArenaExtraStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
+            memoryArena->ExtraStorage = AllocateMemoryArena(stackMemoryArenaExtraStorage);
         }
 
         workingMemoryArena = memoryArena->ExtraStorage;
+
+        printf("CurrentExtraLevel: %d (Storage: %d)\n", memoryArena->Level, memoryArena->Storage->Level);
+        memoryArena->MinAllocatedLevel = SystemMin(memoryArena->MinAllocatedLevel, memoryArena->Level);
     }
 
     auto storage = workingMemoryArena->Storage;
 
+    printf("Push %llu: %llu => %llu\n", sizeInBytes, workingMemoryArena, workingMemoryArena->AllocatedBytes);
+
     if (workingMemoryArena->Storage->AllocatedBytes + sizeInBytes > storage->Memory.Length)
     {
         auto oldSizeInBytes = workingMemoryArena->SizeInBytes;
+        auto oldLevel = storage->Level;
         auto newStorageSize = SystemRoundUpToPowerOf2(SystemMax(workingMemoryArena->SizeInBytes, sizeInBytes)); 
         workingMemoryArena->SizeInBytes += newStorageSize;
         workingMemoryArena->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
         storage->AllocatedBytes = storage->Memory.Length;
 
-        SystemLogDebugMessage(LogMessageCategory_Memory, "Resizing MemoryArena to %u (Previous size was: %u) -> SizeInBytes: %u", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
-
         storage = AllocateMemoryArenaStorage(newStorageSize);
+        storage->Level = oldLevel; 
         storage->Next = workingMemoryArena->Storage;
         workingMemoryArena->Storage = storage;
+       
+        SystemLogDebugMessage(LogMessageCategory_Memory, "Resizing MemoryArena to %u (Previous size was: %u) -> SizeInBytes: %u", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
     }
 
     auto result = storage->Memory.Pointer + storage->AllocatedBytes;
@@ -201,6 +220,8 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
         SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", sizeInBytes, memoryArena->AllocatedBytes);
         return;
     }
+    
+    printf("Pop %llu: %llu => %llu\n", sizeInBytes, memoryArena, memoryArena->AllocatedBytes);
 
     auto shrinkResult = ShrinkMemoryArenaStorage(memoryArena->Storage, sizeInBytes);
     assert(shrinkResult.Storage);
@@ -212,7 +233,7 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
 
     if (shrinkResult.StoragesDeleted > 0)
     {
-        SystemLogDebugMessage(LogMessageCategory_Memory, "Shrinking MemoryArena storage to %u (New size: %u, Previous size was: %u) -> Deleted Memory Storages: %d, Allocated Bytes: %u", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, shrinkResult.StoragesDeleted, memoryArena->AllocatedBytes);
+        SystemLogDebugMessage(LogMessageCategory_Memory, "Shrinking MemoryArena storage by popping %u (New size: %u, Previous size was: %u) -> Deleted Memory Storages: %d, Allocated Bytes: %u", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, shrinkResult.StoragesDeleted, memoryArena->AllocatedBytes);
     }
 }
 
