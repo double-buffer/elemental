@@ -21,7 +21,7 @@ struct ThreadInfo
 static ThreadInfo threadArray[MAX_THREADS];
 static bool isInitialized = false;
 
-SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena)
+SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
 {
     auto result = SystemPushStruct<SystemPlatformEnvironment>(memoryArena);
     
@@ -30,7 +30,7 @@ SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena
     return result;
 }
 
-SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena* memoryArena)
+SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena)
 {
     time_t currentTime;
     time(&currentTime);
@@ -89,7 +89,7 @@ void SystemPlatformCopyMemory(void* destination, const void* source, size_t size
     memcpy(destination, source, sizeInBytes);
 }
 
-ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena* memoryArena)
+ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena memoryArena)
 {
     auto path = (ReadOnlySpan<char>)NS::Bundle::mainBundle()->executablePath()->utf8String();
     auto result = SystemPushArrayZero<char>(memoryArena, path.Length);
@@ -164,7 +164,7 @@ void SystemPlatformFileDelete(ReadOnlySpan<char> path)
     }
 }
 
-ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
+ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnlySpan<char> command)
 {
     // TODO: To review
     auto stackMemoryArena = SystemGetStackMemoryArena();

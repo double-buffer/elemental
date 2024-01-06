@@ -89,7 +89,7 @@ T SystemMin(T value1, T value2);
  * @return A read-only span containing the converted string.
  */
 template<typename T>
-ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value);
+ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena memoryArena, T value);
 
 /**
  * Converts a double value to a string using the provided memory arena.
@@ -98,7 +98,7 @@ ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value
  * @param value The input value.
  * @return A read-only span containing the converted string.
  */
-ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double value);
+ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena memoryArena, double value);
 
 /**
  * Formats a string using the provided memory arena and format specifier.
@@ -108,7 +108,7 @@ ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double v
  * @param ... Additional arguments for formatting.
  * @return A read-only span containing the formatted string.
  */
-ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, ...);
+ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, ...);
 
 /**
  * Formats a string using the provided memory arena, format specifier, and variable arguments.
@@ -118,7 +118,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
  * @param arguments The variable arguments for formatting.
  * @return A read-only span containing the formatted string.
  */
-ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments);
+ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments);
 
 /**
  * Splits a string into substrings based on the specified separator.
@@ -128,7 +128,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
  * @param separator The character used as a separator.
  * @return A read-only span of read-only spans containing the split substrings.
  */
-ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<char> source, char separator);
+ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena memoryArena, ReadOnlySpan<char> source, char separator);
 
 /**
  * Finds the last index of the specified character in the given string.
@@ -146,7 +146,7 @@ int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator);
  * @param source The UTF-8 encoded source string.
  * @return A read-only span containing the wide character string.
  */
-ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source);
+ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena memoryArena, ReadOnlySpan<char> source);
 
 /**
  * Converts a wide character (UTF-16) string to UTF-8 encoding.
@@ -155,7 +155,7 @@ ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, Read
  * @param source The wide character source string.
  * @return A read-only span containing the UTF-8 encoded string.
  */
-ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source);
+ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena memoryArena, ReadOnlySpan<wchar_t> source);
 
 
 //---------------------------------------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnl
  * @param prefix The prefix for the temporary filename.
  * @return A read-only span containing the generated temporary filename.
  */
-ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnlySpan<char> prefix);
+ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena memoryArena, ReadOnlySpan<char> prefix);
 
 /**
  * Retrieves the executable folder path.
@@ -177,7 +177,7 @@ ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnly
  * @param memoryArena Pointer to the memory arena for dynamic memory allocation.
  * @return A read-only span containing the executable folder path.
  */
-ReadOnlySpan<char> SystemGetExecutableFolderPath(MemoryArena* memoryArena);
+ReadOnlySpan<char> SystemGetExecutableFolderPath(MemoryArena memoryArena);
 
 /**
  * Checks if a file exists at the specified path.
@@ -202,7 +202,7 @@ void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
  * @param path The path to the file.
  * @return A span containing the read bytes.
  */
-Span<uint8_t> SystemFileReadBytes(MemoryArena* memoryArena, ReadOnlySpan<char> path);
+Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, ReadOnlySpan<char> path);
 
 /**
  * Deletes the file at the specified path.
@@ -231,7 +231,7 @@ struct SystemLibrary
  * @param command The command to be executed.
  * @return A read-only span containing the output of the executed process.
  */
-ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command);
+ReadOnlySpan<char> SystemExecuteProcess(MemoryArena memoryArena, ReadOnlySpan<char> command);
 
 /**
  * Loads a dynamic-link library with the given library name.

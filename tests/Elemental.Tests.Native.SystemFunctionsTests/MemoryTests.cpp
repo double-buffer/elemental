@@ -81,7 +81,7 @@ UTEST(Memory, StackMemoryArenaRelease)
         }
 
         {
-            auto memoryArenaPointer = (MemoryArena*)stackMemoryArena1;
+            auto memoryArenaPointer = (MemoryArena)stackMemoryArena1;
             auto stackMemoryArena4 = SystemGetStackMemoryArena();
             {
                 auto stackMemoryArena3 = SystemGetStackMemoryArena();

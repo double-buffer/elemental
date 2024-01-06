@@ -22,7 +22,7 @@ struct SystemDictionaryEnumerator
 };
 
 template<typename TKey, typename TValue>
-SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena* memoryArena, size_t maxItemsCount);
+SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena memoryArena, size_t maxItemsCount);
 
 template<typename TKey, typename TValue>
 void SystemAddDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key, TValue value);

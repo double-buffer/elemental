@@ -48,7 +48,7 @@ struct SystemDictionaryStoragePartition
 template<typename TValue> 
 struct SystemDictionaryStorage
 {
-    MemoryArena* MemoryArena;
+    MemoryArena MemoryArena;
     Span<SystemDictionaryEntryIndex> Buckets;
     Span<SystemDictionaryStoragePartition<TValue>*> Partitions;
     size_t PartitionSize;
@@ -85,7 +85,7 @@ TValue* SystemGetDictionaryValue(SystemDictionaryStorage<TValue>* storage, Syste
 
 // TODO: Change the signature to take the max items count
 template<typename TValue>
-SystemDictionaryStoragePartition<TValue>* SystemCreateDictionaryPartition(MemoryArena* memoryArena, size_t paritionIndex, size_t partitionSize);
+SystemDictionaryStoragePartition<TValue>* SystemCreateDictionaryPartition(MemoryArena memoryArena, size_t paritionIndex, size_t partitionSize);
 
 template<typename TValue, typename T>
 SystemDictionaryHashInfo SystemDictionaryComputeHashInfo(SystemDictionaryStorage<TValue>* storage, ReadOnlySpan<T> data);
@@ -103,7 +103,7 @@ TValue& SystemDictionary<TKey, TValue>::operator[](TKey key)
 }
 
 template<typename TKey, typename TValue>
-SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena* memoryArena, size_t maxItemsCount)
+SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena memoryArena, size_t maxItemsCount)
 {
     // TODO: We need to have to initial size parameters, the entries and buckets ones
     // BUG: All here is wrong
@@ -511,7 +511,7 @@ TValue* SystemGetDictionaryValue(SystemDictionaryStorage<TValue>* storage, Syste
 }
 
 template<typename TValue>
-SystemDictionaryStoragePartition<TValue>* SystemCreateDictionaryPartition(MemoryArena* memoryArena, size_t partitionIndex, size_t partitionSize)
+SystemDictionaryStoragePartition<TValue>* SystemCreateDictionaryPartition(MemoryArena memoryArena, size_t partitionIndex, size_t partitionSize)
 {
     auto partition = SystemPushStruct<SystemDictionaryStoragePartition<TValue>>(memoryArena);
     partition->Entries = SystemPushArrayZero<SystemDictionaryEntry<TValue>>(memoryArena, partitionSize);
