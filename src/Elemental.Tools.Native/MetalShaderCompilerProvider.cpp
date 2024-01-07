@@ -25,7 +25,7 @@ bool MetalShaderCompilerProvider::IsCompilerInstalled()
     return true;
 }
     
-Span<uint8_t> MetalShaderCompilerProvider::CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+Span<uint8_t> MetalShaderCompilerProvider::CompileShader(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
 #ifdef _WINDOWS
     logList.push_back({ShaderCompilerLogEntryType_Error, (uint8_t*)"Metal shader compiler is not supported on Windows."});
@@ -84,7 +84,7 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(MemoryArena* memoryAren
     #endif
 }
     
-bool MetalShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, char* output)
+bool MetalShaderCompilerProvider::ProcessLogOutput(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, char* output)
 {
     // BUG: 
     return false;

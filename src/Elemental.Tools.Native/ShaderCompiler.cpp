@@ -111,7 +111,7 @@ DllExport bool Native_CanCompileShader(ShaderLanguage shaderLanguage, GraphicsAp
     return result > 0;
 }
 
-ShaderCompilerResult CompileShader(MemoryArena* memoryArena, uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+ShaderCompilerResult CompileShader(MemoryArena memoryArena, uint8_t* shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
     if (!_platformTargetLanguages.count(graphicsApi))
     {

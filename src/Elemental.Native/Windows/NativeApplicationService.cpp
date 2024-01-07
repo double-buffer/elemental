@@ -4,7 +4,7 @@
 #include "SystemDictionary.h"
 
 // TODO: Review that
-static MemoryArena* nativeApplicationMemoryArena;
+static MemoryArena nativeApplicationMemoryArena;
 static SystemDictionary<HWND, Win32Window*> windowMap;
 
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
