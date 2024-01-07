@@ -30,3 +30,4 @@ bld/
 .swiftpm/
 external/shader-compilers/
 cmake/
+.DS_Store

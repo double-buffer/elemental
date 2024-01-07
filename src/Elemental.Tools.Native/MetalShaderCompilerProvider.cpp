@@ -1,5 +1,5 @@
-#include "PreCompiledHeader.h"
 #include "MetalShaderCompilerProvider.h"
+#include "SystemFunctions.h"
 
 ShaderLanguage MetalShaderCompilerProvider::GetShaderLanguage()
 {
@@ -27,13 +27,16 @@ bool MetalShaderCompilerProvider::IsCompilerInstalled()
     
 Span<uint8_t> MetalShaderCompilerProvider::CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
 #ifdef _WINDOWS
     logList.push_back({ShaderCompilerLogEntryType_Error, (uint8_t*)"Metal shader compiler is not supported on Windows."});
     return Span<uint8_t>();
 #else
-    auto inputFilePath = std::string(SystemGenerateTempFilename()) + ".metal";
-    auto airFilePath = std::string(SystemGenerateTempFilename());
-    auto outputFilePath = std::string(SystemGenerateTempFilename());
+    // TODO: Remove std::string
+    auto inputFilePath = std::string(SystemGenerateTempFilename(stackMemoryArena, "ShaderInput").Pointer) + ".metal";
+    auto airFilePath = std::string(SystemGenerateTempFilename(stackMemoryArena, "ShaderAir").Pointer);
+    auto outputFilePath = std::string(SystemGenerateTempFilename(stackMemoryArena, "ShaderOutput").Pointer);
 
     SystemWriteBytesToFile(inputFilePath.c_str(), shaderCode.Pointer, shaderCode.Length);
 

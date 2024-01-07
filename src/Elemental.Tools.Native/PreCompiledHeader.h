@@ -17,9 +17,15 @@ using namespace Microsoft::WRL;
 #else
 #define ComPtr CComPtr
 #undef _WIN32
-#include <iconv.h>
+#include <Carbon/Carbon.h>
+#include <sys/stat.h>
 #include <unistd.h>
-#include <dlfcn.h>
+#include <fcntl.h>
+#include <pthread.h>
+
+#define NS_PRIVATE_IMPLEMENTATION
+#define CA_PRIVATE_IMPLEMENTATION
+#include "AppKit/AppKit.hpp"
 #endif
 
 // TODO: Cleanup includes

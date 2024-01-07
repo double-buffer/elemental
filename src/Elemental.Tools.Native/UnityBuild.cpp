@@ -1,6 +1,6 @@
 #include "SystemDictionary.cpp"
 #include "SystemLogging.h"
-#include "../Elemental.Native/Windows/SystemPlatformFunctions.cpp" // TODO: To review
+#include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"
 #include "SystemMemory.cpp"
 
