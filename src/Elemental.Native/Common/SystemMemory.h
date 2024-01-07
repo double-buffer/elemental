@@ -16,26 +16,24 @@
  * Represents the storage structure for MemoryArena.
  */
 struct MemoryArenaStorage;
+struct MemoryArenaHandle;
 
-/**
- * Represents a memory arena that manages memory allocation.
- */
 struct MemoryArena
 {
-    MemoryArenaStorage* Storage;    ///< Pointer to the storage structure.
-    size_t StartOffset;             ///< Starting offset of the allocated memory.
-    size_t AllocatedBytes;          ///< Total bytes currently allocated.
-    size_t SizeInBytes;             ///< Total size of the memory arena.
-    uint8_t Level;                  ///< Memory arena level.
-    MemoryArena* ExtraStorage;      ///< Pointer to extra memory storage.
+    MemoryArenaHandle* MemoryArenaHandle;
+    uint8_t Level;
 };
 
 /**
  * Represents a stack-based memory arena.
  */
+
+// TODO: Do we need that now?
 struct StackMemoryArena
 {
-    MemoryArena* MemoryArenaPointer; ///< Pointer to the associated MemoryArena.
+    MemoryArena Arena; ///< Pointer to the associated MemoryArena.
+    size_t StartOffsetInBytes;
+    size_t StartExtraOffsetInBytes;
 
     /**
      * Destructor for StackMemoryArena.
@@ -46,9 +44,9 @@ struct StackMemoryArena
      * Conversion operator to MemoryArena pointer.
      * @return Pointer to the associated MemoryArena.
      */
-    operator MemoryArena*() const 
+    operator MemoryArena() const 
     {
-        return MemoryArenaPointer;
+        return Arena;
     }
 };
 
@@ -56,33 +54,33 @@ struct StackMemoryArena
  * Allocates a new MemoryArena with a default size.
  * @return A pointer to the newly allocated MemoryArena.
  */
-MemoryArena* SystemAllocateMemoryArena();
+MemoryArena SystemAllocateMemoryArena();
 
 /**
  * Allocates a new MemoryArena with a specified size in bytes.
  * @param sizeInBytes The size, in bytes, to allocate for the MemoryArena.
  * @return A pointer to the newly allocated MemoryArena.
  */
-MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes);
+MemoryArena SystemAllocateMemoryArena(size_t sizeInBytes);
 
 /**
  * Frees the memory associated with a MemoryArena.
  * @param memoryArena A pointer to the MemoryArena to be freed.
  */
-void SystemFreeMemoryArena(MemoryArena* memoryArena);
+void SystemFreeMemoryArena(MemoryArena memoryArena);
 
 /**
  * Clears the contents of a MemoryArena.
  * @param memoryArena A pointer to the MemoryArena to be cleared.
  */
-void SystemClearMemoryArena(MemoryArena* memoryArena);
+void SystemClearMemoryArena(MemoryArena memoryArena);
 
 /**
  * Gets the number of bytes currently allocated in a MemoryArena.
  * @param memoryArena A pointer to the MemoryArena.
  * @return The number of bytes currently allocated in the MemoryArena.
  */
-size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena* memoryArena);
+size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena memoryArena);
 
 /**
  * Gets a StackMemoryArena, a specialized MemoryArena with stack-based allocation.
@@ -96,14 +94,14 @@ StackMemoryArena SystemGetStackMemoryArena();
  * @param sizeInBytes The size, in bytes, to allocate.
  * @return A pointer to the allocated memory block.
  */
-void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes);
+void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes);
 
 /**
  * Frees a block of memory in the specified MemoryArena.
  * @param memoryArena A pointer to the MemoryArena.
  * @param sizeInBytes The size, in bytes, to free.
  */
-void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes);
+void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes);
 
 /**
  * Allocates and initializes a block of memory with zero values in the specified MemoryArena.
@@ -111,7 +109,7 @@ void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes);
  * @param sizeInBytes The size, in bytes, to allocate and initialize.
  * @return A pointer to the allocated and initialized memory block.
  */
-void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes);
+void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes);
 
 /**
  * Allocates an array of elements in the specified MemoryArena.
@@ -121,7 +119,7 @@ void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes);
  * @return A Span<T> representing the newly allocated array.
  */
 template<typename T>
-Span<T> SystemPushArray(MemoryArena* memoryArena, size_t count);
+Span<T> SystemPushArray(MemoryArena memoryArena, size_t count);
 
 /**
  * Allocates and initializes an array of elements with zero values in the specified MemoryArena.
@@ -131,7 +129,7 @@ Span<T> SystemPushArray(MemoryArena* memoryArena, size_t count);
  * @return A Span<T> representing the newly allocated and initialized array.
  */
 template<typename T>
-Span<T> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
+Span<T> SystemPushArrayZero(MemoryArena memoryArena, size_t count);
 
 /**
  * Allocates and initializes an array of elements with zero values in the specified MemoryArena.
@@ -140,7 +138,7 @@ Span<T> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
  * @return A Span<char> representing the newly allocated and initialized array.
  */
 template<>
-Span<char> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
+Span<char> SystemPushArrayZero(MemoryArena memoryArena, size_t count);
 
 /**
  * Allocates and initializes an array of elements with zero values in the specified MemoryArena.
@@ -149,7 +147,7 @@ Span<char> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
  * @return A Span<wchar_t> representing the newly allocated and initialized array.
  */
 template<>
-Span<wchar_t> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
+Span<wchar_t> SystemPushArrayZero(MemoryArena memoryArena, size_t count);
 
 /**
  * Allocates a single instance of a structure in the specified MemoryArena.
@@ -158,7 +156,7 @@ Span<wchar_t> SystemPushArrayZero(MemoryArena* memoryArena, size_t count);
  * @return A pointer to the newly allocated structure.
  */
 template<typename T>
-T* SystemPushStruct(MemoryArena* memoryArena);
+T* SystemPushStruct(MemoryArena memoryArena);
 
 /**
  * Allocates and initializes a single instance of a structure with zero values in the specified MemoryArena.
@@ -167,7 +165,7 @@ T* SystemPushStruct(MemoryArena* memoryArena);
  * @return A pointer to the newly allocated and initialized structure.
  */
 template<typename T>
-T* SystemPushStructZero(MemoryArena* memoryArena);
+T* SystemPushStructZero(MemoryArena memoryArena);
 
 /**
  * Copies elements from a source buffer to a destination buffer.
@@ -187,7 +185,7 @@ void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source);
  * @return A Span<T> representing the newly allocated concatenated buffer.
  */
 template<typename T>
-Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2);
+Span<T> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2);
 
 /**
  * Concatenates two buffers into a new buffer allocated in the specified memory arena.
@@ -197,7 +195,7 @@ Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, R
  * @return A Span<char> representing the newly allocated concatenated buffer.
  */
 template<>
-Span<char> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<char> buffer1, ReadOnlySpan<char> buffer2);
+Span<char> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<char> buffer1, ReadOnlySpan<char> buffer2);
 
 /**
  * Concatenates two buffers into a new buffer allocated in the specified memory arena.
@@ -207,4 +205,4 @@ Span<char> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<char> buff
  * @return A Span<wchar_t> representing the newly allocated concatenated buffer.
  */
 template<>
-Span<wchar_t> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> buffer1, ReadOnlySpan<wchar_t> buffer2);
+Span<wchar_t> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<wchar_t> buffer1, ReadOnlySpan<wchar_t> buffer2);

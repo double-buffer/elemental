@@ -13,6 +13,15 @@ struct MemoryArenaStorage
     MemoryArenaStorage* Next;
 };
 
+struct MemoryArenaHandle
+{
+    MemoryArenaStorage* Storage;
+    size_t AllocatedBytes;
+    size_t SizeInBytes;
+    MemoryArena ExtraStorage;
+    uint8_t MinAllocatedLevel;
+};
+
 struct ShrinkMemoryArenaStorageResult
 {
     MemoryArenaStorage* Storage;
@@ -20,15 +29,7 @@ struct ShrinkMemoryArenaStorageResult
     size_t NewSizeInBytes;
 };
 
-thread_local MemoryArenaStorage* stackMemoryArenaStorage = nullptr;
-thread_local MemoryArenaStorage* stackMemoryArenaExtraStorage = nullptr;
-
-void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena);
-
-StackMemoryArena::~StackMemoryArena()
-{
-    SystemReleaseStackMemoryArena(MemoryArenaPointer);
-}
+thread_local MemoryArenaHandle* stackMemoryArenaHandle = nullptr;
 
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
@@ -91,132 +92,169 @@ ShrinkMemoryArenaStorageResult ShrinkMemoryArenaStorage(MemoryArenaStorage* stor
     return result;
 }
 
-MemoryArena* AllocateMemoryArena(MemoryArenaStorage* storage, size_t startOffset, uint8_t level)
+MemoryArenaHandle* AllocateMemoryArenaHandle(MemoryArenaStorage* storage)
 {
-    auto result = (MemoryArena*)SystemPlatformAllocateMemory(sizeof(MemoryArena));
-    result->Storage = storage;
-    result->StartOffset = startOffset;
-    result->AllocatedBytes = 0;
-    result->SizeInBytes = storage->Memory.Length;
-    result->Level = level;
-    result->ExtraStorage = nullptr;
+    auto handle = (MemoryArenaHandle*)SystemPlatformAllocateMemory(sizeof(MemoryArenaHandle));
+    handle->Storage = storage;
+    handle->AllocatedBytes = 0;
+    handle->SizeInBytes = storage->Memory.Length;
+    handle->ExtraStorage = {};
+    handle->MinAllocatedLevel = 255;
 
-    return result;
+    return handle;
 }
 
-MemoryArena* SystemAllocateMemoryArena()
+MemoryArena SystemAllocateMemoryArena()
 {
     return SystemAllocateMemoryArena(MEMORYARENA_DEFAULT_SIZE);
 }
 
-MemoryArena* SystemAllocateMemoryArena(size_t sizeInBytes)
+MemoryArena SystemAllocateMemoryArena(size_t sizeInBytes)
 {
     auto storage = AllocateMemoryArenaStorage(sizeInBytes);
-    return AllocateMemoryArena(storage, 0, 0);
+    auto handle = AllocateMemoryArenaHandle(storage);
+
+    MemoryArena result = {};
+    result.MemoryArenaHandle = handle;
+    result.Level = 0;
+    return result;
 }
 
-void SystemFreeMemoryArena(MemoryArena* memoryArena)
+void SystemFreeMemoryArena(MemoryArena memoryArena)
 {
-    FreeMemoryArenaStorage(memoryArena->Storage);
-    SystemPlatformFreeMemory(memoryArena, sizeof(MemoryArena));
+    FreeMemoryArenaStorage(memoryArena.MemoryArenaHandle->Storage);
+    SystemPlatformFreeMemory(memoryArena.MemoryArenaHandle, sizeof(MemoryArenaHandle));
 }
 
-void SystemClearMemoryArena(MemoryArena* memoryArena)
+void SystemClearMemoryArena(MemoryArena memoryArena)
 {
-    SystemPopMemory(memoryArena, memoryArena->AllocatedBytes);
+    SystemPopMemory(memoryArena, memoryArena.MemoryArenaHandle->AllocatedBytes);
 }
 
-size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena* memoryArena)
+size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena memoryArena)
 {
-    return memoryArena->AllocatedBytes;
+    return memoryArena.MemoryArenaHandle->AllocatedBytes;
 }
 
 StackMemoryArena SystemGetStackMemoryArena()
 {
-    if (stackMemoryArenaStorage == nullptr)
+    if (stackMemoryArenaHandle == nullptr)
     {
-        stackMemoryArenaStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
-        stackMemoryArenaExtraStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
+        auto stackMemoryArenaStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
+        stackMemoryArenaHandle = AllocateMemoryArenaHandle(stackMemoryArenaStorage);
+    }
+    
+    stackMemoryArenaHandle->Storage->Level++;
+    auto extraStorageAllocatedBytes = 0llu;
+
+    if (stackMemoryArenaHandle->ExtraStorage.MemoryArenaHandle != nullptr)
+    {
+        extraStorageAllocatedBytes = stackMemoryArenaHandle->ExtraStorage.MemoryArenaHandle->AllocatedBytes;
     }
 
-    return { AllocateMemoryArena(stackMemoryArenaStorage, stackMemoryArenaStorage->AllocatedBytes, ++stackMemoryArenaStorage->Level)  };
+    MemoryArena memoryArena = {};
+    memoryArena.MemoryArenaHandle = stackMemoryArenaHandle;
+    memoryArena.Level = stackMemoryArenaHandle->Storage->Level;
+
+    return { memoryArena, stackMemoryArenaHandle->AllocatedBytes, extraStorageAllocatedBytes };
 }
 
-void SystemReleaseStackMemoryArena(MemoryArena* stackMemoryArena)
+StackMemoryArena::~StackMemoryArena()
 {
-    if (stackMemoryArena->ExtraStorage != nullptr)
+    auto handle = Arena.MemoryArenaHandle;
+
+    if (handle->ExtraStorage.MemoryArenaHandle != nullptr)
     {
-        SystemPopMemory(stackMemoryArena->ExtraStorage, stackMemoryArena->ExtraStorage->AllocatedBytes);
-        SystemPlatformFreeMemory(stackMemoryArena->ExtraStorage, sizeof(MemoryArena));
+        auto extraBytesToPop = handle->ExtraStorage.MemoryArenaHandle->AllocatedBytes - StartExtraOffsetInBytes;
+
+        if (extraBytesToPop && handle->MinAllocatedLevel >= Arena.Level)
+        {
+            SystemPopMemory(handle->ExtraStorage, extraBytesToPop);
+            handle->MinAllocatedLevel = 255;
+        } 
     }
 
-    stackMemoryArenaStorage->Level--;
-    SystemPopMemory(stackMemoryArena, stackMemoryArena->AllocatedBytes);
-    SystemPlatformFreeMemory(stackMemoryArena, sizeof(MemoryArena));
+    handle->Storage->Level--;
+
+    auto bytesToPop = handle->AllocatedBytes - StartOffsetInBytes;
+
+    if (bytesToPop > 0)
+    {
+        SystemPopMemory(Arena, bytesToPop);
+    }
 }
 
 // TODO: Do we need to align memory?
-void* SystemPushMemory(MemoryArena* memoryArena, size_t sizeInBytes)
+void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes)
 {
-    MemoryArena* workingMemoryArena = memoryArena;
+    MemoryArena workingMemoryArena = memoryArena;
 
-    if (memoryArena->Level !=  memoryArena->Storage->Level)
+    if (memoryArena.Level != memoryArena.MemoryArenaHandle->Storage->Level)
     {
-        if (memoryArena->ExtraStorage == nullptr)
+        if (memoryArena.MemoryArenaHandle->ExtraStorage.MemoryArenaHandle == nullptr)
         {
-            memoryArena->ExtraStorage = AllocateMemoryArena(stackMemoryArenaExtraStorage, stackMemoryArenaExtraStorage->AllocatedBytes, 0);
+            auto stackMemoryArenaExtraStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
+            auto extraHandle = AllocateMemoryArenaHandle(stackMemoryArenaExtraStorage);
+            memoryArena.MemoryArenaHandle->ExtraStorage = { extraHandle, 0 };
         }
 
-        workingMemoryArena = memoryArena->ExtraStorage;
+        workingMemoryArena = memoryArena.MemoryArenaHandle->ExtraStorage;
+        memoryArena.MemoryArenaHandle->MinAllocatedLevel = SystemMin(memoryArena.MemoryArenaHandle->MinAllocatedLevel, memoryArena.Level);
     }
 
-    auto storage = workingMemoryArena->Storage;
+    auto handle = workingMemoryArena.MemoryArenaHandle;
+    auto storage = handle->Storage;
 
-    if (workingMemoryArena->Storage->AllocatedBytes + sizeInBytes > storage->Memory.Length)
+    if (handle->Storage->AllocatedBytes + sizeInBytes > storage->Memory.Length)
     {
-        auto oldSizeInBytes = workingMemoryArena->SizeInBytes;
-        auto newStorageSize = SystemRoundUpToPowerOf2(SystemMax(workingMemoryArena->SizeInBytes, sizeInBytes)); 
-        workingMemoryArena->SizeInBytes += newStorageSize;
-        workingMemoryArena->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
+        auto oldSizeInBytes = handle->SizeInBytes;
+        auto oldLevel = storage->Level;
+        auto newStorageSize = SystemRoundUpToPowerOf2(SystemMax(handle->SizeInBytes, sizeInBytes));
+
+        handle->SizeInBytes += newStorageSize;
+        handle->AllocatedBytes += storage->Memory.Length - storage->AllocatedBytes;
         storage->AllocatedBytes = storage->Memory.Length;
 
-        SystemLogDebugMessage(LogMessageCategory_Memory, "Resizing MemoryArena to %u (Previous size was: %u) -> SizeInBytes: %u", workingMemoryArena->SizeInBytes, oldSizeInBytes, sizeInBytes);
-
         storage = AllocateMemoryArenaStorage(newStorageSize);
-        storage->Next = workingMemoryArena->Storage;
-        workingMemoryArena->Storage = storage;
+        storage->Level = oldLevel; 
+        storage->Next = handle->Storage;
+        handle->Storage = storage;
+       
+        SystemLogDebugMessage(LogMessageCategory_Memory, "Resizing MemoryArena to %u (Previous size was: %u) -> SizeInBytes: %u", handle->SizeInBytes, oldSizeInBytes, sizeInBytes);
     }
 
     auto result = storage->Memory.Pointer + storage->AllocatedBytes;
     storage->AllocatedBytes += sizeInBytes;
-    workingMemoryArena->AllocatedBytes += sizeInBytes;
+    handle->AllocatedBytes += sizeInBytes;
 
     return result;
 }
 
-void SystemPopMemory(MemoryArena* memoryArena, size_t sizeInBytes)
+void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
 {
-    if (sizeInBytes > memoryArena->AllocatedBytes)
+    auto handle = memoryArena.MemoryArenaHandle;
+
+    if (sizeInBytes > handle->AllocatedBytes)
     {
-        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", sizeInBytes, memoryArena->AllocatedBytes);
+        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", sizeInBytes, handle->AllocatedBytes);
         return;
     }
-
-    auto shrinkResult = ShrinkMemoryArenaStorage(memoryArena->Storage, sizeInBytes);
+    
+    auto shrinkResult = ShrinkMemoryArenaStorage(handle->Storage, sizeInBytes);
     assert(shrinkResult.Storage);
 
-    auto oldSizeInBytes = memoryArena->SizeInBytes;
-    memoryArena->Storage = shrinkResult.Storage;
-    memoryArena->AllocatedBytes -= sizeInBytes;
-    memoryArena->SizeInBytes = shrinkResult.NewSizeInBytes;
+    auto oldSizeInBytes = handle->SizeInBytes;
+    handle->Storage = shrinkResult.Storage;
+    handle->AllocatedBytes -= sizeInBytes;
+    handle->SizeInBytes = shrinkResult.NewSizeInBytes;
 
     if (shrinkResult.StoragesDeleted > 0)
     {
-        SystemLogDebugMessage(LogMessageCategory_Memory, "Shrinking MemoryArena storage to %u (New size: %u, Previous size was: %u) -> Deleted Memory Storages: %d, Allocated Bytes: %u", sizeInBytes, memoryArena->SizeInBytes, oldSizeInBytes, shrinkResult.StoragesDeleted, memoryArena->AllocatedBytes);
+        SystemLogDebugMessage(LogMessageCategory_Memory, "Shrinking MemoryArena storage by popping %u (New size: %u, Previous size was: %u) -> Deleted Memory Storages: %d, Allocated Bytes: %u", sizeInBytes, handle->SizeInBytes, oldSizeInBytes, shrinkResult.StoragesDeleted, handle->AllocatedBytes);
     }
 }
 
-void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes)
+void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes)
 {
     auto result = SystemPushMemory(memoryArena, sizeInBytes);
     SystemPlatformClearMemory(result, sizeInBytes);
@@ -225,41 +263,41 @@ void* SystemPushMemoryZero(MemoryArena* memoryArena, size_t sizeInBytes)
 }
 
 template<typename T>
-Span<T> SystemPushArray(MemoryArena* memoryArena, size_t count)
+Span<T> SystemPushArray(MemoryArena memoryArena, size_t count)
 {
     auto memory = SystemPushMemory(memoryArena, sizeof(T) * count);
     return Span<T>((T*)memory, count);
 }
 
 template<typename T>
-Span<T> SystemPushArrayZero(MemoryArena* memoryArena, size_t count)
+Span<T> SystemPushArrayZero(MemoryArena memoryArena, size_t count)
 {
     auto memory = SystemPushMemoryZero(memoryArena, sizeof(T) * count);
     return Span<T>((T*)memory, count);
 }
 
 template<>
-Span<char> SystemPushArrayZero<char>(MemoryArena* memoryArena, size_t count)
+Span<char> SystemPushArrayZero<char>(MemoryArena memoryArena, size_t count)
 {
     auto memory = SystemPushMemoryZero(memoryArena, sizeof(char) * (count + 1));
     return Span<char>((char*)memory, count);
 }
 
 template<>
-Span<wchar_t> SystemPushArrayZero<wchar_t>(MemoryArena* memoryArena, size_t count)
+Span<wchar_t> SystemPushArrayZero<wchar_t>(MemoryArena memoryArena, size_t count)
 {
     auto memory = SystemPushMemoryZero(memoryArena, sizeof(wchar_t) * (count + 1));
     return Span<wchar_t>((wchar_t*)memory, count);
 }
 
 template<typename T>
-T* SystemPushStruct(MemoryArena* memoryArena)
+T* SystemPushStruct(MemoryArena memoryArena)
 {
     return (T*)SystemPushMemory(memoryArena, sizeof(T));
 }
 
 template<typename T>
-T* SystemPushStructZero(MemoryArena* memoryArena)
+T* SystemPushStructZero(MemoryArena memoryArena)
 {
     return (T*)SystemPushMemoryZero(memoryArena, sizeof(T));
 }
@@ -272,7 +310,7 @@ void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source)
 }
 
 template<typename T>
-Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2)
+Span<T> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2)
 {
     auto result = SystemPushArray<T>(memoryArena, buffer1.Length + buffer2.Length);
 
@@ -283,7 +321,7 @@ Span<T> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<T> buffer1, R
 }
 
 template<>
-Span<char> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<char> buffer1, ReadOnlySpan<char> buffer2)
+Span<char> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<char> buffer1, ReadOnlySpan<char> buffer2)
 {
     auto result = SystemPushArrayZero<char>(memoryArena, buffer1.Length + buffer2.Length);
 
@@ -294,7 +332,7 @@ Span<char> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<char> buff
 }
 
 template<>
-Span<wchar_t> SystemConcatBuffers(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> buffer1, ReadOnlySpan<wchar_t> buffer2)
+Span<wchar_t> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<wchar_t> buffer1, ReadOnlySpan<wchar_t> buffer2)
 {
     auto result = SystemPushArrayZero<wchar_t>(memoryArena, buffer1.Length + buffer2.Length);
 

@@ -17,7 +17,7 @@ struct VulkanGraphicsDevice;
 
 #include "SystemMemory.h"
 
-MemoryArena* vulkanMemoryArena;
+MemoryArena vulkanMemoryArena;
 // TODO: To remove -> Temporary
 #include <string>
 

@@ -23,7 +23,7 @@ struct SystemPlatformDateTime
  * @param memoryArena - A pointer to the memory arena used for allocating memory for the environment object.
  * @return A pointer to the SystemPlatformEnvironment object representing the current environment of the system platform.
  */
-SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena);
+SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena);
 
 /**
  * Retrieves the current date and time of the system platform.
@@ -31,7 +31,7 @@ SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena
  * @param memoryArena - A pointer to the memory arena used for allocating memory for the date and time object.
  * @return A pointer to the SystemPlatformDateTime object representing the current date and time of the system platform.
  */
-SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena* memoryArena);
+SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena);
 
 /**
  * Allocates a block of memory of the specified size.
@@ -74,7 +74,7 @@ void SystemPlatformCopyMemory(void* destination, const void* source, size_t size
  * @param memoryArena - A pointer to a MemoryArena struct that will be used for memory allocation.
  * @return A ReadOnlySpan<char> representing the path of the current executable.
  */
-ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena* memoryArena);
+ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena memoryArena);
 
 /**
  * Retrieves the size of a file in bytes.
@@ -122,7 +122,7 @@ void SystemPlatformFileDelete(ReadOnlySpan<char> path);
  * @param command A ReadOnlySpan<char> representing the command to execute.
  * @return A ReadOnlySpan<char> containing the output of the executed command.
  */
-ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command);
+ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnlySpan<char> command);
 
 /**
  * Loads a dynamic library.

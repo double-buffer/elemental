@@ -35,7 +35,7 @@ bool DirectXShaderCompilerProvider::IsCompilerInstalled()
     return _createInstanceFunc != nullptr;
 }
     
-Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
     assert(_createInstanceFunc != nullptr);
 
@@ -133,7 +133,7 @@ Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena* memoryAr
     return outputShaderData;
 }
 
-bool DirectXShaderCompilerProvider::ProcessLogOutput(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
+bool DirectXShaderCompilerProvider::ProcessLogOutput(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, ComPtr<IDxcResult> compileResult)
 {
     // TODO: Allocations are really bad here :(
     auto hasErrors = false;

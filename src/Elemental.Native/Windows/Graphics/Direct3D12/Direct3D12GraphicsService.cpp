@@ -1,7 +1,7 @@
 #include "Direct3D12GraphicsService.h"
 #include "SystemMemory.h"
 
-MemoryArena* direct3D12MemoryArena;
+MemoryArena direct3D12MemoryArena;
 
 GraphicsDiagnostics _graphicsDiagnostics;
 ComPtr<ID3D12SDKConfiguration> _sdkConfiguration;

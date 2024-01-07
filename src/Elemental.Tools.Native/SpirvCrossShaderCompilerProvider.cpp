@@ -19,7 +19,7 @@ bool SpirvCrossShaderCompilerProvider::IsCompilerInstalled()
     return true;
 }
     
-Span<uint8_t> SpirvCrossShaderCompilerProvider::CompileShader(MemoryArena* memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
+Span<uint8_t> SpirvCrossShaderCompilerProvider::CompileShader(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
     // TODO: Check target api
     spirv_cross::CompilerMSL compiler((uint32_t*)shaderCode.Pointer, shaderCode.Length / 4);

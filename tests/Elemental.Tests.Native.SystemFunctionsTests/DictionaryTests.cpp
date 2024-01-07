@@ -250,8 +250,6 @@ UTEST(Dictionary, BigDictionary)
 
 UTEST(Dictionary, ConcurrentAdd) 
 {
-    // TODO: Debug memory bug when more than 80000
-
     // Arrange
     const int32_t itemCount = 80000;
     const int32_t threadCount = 32;

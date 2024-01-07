@@ -34,12 +34,18 @@ T SystemMax(T value1, T value2)
     return (value1 > value2) ? value1 : value2;
 }
 
+template<typename T>
+T SystemMin(T value1, T value2)
+{
+    return (value1 < value2) ? value1 : value2;
+}
+
 //---------------------------------------------------------------------------------------------------------------
 // String functions
 //---------------------------------------------------------------------------------------------------------------
 
 template<typename T>
-ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value)
+ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena memoryArena, T value)
 {
     auto isNegative = value < 0;
     auto length = isNegative ? 1 : 0;
@@ -70,7 +76,7 @@ ReadOnlySpan<char> SystemConvertNumberToString(MemoryArena* memoryArena, T value
     return numString;
 }
 
-ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double value)
+ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena memoryArena, double value)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
@@ -81,7 +87,7 @@ ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena* memoryArena, double v
     return SystemConcatBuffers<char>(memoryArena, integerPart, fractionalPart);
 }
 
-ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, ...)
+ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, ...)
 {
     __builtin_va_list arguments;
 
@@ -92,7 +98,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
     return result;
 }
 
-ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments)
+ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments)
 {
     bool insideFormat = true;
     size_t elementCount = 0;
@@ -189,7 +195,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena* memoryArena, ReadOnlySpan<cha
     return result;
 }
 
-ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena* memoryArena, ReadOnlySpan<char> source, char separator) 
+ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena memoryArena, ReadOnlySpan<char> source, char separator) 
 {
     auto count = 1;
 
@@ -241,7 +247,7 @@ int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator)
     return -1;
 }
 
-ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, ReadOnlySpan<char> source)
+ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena memoryArena, ReadOnlySpan<char> source)
 {
     size_t size = 0;
     auto sourceSpan = source;
@@ -302,7 +308,7 @@ ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena* memoryArena, Read
     return destination;
 }
 
-ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnlySpan<wchar_t> source)
+ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena memoryArena, ReadOnlySpan<wchar_t> source)
 {
     size_t size = 0;
     auto sourceSpan = source;
@@ -377,7 +383,7 @@ ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena* memoryArena, ReadOnl
 // IO functions
 //---------------------------------------------------------------------------------------------------------------
 
-ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnlySpan<char> prefix) 
+ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena memoryArena, ReadOnlySpan<char> prefix) 
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto systemDateTime = SystemPlatformGetCurrentDateTime(stackMemoryArena);
@@ -386,7 +392,7 @@ ReadOnlySpan<char> SystemGenerateTempFilename(MemoryArena* memoryArena, ReadOnly
     return SystemConcatBuffers<char>(memoryArena, prefix, postfix);
 }
 
-ReadOnlySpan<char> SystemGetExecutableFolderPath(MemoryArena* memoryArena) 
+ReadOnlySpan<char> SystemGetExecutableFolderPath(MemoryArena memoryArena) 
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
@@ -416,7 +422,7 @@ void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data)
     SystemPlatformFileWriteBytes(path, data);
 }
 
-Span<uint8_t> SystemFileReadBytes(MemoryArena* memoryArena, ReadOnlySpan<char> path)
+Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, ReadOnlySpan<char> path)
 {
     auto fileSizeInBytes = SystemPlatformFileGetSizeInBytes(path);
     auto fileData = SystemPushArray<uint8_t>(memoryArena, fileSizeInBytes);
@@ -435,7 +441,7 @@ void SystemFileDelete(ReadOnlySpan<char> path)
 // Library / process functions
 //---------------------------------------------------------------------------------------------------------------
 
-ReadOnlySpan<char> SystemExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
+ReadOnlySpan<char> SystemExecuteProcess(MemoryArena memoryArena, ReadOnlySpan<char> command)
 {
     return SystemPlatformExecuteProcess(memoryArena, command);
 }

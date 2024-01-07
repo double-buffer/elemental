@@ -2,7 +2,7 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
-SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena)
+SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
 {
     auto result = SystemPushStruct<SystemPlatformEnvironment>(memoryArena);
     
@@ -11,7 +11,7 @@ SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena* memoryArena
     return result;
 }
 
-SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena* memoryArena)
+SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena)
 {
     SYSTEMTIME systemTime;
     GetLocalTime(&systemTime);
@@ -48,7 +48,7 @@ void SystemPlatformCopyMemory(void* destination, const void* source, size_t size
     memcpy(destination, source, sizeInBytes);
 }
 
-ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena* memoryArena)
+ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena memoryArena)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto path = SystemPushArray<wchar_t>(stackMemoryArena, MAX_PATH);
@@ -141,7 +141,7 @@ void SystemPlatformFileDelete(ReadOnlySpan<char> path)
     }
 }
 
-ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena* memoryArena, ReadOnlySpan<char> command)
+ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnlySpan<char> command)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto commandWide = SystemConvertUtf8ToWideChar(stackMemoryArena, command);

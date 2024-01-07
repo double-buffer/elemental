@@ -45,3 +45,12 @@ UTEST(MathFunctions, SystemMax)
     // Assert
     ASSERT_EQ(67, result);
 }
+
+UTEST(MathFunctions, SystemMin) 
+{
+    // Arrange / Act
+    auto result = SystemMin(67, 54);
+
+    // Assert
+    ASSERT_EQ(54, result);
+}
