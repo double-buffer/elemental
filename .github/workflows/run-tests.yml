@@ -40,7 +40,7 @@ jobs:
 
     - name: Copy MacOS native
       if: inputs.platform == 'osx'
-      run: cp ./Tests/Elemental.Native.dylib ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS
+      run: cp ./Tests/libElemental.Native.dylib ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS
 
     - name: Set Executable Permission
       if: inputs.platform == 'osx'
