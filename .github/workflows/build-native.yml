@@ -27,13 +27,19 @@ jobs:
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
-    - name: Build
+    - name: Configure Build
       run: |
         mkdir ./build
         cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }}
-        cmake --build ./build --target Elemental.Native --config Release
-        cmake --build ./build --target Elemental.Tests.NativeSystemFunctionsTests --config Release
 
+    - name: Build
+      run: |
+        cmake --build ./build --target Elemental.Native --config Release
+
+    - name: Build Tests
+      run: |
+        cmake --build ./build --target Elemental.Tests.NativeSystemFunctionsTests --config Release
+          
     # Conditional Vulkan Loader steps for Windows
     - name: Download Vulkan Loader
       if: inputs.platform == 'win'

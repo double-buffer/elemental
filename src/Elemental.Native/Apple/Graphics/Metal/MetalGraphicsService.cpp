@@ -712,7 +712,7 @@ GraphicsDeviceInfo ConstructGraphicsDeviceInfo(NS::SharedPtr<MTL::Device> device
 {
     GraphicsDeviceInfo result = {};
     result.DeviceId = device->registryID();
-    result.DeviceName = (char*)device->name()->cString(NS::UTF8StringEncoding);
+    result.DeviceName = device->name()->cString(NS::UTF8StringEncoding);
     result.GraphicsApi = GraphicsApi_Metal;
     result.AvailableMemory = device->recommendedMaxWorkingSetSize();
 

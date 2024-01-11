@@ -46,7 +46,7 @@ typedef struct
 
 typedef struct
 {
-    char* DeviceName;
+    const char* DeviceName;
     GraphicsApi GraphicsApi;
     uint64_t DeviceId;
     uint64_t AvailableMemory;

@@ -711,8 +711,9 @@ void Direct3D12DispatchMesh(void* commandListPointer, uint32_t threadGroupCountX
    
 GraphicsDeviceInfo Direct3D12ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto result = GraphicsDeviceInfo();
-    wcscpy_s(result.DeviceName, adapterDescription.Description);
+    result.DeviceName = SystemConvertWideCharToUtf8(stackMemoryArena, adapterDescription.Description).Pointer;
     result.GraphicsApi = GraphicsApi_Direct3D12;
     result.DeviceId = Direct3D12GetDeviceId(adapterDescription);
     result.AvailableMemory = adapterDescription.DedicatedVideoMemory;

@@ -981,7 +981,7 @@ GraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties 
 {
     // TODO: Avoid std::wstring
     auto result = GraphicsDeviceInfo();
-    wcscpy_s(result.DeviceName, std::wstring(deviceProperties.deviceName, deviceProperties.deviceName + strlen(deviceProperties.deviceName)).c_str());
+    result.DeviceName = deviceProperties.deviceName;
     result.GraphicsApi = GraphicsApi_Vulkan;
     result.DeviceId = deviceProperties.deviceID;
     result.AvailableMemory = deviceMemoryProperties.memoryHeaps[0].size;
