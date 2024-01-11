@@ -10,7 +10,11 @@ on:
 
 jobs:
   build-native:
-    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform == 'osx' && 'macos' || inputs.platform }}-latest
+    runs-on: ${{ 
+      (inputs.platform == 'macos' && 'macos-13') ||
+      (inputs.platform == 'linux' && 'ubuntu-latest') ||
+      (inputs.platform == 'windows' && 'windows-latest')
+      }}
 
     steps:
     - uses: actions/checkout@master
@@ -30,7 +34,7 @@ jobs:
     - name: Configure Build
       run: |
         mkdir ./build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }}
+        cmake -DCMAKE_OSX_ARCHITECTURES=${{ inputs.architecture == 'x64' && 'x86_64' ||  inputs.architecture }} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }}
 
     - name: Build
       run: |

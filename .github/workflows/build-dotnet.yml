@@ -17,7 +17,7 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@master
       with:
-        dotnet-version: 8.0.100
+        dotnet-version: 8.0.101
 
     - name: Build Library
       run: |

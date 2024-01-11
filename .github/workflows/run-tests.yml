@@ -10,7 +10,12 @@ on:
 
 jobs:
   run_tests:
-    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform == 'osx' && 'macos' || inputs.platform }}-latest
+    runs-on: ${{ 
+      ((inputs.platform == 'macos' && inputs.architecture == 'arm64') && 'macos-13-xlarge') ||
+      ((inputs.platform == 'macos' && inputs.architecture != 'arm64') && 'macos-13') ||
+      (inputs.platform == 'linux' && 'ubuntu-latest') ||
+      (inputs.platform == 'windows' && 'windows-latest')
+      }}
 
     steps:
     - name: Download Native Binaries ${{ inputs.platform }}-${{ inputs.architecture }}
@@ -35,7 +40,8 @@ jobs:
       run: cp -r ./Elemental.Tests.NativeApplicationTests/* ./Tests/
 
     - name: Copy MacOS native
-      run: cp ./Tests/Elemental.Native.dll ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS
+      if: inputs.platform == 'osx'
+      run: cp ./Tests/Elemental.Native.dylib ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS
 
     - name: Set Executable Permission
       if: inputs.platform == 'osx'
