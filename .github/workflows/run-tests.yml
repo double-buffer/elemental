@@ -20,10 +20,18 @@ jobs:
         path: ./Tests/
  
     - name: Download Native Binaries
+      if: inputs.platform != 'osx'
       uses: actions/download-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./Tests/
+
+    - name: Download Native Binaries
+      if: inputs.platform == 'osx'
+      uses: actions/download-artifact@master
+      with:
+        name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS
 
     - name: Download Dotnet Binaries
       uses: actions/download-artifact@master
