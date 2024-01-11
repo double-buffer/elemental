@@ -25,7 +25,6 @@ jobs:
         path: ./Tests/
  
     - name: Download Native Binaries
-      if: inputs.platform != 'osx'
       uses: actions/download-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
