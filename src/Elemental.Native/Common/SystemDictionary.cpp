@@ -268,17 +268,18 @@ TValue* SystemGetDictionaryEnumeratorNextValue(SystemDictionaryEnumerator<TKey, 
 template<typename TKey, typename TValue>
 void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto storage = dictionary.Storage;
 
     for (size_t i = 0; i < storage->Buckets.Length; i++)
     {
         if (storage->Buckets[i] == SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
-            printf("Bucket %zu => (EMPTY)\n", i);
+            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Bucket %u => (EMPTY)", i);
         }
         else 
         {
-            printf("Bucket %zu", i);
+            auto debugMessage = SystemFormatString(stackMemoryArena, "Bucket %u", i);
 
             auto entryIndex = storage->Buckets[i]; 
 
@@ -289,30 +290,29 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 
                 if (entry.Hash == 0)
                 {
-                    printf(" => (PREV_REMOVED)");
+                    debugMessage = SystemConcatBuffers<char>(stackMemoryArena, debugMessage, " => (PREV_REMOVED)");
                     break;
                 }
 
-                printf(" => %llu (Value: %d, Partition: %d, Index: %d)", entry.Hash, entry.Value, entryIndexFull.PartitionIndex, entryIndexFull.Index);
-
+                debugMessage = SystemConcatBuffers<char>(stackMemoryArena, debugMessage, SystemFormatString(stackMemoryArena, " => %u (Value: %d, Partition: %d, Index: %d)", entry.Hash, entry.Value, entryIndexFull.PartitionIndex, entryIndexFull.Index));
                 entryIndex = entry.Next;
             }
 
-            printf("\n");
+            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
         }
     }
 
     auto currentFreeListIndex = storage->FreeListIndex;
-    printf("FreeList");
+    auto debugMessage = ReadOnlySpan<char>("FreeList");
 
     while (currentFreeListIndex != SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
         auto indexFull = SystemGetDictionaryEntryIndexFull(currentFreeListIndex);
-        printf(" => Partition: %d, Index: %d", indexFull.PartitionIndex, indexFull.Index);
+        debugMessage = SystemConcatBuffers<char>(stackMemoryArena, debugMessage, SystemFormatString(stackMemoryArena, " => Partition: %d, Index: %d", indexFull.PartitionIndex, indexFull.Index));
         currentFreeListIndex = storage->Partitions[indexFull.PartitionIndex]->Entries[indexFull.Index].Next;
     }
 
-    printf("\n");
+    SystemLogDebugMessage(LogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
 
     for (size_t p = 0; p < dictionary.Storage->Partitions.Length; p++)
     {
@@ -320,18 +320,18 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 
         if (partition != nullptr)
         {
-            printf("Partition %zu (Size: %zu): ", p, partition->Entries.Length);
+            debugMessage = SystemFormatString(stackMemoryArena, "Partition %u (Size: %u):", p, partition->Entries.Length);
 
             for (size_t j = 0; j < partition->Entries.Length; j++)
             {
-                printf(" %llu =>", partition->Entries[j].Hash);
+                debugMessage = SystemConcatBuffers<char>(stackMemoryArena, debugMessage, SystemFormatString(stackMemoryArena, " %u =>", partition->Entries[j].Hash));
             }
 
-            printf("\n");
+            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
         }
         else 
         {
-            printf("(EMPTY)\n"); 
+            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Partition %u => (EMPTY)\n", p); 
         }
     }
 }
@@ -458,19 +458,27 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
 template<typename TValue>
 void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
-    // BUG: There seems sometimes we have some bug when one is not found
     SystemDictionaryIndexInfo entryIndex = {};
     SystemDictionaryEntry<TValue>* entry = nullptr;
     SystemDictionaryEntryIndex* parentNextEntryIndex = nullptr;
+    int32_t retryCount = 0;
 
-    // TODO: Convert this to a while struct and use yield?
     do
     {
         entryIndex = SystemGetDictionaryEntryIndexInfo(storage, hashInfo);
 
         if (entryIndex.Index == SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
-            printf("No result found\n");
+            if (retryCount < 5)
+            {
+                SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Retrying to find the item to delete");
+                SystemYieldThread();
+                retryCount++;
+                entry = nullptr;
+                continue;
+            }
+
+            SystemLogErrorMessage(LogMessageCategory_NativeApplication, "No entry found to delete.");
             return;
         }
 
@@ -488,7 +496,7 @@ void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, Syste
 
         SystemYieldThread();
     }
-    while (!__atomic_compare_exchange_n(&parentNextEntryIndex->CombinedIndex, &entryIndex.Index.CombinedIndex, entry->Next.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    while (entry == nullptr || !__atomic_compare_exchange_n(&parentNextEntryIndex->CombinedIndex, &entryIndex.Index.CombinedIndex, entry->Next.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 
     entry->Hash = 0;
     entry->Value = {};

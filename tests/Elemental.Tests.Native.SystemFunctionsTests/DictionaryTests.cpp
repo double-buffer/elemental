@@ -289,8 +289,8 @@ UTEST(Dictionary, ConcurrentAdd)
 UTEST(Dictionary, ConcurrentRemove) 
 {
     // Arrange
-    const int32_t itemCount = 10000;
-    const int32_t threadCount = 20;
+    const int32_t itemCount = 32000;
+    const int32_t threadCount = 32;
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, itemCount);
     
