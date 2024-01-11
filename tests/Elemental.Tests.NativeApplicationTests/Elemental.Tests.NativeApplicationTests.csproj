@@ -5,7 +5,7 @@
         <PublishAot>True</PublishAot>
         <NoWarn>CA1707;CA1822</NoWarn>
 
-        <ArtifactsPivots>./$(AssemblyName)</ArtifactsPivots>
+        <ArtifactsPivots>./</ArtifactsPivots>
     </PropertyGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">

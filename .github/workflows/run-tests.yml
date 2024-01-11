@@ -43,4 +43,9 @@ jobs:
       run: ./Tests/Elemental.Tests.NativeSystemFunctionsTests
     
     - name: Run NativeApplication Tests
+      if: inputs.platform != 'osx'
       run: ./Tests/Elemental.Tests.NativeApplicationTests
+    
+    - name: Run NativeApplication Tests
+      if: inputs.platform == 'osx'
+      run: ./Tests/Elemental.Tests.NativeApplicationTests.app
