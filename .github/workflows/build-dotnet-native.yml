@@ -11,9 +11,9 @@ on:
 jobs:
   build-dotnet-native:
     runs-on: ${{ 
-      (inputs.platform == 'macos' && 'macos-13') ||
+      (inputs.platform == 'osx' && 'macos-13') ||
       (inputs.platform == 'linux' && 'ubuntu-latest') ||
-      (inputs.platform == 'windows' && 'windows-latest')
+      (inputs.platform == 'win' && 'windows-latest')
       }}
 
     steps:

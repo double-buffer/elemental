@@ -11,10 +11,10 @@ on:
 jobs:
   run_tests:
     runs-on: ${{ 
-      ((inputs.platform == 'macos' && inputs.architecture == 'arm64') && 'macos-13-xlarge') ||
-      ((inputs.platform == 'macos' && inputs.architecture != 'arm64') && 'macos-13') ||
+      ((inputs.platform == 'osx' && inputs.architecture == 'arm64') && 'macos-13-xlarge') ||
+      ((inputs.platform == 'osx' && inputs.architecture != 'arm64') && 'macos-13') ||
       (inputs.platform == 'linux' && 'ubuntu-latest') ||
-      (inputs.platform == 'windows' && 'windows-latest')
+      (inputs.platform == 'win' && 'windows-latest')
       }}
 
     steps:
