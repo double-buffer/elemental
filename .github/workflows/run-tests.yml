@@ -48,4 +48,4 @@ jobs:
     
     - name: Run NativeApplication Tests
       if: inputs.platform == 'osx'
-      run: ./Tests/Elemental.Tests.NativeApplicationTests.app
+      run: ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS/Elemental.Tests.NativeApplicationTests
