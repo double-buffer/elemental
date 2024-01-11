@@ -4,6 +4,8 @@
         <OutputType>Exe</OutputType>
         <PublishAot>True</PublishAot>
         <NoWarn>CA1707;CA1822</NoWarn>
+
+        <ArtifactsPivots>./$(AssemblyName)</ArtifactsPivots>
     </PropertyGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
