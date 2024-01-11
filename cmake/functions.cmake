@@ -21,7 +21,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
         file(MAKE_DIRECTORY ${pathExtract})
     endif()
 
-    message(STATUS "Downloading ${repo}")
+    message(STATUS "Downloading ${repo} ${tag} ${filenamePattern}")
 
     # Set the authorization headers if the GITHUB_TOKEN environment variable is defined
     if (DEFINED ENV{GITHUB_TOKEN})
@@ -48,6 +48,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
     string(REGEX REPLACE "\".*" "" downloadUrl "${downloadUrl}")
 
     # Download the asset to a temporary zip file
+    message(STATUS "Downloading file ${downloadUrl}")
     set(pathZip "${CMAKE_BINARY_DIR}/temp.zip")
     execute_process(
         COMMAND curl -s -L -o ${pathZip} ${downloadUrl}

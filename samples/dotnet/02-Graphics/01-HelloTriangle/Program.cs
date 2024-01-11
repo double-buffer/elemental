@@ -6,7 +6,30 @@ using Elemental.Tools;
 
 //TODO: HelloTriangle should be minimal, do another sample to demonstrate the debug functionality
 
-using var applicationService = new NativeApplicationService();
+static void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, string function, string message) 
+{
+    var mainForegroundColor = messageType switch
+    {
+        LogMessageType.Warning => ConsoleColor.Yellow,
+        LogMessageType.Error => ConsoleColor.Red,
+        _ => ConsoleColor.Gray
+    };
+
+    Console.Write("[");
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.Write($"{category}");
+    Console.ForegroundColor = ConsoleColor.Gray;
+    Console.Write("]");
+
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.Write($" {function}");
+
+    Console.ForegroundColor = mainForegroundColor;
+    Console.WriteLine($" {message}");
+    Console.ForegroundColor = ConsoleColor.Gray;
+}
+
+using var applicationService = new NativeApplicationService(new() { LogMessageHandler = LogMessageHandler });
 using var graphicsService = new GraphicsService(new() { GraphicsDiagnostics = GraphicsDiagnostics.Debug });
 
 using var application = applicationService.CreateApplication("Hello Window");

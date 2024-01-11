@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <PublishAot>True</PublishAot>
   </PropertyGroup>
 
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>./bin/$(Configuration)/$(AssemblyName).app/Contents/MacOS</OutputPath>
+    <ArtifactsPivots>$(AssemblyName).app/Contents/MacOS</ArtifactsPivots>
   </PropertyGroup>
-
+    
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Elemental\Elemental.csproj" />
   </ItemGroup>

@@ -33,61 +33,50 @@ Span<uint8_t> MetalShaderCompilerProvider::CompileShader(MemoryArena memoryArena
     logList.push_back({ShaderCompilerLogEntryType_Error, (uint8_t*)"Metal shader compiler is not supported on Windows."});
     return Span<uint8_t>();
 #else
-    // TODO: Remove std::string
-    auto inputFilePath = std::string(SystemGenerateTempFilename(stackMemoryArena, "ShaderInput").Pointer) + ".metal";
-    auto airFilePath = std::string(SystemGenerateTempFilename(stackMemoryArena, "ShaderAir").Pointer);
-    auto outputFilePath = std::string(SystemGenerateTempFilename(stackMemoryArena, "ShaderOutput").Pointer);
 
-    SystemWriteBytesToFile(inputFilePath.c_str(), shaderCode.Pointer, shaderCode.Length);
+    // TODO: Use Format 😄
+    auto inputFilePath = SystemConcatBuffers<char>(stackMemoryArena, SystemGenerateTempFilename(stackMemoryArena, "ShaderInput"), ".metal");
+    auto airFilePath = SystemGenerateTempFilename(stackMemoryArena, "ShaderAir");
+    auto outputFilePath = SystemGenerateTempFilename(stackMemoryArena, "ShaderOutput");
 
-    auto commandLine = "xcrun metal -c " + inputFilePath + " -o " + airFilePath;
+    SystemFileWriteBytes(inputFilePath, shaderCode);
 
-    // TODO: Change that
-    char* output = new char[1024];
-    SystemExecuteProcess(commandLine.c_str(), output);
+    auto commandLine = SystemFormatString(stackMemoryArena, "xcrun metal -c %s -o %s", inputFilePath.Pointer, airFilePath.Pointer);
 
-    auto hasErrors = ProcessLogOutput(logList, output);
+    auto output = SystemExecuteProcess(stackMemoryArena, commandLine);
+
+    auto hasErrors = ProcessLogOutput(memoryArena, logList, output);
     
     if (hasErrors)
     {
-        delete[] output;
-        SystemDeleteFile(inputFilePath.c_str());
-        return Span<uint8_t>::Empty();
+        SystemFileDelete(inputFilePath);
+        return Span<uint8_t>();
     }
     
-    commandLine = "xcrun metallib " + airFilePath + " -o " + outputFilePath;
-    // TODO: Change that
-    delete[] output;
-    output = new char[1024];
-    SystemExecuteProcess(commandLine.c_str(), output);
+    commandLine = SystemFormatString(stackMemoryArena, "xcrun metallib %s -o %s", airFilePath.Pointer, outputFilePath.Pointer);
+    output = SystemExecuteProcess(stackMemoryArena, commandLine);
     
-    hasErrors = ProcessLogOutput(logList, output);
+    hasErrors = ProcessLogOutput(memoryArena, logList, output);
     
     if (hasErrors)
     {
-        delete[] output;
-        SystemDeleteFile(inputFilePath.c_str());
-        SystemDeleteFile(airFilePath.c_str());
+        SystemFileDelete(inputFilePath);
+        SystemFileDelete(airFilePath);
         
-        return Span<uint8_t>::Empty();
+        return Span<uint8_t>();
     }
     
-    uint8_t* outputShaderData;
-    size_t outputShaderDataSize;
+    auto outputShaderData = SystemFileReadBytes(memoryArena, outputFilePath);
 
-    SystemReadBytesFromFile(outputFilePath.c_str(), &outputShaderData, &outputShaderDataSize);
-
-    delete[] output;
-
-    SystemDeleteFile(inputFilePath.c_str());
-    SystemDeleteFile(airFilePath.c_str());
-    SystemDeleteFile(outputFilePath.c_str());
+    SystemFileDelete(inputFilePath);
+    SystemFileDelete(airFilePath);
+    SystemFileDelete(outputFilePath);
         
-    return Span<uint8_t>(outputShaderData, outputShaderDataSize);
+    return outputShaderData;
     #endif
 }
     
-bool MetalShaderCompilerProvider::ProcessLogOutput(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, char* output)
+bool MetalShaderCompilerProvider::ProcessLogOutput(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, ReadOnlySpan<char> output)
 {
     // BUG: 
     return false;

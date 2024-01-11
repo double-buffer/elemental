@@ -31,3 +31,4 @@ bld/
 external/shader-compilers/
 cmake/
 .DS_Store
+artifacts/

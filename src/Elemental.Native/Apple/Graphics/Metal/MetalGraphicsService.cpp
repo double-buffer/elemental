@@ -6,8 +6,9 @@
 #include "MetalTexture.h"
 
 #include "SystemMemory.h"
+#include "SystemLogging.h"
 
-MemoryArena* metalMemoryArena;
+MemoryArena metalMemoryArena;
 
 static NS::SharedPtr<MTL::SharedEventListener> _sharedEventListener;
 
@@ -24,7 +25,9 @@ DllExport void Native_FreeGraphicsService()
 
 DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDevices, int* count)
 {
-    auto devices = NS::TransferPtr(MTLCopyAllDevices());
+    (*count) = 0;
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto devices = NS::RetainPtr(MTLCopyAllDevices());
     auto finalDevices = new NS::SharedPtr<MTL::Device>[64];
     
     for (uint32_t i = 0; i < devices->count(); i++)
@@ -77,8 +80,6 @@ DllExport void Native_GetAvailableGraphicsDevices(GraphicsDeviceInfo* graphicsDe
         auto device = finalDevices[i];
         graphicsDevices[(*count)++] = ConstructGraphicsDeviceInfo(device);
     }
-
-    delete[] finalDevices;
 }
 
 DllExport void* Native_CreateGraphicsDevice(GraphicsDeviceOptions* options)
@@ -709,14 +710,9 @@ DllExport void Native_DispatchMesh(void* commandListPointer, uint32_t threadGrou
     
 GraphicsDeviceInfo ConstructGraphicsDeviceInfo(NS::SharedPtr<MTL::Device> device)
 {
-    uint32_t deviceNameLength = device->name()->length();
-    uint8_t* deviceName = (uint8_t*)malloc(deviceNameLength);
-    memcpy(deviceName, (uint8_t*)device->name()->cString(NS::UTF8StringEncoding), deviceNameLength);
-    
     GraphicsDeviceInfo result = {};
     result.DeviceId = device->registryID();
-    wcscpy(result.DeviceName, L"TO REPLACE");
-    //result.DeviceName = L"Test TO REPLACE"; // TODO: To implement //(char*)deviceName;
+    result.DeviceName = (char*)device->name()->cString(NS::UTF8StringEncoding);
     result.GraphicsApi = GraphicsApi_Metal;
     result.AvailableMemory = device->recommendedMaxWorkingSetSize();
 

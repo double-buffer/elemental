@@ -49,7 +49,7 @@ internal static unsafe class GraphicsDeviceInfoMarshaller
 {
     internal struct GraphicsDeviceInfoUnmanaged
     {
-        public fixed char DeviceName[50];
+        public char* DeviceName;
         public GraphicsApi GraphicsApi { get; }
         public ulong DeviceId { get; }
         public ulong AvailableMemory { get; }
@@ -64,7 +64,7 @@ internal static unsafe class GraphicsDeviceInfoMarshaller
     {
         return new GraphicsDeviceInfo
         {
-            DeviceName = Marshal.PtrToStringUni((nint)unmanaged.DeviceName) ?? "Unknown Device",
+            DeviceName = Utf8StringMarshaller.ConvertToManaged((byte*)unmanaged.DeviceName),
             GraphicsApi = unmanaged.GraphicsApi,
             DeviceId = unmanaged.DeviceId,
             AvailableMemory = unmanaged.AvailableMemory
