@@ -1,6 +1,8 @@
 #pragma once
 
-// TODO: Do we need that data structure?
+
+// TODO: Refactor this structure later when we have integration tests on the command lists
+// TODO: Can we have the same read/write struct so that it can be used by the input system? 
 template<typename T>
 class CircularList
 {

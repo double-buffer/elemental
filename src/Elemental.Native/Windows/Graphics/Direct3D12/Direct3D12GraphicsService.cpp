@@ -753,6 +753,7 @@ CommandAllocatorPoolItem* Direct3D12GetCommandAllocator(Direct3D12CommandQueue* 
 
     if (*commandAllocatorPoolItemPointer == nullptr)
     {
+        // TODO: We could pre allocate directly all the allocators?
         CommandAllocatorPoolItem* commandAllocatorPoolItem;
         commandAllocatorPool.GetCurrentItemPointerAndMove(&commandAllocatorPoolItem);
 

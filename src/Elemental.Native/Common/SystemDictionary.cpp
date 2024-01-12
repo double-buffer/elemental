@@ -3,6 +3,8 @@
 #include "SystemLogging.h"
 
 #define SYSTEM_DICTIONARY_HASH_SEED 123456789
+#define SYSTEM_DICTIONARY_PARTITION_COUNT 16
+#define SYSTEM_DICTIONARY_PARTITION_MIN_SIZE 1024
 #define SYSTEM_DICTIONARY_PARTITION_BITS 10
 #define SYSTEM_DICTIONARY_INDEX_BITS 22
 #define SYSTEM_DICTIONARY_MAX_PARTITION_INDEX ((1 << SYSTEM_DICTIONARY_PARTITION_BITS) - 1)
@@ -71,6 +73,7 @@ struct SystemDictionaryHashInfo
     int32_t BucketIndex;
 };
 
+// TODO: Refactor, don't forward declare
 SystemDictionaryEntryIndex SystemCreateDictionaryEntryIndex(int32_t partitionIndex, int32_t index);
 SystemDictionaryEntryIndexFull SystemGetDictionaryEntryIndexFull(SystemDictionaryEntryIndex index);
 
@@ -83,7 +86,6 @@ void SystemRemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, Syste
 template<typename TValue>
 TValue* SystemGetDictionaryValue(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo);
 
-// TODO: Change the signature to take the max items count
 template<typename TValue>
 SystemDictionaryStoragePartition<TValue>* SystemCreateDictionaryPartition(MemoryArena memoryArena, size_t paritionIndex, size_t partitionSize);
 
@@ -105,21 +107,25 @@ TValue& SystemDictionary<TKey, TValue>::operator[](TKey key)
 template<typename TKey, typename TValue>
 SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena memoryArena, size_t maxItemsCount)
 {
-    // TODO: We need to have to initial size parameters, the entries and buckets ones
-    // BUG: All here is wrong
-    auto maxPartitionsCount = 2;
-    auto partitionSize = maxItemsCount / maxPartitionsCount;
-
-    if (partitionSize == 0)
+    auto partitionCount = (maxItemsCount + SYSTEM_DICTIONARY_PARTITION_MIN_SIZE - 1) / SYSTEM_DICTIONARY_PARTITION_MIN_SIZE;
+    
+    if (partitionCount > SYSTEM_DICTIONARY_PARTITION_COUNT) 
     {
-        partitionSize = 1;
+        partitionCount = SYSTEM_DICTIONARY_PARTITION_COUNT;
     }
 
+    auto partitionSize = (maxItemsCount + partitionCount - 1) / partitionCount;
+
+    if (maxItemsCount < SYSTEM_DICTIONARY_PARTITION_MIN_SIZE && partitionCount == 1) 
+    {
+        partitionSize = maxItemsCount;
+    }
+   
     auto storage = SystemPushStruct<SystemDictionaryStorage<TValue>>(memoryArena);
     storage->MemoryArena = memoryArena;
-    storage->Partitions = SystemPushArrayZero<SystemDictionaryStoragePartition<TValue>*>(memoryArena, maxPartitionsCount);
+    storage->Partitions = SystemPushArrayZero<SystemDictionaryStoragePartition<TValue>*>(memoryArena, partitionCount);
     storage->CurrentPartitionIndex = 0;
-    storage->Partitions[storage->CurrentPartitionIndex] = SystemCreateDictionaryPartition<TValue>(memoryArena, 0, partitionSize); // TODO: Find a proper initial size
+    storage->Partitions[storage->CurrentPartitionIndex] = SystemCreateDictionaryPartition<TValue>(memoryArena, 0, partitionSize);
     storage->PartitionSize = partitionSize;
     storage->IsPartitionBeingCreated = false;
     
@@ -405,7 +411,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
 
         if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
         {
-            if ((storage->CurrentPartitionIndex + 1) == 2) // TODO: Remove hardcoded value
+            if ((storage->CurrentPartitionIndex + 1) == storage->Partitions.Length)
             {
                 SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
                 __atomic_store_n(&storage->IsPartitionBeingCreated, false, __ATOMIC_RELEASE);
@@ -576,7 +582,6 @@ SystemDictionaryIndexInfo SystemGetDictionaryEntryIndexInfo(SystemDictionaryStor
     return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY };
 }
 
-// TODO: Check thread safe?
 template<typename TValue>
 SystemDictionaryEntry<TValue>* SystemGetDictionaryEntryByIndex(SystemDictionaryStorage<TValue>* storage, SystemDictionaryEntryIndex index)
 {
