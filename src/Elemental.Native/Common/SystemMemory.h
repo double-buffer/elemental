@@ -27,8 +27,6 @@ struct MemoryArena
 /**
  * Represents a stack-based memory arena.
  */
-
-// TODO: Do we need that now?
 struct StackMemoryArena
 {
     MemoryArena Arena; ///< Pointer to the associated MemoryArena.
