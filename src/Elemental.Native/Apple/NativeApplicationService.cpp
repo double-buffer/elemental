@@ -197,7 +197,8 @@ void ProcessEvents(MacOSApplication* application)
 {
     NS::SharedPtr<NS::Event> rawEvent; 
 
-    // BUG: It seems we have a memory leak when we move the mouse inside the window :/
+    // BUG: It seems we have a memory leak when we move the mouse inside the window 😟
+    // BUG: If we press a key like Q or A while the app is running and then quit the app it crash 😢
 
     do 
     {

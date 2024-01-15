@@ -11,7 +11,7 @@ public class NativeApplicationServiceTests
         {
             if (messageType == LogMessageType.Debug && category == LogMessageCategory.NativeApplication && message == "Init OK")
             {
-                //initCalled = true;
+                initCalled = true;
             }
         });
         
@@ -22,7 +22,7 @@ public class NativeApplicationServiceTests
         Assert.True(initCalled);
     }
 
-    /*[Fact]
+    [Fact]
     public void CreateApplication_WithName_ReturnsValidObject()
     {
         // Arrange
@@ -34,7 +34,7 @@ public class NativeApplicationServiceTests
         // Assert
         Assert.NotEqual(nint.Zero, application.NativePointer);
     }
-
+/*
     [Fact]
     public void RunApplication_WithValidApplication_CallRunHandler()
     {

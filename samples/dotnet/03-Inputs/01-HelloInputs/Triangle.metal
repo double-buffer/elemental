@@ -18,7 +18,11 @@ struct ShaderParameters
     float RotationX;
     float RotationY;
     float RotationZ;
+    float TranslationX;
+    float TranslationY;
+    float TranslationZ;
     float AspectRatio;
+    uint CurrentColorIndex;
 };
 
 constant float3 triangleVertices[] =
