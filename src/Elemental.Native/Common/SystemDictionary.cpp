@@ -95,12 +95,16 @@ SystemDictionaryEntryIndex SystemGetFreeListEntry(SystemDictionaryStorage<TValue
 
     SystemDictionaryEntry<TValue>* freeListEntry = nullptr;
 
-    // TODO: Change this to a while loop and do a Thread Yield
     do
     {
         if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
             break;
+        }
+
+        if (freeListEntry != nullptr)
+        {
+            SystemYieldThread();
         }
 
         freeListEntry = SystemGetDictionaryEntryByIndex(storage, entryIndex);
@@ -116,12 +120,13 @@ void SystemInsertFreeListEntry(SystemDictionaryStorage<TValue>* storage, SystemD
     SystemDictionaryEntryIndex entryIndex;
     __atomic_load(&storage->FreeListIndex.CombinedIndex, &entryIndex.CombinedIndex, __ATOMIC_ACQUIRE);
 
-    // TODO: Change this to a while loop and do a Thread Yield
-    do
+    entry->Next = entryIndex;
+
+    while (!__atomic_compare_exchange_n(&storage->FreeListIndex.CombinedIndex, &entryIndex.CombinedIndex, index.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE))
     {
         entry->Next = entryIndex;
+        SystemYieldThread();
     }
-    while (!__atomic_compare_exchange_n(&storage->FreeListIndex.CombinedIndex, &entryIndex.CombinedIndex, index.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 }
 
 template<typename TValue>
@@ -146,6 +151,7 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
     if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
     {
         auto expected = false;
+
         while (!__atomic_compare_exchange_n(&storage->IsPartitionBeingCreated, &expected, true, true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE))
         {
             expected = false;
@@ -179,9 +185,19 @@ void SystemAddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDi
     SystemDictionaryEntryIndex bucketHead;
     __atomic_load(&storage->Buckets[hashInfo.BucketIndex].CombinedIndex, &bucketHead.CombinedIndex, __ATOMIC_ACQUIRE);
 
-    // TODO: Convert this to a while struct and use yield?
+    auto firstTry = true;
+
     do
     {
+        if (!firstTry)
+        {
+            SystemYieldThread();
+        }
+        else 
+        {
+            firstTry = false;
+        }
+
         if (bucketHead != SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
             auto bucketHeadEntry = SystemGetDictionaryEntryByIndex(storage, bucketHead);
