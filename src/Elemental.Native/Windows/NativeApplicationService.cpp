@@ -21,7 +21,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
 
     // TODO: Review that
     nativeApplicationMemoryArena = SystemAllocateMemoryArena();
-    windowMap = SystemCreateDictionary<HWND, Win32Window*>(nativeApplicationMemoryArena, 16);
+    windowMap = SystemCreateDictionary<HWND, Win32Window*>(nativeApplicationMemoryArena, 16);  
 }
 
 DllExport void Native_FreeNativeApplicationService()

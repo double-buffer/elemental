@@ -1,6 +1,13 @@
 #include "SystemPlatformFunctions.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
+/*    
+
+    auto baseAddress = VirtualAlloc2(nullptr, nullptr, 64llu * 1024llu * 1014llu * 1024llu, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0);
+    //auto testAddress = (char*)VirtualAlloc2(nullptr, baseAddress, 64llu * 1024llu * 1014llu * 1024llu, MEM_COMMIT, PAGE_EXECUTE_READWRITE, nullptr, 0);
+
+    //*(char*)baseAddress = (char)128;
+*/
 
 SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
 {
@@ -28,14 +35,24 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena
     return result;
 }
 
-void* SystemPlatformAllocateMemory(size_t sizeInBytes)
+void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
-    return HeapAlloc(GetProcessHeap(), 0, sizeInBytes);
+    return VirtualAlloc2(nullptr, nullptr, sizeInBytes, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0);
 }
 
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
 {
-    HeapFree(GetProcessHeap(), 0, pointer);
+    VirtualFree(pointer, sizeInBytes, MEM_RELEASE);
+}
+
+void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
+{
+    VirtualAlloc2(nullptr, pointer, sizeInBytes, MEM_COMMIT, PAGE_READWRITE, nullptr, 0);
+}
+
+void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
+{
+    VirtualFree(pointer, sizeInBytes, MEM_DECOMMIT);
 }
 
 void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes)

@@ -5,6 +5,9 @@
 #define MAX_PATH 255
 #define MAX_THREADS 64  // Maximum number of threads
 
+
+// TODO: Split POSIX functions into a common file
+
 enum ThreadStatus
 {
     THREAD_STATUS_RUNNING,
@@ -50,33 +53,24 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena
     return result;
 }
 
-void* SystemPlatformAllocateMemory(size_t sizeInBytes)
+void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
-    auto size = (vm_size_t)sizeInBytes;
-    vm_size_t pageSize;
-    host_page_size(mach_host_self(), &pageSize);
-    size = (size + pageSize - 1) & ~(pageSize - 1);
-
-    vm_address_t address = 0;
-    auto result = vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
-
-    if (result != KERN_SUCCESS) 
-    {
-        return nullptr;
-    }
-
-    return (void*)address;
+    return mmap(nullptr, sizeInBytes, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 }
 
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
 {
-    auto size = (vm_size_t)sizeInBytes;
-    vm_size_t pageSize;
-    host_page_size(mach_host_self(), &pageSize);
-    size = (size + pageSize - 1) & ~(pageSize - 1);
+    munmap(pointer, sizeInBytes);
+}
 
-    auto address = (vm_address_t)pointer;
-    vm_deallocate(mach_task_self(), address, size);
+void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
+{
+    mprotect(pointer, sizeInBytes, PROT_READ | PROT_WRITE);
+}
+
+void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
+{
+    mprotect(pointer, sizeInBytes, PROT_NONE);
 }
 
 void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes)

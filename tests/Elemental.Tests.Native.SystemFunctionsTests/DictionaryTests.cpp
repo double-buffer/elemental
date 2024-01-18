@@ -2,22 +2,22 @@
 #include "SystemFunctions.h"
 #include "utest.h"
 
-struct ThreadParameter
+struct DictionaryThreadParameter
 {
     SystemDictionary<int32_t, int32_t> Dictionary;
     int32_t ThreadId;
     int32_t ItemCount;
 };
 
-struct TestStruct
+struct DictionaryTestStruct
 {
     int64_t Value1;
     int64_t Value2;
 };
 
-void ConcurrentAddFunction(void* parameter)
+void DictionaryConcurrentAddFunction(void* parameter)
 {
-    auto threadParameter = (ThreadParameter*)parameter;
+    auto threadParameter = (DictionaryThreadParameter*)parameter;
     auto dictionary = threadParameter->Dictionary;
 
     for (int32_t i = 0; i < threadParameter->ItemCount; i++)
@@ -26,9 +26,9 @@ void ConcurrentAddFunction(void* parameter)
     }
 }
 
-void ConcurrentRemoveFunction(void* parameter)
+void DictionaryConcurrentRemoveFunction(void* parameter)
 {
-    auto threadParameter = (ThreadParameter*)parameter;
+    auto threadParameter = (DictionaryThreadParameter*)parameter;
     auto dictionary = threadParameter->Dictionary;
 
     for (int32_t i = 0; i < threadParameter->ItemCount; i++)
@@ -58,12 +58,12 @@ UTEST(Dictionary, AddValue_KeyStruct)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dictionary = SystemCreateDictionary<int32_t, TestStruct>(stackMemoryArena, 24);
+    auto dictionary = SystemCreateDictionary<int32_t, DictionaryTestStruct>(stackMemoryArena, 24);
     
     // Act
     for (int32_t i = 0; i < 10; i++)
     {
-        TestStruct testStruct = {};
+        DictionaryTestStruct testStruct = {};
         testStruct.Value1 = i;
         testStruct.Value2 = i * i;
         SystemAddDictionaryEntry(dictionary, i, testStruct);
@@ -153,9 +153,6 @@ UTEST(Dictionary, RemoveValue_KeyStruct)
     auto testValue = dictionary[9];
     ASSERT_EQ(0, testValue);
 }
-
-// TODO: Add tests for ADD same key normal/concurrent
-// TODO: Add tests for REMOVE same key normal/concurrent 
 
 UTEST(Dictionary, GrowStorage) 
 {
@@ -258,12 +255,12 @@ UTEST(Dictionary, ConcurrentAdd)
     
     // Act
     SystemThread threads[threadCount];
-    ThreadParameter threadParameters[threadCount];
+    DictionaryThreadParameter threadParameters[threadCount];
 
     for (int32_t i = 0; i < threadCount; i++)
     {
         threadParameters[i] = { dictionary, i, itemCount / threadCount };
-        threads[i] = SystemCreateThread(ConcurrentAddFunction, &threadParameters[i]);
+        threads[i] = SystemCreateThread(DictionaryConcurrentAddFunction, &threadParameters[i]);
     }
 
     for (int32_t i = 0; i < threadCount; i++)
@@ -301,12 +298,12 @@ UTEST(Dictionary, ConcurrentRemove)
     
     // Act
     SystemThread threads[threadCount];
-    ThreadParameter threadParameters[threadCount];
+    DictionaryThreadParameter threadParameters[threadCount];
 
     for (int32_t i = 0; i < threadCount; i++)
     {
         threadParameters[i] = { dictionary, i, (itemCount / 2) / threadCount };
-        threads[i] = SystemCreateThread(ConcurrentRemoveFunction, &threadParameters[i]);
+        threads[i] = SystemCreateThread(DictionaryConcurrentRemoveFunction, &threadParameters[i]);
     }
 
     for (int32_t i = 0; i < threadCount; i++)
@@ -371,12 +368,12 @@ UTEST(Dictionary, Enumeration)
     // Arrange
     auto maxEntries = 100;
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dictionary = SystemCreateDictionary<int32_t, TestStruct>(stackMemoryArena, maxEntries);
+    auto dictionary = SystemCreateDictionary<int32_t, DictionaryTestStruct>(stackMemoryArena, maxEntries);
     
     // Act
     for (int32_t i = 0; i < maxEntries / 2; i++)
     {
-        TestStruct testStruct = {};
+        DictionaryTestStruct testStruct = {};
         testStruct.Value1 = i;
         testStruct.Value2 = i * i;
 
@@ -386,7 +383,7 @@ UTEST(Dictionary, Enumeration)
     // Act
     auto testEnumerator = SystemGetDictionaryEnumerator(dictionary);
     auto count = 0;
-    TestStruct resultItems[maxEntries];
+    DictionaryTestStruct resultItems[maxEntries];
     auto testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
 
     while (testValue != nullptr)

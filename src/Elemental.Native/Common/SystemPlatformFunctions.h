@@ -33,23 +33,14 @@ SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
  */
 SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena);
 
-/**
- * Allocates a block of memory of the specified size.
- *
- * @param sizeInBytes The size of the memory block to allocate, in bytes.
- * @return A pointer to the allocated memory block.
- */
-void* SystemPlatformAllocateMemory(size_t sizeInBytes);
 
-/**
- * Frees a previously allocated memory block.
- *
- * This function releases the memory block pointed to by 'pointer', which must have been returned by a previous call to a memory allocation function.
- *
- * @param pointer A pointer to the memory block to free.
- * @param sizeInBytes The size of the memory block in bytes. This parameter may be used for custom memory management purposes.
- */
+void* SystemPlatformReserveMemory(size_t sizeInBytes);
+
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes);
+
+void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes);
+
+void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes);
 
 /**
  * Clears the contents of a memory block.

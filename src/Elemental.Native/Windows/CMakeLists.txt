@@ -18,7 +18,7 @@ target_include_directories(Elemental.Native PRIVATE .)
 target_link_libraries(Elemental.Native PRIVATE common)
 target_link_libraries(Elemental.Native PRIVATE external_dependencies)
 target_link_libraries(Elemental.Native PRIVATE Direct3D12)
-target_link_libraries(Elemental.Native PRIVATE Dwmapi UxTheme)
+target_link_libraries(Elemental.Native PRIVATE Dwmapi UxTheme onecore)
 target_compile_definitions(Elemental.Native PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
 
 add_custom_command(TARGET Elemental.Native POST_BUILD

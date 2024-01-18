@@ -1,7 +1,35 @@
+#include "SystemFunctions.h"
 #include "SystemMemory.h"
 #include "utest.h"
 
-// TODO: Write thread safe tests!!!!
+// TODO: Write memory alignment check tests
+
+struct MemoryThreadParameter
+{
+    MemoryArena MemoryArena;
+    int32_t ThreadId;
+    int32_t ItemCount;
+};
+
+void MemoryConcurrentAddFunction(void* parameter)
+{
+    auto threadParameter = (MemoryThreadParameter*)parameter;
+
+    for (int32_t i = 0; i < threadParameter->ItemCount; i++)
+    {
+        SystemPushMemory(threadParameter->MemoryArena, 64);
+    }
+}
+
+void MemoryConcurrentPopFunction(void* parameter)
+{
+    auto threadParameter = (MemoryThreadParameter*)parameter;
+
+    for (int32_t i = 0; i < threadParameter->ItemCount; i++)
+    {
+        SystemPopMemory(threadParameter->MemoryArena, 64);
+    }
+}
 
 UTEST(Memory, Allocate) 
 {
@@ -125,3 +153,62 @@ UTEST(Memory, StackPushAllocateNewBlock)
     ASSERT_LT(dataSizeInBytes + 1024, SystemGetMemoryArenaAllocatedBytes(memoryArena));
     ASSERT_EQ(dataSizeInBytes, data.Length);
 }
+
+UTEST(Memory, ConcurrentPush) 
+{
+    // Arrange
+    const int32_t itemCount = 80000;
+    const int32_t threadCount = 32;
+    auto maxSize = (size_t)itemCount * 64;
+    auto memoryArena = SystemAllocateMemoryArena(maxSize);
+    
+    // Act
+    SystemThread threads[threadCount];
+    MemoryThreadParameter threadParameters[threadCount];
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        threadParameters[i] = { memoryArena, i, itemCount / threadCount };
+        threads[i] = SystemCreateThread(MemoryConcurrentAddFunction, &threadParameters[i]);
+    }
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
+    }
+
+    // Assert
+    ASSERT_EQ(maxSize, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+}
+
+UTEST(Memory, ConcurrentPop) 
+{
+    // Arrange
+    const int32_t itemCount = 80000;
+    const int32_t threadCount = 32;
+    auto maxSize = (size_t)itemCount * 64;
+    auto memoryArena = SystemAllocateMemoryArena(maxSize);
+    SystemPushMemory(memoryArena, maxSize);
+    
+    // Act
+    SystemThread threads[threadCount];
+    MemoryThreadParameter threadParameters[threadCount];
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        threadParameters[i] = { memoryArena, i, itemCount / threadCount };
+        threads[i] = SystemCreateThread(MemoryConcurrentPopFunction, &threadParameters[i]);
+    }
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
+    }
+
+    // Assert
+    ASSERT_EQ(0llu, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+}
+
+// TODO: ConcurrentPush and Pop with grow/shrink
