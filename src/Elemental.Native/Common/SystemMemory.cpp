@@ -149,7 +149,6 @@ StackMemoryArena::~StackMemoryArena()
     }
 }
 
-#include <stdio.h>
 void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes)
 {
     // TODO: Don't use atomics if the memory arena equals stack memory arena
@@ -218,7 +217,7 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
 
         __atomic_load(&storage->CurrentPointer, &currentPointer, __ATOMIC_ACQUIRE);
 
-        availableCommitedSizeInBytes = (int32_t)(storage->CommitedMemoryPointer - (currentPointer - sizeInBytes));
+        availableCommitedSizeInBytes = (int32_t)(storage->CommitedMemoryPointer - currentPointer);
         fullPagesToDecommit = availableCommitedSizeInBytes / (int32_t)systemPageSizeInBytes;
 
         if (fullPagesToDecommit > 1)
