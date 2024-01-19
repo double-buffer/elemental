@@ -33,13 +33,60 @@ SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
  */
 SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena);
 
+/**
+ * Retrieves the size of the system's memory page.
+ * 
+ * This function is used to obtain the size of a single page of memory as used by the system's memory management. 
+ * The page size is a fundamental property in memory management, as it determines the granularity of memory allocation 
+ * and management operations.
+ *
+ * @return The size of a memory page in bytes.
+ */
+size_t SystemPlatformGetPageSize();
 
+/**
+ * Reserves a block of memory.
+ * 
+ * This function reserves a region of memory of the specified size. The reserved memory is not committed (i.e., physical 
+ * storage has not been allocated). This is typically used in systems to reserve a large block of address space and commit 
+ * portions of it as needed.
+ *
+ * @param sizeInBytes The size of the memory to reserve in bytes.
+ * @return A pointer to the beginning of the reserved memory block.
+ */
 void* SystemPlatformReserveMemory(size_t sizeInBytes);
 
+/**
+ * Frees a previously reserved block of memory.
+ * 
+ * This function releases a previously reserved block of memory, making it available for other uses. The specified memory 
+ * block should have been reserved using SystemPlatformReserveMemory.
+ *
+ * @param pointer A pointer to the start of the memory block to be freed.
+ * @param sizeInBytes The size of the memory block in bytes.
+ */
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes);
 
+/**
+ * Commits a block of reserved memory.
+ * 
+ * After reserving memory using SystemPlatformReserveMemory, this function is used to commit a portion (or all) of that 
+ * memory. Committing memory allocates physical storage (RAM or disk) for that memory region.
+ *
+ * @param pointer A pointer to the start of the memory block to be committed.
+ * @param sizeInBytes The size of the memory block to commit in bytes.
+ */
 void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes);
 
+/**
+ * Decomits a previously committed block of memory.
+ * 
+ * This function is used to decommit a portion of memory that was previously committed using SystemPlatformCommitMemory. 
+ * This effectively frees up the physical storage associated with the memory, while keeping the memory region reserved.
+ *
+ * @param pointer A pointer to the start of the memory block to decommit.
+ * @param sizeInBytes The size of the memory block to decommit in bytes.
+ */
 void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes);
 
 /**

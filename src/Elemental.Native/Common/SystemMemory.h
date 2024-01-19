@@ -12,15 +12,11 @@
 
 //#define new NOT_IMPLEMENTED
 
-/**
- * Represents the storage structure for MemoryArena.
- */
 struct MemoryArenaStorage;
-struct MemoryArenaHandle;
 
 struct MemoryArena
 {
-    MemoryArenaHandle* MemoryArenaHandle;
+    MemoryArenaStorage* Storage;
     uint8_t Level;
 };
 

@@ -53,6 +53,11 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena
     return result;
 }
 
+size_t SystemPlatformGetPageSize()
+{
+    return sysconf(_SC_PAGESIZE);
+}
+
 void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
     return mmap(nullptr, sizeInBytes, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);

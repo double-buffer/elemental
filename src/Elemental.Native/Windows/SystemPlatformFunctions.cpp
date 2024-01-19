@@ -1,13 +1,6 @@
 #include "SystemPlatformFunctions.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
-/*    
-
-    auto baseAddress = VirtualAlloc2(nullptr, nullptr, 64llu * 1024llu * 1014llu * 1024llu, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0);
-    //auto testAddress = (char*)VirtualAlloc2(nullptr, baseAddress, 64llu * 1024llu * 1014llu * 1024llu, MEM_COMMIT, PAGE_EXECUTE_READWRITE, nullptr, 0);
-
-    //*(char*)baseAddress = (char)128;
-*/
 
 SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
 {
@@ -35,6 +28,14 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena
     return result;
 }
 
+size_t SystemPlatformGetPageSize()
+{
+    SYSTEM_INFO systemInfo;
+    GetSystemInfo(&systemInfo);
+
+    return systemInfo.dwAllocationGranularity;
+}
+
 void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
     return VirtualAlloc2(nullptr, nullptr, sizeInBytes, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0);
@@ -42,7 +43,7 @@ void* SystemPlatformReserveMemory(size_t sizeInBytes)
 
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
 {
-    VirtualFree(pointer, sizeInBytes, MEM_RELEASE);
+    VirtualFree(pointer, 0, MEM_RELEASE);
 }
 
 void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)

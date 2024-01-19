@@ -139,21 +139,6 @@ UTEST(Memory, StackMemoryArenaRelease)
     ASSERT_STREQ("Test5Stack1", string5.Pointer);
 }
 
-UTEST(Memory, StackPushAllocateNewBlock) 
-{
-    // Arrange
-    auto memoryArena = SystemGetStackMemoryArena();
-    auto dataSizeInBytes = 2097152llu;
-    auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
-    
-    // Act
-    SystemPushArrayZero<uint8_t>(memoryArena, 1024); 
-
-    // Assert
-    ASSERT_LT(dataSizeInBytes + 1024, SystemGetMemoryArenaAllocatedBytes(memoryArena));
-    ASSERT_EQ(dataSizeInBytes, data.Length);
-}
-
 UTEST(Memory, ConcurrentPush) 
 {
     // Arrange
@@ -211,4 +196,39 @@ UTEST(Memory, ConcurrentPop)
     ASSERT_EQ(0llu, SystemGetMemoryArenaAllocatedBytes(memoryArena));
 }
 
-// TODO: ConcurrentPush and Pop with grow/shrink
+UTEST(Memory, ConcurrentPushPop) 
+{
+    // Arrange
+    const int32_t itemCount = 80000;
+    const int32_t threadCount = 32;
+    auto maxSize = (size_t)itemCount * 64;
+    auto memoryArena = SystemAllocateMemoryArena(maxSize);
+    SystemPushMemory(memoryArena, maxSize / 2);
+    
+    // Act
+    SystemThread threads[threadCount];
+    MemoryThreadParameter threadParameters[threadCount];
+
+    for (int32_t i = 0; i < threadCount / 2; i++)
+    {
+        threadParameters[i] = { memoryArena, i, itemCount / threadCount };
+        threads[i] = SystemCreateThread(MemoryConcurrentPopFunction, &threadParameters[i]);
+    }
+    
+    for (int32_t i = threadCount / 2; i < threadCount; i++)
+    {
+        threadParameters[i] = { memoryArena, i, itemCount / threadCount };
+        threads[i] = SystemCreateThread(MemoryConcurrentAddFunction, &threadParameters[i]);
+    }
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
+    }
+
+    // Assert
+    ASSERT_EQ(maxSize / 2, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+}
+
+// TODO: ConcurrentPush and Pop mixed to tead the decommit thread safe that could have issues
