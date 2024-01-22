@@ -5,12 +5,21 @@
 
 #define MEMORYARENA_DEFAULT_SIZE 64 * 1024 * 1024
 
+struct MemoryArenaPageInfo
+{
+    bool IsCommitted;
+    uint32_t MinCommittedOffset;
+    uint32_t MaxCommittedOffset;
+};
+
 struct MemoryArenaStorage
 {
     uint8_t* CurrentPointer;
-    uint8_t* CommitedMemoryPointer;
     size_t SizeInBytes;
+    size_t HeaderSizeInBytes;
+    uint8_t* CommitedMemoryPointer;
     bool IsCommitOperationInProgres;
+    MemoryArenaPageInfo* PagesInfos;
 
     // Stack fields
     MemoryArena ExtraStorage;
@@ -26,6 +35,7 @@ size_t ResizeToPageSizeMultiple(size_t sizeInBytes, size_t pageSizeInBytes)
     return (sizeInBytes + pageSizeInBytes - 1) & ~(pageSizeInBytes - 1);
 }
 
+#include <stdio.h>
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
     if (systemPageSizeInBytes == 0)
@@ -33,17 +43,41 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
         systemPageSizeInBytes = SystemPlatformGetPageSize();
     }
 
-    auto sizeResized = ResizeToPageSizeMultiple(sizeof(MemoryArenaStorage) + sizeInBytes, systemPageSizeInBytes);
-    auto storage = (MemoryArenaStorage*)SystemPlatformReserveMemory(sizeResized);
-    SystemPlatformCommitMemory(storage, systemPageSizeInBytes);
+    auto pageInfosCount = SystemRoundUp((float)sizeInBytes / (float)systemPageSizeInBytes);
+    auto headerSizeInBytes = sizeof(MemoryArenaStorage) + pageInfosCount * sizeof(MemoryArenaPageInfo);
 
-    storage->CurrentPointer = (uint8_t*)storage + sizeof(MemoryArenaStorage);
-    storage->CommitedMemoryPointer = (uint8_t*)storage + systemPageSizeInBytes;
+    auto sizeResized = ResizeToPageSizeMultiple(headerSizeInBytes + sizeInBytes, systemPageSizeInBytes);
+    auto storage = (MemoryArenaStorage*)SystemPlatformReserveMemory(sizeResized);
+
+    auto headerResized = ResizeToPageSizeMultiple(headerSizeInBytes, systemPageSizeInBytes);
+    SystemPlatformCommitMemory(storage, headerResized);
+
+    storage->CurrentPointer = (uint8_t*)storage + headerSizeInBytes;
     storage->SizeInBytes = sizeInBytes;
+    storage->HeaderSizeInBytes = headerSizeInBytes;
+    storage->CommitedMemoryPointer = (uint8_t*)storage + headerResized;
     storage->IsCommitOperationInProgres = false;
+    storage->PagesInfos = (MemoryArenaPageInfo*)((uint8_t*)storage + sizeof(MemoryArenaStorage));
     storage->ExtraStorage = {};
     storage->Level = 0;
     storage->MinAllocatedLevel = 255;
+
+    printf("PageInfo Count: %llu, HeaderSize: %llu\n", pageInfosCount, storage->HeaderSizeInBytes);
+
+    for (size_t i = 0; i < (size_t)pageInfosCount; i++)
+    {
+        // TODO: Init min and max
+        if (headerResized / systemPageSizeInBytes > i)
+        {
+            storage->PagesInfos[i].IsCommitted = true;
+            storage->PagesInfos[i].MinCommittedOffset = 0;
+            storage->PagesInfos[i].MaxCommittedOffset = storage->HeaderSizeInBytes;
+        }
+        else 
+        {
+            storage->PagesInfos[i].IsCommitted = false;
+        }
+    }
 
     return storage;
 }
@@ -84,7 +118,7 @@ MemoryArena SystemAllocateMemoryArena(size_t sizeInBytes)
 
 void SystemFreeMemoryArena(MemoryArena memoryArena)
 {
-    SystemPlatformFreeMemory(memoryArena.Storage, sizeof(MemoryArenaStorage) + memoryArena.Storage->SizeInBytes);
+    SystemPlatformFreeMemory(memoryArena.Storage, memoryArena.Storage->HeaderSizeInBytes + memoryArena.Storage->SizeInBytes);
 }
 
 void SystemClearMemoryArena(MemoryArena memoryArena)
@@ -92,9 +126,10 @@ void SystemClearMemoryArena(MemoryArena memoryArena)
     SystemPopMemory(memoryArena, SystemGetMemoryArenaAllocatedBytes(memoryArena));
 }
 
+// TODO: Change this to infos and return also the committed pages and total pages
 size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena memoryArena)
 {
-    return memoryArena.Storage->CurrentPointer - (uint8_t*)memoryArena.Storage - sizeof(MemoryArenaStorage);
+    return memoryArena.Storage->CurrentPointer - (uint8_t*)memoryArena.Storage - memoryArena.Storage->HeaderSizeInBytes;
 }
 
 StackMemoryArena SystemGetStackMemoryArena()
@@ -149,12 +184,127 @@ StackMemoryArena::~StackMemoryArena()
     }
 }
 
+struct PageSizeIndexes
+{
+    size_t StartIndex;
+    size_t EndIndex;
+};
+
+PageSizeIndexes ComputePageSizeInfoIndexes(MemoryArenaStorage* storage, void* pointer, size_t sizeInBytes)
+{
+    PageSizeIndexes result = {};
+    result.StartIndex = ((uint8_t*)pointer - (uint8_t*)storage) / systemPageSizeInBytes;
+    result.EndIndex = (size_t)SystemRoundUp((float)((uint8_t*)pointer - (uint8_t*)storage + sizeInBytes) / systemPageSizeInBytes);
+    return result;
+}
+
+PageSizeIndexes ComputePageSizeLocalOffsets(MemoryArenaStorage* storage, size_t index, void* pointer, size_t sizeInBytes)
+{
+    // TODO: Take into account the index
+    PageSizeIndexes result = {};
+    result.StartIndex = ((uint8_t*)pointer - (uint8_t*)storage) % systemPageSizeInBytes;
+    result.EndIndex = ((uint8_t*)pointer - (uint8_t*)storage + sizeInBytes) % systemPageSizeInBytes;
+    return result;
+}
+
+void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes)
+{
+    auto storage = memoryArena.Storage;
+    auto pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
+    auto needToCommit = false;
+
+    for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
+    {
+        auto pageSizeOffsets = ComputePageSizeLocalOffsets(storage, i, pointer, sizeInBytes);
+        auto pageInfos = &storage->PagesInfos[i];
+
+        //printf("Checking page: %llu (size: %llu) (start: %llu, end: %llu, pageSize: %llu, allocated: %llu)\n", i, sizeInBytes, pageSizeIndexes.StartIndex, pageSizeIndexes.EndIndex, systemPageSizeInBytes, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+  
+            
+        // TODO: Atomic (with exchange?)
+        pageInfos->MinCommittedOffset = pageSizeOffsets.StartIndex < pageInfos->MinCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MinCommittedOffset;
+        pageInfos->MaxCommittedOffset = pageSizeOffsets.EndIndex > pageInfos->MaxCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MaxCommittedOffset;
+
+        printf("Commit page :%llu start: %u end: %u\n", i, pageSizeOffsets.StartIndex, pageSizeOffsets.EndIndex);
+    
+        if (!pageInfos->IsCommitted)
+        {
+            printf("Need to commit page %llu\n", i);
+            needToCommit = true;
+        }
+    }
+
+    if (!needToCommit)
+    {
+        return;
+    }
+
+    auto expected = false;
+
+    while (!__atomic_compare_exchange_n(&storage->IsCommitOperationInProgres, &expected, true, true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE))
+    {
+        expected = false;
+        SystemYieldThread();
+    }
+
+    pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
+
+    for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
+    {
+        // TODO: Try to group the commit
+        if (!storage->PagesInfos[i].IsCommitted)
+        {
+            printf("Committing page %llu\n", i);
+            SystemPlatformCommitMemory((uint8_t*)storage + i * systemPageSizeInBytes, systemPageSizeInBytes);
+            storage->PagesInfos[i].IsCommitted = true;
+            //storage->PagesInfos[i].MinCommittedOffset = systemPageSizeInBytes;
+            //storage->PagesInfos[i].MaxCommittedOffset = 0;
+        }
+    }
+
+    __atomic_store_n(&storage->IsCommitOperationInProgres, false, __ATOMIC_RELEASE);
+}
+
+void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes)
+{
+    auto storage = memoryArena.Storage;
+    auto pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
+    auto needToDecommit = false;
+
+    for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
+    {
+        auto pageSizeOffsets = ComputePageSizeLocalOffsets(storage, i, pointer, sizeInBytes);
+        auto pageInfos = &storage->PagesInfos[i];
+        // TODO: Need to check start and end index to be sure if we can decommit!
+        // TODO: Atomic
+
+        //pageInfos->MinCommittedOffset = pageSizeOffsets.StartIndex >= pageInfos->MinCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MinCommittedOffset;
+        //pageInfos->MaxCommittedOffset = pageSizeOffsets.EndIndex <= pageInfos->MaxCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MaxCommittedOffset;
+
+        printf("Checking page: %llu (size: %llu) (min: %u, max: %u, start offset: %llu, end offset: %llu)\n", i, sizeInBytes, pageInfos->MinCommittedOffset, pageInfos->MaxCommittedOffset
+               , pageSizeOffsets.StartIndex, 
+               pageSizeOffsets.EndIndex);
+
+        if (pageInfos->IsCommitted && (int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
+        {
+            printf("Need to decommit page %llu\n", i);
+            needToDecommit = true;
+            break;
+        }
+    }
+
+    // Maybe it is possible by storing in each page entry in the table the min and max pointer
+    // We update the boundaries and if no more we can decommit safely
+}
+
+// TODO: Use span everywhere?
 void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes)
 {
     // TODO: Don't use atomics if the memory arena equals stack memory arena
 
     // TODO: Align sizeInBytes
-    auto storage = GetStackWorkingMemoryArena(memoryArena).Storage;
+    auto workingMemoryArena = GetStackWorkingMemoryArena(memoryArena);
+    auto storage = workingMemoryArena.Storage;
     auto allocatedSize = SystemGetMemoryArenaAllocatedBytes(memoryArena);
 
     if (allocatedSize + sizeInBytes > storage->SizeInBytes)
@@ -164,6 +314,7 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes)
     }
 
     auto pointer = __atomic_fetch_add(&storage->CurrentPointer, sizeInBytes, __ATOMIC_SEQ_CST);
+    SystemCommitMemory(workingMemoryArena, pointer, sizeInBytes);
 
     if (pointer + sizeInBytes >= storage->CommitedMemoryPointer)
     {
@@ -179,7 +330,7 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes)
         {
             auto sizeResized = ResizeToPageSizeMultiple(sizeInBytes, systemPageSizeInBytes);
 
-            SystemPlatformCommitMemory(storage->CommitedMemoryPointer, sizeResized);
+            //SystemPlatformCommitMemory(storage->CommitedMemoryPointer, sizeResized);
             storage->CommitedMemoryPointer += sizeResized;
         }
 
@@ -201,6 +352,9 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
     }
 
     auto currentPointer = __atomic_fetch_add(&storage->CurrentPointer, -sizeInBytes, __ATOMIC_SEQ_CST);
+    SystemDecommitMemory(memoryArena, currentPointer - sizeInBytes, sizeInBytes);
+
+    // TODO: Decommit, concurrent dictionary add crash because we don't reset the flags.
 
     auto availableCommitedSizeInBytes = (int32_t)(storage->CommitedMemoryPointer - (currentPointer - sizeInBytes));
     auto fullPagesToDecommit = availableCommitedSizeInBytes / (int32_t)systemPageSizeInBytes;

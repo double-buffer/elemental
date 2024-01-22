@@ -22,6 +22,19 @@ double SystemRound(double value)
     return (value < 0.0) ? (int32_t)(value - 0.5) : (int32_t)(value + 0.5);
 }
 
+int32_t SystemRoundUp(double value)
+{
+    auto intPart = (int32_t)value;
+    auto fractionalPart = value - intPart;
+    
+    if (fractionalPart > 0.0) 
+    {
+        return intPart + 1;
+    }
+
+    return intPart;
+}
+
 template<typename T>
 T SystemAbs(T value)
 {

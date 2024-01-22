@@ -25,6 +25,30 @@ UTEST(MathFunctions, SystemRound)
     ASSERT_EQ(46.0, result);
 }
 
+UTEST(MathFunctions, SystemRoundUpNearZero) 
+{
+    // Arrange
+    auto testNumber = 0.1;
+    
+    // Act
+    auto result = SystemRoundUp(testNumber);
+
+    // Assert
+    ASSERT_EQ(1, result);
+}
+
+UTEST(MathFunctions, SystemRoundUpExact) 
+{
+    // Arrange
+    auto testNumber = 6.0;
+    
+    // Act
+    auto result = SystemRoundUp(testNumber);
+
+    // Assert
+    ASSERT_EQ(6, result);
+}
+
 UTEST(MathFunctions, SystemAbs) 
 {
     // Arrange

@@ -3,6 +3,7 @@
 #include "SystemSpan.h"
 
 // TODO: Get rid of all mallocs and new
+// TODO: Maybe we should expose the memory arena to the outside world?
 
 //#define new NOT_IMPLEMENTED()
 

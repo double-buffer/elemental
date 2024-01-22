@@ -35,7 +35,7 @@ UTEST(Memory, Allocate)
 {
     // Arrange
     auto memoryArena = SystemAllocateMemoryArena();
-    auto dataSizeInBytes = 1024llu;
+    auto dataSizeInBytes = 70024llu;
     
     // Act
     auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
@@ -43,6 +43,22 @@ UTEST(Memory, Allocate)
     // Assert
     ASSERT_EQ(dataSizeInBytes, SystemGetMemoryArenaAllocatedBytes(memoryArena));
     ASSERT_EQ(dataSizeInBytes, data.Length);
+}
+
+UTEST(Memory, AllocateMultiple) 
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dataSizeInBytes = 70024llu;
+    auto dataSizeInBytes2 = 1024llu;
+    
+    // Act
+    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
+    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes2); 
+    SystemPopMemory(memoryArena, dataSizeInBytes2);
+
+    // Assert
+    ASSERT_EQ(dataSizeInBytes, SystemGetMemoryArenaAllocatedBytes(memoryArena));
 }
 
 UTEST(Memory, ConcatBuffers)
@@ -230,5 +246,8 @@ UTEST(Memory, ConcurrentPushPop)
     // Assert
     ASSERT_EQ(maxSize / 2, SystemGetMemoryArenaAllocatedBytes(memoryArena));
 }
+
+// TODO: Add tests with manual commit decommit over a reserved area
+
 
 // TODO: ConcurrentPush and Pop mixed to tead the decommit thread safe that could have issues

@@ -39,6 +39,15 @@ size_t SystemRoundUpToPowerOf2(size_t value);
 double SystemRound(double value);
 
 /**
+ * Rounds a double value up to the nearest integer.
+ * If the value is already an integer, it will remain unchanged.
+ *
+ * @param value The double value to be rounded up.
+ * @return The rounded integer as int32_t.
+ */
+int32_t SystemRoundUp(double value);
+
+/**
  * Calculates the absolute value of the given input.
  *
  * This template function returns the absolute (non-negative) value of any numeric type.
