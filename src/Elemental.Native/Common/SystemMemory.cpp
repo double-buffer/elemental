@@ -232,7 +232,7 @@ StackMemoryArena::~StackMemoryArena()
     }
 }
 
-bool showDebug = true;
+bool showDebug = false;
 
 void DebugPageTable(MemoryArenaStorage* storage, size_t count)
 {
