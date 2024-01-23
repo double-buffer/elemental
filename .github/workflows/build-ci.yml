@@ -43,3 +43,17 @@ jobs:
     with:
       platform: ${{ matrix.platform }}
       architecture: ${{ matrix.architecture }}
+
+  ci-build-check:
+    if: always() && github.event.pull_request
+    runs-on: ubuntu-latest
+    name: CI Build Check
+    needs:
+      - ci-checks
+      - changes
+    steps:
+      - uses: mheap/github-action-required-labels@master
+    with:
+    mode: exactly
+    count: 0
+    labels: build-fail
