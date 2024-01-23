@@ -279,6 +279,30 @@ struct SystemThread
     void* Handle;
 };
 
+#define SystemAtomicReplace(destination, expected, replaceExpression) \
+        {\
+        auto desired = (replaceExpression); \
+        while (!__atomic_compare_exchange_n(&(destination), &(expected), desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) \
+        {\
+            SystemYieldThread();\
+            desired = (replaceExpression);\
+        }\
+        }\
+
+#define SystemAtomicReplaceWithValue(destination, expectedValue, replaceValue) \
+        {\
+        auto expected = (expectedValue); \
+        while (!__atomic_compare_exchange_n(&(destination), &expected, replaceValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) \
+        {\
+            SystemYieldThread();\
+            expected = (expectedValue);\
+        }\
+        }\
+    
+#define SystemAtomicStore(destination, value) __atomic_store_n(&(destination), (value), __ATOMIC_RELEASE);
+#define SystemAtomicAdd(destination, value) __atomic_fetch_add(&(destination), (value), __ATOMIC_SEQ_CST);
+#define SystemAtomicSubstract(destination, value) __atomic_fetch_sub(&(destination), (value), __ATOMIC_SEQ_CST);
+
 /**
  * Function signature for a system thread.
  */
