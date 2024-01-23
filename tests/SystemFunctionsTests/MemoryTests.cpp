@@ -50,15 +50,14 @@ UTEST(Memory, AllocateMultiple)
     // Arrange
     auto memoryArena = SystemAllocateMemoryArena();
     auto dataSizeInBytes = 70024llu;
-    auto dataSizeInBytes2 = 1024llu;
     
     // Act
     SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
-    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes2); 
-    SystemPopMemory(memoryArena, dataSizeInBytes2);
+    SystemPushArrayZero<uint8_t>(memoryArena, 1024); 
+    SystemPopMemory(memoryArena, 20000);
 
     // Assert
-    ASSERT_EQ(dataSizeInBytes, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+    ASSERT_EQ(dataSizeInBytes + 1024 - 20000, SystemGetMemoryArenaAllocatedBytes(memoryArena));
 }
 
 UTEST(Memory, ConcatBuffers)
