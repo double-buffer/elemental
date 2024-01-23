@@ -21,6 +21,13 @@ struct MemoryArena
     uint8_t Level;
 };
 
+struct MemoryArenaAllocationInfos
+{
+    size_t AllocatedBytes;
+    size_t CommittedBytes;
+    size_t MaximumSizeInBytes;
+};
+
 /**
  * Represents a stack-based memory arena.
  */
@@ -70,12 +77,8 @@ void SystemFreeMemoryArena(MemoryArena memoryArena);
  */
 void SystemClearMemoryArena(MemoryArena memoryArena);
 
-/**
- * Gets the number of bytes currently allocated in a MemoryArena.
- * @param memoryArena A pointer to the MemoryArena.
- * @return The number of bytes currently allocated in the MemoryArena.
- */
-size_t SystemGetMemoryArenaAllocatedBytes(MemoryArena memoryArena);
+
+MemoryArenaAllocationInfos SystemGetMemoryArenaAllocationInfos(MemoryArena memoryArena);
 
 /**
  * Gets a StackMemoryArena, a specialized MemoryArena with stack-based allocation.

@@ -41,7 +41,8 @@ UTEST(Memory, Allocate)
     auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
 
     // Assert
-    ASSERT_EQ(dataSizeInBytes, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
     ASSERT_EQ(dataSizeInBytes, data.Length);
 }
 
@@ -57,7 +58,9 @@ UTEST(Memory, AllocateMultiple)
     SystemPopMemory(memoryArena, 20000);
 
     // Assert
-    ASSERT_EQ(dataSizeInBytes + 1024 - 20000, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(dataSizeInBytes + 1024 - 20000, allocationInfos.AllocatedBytes);
+    ASSERT_GT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
 }
 
 UTEST(Memory, ConcatBuffers)
@@ -179,7 +182,8 @@ UTEST(Memory, ConcurrentPush)
     }
 
     // Assert
-    ASSERT_EQ(maxSize, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(maxSize, allocationInfos.AllocatedBytes);
 }
 
 UTEST(Memory, ConcurrentPop) 
@@ -208,7 +212,8 @@ UTEST(Memory, ConcurrentPop)
     }
 
     // Assert
-    ASSERT_EQ(0llu, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(0llu, allocationInfos.AllocatedBytes);
 }
 
 UTEST(Memory, ConcurrentPushPop) 
@@ -243,7 +248,8 @@ UTEST(Memory, ConcurrentPushPop)
     }
 
     // Assert
-    ASSERT_EQ(maxSize / 2, SystemGetMemoryArenaAllocatedBytes(memoryArena));
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(maxSize / 2, allocationInfos.AllocatedBytes);
 }
 
 // TODO: Add tests with manual commit decommit over a reserved area
