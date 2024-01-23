@@ -17,6 +17,12 @@ struct SystemPlatformDateTime
     int32_t Second;
 };
 
+struct SystemPlatformAllocationInfos
+{
+    size_t CommittedBytes;
+    size_t ReservedBytes;
+};
+
 /**
  * Retrieves the current environment of the system platform.
  *
@@ -43,6 +49,20 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena
  * @return The size of a memory page in bytes.
  */
 size_t SystemPlatformGetPageSize();
+
+/**
+ * Retrieves allocation information of the system platform.
+ *
+ * This function provides detailed information about the memory allocation status of the system platform. It returns
+ * a `SystemPlatformAllocationInfos` structure containing two size_t values: `CommittedBytes` and `ReservedBytes`.
+ * `CommittedBytes` indicates the total amount of memory that is currently allocated and in use, whereas `ReservedBytes`
+ * represents the total amount of memory that has been reserved but not necessarily allocated. This information is
+ * crucial for understanding the memory usage and availability on the system platform, helping in optimizing memory
+ * management for applications.
+ *
+ * @return A `SystemPlatformAllocationInfos` structure containing the committed and reserved memory information.
+ */
+SystemPlatformAllocationInfos SystemPlatformGetAllocationInfos();
 
 /**
  * Reserves a block of memory.

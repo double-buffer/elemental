@@ -21,6 +21,12 @@ struct MemoryArena
     uint8_t Level;
 };
 
+struct AllocationInfos
+{
+    size_t CommittedBytes;
+    size_t ReservedBytes;
+};
+
 struct MemoryArenaAllocationInfos
 {
     size_t AllocatedBytes;
@@ -78,6 +84,7 @@ void SystemFreeMemoryArena(MemoryArena memoryArena);
 void SystemClearMemoryArena(MemoryArena memoryArena);
 
 
+AllocationInfos SystemGetAllocationInfos();
 MemoryArenaAllocationInfos SystemGetMemoryArenaAllocationInfos(MemoryArena memoryArena);
 
 /**

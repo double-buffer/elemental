@@ -24,6 +24,8 @@ struct ThreadInfo
 static ThreadInfo threadArray[MAX_THREADS];
 static bool isInitialized = false;
 
+SystemPlatformAllocationInfos systemPlatformAllocationInfos;
+
 SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
 {
     auto result = SystemPushStruct<SystemPlatformEnvironment>(memoryArena);
@@ -58,23 +60,32 @@ size_t SystemPlatformGetPageSize()
     return sysconf(_SC_PAGESIZE);
 }
 
+SystemPlatformAllocationInfos SystemPlatformGetAllocationInfos()
+{
+    return systemPlatformAllocationInfos;
+}
+
 void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.ReservedBytes += sizeInBytes;
     return mmap(nullptr, sizeInBytes, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
 }
 
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.ReservedBytes -= sizeInBytes;
     munmap(pointer, sizeInBytes);
 }
 
 void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.CommittedBytes += sizeInBytes;
     mprotect(pointer, sizeInBytes, PROT_READ | PROT_WRITE);
 }
 
 void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.CommittedBytes -= sizeInBytes;
     mprotect(pointer, sizeInBytes, PROT_NONE);
 }
 

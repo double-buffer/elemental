@@ -2,6 +2,8 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
+SystemPlatformAllocationInfos systemPlatformAllocationInfos;
+
 SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
 {
     auto result = SystemPushStruct<SystemPlatformEnvironment>(memoryArena);
@@ -36,23 +38,32 @@ size_t SystemPlatformGetPageSize()
     return systemInfo.dwAllocationGranularity;
 }
 
+SystemPlatformAllocationInfos SystemPlatformGetAllocationInfos()
+{
+    return systemPlatformAllocationInfos;
+}
+
 void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.ReservedBytes += sizeInBytes;
     return VirtualAlloc2(nullptr, nullptr, sizeInBytes, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0);
 }
 
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.ReservedBytes -= sizeInBytes;
     VirtualFree(pointer, 0, MEM_RELEASE);
 }
 
 void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.CommittedBytes += sizeInBytes;
     VirtualAlloc2(nullptr, pointer, sizeInBytes, MEM_COMMIT, PAGE_READWRITE, nullptr, 0);
 }
 
 void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
 {
+    systemPlatformAllocationInfos.CommittedBytes -= sizeInBytes;
     VirtualFree(pointer, sizeInBytes, MEM_DECOMMIT);
 }
 
