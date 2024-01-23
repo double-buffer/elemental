@@ -49,8 +49,11 @@ jobs:
     runs-on: ubuntu-latest
     name: CI Build Check
     needs: [ run_tests ]
-    uses: mheap/github-action-required-labels@master
-    with:
-      mode: exactly
-      count: 0
-      labels: build-fail
+    steps:
+      - run: |
+          result="${{ needs.build.result }}"
+          if [[ $result == "success" || $result == "skipped" ]]; then
+            exit 0
+          else
+            exit 1
+          fi
