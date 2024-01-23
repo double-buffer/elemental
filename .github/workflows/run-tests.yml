@@ -45,11 +45,11 @@ jobs:
     - name: Set Executable Permission
       if: inputs.platform == 'osx'
       run: |
-        chmod +x ./Tests/Elemental.Tests.NativeSystemFunctionsTests
+        chmod +x ./Tests/SystemFunctionsTests
         chmod +x ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS/Elemental.Tests.NativeApplicationTests
 
     - name: Run Native System Functions Tests
-      run: ./Tests/Elemental.Tests.NativeSystemFunctionsTests
+      run: ./Tests/SystemFunctionsTests
     
     - name: Run NativeApplication Tests
       if: inputs.platform != 'osx'

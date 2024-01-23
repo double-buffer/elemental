@@ -31,6 +31,7 @@ jobs:
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
+    #TODO: We don't need to use ninja-multiconfig because we build only in release
     - name: Configure Build
       run: |
         mkdir ./build
@@ -42,7 +43,7 @@ jobs:
 
     - name: Build Tests
       run: |
-        cmake --build ./build --target Elemental.Tests.NativeSystemFunctionsTests --config Release
+        cmake --build ./build --target SystemFunctionsTests --config Release
           
     # Conditional Vulkan Loader steps for Windows
     - name: Download Vulkan Loader
@@ -85,5 +86,5 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./build/tests/Elemental.Tests.Native.SystemFunctionsTests/Release/*
+        path: ./build/tests/SystemFunctionsTests/Release/*
 
