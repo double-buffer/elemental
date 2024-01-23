@@ -48,12 +48,9 @@ jobs:
     if: always() && github.event.pull_request
     runs-on: ubuntu-latest
     name: CI Build Check
-    needs:
-      - ci-checks
-      - changes
-    steps:
-      - uses: mheap/github-action-required-labels@master
+    needs: [ run_tests ]
+    uses: mheap/github-action-required-labels@master
     with:
-    mode: exactly
-    count: 0
-    labels: build-fail
+      mode: exactly
+      count: 0
+      labels: build-fail
