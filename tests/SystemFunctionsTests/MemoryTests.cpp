@@ -2,8 +2,6 @@
 #include "SystemMemory.h"
 #include "utest.h"
 
-// TODO: Write memory alignment check tests
-
 struct MemoryThreadParameter
 {
     MemoryArena MemoryArena;
@@ -53,14 +51,29 @@ UTEST(Memory, AllocateMultiple)
     auto dataSizeInBytes = 70024llu;
     
     // Act
-    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
-    SystemPushArrayZero<uint8_t>(memoryArena, 1024); 
+    SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes); 
+    SystemPushArray<uint8_t>(memoryArena, 1024); 
     SystemPopMemory(memoryArena, 20000);
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ(dataSizeInBytes + 1024 - 20000, allocationInfos.AllocatedBytes);
     ASSERT_GT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+}
+
+UTEST(Memory, AllocateCheckAlignement) 
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dataSizeInBytes = 70024llu;
+    auto alignment = 8llu;
+    
+    // Act
+    SystemPushArrayZero<uint8_t>(memoryArena, 455);
+    auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
+
+    // Assert
+    ASSERT_TRUE(((size_t)data.Pointer & (alignment - 1)) == 0);
 }
 
 UTEST(Memory, ConcatBuffers)
@@ -252,7 +265,87 @@ UTEST(Memory, ConcurrentPushPop)
     ASSERT_EQ(maxSize / 2, allocationInfos.AllocatedBytes);
 }
 
-// TODO: Add tests with manual commit decommit over a reserved area
+UTEST(Memory, AllocateReserved) 
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dataSizeInBytes = 70024llu;
+    
+    // Act
+    SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved); 
 
+    // Assert
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
+    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+}
 
-// TODO: ConcurrentPush and Pop mixed to tead the decommit thread safe that could have issues
+UTEST(Memory, AllocateReservedCommit) 
+{
+    // Arrange
+    auto maxSizeInBytes = 4000000llu;
+    auto dataSizeInBytes = 2000000llu;
+    auto offset = 150000llu;
+    auto offset2 = 160000llu;
+    auto bufferSize = 1024llu;
+
+    auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
+    
+    // Act
+    auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
+    SystemCommitMemory(memoryArena, offset, bufferSize);
+
+    for (size_t i = 0; i < bufferSize; i++)
+    {
+        array[offset - bufferSize + i] = i % 256;
+    }
+
+    SystemCommitMemory(memoryArena, offset2, bufferSize);
+
+    for (size_t i = 0; i < bufferSize; i++)
+    {
+        array[offset2 - bufferSize + i] = i % 256;
+    }
+
+    // Assert
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
+    ASSERT_EQ(maxSizeInBytes, allocationInfos.MaximumSizeInBytes);
+    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+}
+
+UTEST(Memory, AllocateReservedDecommit) 
+{
+    // Arrange
+    auto maxSizeInBytes = 4000000llu;
+    auto dataSizeInBytes = 2000000llu;
+    auto offset = 150000llu;
+    auto offset2 = 160000llu;
+    auto bufferSize = 1024llu;
+
+    auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
+    
+    auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
+    SystemCommitMemory(memoryArena, offset, bufferSize);
+
+    for (size_t i = 0; i < bufferSize; i++)
+    {
+        array[offset - bufferSize + i] = i % 256;
+    }
+
+    SystemCommitMemory(memoryArena, offset2, bufferSize);
+
+    for (size_t i = 0; i < bufferSize; i++)
+    {
+        array[offset2 - bufferSize + i] = i % 256;
+    }
+
+    // Act
+    SystemDecommitMemory(memoryArena, offset, (offset2 - offset) + bufferSize * 2);
+
+    // Assert
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
+    ASSERT_EQ(maxSizeInBytes, allocationInfos.MaximumSizeInBytes);
+    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+}

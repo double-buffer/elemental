@@ -1,4 +1,5 @@
 #include "ShaderCompiler.h"
+#include "SystemLogging.h"
 
 // TODO: Do we keep std datastructures? Perf is not critical in the tools
 std::vector<ShaderCompilerProvider*> _shaderCompilerProviders;

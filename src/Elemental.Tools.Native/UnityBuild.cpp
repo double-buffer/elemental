@@ -1,9 +1,3 @@
-#include "SystemDictionary.cpp"
-#include "SystemLogging.h"
-#include "SystemPlatformFunctions.cpp"
-#include "SystemLogging.cpp"
-#include "SystemMemory.cpp"
-
 #include "ElementalTools.h"
 
 #include "SystemFunctions.cpp"
@@ -13,3 +7,7 @@
 #include "MetalShaderCompilerProvider.cpp"
 #include "ShaderCompiler.cpp"
 
+#include "SystemDictionary.cpp"
+#include "SystemPlatformFunctions.cpp"
+#include "SystemLogging.cpp"
+#include "SystemMemory.cpp"

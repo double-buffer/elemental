@@ -17,6 +17,11 @@ size_t SystemRoundUpToPowerOf2(size_t value)
     return result;
 }
 
+size_t SystemAlignToPowerOf2(size_t offset, size_t alignment) 
+{
+    return (offset + alignment - 1) & ~(alignment - 1);
+}
+
 double SystemRound(double value)
 {
     return (value < 0.0) ? (int32_t)(value - 0.5) : (int32_t)(value + 0.5);

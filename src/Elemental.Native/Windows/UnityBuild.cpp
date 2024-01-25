@@ -1,12 +1,5 @@
 #include "CircularList.h"
 
-#include "SystemPlatformFunctions.cpp"
-#include "SystemLogging.cpp"
-#include "SystemMemory.cpp"
-#include "SystemFunctions.cpp"
-#include "SystemDictionary.cpp"
-#include "SystemInputs.cpp"
-
 #include "Elemental.h"
 
 #include "NativeApplicationService.cpp"
@@ -14,3 +7,10 @@
 #include "Vulkan/VulkanGraphicsService.cpp"
 #include "Graphics/GraphicsService.cpp"
 #include "Inputs/InputsService.cpp"
+
+#include "SystemPlatformFunctions.cpp"
+#include "SystemLogging.cpp"
+#include "SystemMemory.cpp"
+#include "SystemFunctions.cpp"
+#include "SystemDictionary.cpp"
+#include "SystemInputs.cpp"
