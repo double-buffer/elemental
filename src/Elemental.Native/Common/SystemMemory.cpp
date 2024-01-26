@@ -54,6 +54,8 @@ PageSizeIndexes ComputePageSizeInfoIndexes(MemoryArenaStorage* storage, size_t o
 
 PageSizeIndexes ComputePageSizeLocalOffsets(MemoryArenaStorage* storage, size_t index, size_t offset, size_t sizeInBytes)
 {
+    offset = offset + storage->HeaderSizeInBytes;
+
     auto absoluteStart = (uint8_t*)storage + offset;
     auto absoluteEnd = (uint8_t*)storage + offset + sizeInBytes;
 
@@ -126,7 +128,7 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     {
         if (headerPageCount > i)
         {
-            auto offsets = ComputePageSizeLocalOffsets(storage, i, 0, headerSizeInBytes);
+            auto offsets = ComputePageSizeLocalOffsets(storage, i, -headerSizeInBytes, headerSizeInBytes);
 
             SetPageCommitted(storage, i);
             storage->CommittedPagesCount++;
@@ -334,6 +336,7 @@ void SystemDecommitMemory(MemoryArena memoryArena, size_t offset, size_t sizeInB
     {
         return;
     }
+
     
     auto pageSizeIndexes = ComputePageSizeInfoIndexes(storage, offset, sizeInBytes);
     auto needToDecommit = false;
@@ -416,7 +419,7 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
 
     if (state == AllocationState_Committed)
     {
-        SystemCommitMemory(workingMemoryArena, (size_t)(pointer - (uint8_t*)storage + storage->HeaderSizeInBytes), sizeInBytes);
+        SystemCommitMemory(workingMemoryArena, (size_t)(pointer - ((uint8_t*)storage + storage->HeaderSizeInBytes)), sizeInBytes);
     }
 
     return pointer;
@@ -445,7 +448,8 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
         pointer = SystemAtomicSubstract(storage->CurrentPointer, sizeInBytes);
     }
 
-    SystemDecommitMemory(memoryArena, (size_t)(pointer - (uint8_t*)storage + storage->HeaderSizeInBytes) - sizeInBytes, sizeInBytes);
+    // BUG: It seems we have a memory access exception here because maybe we try to decommit the header too!
+    SystemDecommitMemory(memoryArena, (size_t)(pointer - ((uint8_t*)storage + storage->HeaderSizeInBytes)) - sizeInBytes, sizeInBytes);
 }
 
 void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes)

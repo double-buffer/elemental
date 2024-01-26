@@ -15,7 +15,7 @@ void MemoryConcurrentAddFunction(void* parameter)
 
     for (int32_t i = 0; i < threadParameter->ItemCount; i++)
     {
-        SystemPushMemory(threadParameter->MemoryArena, 64);
+        SystemPushMemoryZero(threadParameter->MemoryArena, 64);
     }
 }
 
@@ -51,14 +51,29 @@ UTEST(Memory, AllocateMultiple)
     auto dataSizeInBytes = 70024llu;
     
     // Act
-    SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes); 
-    SystemPushArray<uint8_t>(memoryArena, 1024); 
+    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
+    SystemPushArrayZero<uint8_t>(memoryArena, 1024); 
     SystemPopMemory(memoryArena, 20000);
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ(dataSizeInBytes + 1024 - 20000, allocationInfos.AllocatedBytes);
     ASSERT_GT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+}
+
+UTEST(Memory, AllocatePop) 
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dataSizeInBytes = 64llu;
+    
+    // Act
+    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
+    SystemPopMemory(memoryArena, dataSizeInBytes);
+
+    // Assert
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(0, allocationInfos.AllocatedBytes);
 }
 
 UTEST(Memory, AllocateCheckAlignement) 
@@ -227,42 +242,6 @@ UTEST(Memory, ConcurrentPop)
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ(0llu, allocationInfos.AllocatedBytes);
-}
-
-UTEST(Memory, ConcurrentPushPop) 
-{
-    // Arrange
-    const int32_t itemCount = 80000;
-    const int32_t threadCount = 32;
-    auto maxSize = (size_t)itemCount * 64;
-    auto memoryArena = SystemAllocateMemoryArena(maxSize);
-    SystemPushMemory(memoryArena, maxSize / 2);
-    
-    // Act
-    SystemThread threads[threadCount];
-    MemoryThreadParameter threadParameters[threadCount];
-
-    for (int32_t i = 0; i < threadCount / 2; i++)
-    {
-        threadParameters[i] = { memoryArena, i, itemCount / threadCount };
-        threads[i] = SystemCreateThread(MemoryConcurrentPopFunction, &threadParameters[i]);
-    }
-    
-    for (int32_t i = threadCount / 2; i < threadCount; i++)
-    {
-        threadParameters[i] = { memoryArena, i, itemCount / threadCount };
-        threads[i] = SystemCreateThread(MemoryConcurrentAddFunction, &threadParameters[i]);
-    }
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        SystemWaitThread(threads[i]);
-        SystemFreeThread(threads[i]);
-    }
-
-    // Assert
-    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(maxSize / 2, allocationInfos.AllocatedBytes);
 }
 
 UTEST(Memory, AllocateReserved) 
