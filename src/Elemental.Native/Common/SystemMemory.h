@@ -143,19 +143,20 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes);
 /**
  * Commits memory in the specified MemoryArena.
  * @param memoryArena MemoryArena in which to commit memory.
- * @param offset Offset at which to start committing memory.
+ * @param pointer Pointer at which to start committing memory.
  * @param sizeInBytes Size of the memory block to commit.
+ * @param clearMemory True to clear the memory to 0.
  */
-void SystemCommitMemory(MemoryArena memoryArena, size_t offset, size_t sizeInBytes);
+void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes, bool clearMemory = false);
 
 /**
  * Decomits memory in the specified MemoryArena.
  * The page will be decommitted if all the allocations (including spaces between them) have been decommitted.
  * @param memoryArena MemoryArena in which to decommit memory.
- * @param offset Offset at which to start decommitting memory.
+ * @param pointer Pointer to start decommitting memory.
  * @param sizeInBytes Size of the memory block to decommit.
  */
-void SystemDecommitMemory(MemoryArena memoryArena, size_t offset, size_t sizeInBytes);
+void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes);
 
 /**
  * Allocates and initializes a block of memory with zero values in the specified MemoryArena.

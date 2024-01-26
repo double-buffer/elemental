@@ -37,7 +37,6 @@ template<typename TKey, typename TValue>
 struct SystemDictionaryEnumerator
 {
     SystemDictionary<TKey, TValue> Dictionary; ///< The dictionary being enumerated.
-    size_t PartitionIndex; ///< Current partition index in the enumeration.
     size_t Index; ///< Current index in the partition.
 };
 

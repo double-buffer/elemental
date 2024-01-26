@@ -228,8 +228,10 @@ UTEST(Dictionary, RemoveValuesAfterFull)
 UTEST(Dictionary, BigDictionary) 
 {
     // Arrange
+    auto maxElements = 1000000;
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(stackMemoryArena, 10000);
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(memoryArena, maxElements);
     
     // Act
     for (int32_t i = 0; i < 10000; i++)

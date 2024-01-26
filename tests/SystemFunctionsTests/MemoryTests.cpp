@@ -73,7 +73,7 @@ UTEST(Memory, AllocatePop)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(0, allocationInfos.AllocatedBytes);
+    ASSERT_EQ(0llu, allocationInfos.AllocatedBytes);
 }
 
 UTEST(Memory, AllocateCheckAlignement) 
@@ -272,14 +272,14 @@ UTEST(Memory, AllocateReservedCommit)
     
     // Act
     auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
-    SystemCommitMemory(memoryArena, offset, bufferSize);
+    SystemCommitMemory(memoryArena, array.Pointer + offset, bufferSize);
 
     for (size_t i = 0; i < bufferSize; i++)
     {
         array[offset - bufferSize + i] = i % 256;
     }
 
-    SystemCommitMemory(memoryArena, offset2, bufferSize);
+    SystemCommitMemory(memoryArena, array.Pointer + offset2, bufferSize);
 
     for (size_t i = 0; i < bufferSize; i++)
     {
@@ -305,14 +305,14 @@ UTEST(Memory, AllocateReservedDecommit)
     auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
     
     auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
-    SystemCommitMemory(memoryArena, offset, bufferSize);
+    SystemCommitMemory(memoryArena, array.Pointer + offset, bufferSize);
 
     for (size_t i = 0; i < bufferSize; i++)
     {
         array[offset - bufferSize + i] = i % 256;
     }
 
-    SystemCommitMemory(memoryArena, offset2, bufferSize);
+    SystemCommitMemory(memoryArena, array.Pointer + offset2, bufferSize);
 
     for (size_t i = 0; i < bufferSize; i++)
     {
@@ -320,7 +320,7 @@ UTEST(Memory, AllocateReservedDecommit)
     }
 
     // Act
-    SystemDecommitMemory(memoryArena, offset, (offset2 - offset) + bufferSize * 2);
+    SystemDecommitMemory(memoryArena, array.Pointer + offset, (offset2 - offset) + bufferSize * 2);
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);

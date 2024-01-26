@@ -3,68 +3,35 @@
 #include "SystemLogging.h"
 
 #define SYSTEM_DICTIONARY_HASH_SEED 123456789
-#define SYSTEM_DICTIONARY_PARTITION_COUNT 16
-#define SYSTEM_DICTIONARY_PARTITION_MIN_SIZE 1024
-#define SYSTEM_DICTIONARY_PARTITION_BITS 10
-#define SYSTEM_DICTIONARY_INDEX_BITS 22
-#define SYSTEM_DICTIONARY_MAX_PARTITION_INDEX ((1 << SYSTEM_DICTIONARY_PARTITION_BITS) - 1)
-#define SYSTEM_DICTIONARY_MAX_INDEX ((1 << SYSTEM_DICTIONARY_INDEX_BITS) - 1)
-
-struct SystemDictionaryEntryIndex
-{
-    int32_t CombinedIndex;
-
-    bool operator==(const SystemDictionaryEntryIndex& other) const 
-    {
-        return CombinedIndex == other.CombinedIndex;
-    }
-
-    bool operator!=(const SystemDictionaryEntryIndex& other) const 
-    {
-        return CombinedIndex != other.CombinedIndex;
-    }
-};
-
-struct SystemDictionaryEntryIndexFull
-{
-    int32_t PartitionIndex;
-    int32_t Index;
-};
-    
-SystemDictionaryEntryIndex SYSTEM_DICTIONARY_INDEX_EMPTY = { -1 };
+#define SYSTEM_DICTIONARY_INDEX_EMPTY -1
+#define SYSTEM_DICTIONARY_ALLOCATE_SIZE 1024
 
 template<typename TValue>
 struct SystemDictionaryEntry
 {
     uint64_t Hash;
     TValue Value;
-    SystemDictionaryEntryIndex Next;
-};
-
-template<typename TValue> 
-struct SystemDictionaryStoragePartition
-{
-    Span<SystemDictionaryEntry<TValue>> Entries;
+    int32_t Next;
 };
 
 template<typename TValue> 
 struct SystemDictionaryStorage
 {
     MemoryArena MemoryArena;
-    Span<SystemDictionaryEntryIndex> Buckets;
-    Span<SystemDictionaryStoragePartition<TValue>*> Partitions;
-    size_t PartitionSize;
-    size_t CurrentPartitionIndex;
-    bool IsPartitionBeingCreated;
-    SystemDictionaryEntryIndex FreeListIndex;
+    Span<int32_t> Buckets;
+    Span<SystemDictionaryEntry<TValue>> Entries;
+    size_t CurrentEntryIndex;
+    size_t CurrentCommitIndex;
+    int32_t FreeListIndex;
+    bool IsCommitOperationInProgress;
 };
 
 struct SystemDictionaryIndexInfo
 {
     int32_t BucketIndex;
-    SystemDictionaryEntryIndex RootIndex;
-    SystemDictionaryEntryIndex ParentIndex;
-    SystemDictionaryEntryIndex Index;
+    int32_t RootIndex;
+    int32_t ParentIndex;
+    int32_t Index;
 };
 
 struct SystemDictionaryHashInfo
@@ -73,25 +40,53 @@ struct SystemDictionaryHashInfo
     int32_t BucketIndex;
 };
 
-SystemDictionaryEntryIndex CreateDictionaryEntryIndex(int32_t partitionIndex, int32_t index)
+template<typename TValue>
+SystemDictionaryIndexInfo GetDictionaryEntryIndexInfo(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
-    return { (partitionIndex & SYSTEM_DICTIONARY_MAX_PARTITION_INDEX) << SYSTEM_DICTIONARY_INDEX_BITS | (index & SYSTEM_DICTIONARY_MAX_INDEX) };
-}
+    int32_t currentIndex;
+    __atomic_load(&storage->Buckets[hashInfo.BucketIndex], &currentIndex, __ATOMIC_ACQUIRE);
 
-SystemDictionaryEntryIndexFull GetDictionaryEntryIndexFull(SystemDictionaryEntryIndex index)
-{
-    return 
-    { 
-        index.CombinedIndex == -1 ? -1 : (index.CombinedIndex >> SYSTEM_DICTIONARY_INDEX_BITS) & SYSTEM_DICTIONARY_MAX_PARTITION_INDEX, 
-        index.CombinedIndex == -1 ? -1 : index.CombinedIndex & SYSTEM_DICTIONARY_MAX_INDEX 
-    };
+    auto rootIndex = currentIndex;
+    auto parentIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
+
+    while (currentIndex != SYSTEM_DICTIONARY_INDEX_EMPTY) 
+    {
+        auto currentEntry = GetDictionaryEntryByIndex(storage, currentIndex);
+
+        if (currentEntry->Hash == hashInfo.Hash)
+        {
+            SystemDictionaryIndexInfo result = {};
+            result.BucketIndex = hashInfo.BucketIndex;
+            result.RootIndex = rootIndex;
+            result.ParentIndex = parentIndex;
+            result.Index = currentIndex;
+
+            return result;
+        }
+
+        parentIndex = currentIndex;
+        __atomic_load(&currentEntry->Next, &currentIndex, __ATOMIC_ACQUIRE);
+    }
+
+    return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY };
 }
 
 template<typename TValue>
-SystemDictionaryEntryIndex GetFreeListEntry(SystemDictionaryStorage<TValue>* storage)
+SystemDictionaryEntry<TValue>* GetDictionaryEntryByIndex(SystemDictionaryStorage<TValue>* storage, int32_t index)
 {
-    SystemDictionaryEntryIndex entryIndex;
-    __atomic_load(&storage->FreeListIndex.CombinedIndex, &entryIndex.CombinedIndex, __ATOMIC_ACQUIRE);
+    if (index == SYSTEM_DICTIONARY_INDEX_EMPTY)
+    {
+        return nullptr;
+    }
+
+    return &(storage->Entries[index]);
+}
+
+template<typename TValue>
+int32_t GetFreeListEntry(SystemDictionaryStorage<TValue>* storage)
+{
+    int32_t entryIndex;
+    __atomic_load(&storage->FreeListIndex, &entryIndex, __ATOMIC_ACQUIRE);
 
     SystemDictionaryEntry<TValue>* freeListEntry = nullptr;
 
@@ -109,81 +104,71 @@ SystemDictionaryEntryIndex GetFreeListEntry(SystemDictionaryStorage<TValue>* sto
 
         freeListEntry = GetDictionaryEntryByIndex(storage, entryIndex);
     }
-    while (!__atomic_compare_exchange_n(&storage->FreeListIndex.CombinedIndex, &entryIndex.CombinedIndex, freeListEntry->Next.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    while (!__atomic_compare_exchange_n(&storage->FreeListIndex, &entryIndex, freeListEntry->Next, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 
     return entryIndex;
 }
 
 template<typename TValue>
-void InsertFreeListEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryEntryIndex index, SystemDictionaryEntry<TValue>* entry)
+void InsertFreeListEntry(SystemDictionaryStorage<TValue>* storage, int32_t index, SystemDictionaryEntry<TValue>* entry)
 {
-    SystemDictionaryEntryIndex entryIndex;
-    __atomic_load(&storage->FreeListIndex.CombinedIndex, &entryIndex.CombinedIndex, __ATOMIC_ACQUIRE);
+    int32_t entryIndex;
+    __atomic_load(&storage->FreeListIndex, &entryIndex, __ATOMIC_ACQUIRE);
 
     entry->Next = entryIndex;
 
-    while (!__atomic_compare_exchange_n(&storage->FreeListIndex.CombinedIndex, &entryIndex.CombinedIndex, index.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE))
+    while (!__atomic_compare_exchange_n(&storage->FreeListIndex, &entryIndex, index, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE))
     {
         entry->Next = entryIndex;
         SystemYieldThread();
     }
 }
-
+int counter = 0;
 template<typename TValue>
-SystemDictionaryStoragePartition<TValue>* CreateDictionaryPartition(MemoryArena memoryArena, size_t partitionIndex, size_t partitionSize)
+void CommitEntriesMemory(SystemDictionaryStorage<TValue>* storage)
 {
-    auto partition = SystemPushStruct<SystemDictionaryStoragePartition<TValue>>(memoryArena);
-    partition->Entries = SystemPushArrayZero<SystemDictionaryEntry<TValue>>(memoryArena, partitionSize);
-
-    for (size_t i = 0; i < partition->Entries.Length; i++)
-    {
-        partition->Entries[i].Next = i < partition->Entries.Length - 1 ? CreateDictionaryEntryIndex(partitionIndex, i + 1) : SYSTEM_DICTIONARY_INDEX_EMPTY;
-    }
-
-    return partition;
+    auto entrySize = sizeof(SystemDictionaryEntry<TValue>);
+    printf("Committing Offset %d: %llu, Size: %llu\n", counter++, storage->CurrentEntryIndex * entrySize, SYSTEM_DICTIONARY_ALLOCATE_SIZE * entrySize);
+    
+    SystemCommitMemory(storage->MemoryArena, (uint8_t*)storage->Entries.Pointer + storage->CurrentEntryIndex * entrySize, SYSTEM_DICTIONARY_ALLOCATE_SIZE * entrySize, true);
+    SystemAtomicAdd(storage->CurrentCommitIndex, SYSTEM_DICTIONARY_ALLOCATE_SIZE);
 }
 
 template<typename TValue>
 void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo, TValue value)
 {
+    printf("Add Entry %d\n", value);
+    // TODO: create a SystemAtomicLoad
+
     auto entryIndex = GetFreeListEntry(storage); 
 
     if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
     {
-        auto expected = false;
+        entryIndex = SystemAtomicAdd(storage->CurrentEntryIndex, 1);
 
-        while (!__atomic_compare_exchange_n(&storage->IsPartitionBeingCreated, &expected, true, true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE))
+        if (storage->CurrentEntryIndex == storage->Entries.Length)
         {
-            expected = false;
-            SystemYieldThread();
+            SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
+            return;
         }
-            
-        entryIndex = GetFreeListEntry(storage);
-
-        if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
+      
+        if (entryIndex > storage->CurrentCommitIndex)                
         {
-            if ((storage->CurrentPartitionIndex + 1) == storage->Partitions.Length)
+            SystemAtomicReplaceWithValue(storage->IsCommitOperationInProgress, false, true);
+
+            while (entryIndex > storage->CurrentCommitIndex)
             {
-                SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
-                __atomic_store_n(&storage->IsPartitionBeingCreated, false, __ATOMIC_RELEASE);
-                return;
+                CommitEntriesMemory(storage);
             }
 
-            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Dictionary partition is full, allocating a new partition.");
-            storage->CurrentPartitionIndex++;
-            storage->Partitions[storage->CurrentPartitionIndex] = CreateDictionaryPartition<TValue>(storage->MemoryArena, storage->CurrentPartitionIndex, storage->PartitionSize);
-            storage->FreeListIndex = CreateDictionaryEntryIndex(storage->CurrentPartitionIndex, 1);
-
-            entryIndex = CreateDictionaryEntryIndex(storage->CurrentPartitionIndex, 0);
+            SystemAtomicStore(storage->IsCommitOperationInProgress, false);
         }
-
-        __atomic_store_n(&storage->IsPartitionBeingCreated, false, __ATOMIC_RELEASE);
     }
     
     auto entry = GetDictionaryEntryByIndex(storage, entryIndex);
 
-    SystemDictionaryEntryIndex bucketHead;
-    __atomic_load(&storage->Buckets[hashInfo.BucketIndex].CombinedIndex, &bucketHead.CombinedIndex, __ATOMIC_ACQUIRE);
+    int32_t bucketHead;
+    __atomic_load(&storage->Buckets[hashInfo.BucketIndex], &bucketHead, __ATOMIC_ACQUIRE);
 
     auto firstTry = true;
 
@@ -216,7 +201,7 @@ void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictiona
             entry->Next = SYSTEM_DICTIONARY_INDEX_EMPTY;
         }
     }
-    while (!__atomic_compare_exchange_n(&storage->Buckets[hashInfo.BucketIndex].CombinedIndex, &bucketHead.CombinedIndex, entryIndex.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    while (!__atomic_compare_exchange_n(&storage->Buckets[hashInfo.BucketIndex], &bucketHead, entryIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 
     entry->Hash = hashInfo.Hash;
     entry->Value = value;
@@ -227,7 +212,7 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
 {
     SystemDictionaryIndexInfo entryIndex = {};
     SystemDictionaryEntry<TValue>* entry = nullptr;
-    SystemDictionaryEntryIndex* parentNextEntryIndex = nullptr;
+    int32_t* parentNextEntryIndex = nullptr;
     int32_t retryCount = 0;
 
     do
@@ -263,7 +248,7 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
 
         SystemYieldThread();
     }
-    while (entry == nullptr || !__atomic_compare_exchange_n(&parentNextEntryIndex->CombinedIndex, &entryIndex.Index.CombinedIndex, entry->Next.CombinedIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    while (entry == nullptr || !__atomic_compare_exchange_n(parentNextEntryIndex, &entryIndex.Index, entry->Next, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 
     entry->Hash = 0;
     entry->Value = {};
@@ -298,49 +283,6 @@ SystemDictionaryHashInfo DictionaryComputeHashInfo(SystemDictionaryStorage<TValu
     return result;
 }
 
-template<typename TValue>
-SystemDictionaryIndexInfo GetDictionaryEntryIndexInfo(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
-{
-    SystemDictionaryEntryIndex currentIndex;
-    __atomic_load(&storage->Buckets[hashInfo.BucketIndex].CombinedIndex, &currentIndex.CombinedIndex, __ATOMIC_ACQUIRE);
-
-    auto rootIndex = currentIndex;
-    auto parentIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
-
-    while (currentIndex != SYSTEM_DICTIONARY_INDEX_EMPTY) 
-    {
-        auto currentEntry = GetDictionaryEntryByIndex(storage, currentIndex);
-
-        if (currentEntry->Hash == hashInfo.Hash)
-        {
-            SystemDictionaryIndexInfo result = {};
-            result.BucketIndex = hashInfo.BucketIndex;
-            result.RootIndex = rootIndex;
-            result.ParentIndex = parentIndex;
-            result.Index = currentIndex;
-
-            return result;
-        }
-
-        parentIndex = currentIndex;
-        __atomic_load(&currentEntry->Next.CombinedIndex, &currentIndex.CombinedIndex, __ATOMIC_ACQUIRE);
-    }
-
-    return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY };
-}
-
-template<typename TValue>
-SystemDictionaryEntry<TValue>* GetDictionaryEntryByIndex(SystemDictionaryStorage<TValue>* storage, SystemDictionaryEntryIndex index)
-{
-    if (index == SYSTEM_DICTIONARY_INDEX_EMPTY)
-    {
-        return nullptr;
-    }
-
-    auto indexFull = GetDictionaryEntryIndexFull(index);
-    return &(storage->Partitions[indexFull.PartitionIndex]->Entries[indexFull.Index]);
-}
-
 template<typename TKey, typename TValue>
 TValue& SystemDictionary<TKey, TValue>::operator[](TKey key)
 {
@@ -350,37 +292,24 @@ TValue& SystemDictionary<TKey, TValue>::operator[](TKey key)
 template<typename TKey, typename TValue>
 SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena memoryArena, size_t maxItemsCount)
 {
-    auto partitionCount = (maxItemsCount + SYSTEM_DICTIONARY_PARTITION_MIN_SIZE - 1) / SYSTEM_DICTIONARY_PARTITION_MIN_SIZE;
-    
-    if (partitionCount > SYSTEM_DICTIONARY_PARTITION_COUNT) 
-    {
-        partitionCount = SYSTEM_DICTIONARY_PARTITION_COUNT;
-    }
-
-    auto partitionSize = (maxItemsCount + partitionCount - 1) / partitionCount;
-
-    if (maxItemsCount < SYSTEM_DICTIONARY_PARTITION_MIN_SIZE && partitionCount == 1) 
-    {
-        partitionSize = maxItemsCount;
-    }
-   
     auto storage = SystemPushStruct<SystemDictionaryStorage<TValue>>(memoryArena);
     storage->MemoryArena = memoryArena;
-    storage->Partitions = SystemPushArrayZero<SystemDictionaryStoragePartition<TValue>*>(memoryArena, partitionCount);
-    storage->CurrentPartitionIndex = 0;
-    storage->Partitions[storage->CurrentPartitionIndex] = CreateDictionaryPartition<TValue>(memoryArena, 0, partitionSize);
-    storage->PartitionSize = partitionSize;
-    storage->IsPartitionBeingCreated = false;
-    
-    storage->FreeListIndex = CreateDictionaryEntryIndex(0, 0);
-    storage->Buckets = SystemPushArrayZero<SystemDictionaryEntryIndex>(memoryArena, maxItemsCount);
+    storage->Buckets = SystemPushArray<int32_t>(memoryArena, maxItemsCount);
 
     for (size_t i = 0; i < storage->Buckets.Length; i++)
     {
         storage->Buckets[i] = SYSTEM_DICTIONARY_INDEX_EMPTY;
     }
 
-    return { storage };
+    storage->Entries = SystemPushArray<SystemDictionaryEntry<TValue>>(memoryArena, maxItemsCount, AllocationState_Reserved);
+    storage->CurrentEntryIndex = 0;
+    storage->CurrentCommitIndex = 0;
+
+    CommitEntriesMemory(storage);
+
+    SystemDictionary<TKey, TValue> result = {};
+    result.Storage = storage;
+    return result;
 }
 
 template<typename TKey, typename TValue>
@@ -478,7 +407,6 @@ SystemDictionaryEnumerator<TKey, TValue> SystemGetDictionaryEnumerator(SystemDic
 {
     SystemDictionaryEnumerator<TKey, TValue> result = {};
     result.Dictionary = dictionary;
-    result.PartitionIndex = 0;
     result.Index = 0;
 
     return result;
@@ -489,21 +417,10 @@ TValue* SystemGetDictionaryEnumeratorNextValue(SystemDictionaryEnumerator<TKey, 
 {
     auto storage = enumerator->Dictionary.Storage;
 
-    while (enumerator->PartitionIndex < storage->Partitions.Length)
+    while (enumerator->Index < storage->Entries.Length)
     {
-        if (storage->Partitions[enumerator->PartitionIndex] == nullptr)
-        {
-            break;
-        }
-
-        auto result = &(storage->Partitions[enumerator->PartitionIndex]->Entries[enumerator->Index]);
+        auto result = &(storage->Entries[enumerator->Index]);
         enumerator->Index++;
-        
-        if (enumerator->Index == storage->Partitions[enumerator->PartitionIndex]->Entries.Length)
-        {
-            enumerator->PartitionIndex++;
-            enumerator->Index = 0;
-        }
         
         if (result->Hash != 0)
         {
@@ -534,7 +451,7 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 
             while (entryIndex != SYSTEM_DICTIONARY_INDEX_EMPTY)
             {
-                auto entryIndexFull = SystemGetDictionaryEntryIndexFull(entryIndex);
+                auto entryIndexFull = GetDictionaryEntryIndexFull(entryIndex);
                 auto entry = storage->Partitions[entryIndexFull.PartitionIndex]->Entries[entryIndexFull.Index]; 
 
                 if (entry.Hash == 0)
@@ -556,32 +473,10 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 
     while (currentFreeListIndex != SYSTEM_DICTIONARY_INDEX_EMPTY)
     {
-        auto indexFull = SystemGetDictionaryEntryIndexFull(currentFreeListIndex);
+        auto indexFull = GetDictionaryEntryIndexFull(currentFreeListIndex);
         debugMessage = SystemConcatBuffers<char>(stackMemoryArena, debugMessage, SystemFormatString(stackMemoryArena, " => Partition: %d, Index: %d", indexFull.PartitionIndex, indexFull.Index));
         currentFreeListIndex = storage->Partitions[indexFull.PartitionIndex]->Entries[indexFull.Index].Next;
     }
 
     SystemLogDebugMessage(LogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
-
-    for (size_t p = 0; p < dictionary.Storage->Partitions.Length; p++)
-    {
-        auto partition = dictionary.Storage->Partitions[p];
-
-        if (partition != nullptr)
-        {
-            debugMessage = SystemFormatString(stackMemoryArena, "Partition %u (Size: %u):", p, partition->Entries.Length);
-
-            for (size_t j = 0; j < partition->Entries.Length; j++)
-            {
-                debugMessage = SystemConcatBuffers<char>(stackMemoryArena, debugMessage, SystemFormatString(stackMemoryArena, " %u =>", partition->Entries[j].Hash));
-            }
-
-            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
-        }
-        else 
-        {
-            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Partition %u => (EMPTY)\n", p); 
-        }
-    }
 }
-
