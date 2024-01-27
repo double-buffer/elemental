@@ -264,6 +264,12 @@ StackMemoryArena::~StackMemoryArena()
     }
 }
 
+template<typename T>
+void SystemCommitMemory(MemoryArena memoryArena, ReadOnlySpan<T> buffer, bool clearMemory)
+{
+    SystemCommitMemory(memoryArena, (uint8_t*)buffer.Pointer, sizeof(T) * buffer.Length, true);
+}
+
 void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes, bool clearMemory)
 {
     auto storage = memoryArena.Storage;
@@ -447,6 +453,7 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
     {
         pointer = storage->CurrentPointer;
         storage->CurrentPointer -= sizeInBytes;
+        SystemPlatformClearMemory(storage->CurrentPointer, sizeInBytes);
     }
     else
     {

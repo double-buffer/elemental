@@ -141,13 +141,26 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
 void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes);
 
 /**
- * Commits memory in the specified MemoryArena.
- * @param memoryArena MemoryArena in which to commit memory.
- * @param pointer Pointer at which to start committing memory.
- * @param sizeInBytes Size of the memory block to commit.
- * @param clearMemory True to clear the memory to 0.
+ * Commits a block of memory in a MemoryArena.
+ * 
+ * @param memoryArena The MemoryArena to commit memory in.
+ * @param pointer     Start pointer for memory commitment.
+ * @param sizeInBytes Size of memory block in bytes.
+ * @param clearMemory If true, initializes memory to 0. Defaults to false.
  */
 void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes, bool clearMemory = false);
+
+/**
+ * Commits memory for an array of elements in a MemoryArena.
+ * 
+ * @tparam T          Element type in the buffer.
+ * @param memoryArena The MemoryArena to commit memory in.
+ * @param buffer      ReadOnlySpan representing an array of elements.
+ * @param clearMemory If true, initializes memory to 0. Defaults to false.
+ */
+template<typename T>
+void SystemCommitMemory(MemoryArena memoryArena, ReadOnlySpan<T> buffer, bool clearMemory = false);
+
 
 /**
  * Decomits memory in the specified MemoryArena.

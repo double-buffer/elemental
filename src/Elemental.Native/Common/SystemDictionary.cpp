@@ -4,7 +4,6 @@
 
 #define SYSTEM_DICTIONARY_HASH_SEED 123456789
 #define SYSTEM_DICTIONARY_INDEX_EMPTY -1
-#define SYSTEM_DICTIONARY_ALLOCATE_SIZE 1024
 
 template<typename TValue>
 struct SystemDictionaryEntry
@@ -21,9 +20,7 @@ struct SystemDictionaryStorage
     Span<int32_t> Buckets;
     Span<SystemDictionaryEntry<TValue>> Entries;
     size_t CurrentEntryIndex;
-    size_t CurrentCommitIndex;
     int32_t FreeListIndex;
-    bool IsCommitOperationInProgress;
 };
 
 struct SystemDictionaryIndexInfo
@@ -123,46 +120,23 @@ void InsertFreeListEntry(SystemDictionaryStorage<TValue>* storage, int32_t index
         SystemYieldThread();
     }
 }
-int counter = 0;
-template<typename TValue>
-void CommitEntriesMemory(SystemDictionaryStorage<TValue>* storage)
-{
-    auto entrySize = sizeof(SystemDictionaryEntry<TValue>);
-    printf("Committing Offset %d: %llu, Size: %llu\n", counter++, storage->CurrentEntryIndex * entrySize, SYSTEM_DICTIONARY_ALLOCATE_SIZE * entrySize);
-    
-    SystemCommitMemory(storage->MemoryArena, (uint8_t*)storage->Entries.Pointer + storage->CurrentEntryIndex * entrySize, SYSTEM_DICTIONARY_ALLOCATE_SIZE * entrySize, true);
-    SystemAtomicAdd(storage->CurrentCommitIndex, SYSTEM_DICTIONARY_ALLOCATE_SIZE);
-}
 
 template<typename TValue>
 void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo, TValue value)
 {
-    printf("Add Entry %d\n", value);
-    // TODO: create a SystemAtomicLoad
-
     auto entryIndex = GetFreeListEntry(storage); 
 
     if (entryIndex == SYSTEM_DICTIONARY_INDEX_EMPTY) 
     {
         entryIndex = SystemAtomicAdd(storage->CurrentEntryIndex, 1);
 
-        if (storage->CurrentEntryIndex == storage->Entries.Length)
+        if (entryIndex == storage->Entries.Length)
         {
             SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
             return;
         }
-      
-        if (entryIndex > storage->CurrentCommitIndex)                
-        {
-            SystemAtomicReplaceWithValue(storage->IsCommitOperationInProgress, false, true);
-
-            while (entryIndex > storage->CurrentCommitIndex)
-            {
-                CommitEntriesMemory(storage);
-            }
-
-            SystemAtomicStore(storage->IsCommitOperationInProgress, false);
-        }
+                
+        SystemCommitMemory<SystemDictionaryEntry<TValue>>(storage->MemoryArena, storage->Entries.Slice(entryIndex, 1), true);
     }
     
     auto entry = GetDictionaryEntryByIndex(storage, entryIndex);
@@ -303,9 +277,7 @@ SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena memoryArena, s
 
     storage->Entries = SystemPushArray<SystemDictionaryEntry<TValue>>(memoryArena, maxItemsCount, AllocationState_Reserved);
     storage->CurrentEntryIndex = 0;
-    storage->CurrentCommitIndex = 0;
-
-    CommitEntriesMemory(storage);
+    storage->FreeListIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
 
     SystemDictionary<TKey, TValue> result = {};
     result.Storage = storage;
