@@ -293,29 +293,65 @@ struct SystemThread
     void* Handle;
 };
 
-#define SystemAtomicReplace(destination, expected, replaceExpression) \
+/**
+ * Atomically replaces the value of a variable if it matches the expected value.
+ *
+ * @param destination         The variable to update.
+ * @param expectedExpression  The value to compare against the destination.
+ * @param replaceExpression   The new value to set if the destination matches expectedExpression.
+ */
+#define SystemAtomicReplace(destination, expectedExpression, replaceExpression) \
         {\
+        auto expected = (expectedExpression);\
         auto desired = (replaceExpression); \
         while (!__atomic_compare_exchange_n(&(destination), &(expected), desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) \
         {\
             SystemYieldThread();\
+            expected = (expectedExpression);\
             desired = (replaceExpression);\
         }\
         }\
 
-#define SystemAtomicReplaceWithValue(destination, expectedValue, replaceValue) \
-        {\
-        auto expected = (expectedValue); \
-        while (!__atomic_compare_exchange_n(&(destination), &expected, replaceValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) \
-        {\
-            SystemYieldThread();\
-            expected = (expectedValue);\
-        }\
-        }\
-    
-#define SystemAtomicStore(destination, value) __atomic_store_n(&(destination), (value), __ATOMIC_RELEASE);
-#define SystemAtomicAdd(destination, value) __atomic_fetch_add(&(destination), (value), __ATOMIC_SEQ_CST);
-#define SystemAtomicSubstract(destination, value) __atomic_fetch_sub(&(destination), (value), __ATOMIC_SEQ_CST);
+/**
+ * Atomically loads the value of a variable.
+ *
+ * @param source        The variable to load from.
+ * @param destination   The variable to store the loaded value.
+ */
+#define SystemAtomicLoad(source, destination) __atomic_load(&(source), &(destination), __ATOMIC_ACQUIRE)
+
+/**
+ * Atomically stores a value in a variable.
+ *
+ * @param destination  The variable to store the value in.
+ * @param value        The value to store.
+ */
+#define SystemAtomicStore(destination, value) __atomic_store_n(&(destination), (value), __ATOMIC_RELEASE)
+
+/**
+ * Atomically adds a value to a variable.
+ *
+ * @param destination  The variable to add to.
+ * @param value        The value to add.
+ */
+#define SystemAtomicAdd(destination, value) __atomic_fetch_add(&(destination), (value), __ATOMIC_SEQ_CST)
+
+/**
+ * Atomically subtracts a value from a variable.
+ *
+ * @param destination  The variable to subtract from.
+ * @param value        The value to subtract.
+ */
+#define SystemAtomicSubstract(destination, value) __atomic_fetch_sub(&(destination), (value), __ATOMIC_SEQ_CST)
+
+/**
+ * Atomically compares the variable to an expected value and, if they are equal, replaces it with a new value.
+ *
+ * @param destination     The variable to compare and potentially update.
+ * @param expectedValue   The value to compare against the destination.
+ * @param value           The new value to set if the destination matches expectedValue.
+ */
+#define SystemAtomicCompareExchange(destination, expectedValue, value) __atomic_compare_exchange_n(&(destination), &(expectedValue), (value), true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)
 
 /**
  * Function signature for a system thread.

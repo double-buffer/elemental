@@ -41,7 +41,7 @@ template<typename TValue>
 SystemDictionaryIndexInfo GetDictionaryEntryIndexInfo(SystemDictionaryStorage<TValue>* storage, SystemDictionaryHashInfo hashInfo)
 {
     int32_t currentIndex;
-    __atomic_load(&storage->Buckets[hashInfo.BucketIndex], &currentIndex, __ATOMIC_ACQUIRE);
+    SystemAtomicLoad(storage->Buckets[hashInfo.BucketIndex], currentIndex);
 
     auto rootIndex = currentIndex;
     auto parentIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
@@ -62,10 +62,16 @@ SystemDictionaryIndexInfo GetDictionaryEntryIndexInfo(SystemDictionaryStorage<TV
         }
 
         parentIndex = currentIndex;
-        __atomic_load(&currentEntry->Next, &currentIndex, __ATOMIC_ACQUIRE);
+        SystemAtomicLoad(currentEntry->Next, currentIndex);
     }
 
-    return { -1, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY, SYSTEM_DICTIONARY_INDEX_EMPTY };
+    SystemDictionaryIndexInfo result = {};
+    result.BucketIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
+    result.RootIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
+    result.ParentIndex = SYSTEM_DICTIONARY_INDEX_EMPTY;
+    result.Index = SYSTEM_DICTIONARY_INDEX_EMPTY;
+
+    return result;
 }
 
 template<typename TValue>
@@ -83,7 +89,7 @@ template<typename TValue>
 int32_t GetFreeListEntry(SystemDictionaryStorage<TValue>* storage)
 {
     int32_t entryIndex;
-    __atomic_load(&storage->FreeListIndex, &entryIndex, __ATOMIC_ACQUIRE);
+    SystemAtomicLoad(storage->FreeListIndex, entryIndex);
 
     SystemDictionaryEntry<TValue>* freeListEntry = nullptr;
 
@@ -101,7 +107,7 @@ int32_t GetFreeListEntry(SystemDictionaryStorage<TValue>* storage)
 
         freeListEntry = GetDictionaryEntryByIndex(storage, entryIndex);
     }
-    while (!__atomic_compare_exchange_n(&storage->FreeListIndex, &entryIndex, freeListEntry->Next, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    while (!SystemAtomicCompareExchange(storage->FreeListIndex, entryIndex, freeListEntry->Next));
 
     return entryIndex;
 }
@@ -110,11 +116,11 @@ template<typename TValue>
 void InsertFreeListEntry(SystemDictionaryStorage<TValue>* storage, int32_t index, SystemDictionaryEntry<TValue>* entry)
 {
     int32_t entryIndex;
-    __atomic_load(&storage->FreeListIndex, &entryIndex, __ATOMIC_ACQUIRE);
+    SystemAtomicLoad(storage->FreeListIndex, entryIndex);
 
     entry->Next = entryIndex;
 
-    while (!__atomic_compare_exchange_n(&storage->FreeListIndex, &entryIndex, index, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE))
+    while (!SystemAtomicCompareExchange(storage->FreeListIndex, entryIndex, index))
     {
         entry->Next = entryIndex;
         SystemYieldThread();
@@ -142,7 +148,7 @@ void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictiona
     auto entry = GetDictionaryEntryByIndex(storage, entryIndex);
 
     int32_t bucketHead;
-    __atomic_load(&storage->Buckets[hashInfo.BucketIndex], &bucketHead, __ATOMIC_ACQUIRE);
+    SystemAtomicLoad(storage->Buckets[hashInfo.BucketIndex], bucketHead);
 
     auto firstTry = true;
 
@@ -175,7 +181,7 @@ void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictiona
             entry->Next = SYSTEM_DICTIONARY_INDEX_EMPTY;
         }
     }
-    while (!__atomic_compare_exchange_n(&storage->Buckets[hashInfo.BucketIndex], &bucketHead, entryIndex, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    while (!SystemAtomicCompareExchange(storage->Buckets[hashInfo.BucketIndex], bucketHead, entryIndex));
 
     entry->Hash = hashInfo.Hash;
     entry->Value = value;
@@ -222,7 +228,7 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
 
         SystemYieldThread();
     }
-    while (entry == nullptr || !__atomic_compare_exchange_n(parentNextEntryIndex, &entryIndex.Index, entry->Next, true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
+    while (entry == nullptr || !SystemAtomicCompareExchange(*parentNextEntryIndex, entryIndex.Index, entry->Next));
 
     entry->Hash = 0;
     entry->Value = {};

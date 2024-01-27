@@ -312,7 +312,7 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
 
     if (memoryArena.Storage != stackMemoryArenaStorage)
     {
-        SystemAtomicReplaceWithValue(storage->IsCommitOperationInProgres, false, true);
+        SystemAtomicReplace(storage->IsCommitOperationInProgres, false, true);
     }
 
     pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
@@ -381,7 +381,7 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
 
     if (memoryArena.Storage != stackMemoryArenaStorage)
     {
-        SystemAtomicReplaceWithValue(storage->IsCommitOperationInProgres, false, true);
+        SystemAtomicReplace(storage->IsCommitOperationInProgres, false, true);
     }
 
     for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
