@@ -979,9 +979,14 @@ void VulkanDispatchMesh(void* commandListPointer, uint32_t threadGroupCountX, ui
    
 GraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
-    // TODO: Avoid std::wstring
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto result = GraphicsDeviceInfo();
-    result.DeviceName = deviceProperties.deviceName;
+
+    auto deviceName = ReadOnlySpan<char>(deviceProperties.deviceName);
+    auto destinationDeviceName = SystemPushArray<char>(stackMemoryArena, deviceName.Length);
+    SystemCopyBuffer<char>(destinationDeviceName, deviceName);
+
+    result.DeviceName = destinationDeviceName.Pointer;
     result.GraphicsApi = GraphicsApi_Vulkan;
     result.DeviceId = deviceProperties.deviceID;
     result.AvailableMemory = deviceMemoryProperties.memoryHeaps[0].size;

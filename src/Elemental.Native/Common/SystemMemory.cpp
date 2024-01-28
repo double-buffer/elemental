@@ -27,10 +27,10 @@ struct MemoryArenaStorage
     MemoryArenaPageInfo* PagesInfos;
     MemoryArenaPageCommitInfo* PagesCommitInfos;
 
-    // Stack fields
-    MemoryArena ExtraStorage;
-    uint8_t Level;
-    uint8_t MinAllocatedLevel;
+    MemoryArena StackExtraStorage;
+    uint8_t StackLevel;
+    uint8_t StackMinAllocatedLevel;
+    size_t StackBytesToClear;
 };
 
 struct PageSizeIndexes
@@ -116,9 +116,10 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     storage->CommittedPagesCount = 0;
     storage->PagesInfos = (MemoryArenaPageInfo*)((uint8_t*)storage + sizeof(MemoryArenaStorage));
     storage->PagesCommitInfos = (MemoryArenaPageCommitInfo*)((uint8_t*)storage + sizeof(MemoryArenaStorage) + pageInfosCount * sizeof(MemoryArenaPageInfo));
-    storage->ExtraStorage = {};
-    storage->Level = 0;
-    storage->MinAllocatedLevel = 255;
+    storage->StackExtraStorage = {};
+    storage->StackLevel = 0;
+    storage->StackMinAllocatedLevel = 255;
+    storage->StackBytesToClear = 0;
 
     auto headerPageCount = headerResized / systemPageSizeInBytes;
 
@@ -148,16 +149,16 @@ MemoryArena GetStackWorkingMemoryArena(MemoryArena memoryArena)
 {
     MemoryArena workingMemoryArena = memoryArena;
 
-    if (memoryArena.Level != memoryArena.Storage->Level)
+    if (memoryArena.Level != memoryArena.Storage->StackLevel)
     {
-        if (memoryArena.Storage->ExtraStorage.Storage == nullptr)
+        if (memoryArena.Storage->StackExtraStorage.Storage == nullptr)
         {
             auto extraHandle = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
-            memoryArena.Storage->ExtraStorage = { extraHandle, 0 };
+            memoryArena.Storage->StackExtraStorage = { extraHandle, 0 };
         }
 
-        workingMemoryArena = memoryArena.Storage->ExtraStorage;
-        memoryArena.Storage->MinAllocatedLevel = SystemMin(memoryArena.Storage->MinAllocatedLevel, memoryArena.Level);
+        workingMemoryArena = memoryArena.Storage->StackExtraStorage;
+        memoryArena.Storage->StackMinAllocatedLevel = SystemMin(memoryArena.Storage->StackMinAllocatedLevel, memoryArena.Level);
     }
 
     return workingMemoryArena;
@@ -219,17 +220,24 @@ StackMemoryArena SystemGetStackMemoryArena()
         stackMemoryArenaStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
     }
     
-    stackMemoryArenaStorage->Level++;
+    SystemPlatformClearMemory(stackMemoryArenaStorage->CurrentPointer, stackMemoryArenaStorage->StackBytesToClear);
+    stackMemoryArenaStorage->StackBytesToClear = 0;
+    
+    stackMemoryArenaStorage->StackLevel++;
     auto extraStorageAllocatedBytes = 0llu;
 
-    if (stackMemoryArenaStorage->ExtraStorage.Storage != nullptr)
+    if (stackMemoryArenaStorage->StackExtraStorage.Storage != nullptr)
     {
-        extraStorageAllocatedBytes = GetMemoryArenaAllocatedBytes(stackMemoryArenaStorage->ExtraStorage);
+        extraStorageAllocatedBytes = GetMemoryArenaAllocatedBytes(stackMemoryArenaStorage->StackExtraStorage);
+
+        auto extraStorage = stackMemoryArenaStorage->StackExtraStorage.Storage;
+        SystemPlatformClearMemory(extraStorage->CurrentPointer, extraStorage->StackBytesToClear);
+        extraStorage->StackBytesToClear = 0;
     }
 
     MemoryArena memoryArena = {};
     memoryArena.Storage = stackMemoryArenaStorage;
-    memoryArena.Level = stackMemoryArenaStorage->Level;
+    memoryArena.Level = stackMemoryArenaStorage->StackLevel;
 
     StackMemoryArena result = {};
     result.Arena = memoryArena;
@@ -243,18 +251,18 @@ StackMemoryArena::~StackMemoryArena()
 {
     auto storage = Arena.Storage;
 
-    if (storage->ExtraStorage.Storage != nullptr)
+    if (storage->StackExtraStorage.Storage != nullptr)
     {
-        auto extraBytesToPop = GetMemoryArenaAllocatedBytes(storage->ExtraStorage) - StartExtraOffsetInBytes;
+        auto extraBytesToPop = GetMemoryArenaAllocatedBytes(storage->StackExtraStorage) - StartExtraOffsetInBytes;
 
-        if (extraBytesToPop && storage->MinAllocatedLevel >= Arena.Level)
+        if (extraBytesToPop && storage->StackMinAllocatedLevel >= Arena.Level)
         {
-            SystemPopMemory(storage->ExtraStorage, extraBytesToPop);
-            storage->MinAllocatedLevel = 255;
+            SystemPopMemory(storage->StackExtraStorage, extraBytesToPop);
+            storage->StackMinAllocatedLevel = 255;
         } 
     }
 
-    storage->Level--;
+    storage->StackLevel--;
 
     auto bytesToPop = GetMemoryArenaAllocatedBytes(Arena) - StartOffsetInBytes;
 
@@ -453,7 +461,7 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
     {
         pointer = storage->CurrentPointer;
         storage->CurrentPointer -= sizeInBytes;
-        SystemPlatformClearMemory(storage->CurrentPointer, sizeInBytes);
+        storage->StackBytesToClear += sizeInBytes;
     }
     else
     {
