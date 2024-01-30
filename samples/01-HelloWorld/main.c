@@ -60,8 +60,17 @@ bool RunHandler(elemApplicationStatus status)
 
 void main()
 {
+    // Maybe
+    ElemConfigureLogHandler(LogMessageHandler);
+    // ElemConfigureLogHandler(emConsoleLogHandler);
+
+    auto application = ElemCreateApplication("Hello World");
+    ElemRunApplication(application, RunHandler);
+    ElemFreeApplication(application);
+
+    // Actual
     auto applicationService = elemInitApplicationService({ LogMessageHandler = LogMessageHandler });
-    auto application = elemCreateApplication(applicationService, "Hello World");
+    auto application = elemCreateApplication("Hello World");
 
     elemRunApplication(application, RunHandler);
 

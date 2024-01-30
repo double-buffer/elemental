@@ -9,12 +9,11 @@
     <ArtifactsPivots>$(AssemblyName).app/Contents/MacOS</ArtifactsPivots>
   </PropertyGroup>
 
-
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Elemental\Elemental.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Elemental.Tools\Elemental.Tools.csproj" />
+    <ProjectReference Include="..\..\src\Elemental\Elemental.csproj" />
+    <ProjectReference Include="..\..\src\Elemental.Tools\Elemental.Tools.csproj" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Content Include="Triangle.metal">
       <TargetPath>Triangle.metal</TargetPath>
