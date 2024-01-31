@@ -11,7 +11,7 @@ on:
 jobs:
   build-native:
     runs-on: ${{ 
-      (inputs.platform == 'osx' && 'macos-1') ||
+      (inputs.platform == 'osx' && 'macos-14') ||
       (inputs.platform == 'linux' && 'ubuntu-latest') ||
       (inputs.platform == 'win' && 'windows-latest')
       }}
