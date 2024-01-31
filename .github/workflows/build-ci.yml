@@ -26,7 +26,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/run-tests.yml
-    needs: [ build_native, build_dotneti ]
+    needs: [ build_native, build_dotnet ]
     name: 'run-tests'
     secrets: inherit
     with:
