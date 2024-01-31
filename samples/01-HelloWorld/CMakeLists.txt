@@ -1,23 +1,14 @@
-add_executable(SystemFunctionsTests UnityBuild.cpp)
+add_executable(HelloWorld Main.c)
 
-target_compile_options(SystemFunctionsTests PRIVATE -W4)
-target_compile_options(SystemFunctionsTests PRIVATE -Wno-unused-parameter)
+set_target_properties(HelloWorld PROPERTIES LINKER_LANGUAGE C)
 
-target_link_libraries(SystemFunctionsTests PRIVATE common)
-target_link_libraries(SystemFunctionsTests PRIVATE external_dependencies)
-target_link_libraries(SystemFunctionsTests PRIVATE utest)
+target_compile_options(HelloWorld PRIVATE -W4)
+target_compile_options(HelloWorld PRIVATE -Wno-unused-parameter)
+
+target_link_libraries(HelloWorld INTERFACE Elemental)
 
 if(WIN32)
-    target_compile_options(SystemFunctionsTests PRIVATE -EHs -MD)
-    target_compile_definitions(SystemFunctionsTests PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
-    target_include_directories(SystemFunctionsTests PRIVATE ../../src/Elemental/Windows/)
-    target_precompile_headers(SystemFunctionsTests PRIVATE ../../src/Elemental/Windows/PreCompiledHeader.h)
-    target_link_libraries(SystemFunctionsTests PRIVATE Dwmapi UxTheme onecore)
+    target_compile_options(HelloWorld PRIVATE -EHs -MD)
+    target_compile_definitions(HelloWorld PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
 elseif(APPLE)
-    target_include_directories(SystemFunctionsTests PRIVATE ../../src/Elemental/Apple/)
-    target_precompile_headers(SystemFunctionsTests PRIVATE ../../src/Elemental/Apple/PreCompiledHeader.h)
-    target_compile_options(SystemFunctionsTests PRIVATE -fms-extensions -fno-objc-arc)
-
-    target_compile_definitions(SystemFunctionsTests PRIVATE __BLOCKS__)
-    target_link_options(SystemFunctionsTests PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
 endif()

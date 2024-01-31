@@ -2,7 +2,7 @@
 #include "Elemental.h"
 
 int32_t counter = 0;
-
+/*
 // TODO: Provide a default handler that can be used out of the box for other samples. We show how to provide one here on the first one
 void LogMessageHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, ElemReadOnlySpan<char> function, ElemReadOnlySpan<char> message) 
 {
@@ -56,10 +56,11 @@ bool RunHandler(ElemApplicationStatus status)
 
     printf("Hello World {counter}!", counter++);
     return true;
-}
+}*/
 
-void main()
+int main()
 {
+    /*
     // Maybe
     ElemConfigureLogHandler(LogMessageHandler);
     // ElemConfigureLogHandler(emConsoleLogHandler);
@@ -75,5 +76,10 @@ void main()
     elemRunApplication(application, RunHandler);
 
     elemFreeApplication(application);
-    elemFreeApplicationService(applicationService);
+    elemFreeApplicationService(applicationService);*/
+
+    int test = 5;
+    printf("Hello world2\n");
+
+    return 0;
 }

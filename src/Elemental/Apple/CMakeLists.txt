@@ -1,5 +1,7 @@
 add_library(Elemental SHARED UnityBuild.cpp)
 
+target_include_directories(Elemental INTERFACE ../.)
+
 target_compile_options(Elemental PRIVATE -Wall -fno-objc-arc)
 target_include_directories(Elemental PRIVATE .)
 target_precompile_headers(Elemental PRIVATE PreCompiledHeader.h)
