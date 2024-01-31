@@ -4,25 +4,25 @@
 int32_t counter = 0;
 
 // TODO: Provide a default handler that can be used out of the box for other samples. We show how to provide one here on the first one
-void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, ReadOnlySpan<char> function, ReadOnlySpan<char> message) 
+void LogMessageHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, ElemReadOnlySpan<char> function, ElemReadOnlySpan<char> message) 
 {
     printf("[");
     printf("\033[36m");
 
     // TODO: Provide a mapping function
-    if (category == LogMessageCategory_Memory)
+    if (category == ElemLogMessageCategory_Memory)
     {
         printf("Memory");
     }
-    else if (category == LogMessageCategory_NativeApplication)
+    else if (category == ElemLogMessageCategory_NativeApplication)
     {
         printf("Application");
     }
-    else if (category == LogMessageCategory_Graphics)
+    else if (category == ElemLogMessageCategory_Graphics)
     {
         printf("Graphics");
     }
-    else if (category == LogMessageCategory_Inputs)
+    else if (category == ElemLogMessageCategory_Inputs)
     {
         printf("Inputs");
     }
@@ -31,11 +31,11 @@ void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, 
 
     printf("\033[32m %s", function.Pointer);
 
-    if (messageType == LogMessageType_Error)
+    if (messageType == ElemLogMessageType_Error)
     {
         printf("\033[31m");
     }
-    else if (messageType == LogMessageType_Warning)
+    else if (messageType == ElemLogMessageType_Warning)
     {
         printf("\033[33m");
     }
@@ -47,7 +47,7 @@ void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, 
     printf(" %s\n\033[0m", message.Pointer);
 }
 
-bool RunHandler(elemApplicationStatus status)
+bool RunHandler(ElemApplicationStatus status)
 {
     if (counter > 10 || !status.IsActive)
     {

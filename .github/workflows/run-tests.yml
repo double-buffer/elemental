@@ -11,8 +11,7 @@ on:
 jobs:
   run_tests:
     runs-on: ${{ 
-      ((inputs.platform == 'osx' && inputs.architecture == 'arm64') && 'macos-13-xlarge') ||
-      ((inputs.platform == 'osx' && inputs.architecture != 'arm64') && 'macos-13') ||
+      ((inputs.platform == 'osx') && 'macos-14') ||
       (inputs.platform == 'linux' && 'ubuntu-latest') ||
       (inputs.platform == 'win' && 'windows-latest')
       }}
