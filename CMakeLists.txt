@@ -21,12 +21,12 @@ include(functions)
 
 # TODO: Don't include tools dep for the runtime
 add_subdirectory(external)
-add_subdirectory(src/Elemental.Native/Common)
-add_subdirectory(src/Elemental.Tools.Native)
+add_subdirectory(src/Elemental/Common)
+add_subdirectory(src/Elemental.Tools)
 add_subdirectory(tests/SystemFunctionsTests)
 
 if(WIN32)
-    add_subdirectory(src/Elemental.Native/Windows)
+    add_subdirectory(src/Elemental/Windows)
 elseif(APPLE)
-    add_subdirectory(src/Elemental.Native/Apple)
+    add_subdirectory(src/Elemental/Apple)
 endif()
