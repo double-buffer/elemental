@@ -39,7 +39,7 @@ jobs:
 
     - name: Build
       run: |
-        cmake --build ./build --target Elemental.Native --config Release
+        cmake --build ./build --target Elemental --config Release
 
     - name: Build Tests
       run: |
@@ -48,21 +48,21 @@ jobs:
     # Conditional Vulkan Loader steps for Windows
     - name: Download Vulkan Loader
       if: inputs.platform == 'win'
-      working-directory: ./build/src/Elemental.Native/Windows/Release
+      working-directory: ./build/src/Elemental/Windows/Release
       run: |
         mkdir ./tmp/
         curl -L -o ./tmp/vulkan-loader.zip https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip
 
     - name: Extract Vulkan Loader
       if: inputs.platform == 'win'
-      working-directory: ./build/src/Elemental.Native/Windows/Release
+      working-directory: ./build/src/Elemental/Windows/Release
       run: |
         unzip ./tmp/vulkan-loader.zip -d ./bin/
 
     - name: Set Vulkan DLL Path
       if: inputs.platform == 'win'
       id: set-vulkan-dll-path
-      working-directory: ./build/src/Elemental.Native/Windows/Release
+      working-directory: ./build/src/Elemental/Windows/Release
       shell: bash
       run: |
         dllPath=$(find ./bin -name vulkan-1.dll -type f -print -quit)
@@ -70,7 +70,7 @@ jobs:
 
     - name: Copy files
       if: inputs.platform == 'win'
-      working-directory: ./build/src/Elemental.Native/Windows/Release
+      working-directory: ./build/src/Elemental/Windows/Release
       shell: bash
       run: |
         cp ${{ env.vulkan_dll_path }} .
@@ -80,7 +80,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./build/src/Elemental.Native/${{ inputs.platform == 'win' && 'Windows' || inputs.platform == 'osx' && 'Apple' || inputs.platform }}/Release/*.${{ inputs.platform == 'win' && 'dll' || inputs.platform == 'osx' && 'dylib' || 'so' }}
+        path: ./build/src/Elemental/${{ inputs.platform == 'win' && 'Windows' || inputs.platform == 'osx' && 'Apple' || inputs.platform }}/Release/*.${{ inputs.platform == 'win' && 'dll' || inputs.platform == 'osx' && 'dylib' || 'so' }}
 
     - name: Upload Tests Binaries
       uses: actions/upload-artifact@master
