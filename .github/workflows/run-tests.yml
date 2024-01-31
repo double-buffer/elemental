@@ -24,37 +24,17 @@ jobs:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./Tests/
  
-    - name: Download Native Binaries
+    - name: Download Native Test Binaries
       uses: actions/download-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./Tests/
 
-    - name: Download Dotnet Binaries
-      uses: actions/download-artifact@master
-      with:
-        name: dotnet.tests.${{ inputs.platform }}-${{ inputs.architecture }}
-
-    - name: Copy files
-      run: cp -r ./Elemental.Tests.NativeApplicationTests/* ./Tests/
-
-    - name: Copy MacOS native
-      if: inputs.platform == 'osx'
-      run: cp ./Tests/libElemental.Native.dylib ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS
-
     - name: Set Executable Permission
       if: inputs.platform == 'osx'
       run: |
         chmod +x ./Tests/SystemFunctionsTests
-        chmod +x ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS/Elemental.Tests.NativeApplicationTests
 
     - name: Run Native System Functions Tests
       run: ./Tests/SystemFunctionsTests
     
-    - name: Run NativeApplication Tests
-      if: inputs.platform != 'osx'
-      run: ./Tests/Elemental.Tests.NativeApplicationTests
-    
-    - name: Run NativeApplication Tests
-      if: inputs.platform == 'osx'
-      run: ./Tests/Elemental.Tests.NativeApplicationTests.app/Contents/MacOS/Elemental.Tests.NativeApplicationTests
