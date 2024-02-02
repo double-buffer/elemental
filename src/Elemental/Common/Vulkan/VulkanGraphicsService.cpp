@@ -70,7 +70,7 @@ void VulkanInitGraphicsService(GraphicsServiceOptions* options)
 
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && isSdkInstalled)
     {
-        SystemLogDebugMessage(LogMessageCategory_Graphics, "Vulkan Debug Mode");
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Vulkan Debug Mode");
 
         const char* layers[] =
         {
@@ -563,7 +563,7 @@ void VulkanWaitForFenceOnCpu(Fence fence)
 
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
     {
-        SystemLogDebugMessage(LogMessageCategory_Graphics, "Wait for fence on CPU...");
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for fence on CPU...");
 
         VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
         waitInfo.semaphoreCount = 1;
@@ -943,7 +943,7 @@ void VulkanSetShader(void* commandListPointer, void* shaderPointer)
         // TODO: We should have a kind of GetOrAdd method 
         if (!SystemDictionaryContainsKey(graphicsDevice->PipelineStates, hash))
         {
-            SystemLogDebugMessage(LogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
             auto pipelineStateCacheItem = VulkanCreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
             SystemAddDictionaryEntry(graphicsDevice->PipelineStates, hash, pipelineStateCacheItem);
@@ -1098,7 +1098,7 @@ VulkanCommandList* VulkanGetCommandList(VulkanCommandQueue* commandQueue, Vulkan
     {
         if (!isFromCommandPoolItem)
         {
-            SystemLogWarningMessage(LogMessageCategory_Graphics, "Warning: Not enough command buffer objects in the pool. Performance may decrease...");
+            SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Warning: Not enough command buffer objects in the pool. Performance may decrease...");
         } 
 
         commandList = new VulkanCommandList(commandQueue->GraphicsDevice);
@@ -1331,18 +1331,18 @@ static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags
     // 	return VK_FALSE;
     // }
 
-    auto messageType = LogMessageType_Debug;
+    auto messageType = ElemLogMessageType_Debug;
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
-        messageType = LogMessageType_Error;
+        messageType = ElemLogMessageType_Error;
     }
     else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
     {
-        messageType = LogMessageType_Warning;
+        messageType = ElemLogMessageType_Warning;
     }
 
-    SystemLogMessage(messageType, LogMessageCategory_Graphics, "%s", pMessage);
+    SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", pMessage);
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {

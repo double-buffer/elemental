@@ -15,17 +15,17 @@
 #include "SystemInputs.cpp"
 
 #ifdef _DEBUG
-void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, const char* function, const char* message)
+void LogMessageHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message)
 {
-    if (messageType == LogMessageType_Error)
+    if (messageType == ElemLogMessageType_Error)
     {
         printf("\033[31mERROR: ");
     }
-    else if (messageType == LogMessageType_Warning)
+    else if (messageType == ElemLogMessageType_Warning)
     {
         printf("\033[33mWARNING: ");
     }
-    else if (messageType == LogMessageType_Debug)
+    else if (messageType == ElemLogMessageType_Debug)
     {
         printf("\033[36mDEBUG: ");
     }
@@ -39,7 +39,7 @@ UTEST_STATE();
 int main(int argc, const char *const argv[]) 
 {
     #ifdef _DEBUG
-    SystemRegisterLogMessageHandler(LogMessageHandler);
+    SystemRegisterLogHandler(LogMessageHandler);
     #endif
     return utest_main(argc, argv);
 }

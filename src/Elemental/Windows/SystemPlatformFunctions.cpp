@@ -105,7 +105,7 @@ size_t SystemPlatformFileGetSizeInBytes(ReadOnlySpan<char> path)
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
         return 0;
     }
     
@@ -124,14 +124,14 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for writing. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open file %s for writing. (Error code: %d)", path.Pointer, GetLastError());
         return;
     }
 
     DWORD bytesWritten;
     if (!WriteFile(fileHandle, data.Pointer, data.Length, &bytesWritten, nullptr) || bytesWritten != data.Length) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Error writing to file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Error writing to file %s. (Error code: %d)", path.Pointer, GetLastError());
     }
 
     CloseHandle(fileHandle);
@@ -146,14 +146,14 @@ void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
         return;
     }
     
     DWORD bytesRead;
     if (!ReadFile(fileHandle, data.Pointer, data.Length, &bytesRead, nullptr) || bytesRead != data.Length) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Error reading file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Error reading file %s. (Error code: %d)", path.Pointer, GetLastError());
     }
     
     CloseHandle(fileHandle);
@@ -166,7 +166,7 @@ void SystemPlatformFileDelete(ReadOnlySpan<char> path)
 
     if (!DeleteFile(pathWide.Pointer))
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot delete file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot delete file %s. (Error code: %d)", path.Pointer, GetLastError());
     }
 }
 
@@ -183,7 +183,7 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
     HANDLE readPipe, writePipe;
     if (!CreatePipe(&readPipe, &writePipe, &pipeAttributes, 0)) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot open read/write pipe for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open read/write pipe for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
         return ReadOnlySpan<char>();
     }
 
@@ -196,7 +196,7 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
     PROCESS_INFORMATION processInfo {};
     if (!CreateProcess(nullptr, (LPWSTR)commandWide.Pointer, nullptr, nullptr, true, 0, nullptr, nullptr, &startupInfo, &processInfo)) 
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot create process for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot create process for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
         return ReadOnlySpan<char>();
     }
 
@@ -245,7 +245,7 @@ void* SystemPlatformCreateThread(void* threadFunction, void* parameters)
 
     if (threadHandle == nullptr)
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Cannot create thread (Error code: %d)", GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot create thread (Error code: %d)", GetLastError());
         return nullptr;
     }
 
@@ -256,7 +256,7 @@ void SystemPlatformWaitThread(void* thread)
 {
     if (thread == nullptr)
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Invalid thread handle provided.");
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Invalid thread handle provided.");
         return;
     }
 
@@ -264,7 +264,7 @@ void SystemPlatformWaitThread(void* thread)
 
     if (waitResult != WAIT_OBJECT_0)
     {
-        SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Failed to wait on thread (Error code: %d)", GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Failed to wait on thread (Error code: %d)", GetLastError());
     }
 }
 

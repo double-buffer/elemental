@@ -6,6 +6,7 @@ target_compile_options(SystemFunctionsTests PRIVATE -Wno-unused-parameter)
 target_link_libraries(SystemFunctionsTests PRIVATE common)
 target_link_libraries(SystemFunctionsTests PRIVATE external_dependencies)
 target_link_libraries(SystemFunctionsTests PRIVATE utest)
+target_link_libraries(SystemFunctionsTests PRIVATE ElementalHeaders)
 
 if(WIN32)
     target_compile_options(SystemFunctionsTests PRIVATE -EHs -MD)

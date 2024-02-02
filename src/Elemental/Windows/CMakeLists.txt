@@ -2,12 +2,16 @@ add_library(Direct3D12 INTERFACE)
 download_and_extract_nuget_package(Direct3D12 "Microsoft.Direct3D.D3D12" "1.611.2")
 target_link_libraries(Direct3D12 INTERFACE dxgi dxguid)
 
-
-
 # TODO: Do we really need that?
 target_link_libraries(Direct3D12 INTERFACE d3d12)
 
+# TODO: Move that
+add_library(ElementalHeaders INTERFACE)
+target_include_directories(ElementalHeaders INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
 add_library(Elemental SHARED UnityBuild.cpp)
+
+target_include_directories(Elemental PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 target_compile_options(Elemental PRIVATE -W4 -EHs)
 target_compile_options(Elemental PRIVATE -Wno-unused-parameter)

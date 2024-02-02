@@ -4,7 +4,7 @@
         case GraphicsApi_Vulkan: return Vulkan##functionName(apiObject, __VA_ARGS__); \
         case GraphicsApi_Metal: \
         case GraphicsApi_Unknown: \
-        default: SystemLogErrorMessage(LogMessageCategory_Graphics, "Unknown graphics API."); return {}; \
+        default: SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Unknown graphics API."); return {}; \
     }
     
 #define DispatchReturnGraphicsFunctionForApi(functionName, api, ...) \
@@ -13,7 +13,7 @@
         case GraphicsApi_Vulkan: return Vulkan##functionName(__VA_ARGS__); \
         case GraphicsApi_Metal: \
         case GraphicsApi_Unknown: \
-        default: SystemLogErrorMessage(LogMessageCategory_Graphics, "Unknown graphics API."); return {}; \
+        default: SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Unknown graphics API."); return {}; \
     }
 
 #define DispatchGraphicsFunction(functionName, apiObject, ...) GraphicsObject* graphicsObject = (GraphicsObject*)apiObject; \
@@ -22,7 +22,7 @@
         case GraphicsApi_Vulkan: Vulkan##functionName(apiObject, __VA_ARGS__); break; \
         case GraphicsApi_Metal: \
         case GraphicsApi_Unknown: \
-        default: SystemLogErrorMessage(LogMessageCategory_Graphics, "Unknown graphics API.");\
+        default: SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Unknown graphics API.");\
     }
 
 #define DispatchGraphicsFunctionForApi(functionName, api, ...) \
@@ -31,7 +31,7 @@
         case GraphicsApi_Vulkan: Vulkan##functionName(__VA_ARGS__); break; \
         case GraphicsApi_Metal: \
         case GraphicsApi_Unknown: \
-        default: SystemLogErrorMessage(LogMessageCategory_Graphics, "Unknown graphics API.");\
+        default: SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Unknown graphics API.");\
     }
 
 DllExport void Native_InitGraphicsService(GraphicsServiceOptions* options)

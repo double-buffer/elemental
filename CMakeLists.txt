@@ -28,12 +28,13 @@ add_subdirectory(external)
 add_subdirectory(src/Elemental/Common)
 add_subdirectory(src/Elemental.Tools)
 
-add_subdirectory(samples/01-HelloWorld)
-
-add_subdirectory(tests/SystemFunctionsTests)
 
 if(WIN32)
     add_subdirectory(src/Elemental/Windows)
 elseif(APPLE)
     add_subdirectory(src/Elemental/Apple)
 endif()
+
+add_subdirectory(tests/SystemFunctionsTests)
+
+add_subdirectory(samples/01-HelloWorld)

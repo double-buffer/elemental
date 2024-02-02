@@ -7,6 +7,7 @@
 
 #ifdef _WINDOWS
 #define DllExport extern "C" __declspec(dllexport)
+#define ElemAPI extern "C" __declspec(dllexport)
 #include <windows.h>
 #include <wrl/client.h>
 using namespace Microsoft::WRL;
@@ -16,6 +17,7 @@ using namespace Microsoft::WRL;
 #undef min
 #else
 #define DllExport extern "C" __attribute__((visibility("default"))) 
+#define ElemAPI extern "C" __attribute__((visibility("default")))
 #define ComPtr CComPtr
 #undef _WIN32
 #include <Carbon/Carbon.h>

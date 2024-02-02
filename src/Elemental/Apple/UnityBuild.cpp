@@ -1,7 +1,5 @@
 #include "CircularList.h"
 
-#include "Elemental.h"
-
 #include "MacOSApplicationDelegate.cpp"
 #include "NativeApplicationService.cpp"
 #include "Graphics/GraphicsService.cpp"

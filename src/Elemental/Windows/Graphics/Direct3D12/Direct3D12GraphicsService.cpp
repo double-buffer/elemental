@@ -38,7 +38,7 @@ void Direct3D12InitGraphicsService(GraphicsServiceOptions* options)
  
     if (options->GraphicsDiagnostics == GraphicsDiagnostics_Debug && sdkLayerExists)
     {
-        SystemLogDebugMessage(LogMessageCategory_Graphics, "DirectX12 Debug Mode");
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "DirectX12 Debug Mode");
 
         AssertIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(_debugInterface.GetAddressOf())));
 
@@ -336,7 +336,7 @@ void Direct3D12WaitForFenceOnCpu(Fence fence)
 
     if (fence.FenceValue > commandQueueToWait->LastCompletedFenceValue)
     {
-        SystemLogDebugMessage(LogMessageCategory_Graphics, "Wait for Fence on CPU...");
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
         commandQueueToWait->Fence->SetEventOnCompletion(fence.FenceValue, _globalFenceEvent);
         WaitForSingleObject(_globalFenceEvent, INFINITE);
     }
@@ -666,7 +666,7 @@ void Direct3D12SetShader(void* commandListPointer, void* shaderPointer)
         if (!SystemDictionaryContainsKey(graphicsDevice->PipelineStates, hash))
         {
             // TODO: Review allocators
-            SystemLogDebugMessage(LogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create PipelineState for shader %u...", hash);
             auto pipelineStateCacheItem = PipelineStateCacheItem();
             pipelineStateCacheItem.PipelineState = Direct3D12CreateRenderPipelineState(shader, &commandList->CurrentRenderPassDescriptor);
 
@@ -824,7 +824,7 @@ Direct3D12CommandList* Direct3D12GetCommandList(Direct3D12CommandQueue* commandQ
 
         if (commandList->IsUsed)
         {
-            SystemLogWarningMessage(LogMessageCategory_Graphics, "Warning: Not enough command list objects in the pool. Performance may decrease...");
+            SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Warning: Not enough command list objects in the pool. Performance may decrease...");
             auto commandListResult = new Direct3D12CommandList(commandQueue, commandQueue->GraphicsDevice);
             commandListResult->IsUsed = true;
 
@@ -1100,17 +1100,17 @@ static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12
         return;
     }
 
-    auto messageType = LogMessageType_Debug;
+    auto messageType = ElemLogMessageType_Debug;
 
     if (severity == D3D12_MESSAGE_SEVERITY_WARNING)
     {
-        messageType = LogMessageType_Warning;
+        messageType = ElemLogMessageType_Warning;
     }
     else if(severity == D3D12_MESSAGE_SEVERITY_ERROR || severity == D3D12_MESSAGE_SEVERITY_CORRUPTION)
     {
-        messageType = LogMessageType_Error;
+        messageType = ElemLogMessageType_Error;
     }
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    SystemLogMessage(messageType, LogMessageCategory_Graphics, "%s", description);
+    SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", description);
 }

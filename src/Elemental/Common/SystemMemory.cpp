@@ -420,7 +420,7 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
 
     if (allocatedSize + sizeInBytes > storage->SizeInBytes)
     {
-        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot push to memory arena with: %u (Allocated size is: %u, Max size is: %u)", sizeInBytes, allocatedSize, storage->SizeInBytes);
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot push to memory arena with: %u (Allocated size is: %u, Max size is: %u)", sizeInBytes, allocatedSize, storage->SizeInBytes);
         return nullptr;
     }
 
@@ -451,7 +451,7 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
 
     if (sizeInBytes > allocatedSize)
     {
-        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", sizeInBytes, allocatedSize);
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", sizeInBytes, allocatedSize);
         return;
     }
 
@@ -524,7 +524,7 @@ void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source)
 {
     if (destination.Length < source.Length)
     {
-        SystemLogErrorMessage(LogMessageCategory_Memory, "Cannot copy buffer, destination length is less than source length.");
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot copy buffer, destination length is less than source length.");
         return;
     }
 

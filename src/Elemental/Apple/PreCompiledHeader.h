@@ -17,4 +17,5 @@
 #include <IOKit/hid/IOHIDManager.h>
 
 #define DllExport extern "C" __attribute__((visibility("default"))) 
+#define ElemAPI extern "C" __attribute__((visibility("default")))
 #define PackedStruct struct __attribute__((__packed__))

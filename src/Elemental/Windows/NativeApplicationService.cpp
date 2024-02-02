@@ -3,13 +3,116 @@
 #include "SystemFunctions.h"
 #include "SystemDictionary.h"
 
-// TODO: Review that
+#include "Elemental.h"
+
+struct WindowsApplication
+{
+    HINSTANCE ApplicationInstance;
+};
+
+struct WindowsApplicationFull
+{
+    ElemApplicationStatus Status;
+};
+
+static MemoryArena applicationMemoryArena;
+static WindowsApplication windowsApplication; // TODO: Replace by pool
+static WindowsApplicationFull windowsApplicationFull; // TODO: Replace by pool
+
+// TODO: OLD CODE
 static MemoryArena nativeApplicationMemoryArena;
 static SystemDictionary<HWND, Win32Window*> windowMap;
 
+// TODO: Create a SystemPool that can manage freelist, versioning and hot/cold data
+
+void InitMemory()
+{
+    if (applicationMemoryArena.Storage == nullptr)
+    {
+        applicationMemoryArena = SystemAllocateMemoryArena();
+
+        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
+
+        #ifdef _DEBUG
+        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode");
+        #endif
+    }
+}
+
+void ProcessMessages(ElemApplication application)
+{
+    MSG message;
+
+	while (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE))
+	{
+        if (message.message == WM_QUIT)
+        {
+            // TODO:
+            //application->SetStatus(NativeApplicationStatusFlags::Closing, 1);
+        }
+
+        TranslateMessage(&message);
+        DispatchMessage(&message);
+    }
+}
+
+ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
+{
+    if (logHandler)
+    {
+        SystemRegisterLogHandler(logHandler);
+    } 
+}
+
+ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
+{
+    InitMemory();
+
+    // TODO: Replace that
+    windowsApplication.ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
+
+    WNDCLASS windowClass {};
+    windowClass.style = CS_HREDRAW | CS_VREDRAW;
+    windowClass.lpfnWndProc = Win32WindowCallBack;
+	windowClass.hInstance = windowsApplication.ApplicationInstance;
+	windowClass.lpszClassName = L"ElementalWindowClass";
+	windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+    windowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
+
+    RegisterClass(&windowClass);
+
+    // TODO: Write pool system
+    return 1;
+}
+
+ElemAPI void ElemFreeApplication(ElemApplication application)
+{
+    // TODO: Free pool item
+}
+
+ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
+{
+    auto canRun = true;
+
+    while (canRun) 
+    {
+        ProcessMessages(application);
+        //canRun = runHandler(application->Status); // TODO: Use Pool
+        canRun = runHandler(windowsApplicationFull.Status);
+/*
+        if (application->IsStatusActive(NativeApplicationStatusFlags::Closing))
+        {
+            canRun = false;
+        }*/
+    }
+}
+
+
+
+
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
-    if (options->LogMessageHandler)
+    /*if (options->LogMessageHandler)
     {
         SystemRegisterLogMessageHandler(options->LogMessageHandler);
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
@@ -17,7 +120,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         #ifdef _DEBUG
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Debug Mode");
         #endif
-    } 
+    } */
 
     // TODO: Review that
     nativeApplicationMemoryArena = SystemAllocateMemoryArena();

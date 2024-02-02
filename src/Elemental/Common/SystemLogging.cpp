@@ -2,16 +2,16 @@
 #include "SystemMemory.h"
 #include "SystemFunctions.h"
 
-static LogMessageHandlerPtr systemLogMessageHandler = nullptr;
+static ElemLogHandlerPtr systemLogHandler = nullptr;
 
-void SystemRegisterLogMessageHandler(LogMessageHandlerPtr logMessageHandler)
+void SystemRegisterLogHandler(ElemLogHandlerPtr logHandler)
 {
-    systemLogMessageHandler = logMessageHandler;
+    systemLogHandler = logHandler;
 }
 
-void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType type, LogMessageCategory category, ReadOnlySpan<char> format, ...)
+void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, ElemLogMessageType type, ElemLogMessageCategory category, ReadOnlySpan<char> format, ...)
 {
-    if (systemLogMessageHandler == nullptr)
+    if (systemLogHandler == nullptr)
     {
         return;
     }
@@ -22,7 +22,7 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     auto formattedString = SystemFormatString(stackMemoryArena, format, arguments);
-    systemLogMessageHandler(type, category, functionName.Pointer, formattedString.Pointer);
+    systemLogHandler(type, category, functionName.Pointer, formattedString.Pointer);
 
     __builtin_va_end(arguments);
 }

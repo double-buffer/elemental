@@ -78,7 +78,7 @@ DllExport void Native_InitShaderCompiler(ShaderCompilerOptions* options)
 {
     if (options->LogMessageHandler)
     {
-        SystemRegisterLogMessageHandler(options->LogMessageHandler);
+        //SystemRegisterLogHandler(options->LogMessageHandler);
     }
 
     _platformTargetLanguages[GraphicsApi_Direct3D12] = ShaderLanguage_Dxil;

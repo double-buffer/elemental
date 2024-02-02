@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ElementalCommon.h"
+#include "Elemental.h"
 #include "SystemSpan.h"
 
 /**
@@ -9,9 +9,9 @@
  * This function allows the registration of a custom log message handler, which will be called
  * whenever a log message is generated in the system.
  *
- * @param logMessageHandler A pointer to the custom log message handler function.
+ * @param logHandler A pointer to the custom log message handler function.
  */
-void SystemRegisterLogMessageHandler(LogMessageHandlerPtr logMessageHandler);
+void SystemRegisterLogHandler(ElemLogHandlerPtr logHandler);
 
 /**
  * Calls the registered log message handler with the specified log message details.
@@ -24,7 +24,7 @@ void SystemRegisterLogMessageHandler(LogMessageHandlerPtr logMessageHandler);
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType type, LogMessageCategory category, ReadOnlySpan<char> format, ...);
+void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, ElemLogMessageType type, ElemLogMessageCategory category, ReadOnlySpan<char> format, ...);
 
 /**
  * Macro for logging a custom log message.
@@ -47,7 +47,7 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogDebugMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Debug, category, format, ##__VA_ARGS__)
+#define SystemLogDebugMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, ElemLogMessageType_Debug, category, format, ##__VA_ARGS__)
 
 /**
  * Macro for logging a warning-level log message.
@@ -58,7 +58,7 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogWarningMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Warning, category, format, ##__VA_ARGS__)
+#define SystemLogWarningMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, ElemLogMessageType_Warning, category, format, ##__VA_ARGS__)
 
 /**
  * Macro for logging an error-level log message.
@@ -69,4 +69,4 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, LogMessageType
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogErrorMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, LogMessageType_Error, category, format, ##__VA_ARGS__)
+#define SystemLogErrorMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, ElemLogMessageType_Error, category, format, ##__VA_ARGS__)

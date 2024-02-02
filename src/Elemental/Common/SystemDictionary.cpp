@@ -136,9 +136,9 @@ void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictiona
     {
         entryIndex = SystemAtomicAdd(storage->CurrentEntryIndex, 1);
 
-        if (entryIndex == storage->Entries.Length)
+        if (entryIndex == (int32_t)storage->Entries.Length)
         {
-            SystemLogErrorMessage(LogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
+            SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
             return;
         }
                 
@@ -203,14 +203,14 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
         {
             if (retryCount < 5)
             {
-                SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Retrying to find the item to delete");
+                SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Retrying to find the item to delete");
                 SystemYieldThread();
                 retryCount++;
                 entry = nullptr;
                 continue;
             }
 
-            SystemLogErrorMessage(LogMessageCategory_NativeApplication, "No entry found to delete.");
+            SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "No entry found to delete.");
             return;
         }
 

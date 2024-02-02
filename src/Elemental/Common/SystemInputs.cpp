@@ -18,7 +18,7 @@ void AddNativeInputsQueueItem(NativeInputsQueue* nativeInputsQueue, InputsValue 
 {
     if (nativeInputsQueue->WriteIndex == nativeInputsQueue->Count)
     {
-        SystemLogErrorMessage(LogMessageCategory_Inputs, "Native Inputs Queue is full");
+        SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Native Inputs Queue is full");
     }
     
 
