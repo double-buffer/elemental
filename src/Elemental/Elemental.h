@@ -37,7 +37,10 @@ typedef struct
 
 typedef bool (*ElemRunHandlerPtr)(ElemApplicationStatus status);
 
-
+// ##Module_Application##
+/*
+*    This function help
+*/
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 ElemAPI ElemApplication ElemCreateApplication(const char* applicationName);
 ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler);

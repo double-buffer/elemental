@@ -118,6 +118,7 @@ foreach (var function in compilation.Functions)
         continue;
     }
 
+    Console.WriteLine($"Test: {function.Comment} {function.Name}");
     Console.WriteLine($"Function: {function.Name}");
 
     builder.AppendLine();
