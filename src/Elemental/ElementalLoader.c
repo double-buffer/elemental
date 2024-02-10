@@ -10,6 +10,18 @@
 #endif
 
 static void* library = NULL;
+static int functionPointersLoaded = 0;
+
+typedef struct ElementalFunctions 
+{
+    void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
+    uint64_t (*ElemCreateApplication)(const char*);
+    void (*ElemRunApplication)(uint64_t, ElemRunHandlerPtr);
+    void (*ElemFreeApplication)(uint64_t);
+    
+} ElementalFunctions;
+
+static ElementalFunctions elementalFunctions;
 
 static bool LoadElementalLibrary() 
 {
@@ -34,7 +46,8 @@ static bool LoadElementalLibrary()
 
 void* GetFunctionPointer(const char* functionName) 
 {
-    if (!library) {
+    if (!library) 
+    {
         return NULL;
     }
 
@@ -45,90 +58,61 @@ void* GetFunctionPointer(const char* functionName)
     #endif
 }
 
+static bool LoadFunctionPointers() 
+{
+    if (!LoadElementalLibrary() || functionPointersLoaded)
+        return functionPointersLoaded;
+
+    elementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetFunctionPointer("ElemConfigureLogHandler");
+    elementalFunctions.ElemCreateApplication = (uint64_t (*)(const char*))GetFunctionPointer("ElemCreateApplication");
+    elementalFunctions.ElemRunApplication = (void (*)(uint64_t, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
+    elementalFunctions.ElemFreeApplication = (void (*)(uint64_t))GetFunctionPointer("ElemFreeApplication");
+    
+
+    functionPointersLoaded = 1;
+    return true;
+}
+
 static void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
 {
-    if (!LoadElementalLibrary()) 
+    if (!LoadFunctionPointers()) 
     {
         assert(library);
         return;
     }
 
-    typedef void (*FunctionType)(ElemLogHandlerPtr);
-    FunctionType functionPointer;
-
-    functionPointer = (FunctionType)GetFunctionPointer("ElemConfigureLogHandler");
-
-    if (!functionPointer) 
-    {
-        assert(functionPointer);
-        return;
-    }
-
-    functionPointer(logHandler);
+    elementalFunctions.ElemConfigureLogHandler(logHandler);
 }
 
 static uint64_t ElemCreateApplication(const char* applicationName)
 {
-    if (!LoadElementalLibrary()) 
+    if (!LoadFunctionPointers()) 
     {
         assert(library);
         return (uint64_t){0};
     }
 
-    typedef uint64_t (*FunctionType)(const char*);
-    FunctionType functionPointer;
-
-    functionPointer = (FunctionType)GetFunctionPointer("ElemCreateApplication");
-
-    if (!functionPointer) 
-    {
-        assert(functionPointer);
-        return (uint64_t){0};
-    }
-
-    return functionPointer(applicationName);
+    return elementalFunctions.ElemCreateApplication(applicationName);
 }
 
 static void ElemRunApplication(uint64_t application, ElemRunHandlerPtr runHandler)
 {
-    if (!LoadElementalLibrary()) 
+    if (!LoadFunctionPointers()) 
     {
         assert(library);
         return;
     }
 
-    typedef void (*FunctionType)(uint64_t, ElemRunHandlerPtr);
-    FunctionType functionPointer;
-
-    functionPointer = (FunctionType)GetFunctionPointer("ElemRunApplication");
-
-    if (!functionPointer) 
-    {
-        assert(functionPointer);
-        return;
-    }
-
-    functionPointer(application, runHandler);
+    elementalFunctions.ElemRunApplication(application, runHandler);
 }
 
 static void ElemFreeApplication(uint64_t application)
 {
-    if (!LoadElementalLibrary()) 
+    if (!LoadFunctionPointers()) 
     {
         assert(library);
         return;
     }
 
-    typedef void (*FunctionType)(uint64_t);
-    FunctionType functionPointer;
-
-    functionPointer = (FunctionType)GetFunctionPointer("ElemFreeApplication");
-
-    if (!functionPointer) 
-    {
-        assert(functionPointer);
-        return;
-    }
-
-    functionPointer(application);
+    elementalFunctions.ElemFreeApplication(application);
 }

@@ -15,6 +15,14 @@ const string template = """
                         #endif
 
                         static void* library = NULL;
+                        static int functionPointersLoaded = 0;
+
+                        typedef struct ElementalFunctions 
+                        {
+                            ##ELEM_FUNCTIONS_DECLARATIONS##
+                        } ElementalFunctions;
+    
+                        static ElementalFunctions elementalFunctions;
 
                         static bool LoadElementalLibrary() 
                         {
@@ -39,7 +47,8 @@ const string template = """
 
                         void* GetFunctionPointer(const char* functionName) 
                         {
-                            if (!library) {
+                            if (!library) 
+                            {
                                 return NULL;
                             }
 
@@ -49,48 +58,39 @@ const string template = """
                                 return dlsym(library, functionName);
                             #endif
                         }
+
+                        static bool LoadFunctionPointers() 
+                        {
+                            if (!LoadElementalLibrary() || functionPointersLoaded)
+                            {
+                                return functionPointersLoaded;
+                            }
+
+                            ##ELEM_FUNCTIONS##
+
+                            functionPointersLoaded = 1;
+                            return true;
+                        }
                         """;
 
 const string functionTemplate = """
-    if (!LoadElementalLibrary()) 
+    if (!LoadFunctionPointers()) 
     {
         assert(library);
         return (##RETURN_TYPE##){0};
     }
 
-    typedef ##RETURN_TYPE## (*FunctionType)(##FUNCTION_PARAMETERS##);
-    FunctionType functionPointer;
-
-    functionPointer = (FunctionType)GetFunctionPointer("##FUNCTION_NAME##");
-
-    if (!functionPointer) 
-    {
-        assert(functionPointer);
-        return (##RETURN_TYPE##){0};
-    }
-
-    return functionPointer(##FUNCTION_PARAMETER_VALUES##);
+    return elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
 """;
 
 const string functionTemplateVoid = """
-    if (!LoadElementalLibrary()) 
+    if (!LoadFunctionPointers()) 
     {
         assert(library);
         return;
     }
 
-    typedef ##RETURN_TYPE## (*FunctionType)(##FUNCTION_PARAMETERS##);
-    FunctionType functionPointer;
-
-    functionPointer = (FunctionType)GetFunctionPointer("##FUNCTION_NAME##");
-
-    if (!functionPointer) 
-    {
-        assert(functionPointer);
-        return;
-    }
-
-    functionPointer(##FUNCTION_PARAMETER_VALUES##);
+    elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
 """;
 
 if (args.Length != 2)
@@ -99,7 +99,7 @@ if (args.Length != 2)
     return 1;
 }
 
-// TODO: Build a table of function pointers to speed up calls
+// TODO: Add a caching mechanism to only re generate when needed
 
 var inputFile = args[0];
 var outputFile = args[1];
@@ -110,6 +110,9 @@ builder.AppendLine(template);
 Console.WriteLine($"Processing file '{args[0]}'...");
 
 var compilation = CppParser.ParseFile(inputFile);
+
+var functionsDeclarationStringBuilder = new StringBuilder();
+var functionsStringBuilder = new StringBuilder();
 
 foreach (var function in compilation.Functions)
 {
@@ -124,8 +127,10 @@ foreach (var function in compilation.Functions)
     builder.AppendLine();
     builder.Append($"static {function.ReturnType.GetDisplayName()} {function.Name}(");
     var isFirstParameter = true;
-    var parametersBuilder = new StringBuilder();
     var parameterValuesBuilder = new StringBuilder();
+
+    functionsStringBuilder.Append($"elementalFunctions.{function.Name} = ({function.ReturnType.GetDisplayName()} (*)(");
+    functionsDeclarationStringBuilder.Append($"{function.ReturnType.GetDisplayName()} (*{function.Name})(");
 
     foreach (var parameter in function.Parameters)
     {
@@ -136,14 +141,22 @@ foreach (var function in compilation.Functions)
         else
         {
             builder.Append(", ");
-            parametersBuilder.Append(", ");
+            functionsStringBuilder.Append(", ");
+            functionsDeclarationStringBuilder.Append(", ");
             parameterValuesBuilder.Append(", ");
         }
 
         builder.Append($"{parameter.Type.GetDisplayName()} {parameter.Name}");
-        parametersBuilder.Append($"{parameter.Type.GetDisplayName()}");
+        functionsStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
+        functionsDeclarationStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
         parameterValuesBuilder.Append($"{parameter.Name}");
     }
+
+    functionsStringBuilder.AppendLine($"))GetFunctionPointer(\"{function.Name}\");");
+    functionsStringBuilder.Append("    ");
+
+    functionsDeclarationStringBuilder.AppendLine($");");
+    functionsDeclarationStringBuilder.Append("    ");
 
     builder.AppendLine(")");
     builder.AppendLine("{");
@@ -151,11 +164,13 @@ foreach (var function in compilation.Functions)
     builder.AppendLine(function.ReturnType.GetDisplayName() == "void" ? functionTemplateVoid : functionTemplate)
            .Replace("##RETURN_TYPE##", function.ReturnType.GetDisplayName())
            .Replace("##FUNCTION_NAME##", function.Name)
-           .Replace("##FUNCTION_PARAMETERS##", parametersBuilder.ToString())
            .Replace("##FUNCTION_PARAMETER_VALUES##", parameterValuesBuilder.ToString());
 
     builder.AppendLine("}");
 }
+
+builder.Replace("##ELEM_FUNCTIONS##", functionsStringBuilder.ToString());
+builder.Replace("##ELEM_FUNCTIONS_DECLARATIONS##", functionsDeclarationStringBuilder.ToString());
 
 File.WriteAllText(outputFile, builder.ToString());
 
