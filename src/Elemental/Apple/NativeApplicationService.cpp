@@ -1,11 +1,203 @@
 #include "NativeApplicationService.h"
 #include "MacOSWindow.h"
 #include "MacOSApplicationDelegate.h"
+
 #include "SystemLogging.h"
+#include "SystemMemory.h"
+
+#include "Elemental.h"
+
+struct MacOSApplicationFull
+{
+    ElemApplicationStatus Status;
+};
+
+static MemoryArena applicationMemoryArena;
+static MacOSApplicationFull macOSApplicationFull; // TODO: Replace by pool
+
+void InitMemory()
+{
+    if (applicationMemoryArena.Storage == nullptr)
+    {
+        applicationMemoryArena = SystemAllocateMemoryArena();
+
+        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
+
+        #ifdef _DEBUG
+        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode");
+        #endif
+    }
+}
+
+void ProcessEvents(ElemApplication application) 
+{
+    NS::SharedPtr<NS::Event> rawEvent; 
+
+    // BUG: It seems we have a memory leak when we move the mouse inside the window 😟
+    // BUG: If we press a key like Q or A while the app is running and then quit the app it crash 😢
+
+    do 
+    {
+        //if (application->IsStatusActive(Active)) 
+        if (true) 
+        {
+            rawEvent = NS::RetainPtr(NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode(), true));
+        }
+    
+        if (!rawEvent.get())
+        {
+            //application->SetStatus(Active, 1);
+            return;
+        }
+
+        NS::Application::sharedApplication()->sendEvent(rawEvent.get());
+    } while (rawEvent.get() != nullptr);
+}
+
+void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
+{
+    using NS::StringEncoding::UTF8StringEncoding;
+
+    auto applicationNameString = NS::String::string(applicationName.Pointer, UTF8StringEncoding);
+
+    auto mainMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("MainMenu")));
+    auto applicationMenuItem = NS::TransferPtr(mainMenu->addItem(MTLSTR("ApplicationMenu"), nullptr, MTLSTR("")));
+
+    auto applicationSubMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Application")));
+    applicationMenuItem->setSubmenu(applicationSubMenu.get());
+
+    auto aboutSelector = NS::MenuItem::registerActionCallback("about", [](void*, SEL, const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->orderFrontStandardAboutPanel(nullptr);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("About ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), aboutSelector, MTLSTR(""));
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+    
+    auto serviceMenuItem = applicationSubMenu->addItem(MTLSTR("Service"), nullptr, MTLSTR(""));
+    auto serviceMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Service")));
+    serviceMenuItem->setSubmenu(serviceMenu.get());
+
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+    
+    auto hideSelector = NS::MenuItem::registerActionCallback("appHide", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->hide(pSender);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("Hide ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), hideSelector, MTLSTR("h"));
+    
+    auto hideOthersSelector = NS::MenuItem::registerActionCallback("appHideOthers", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->hideOtherApplications(pSender);
+    });
+
+    auto hideOthersMenuItem = applicationSubMenu->addItem(NS::String::string("Hide Others", UTF8StringEncoding), hideOthersSelector, MTLSTR("h"));
+    hideOthersMenuItem->setKeyEquivalentModifierMask(NS::EventModifierFlagCommand | NS::EventModifierFlagOption);
+    
+    auto showAllSelector = NS::MenuItem::registerActionCallback("appShowall", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->unhideAllApplications(pSender);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("Show All", UTF8StringEncoding), showAllSelector, MTLSTR(""));
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+
+    auto quitSelector = NS::MenuItem::registerActionCallback("appQuit", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->terminate(pSender);
+    });
+
+    applicationSubMenu->addItem(NS::String::string("Quit ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), quitSelector, MTLSTR("q"));
+
+    auto windowMenuItem = NS::TransferPtr(mainMenu->addItem(MTLSTR("WindowMenu"), nullptr, MTLSTR("")));
+    auto windowSubMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Window")));
+    windowMenuItem->setSubmenu(windowSubMenu.get());
+    
+    // TODO: The 2 items here should be on the top
+    auto minimizeSelector = NS::MenuItem::registerActionCallback("minimize", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->mainWindow()->miniaturize(nullptr);
+    });
+
+    windowSubMenu->addItem(NS::String::string("Minimize", UTF8StringEncoding), minimizeSelector, MTLSTR("m"));
+    
+    auto zoomSelector = NS::MenuItem::registerActionCallback("zoom", [](void*,SEL,const NS::Object* pSender)
+    {
+        NS::Application::sharedApplication()->mainWindow()->zoom(nullptr);
+    });
+
+    windowSubMenu->addItem(NS::String::string("Zoom", UTF8StringEncoding), zoomSelector, MTLSTR(""));
+
+    NS::Application::sharedApplication()->setMainMenu(mainMenu.get());
+    NS::Application::sharedApplication()->setServicesMenu(serviceMenu.get());
+    NS::Application::sharedApplication()->setWindowsMenu(windowSubMenu.get());
+}
+
+ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
+{
+    if (logHandler)
+    {
+        SystemRegisterLogHandler(logHandler);
+    } 
+}
+
+ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
+{
+    InitMemory();
+    
+    NS::ProcessInfo::processInfo()->disableSuddenTermination();
+
+    // TODO: Is it really needed? 
+    ProcessSerialNumber processSerialNumber = {0, kCurrentProcess};
+    TransformProcessType(&processSerialNumber, kProcessTransformToForegroundApplication);
+
+    auto application = new MacOSApplication();
+    application->ApplicationDelegate = new MacOSApplicationDelegate(application);
+
+    NS::Application* pSharedApplication = NS::Application::sharedApplication();
+    pSharedApplication->setDelegate(application->ApplicationDelegate);
+    pSharedApplication->setActivationPolicy(NS::ActivationPolicy::ActivationPolicyRegular);
+
+    // TODO: It is not needed it seems
+    ProcessSerialNumber psn = { 0, kCurrentProcess }; 
+	TransformProcessType(& psn, kProcessTransformToForegroundApplication);
+
+    pSharedApplication->activateIgnoringOtherApps(true);
+    pSharedApplication->finishLaunching();
+
+    CreateApplicationMenu(applicationName);
+
+    // TODO: Write pool system
+    return 1;
+}
+
+ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
+{
+    auto canRun = true;
+
+    while (canRun) 
+    {
+        auto autoreleasePool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+
+        ProcessEvents(application);
+        canRun = runHandler(macOSApplicationFull.Status);
+
+        /*if (application->IsStatusActive(Closing)) 
+        {
+            canRun = false;
+        }*/
+    }
+}
+
+ElemAPI void ElemFreeApplication(ElemApplication application)
+{
+}
+
 
 DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* options)
 {
-    if (options->LogMessageHandler)
+    /*if (options->LogMessageHandler)
     {
         SystemRegisterLogMessageHandler(options->LogMessageHandler);
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Init OK");
@@ -13,7 +205,7 @@ DllExport void Native_InitNativeApplicationService(NativeApplicationOptions* opt
         #ifdef _DEBUG
         SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Debug Mode");
         #endif
-    }
+    }*/
 
     NS::ProcessInfo::processInfo()->disableSuddenTermination();
 }
@@ -70,7 +262,7 @@ DllExport void Native_RunApplication(MacOSApplication* application, RunHandlerPt
     {
         auto autoreleasePool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 
-        ProcessEvents(application);
+        //ProcessEvents(application);
         canRun = runHandler(application->Status);
 
         if (application->IsStatusActive(Closing)) 
@@ -88,7 +280,7 @@ DllExport void* Native_CreateWindow(MacOSApplication* nativeApplication, NativeW
         NS::BackingStoreBuffered,
         false ));
 
-    SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Title %s", options->Title);
+    //SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Title %s", options->Title);
 
     // BUG: String conversion is not working for now :(
     auto titleTest = "Test Title TEMP";
@@ -193,106 +385,3 @@ DllExport void Native_SetWindowState(MacOSWindow* window, NativeWindowState wind
     }
 }
 
-void ProcessEvents(MacOSApplication* application) 
-{
-    NS::SharedPtr<NS::Event> rawEvent; 
-
-    // BUG: It seems we have a memory leak when we move the mouse inside the window 😟
-    // BUG: If we press a key like Q or A while the app is running and then quit the app it crash 😢
-
-    do 
-    {
-        if (application->IsStatusActive(Active)) 
-        {
-            rawEvent = NS::RetainPtr(NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode(), true));
-        }
-    
-        if (!rawEvent.get())
-        {
-            application->SetStatus(Active, 1);
-            return;
-        }
-
-        NS::Application::sharedApplication()->sendEvent(rawEvent.get());
-    } while (rawEvent.get() != nullptr);
-}
-
-void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
-{
-    using NS::StringEncoding::UTF8StringEncoding;
-
-    auto applicationNameString = NS::String::string(applicationName.Pointer, UTF8StringEncoding);
-
-    auto mainMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("MainMenu")));
-    auto applicationMenuItem = NS::TransferPtr(mainMenu->addItem(MTLSTR("ApplicationMenu"), nullptr, MTLSTR("")));
-
-    auto applicationSubMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Application")));
-    applicationMenuItem->setSubmenu(applicationSubMenu.get());
-
-    auto aboutSelector = NS::MenuItem::registerActionCallback("about", [](void*, SEL, const NS::Object* pSender)
-    {
-        NS::Application::sharedApplication()->orderFrontStandardAboutPanel(nullptr);
-    });
-
-    applicationSubMenu->addItem(NS::String::string("About ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), aboutSelector, MTLSTR(""));
-    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
-    
-    auto serviceMenuItem = applicationSubMenu->addItem(MTLSTR("Service"), nullptr, MTLSTR(""));
-    auto serviceMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Service")));
-    serviceMenuItem->setSubmenu(serviceMenu.get());
-
-    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
-    
-    auto hideSelector = NS::MenuItem::registerActionCallback("appHide", [](void*,SEL,const NS::Object* pSender)
-    {
-        NS::Application::sharedApplication()->hide(pSender);
-    });
-
-    applicationSubMenu->addItem(NS::String::string("Hide ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), hideSelector, MTLSTR("h"));
-    
-    auto hideOthersSelector = NS::MenuItem::registerActionCallback("appHideOthers", [](void*,SEL,const NS::Object* pSender)
-    {
-        NS::Application::sharedApplication()->hideOtherApplications(pSender);
-    });
-
-    auto hideOthersMenuItem = applicationSubMenu->addItem(NS::String::string("Hide Others", UTF8StringEncoding), hideOthersSelector, MTLSTR("h"));
-    hideOthersMenuItem->setKeyEquivalentModifierMask(NS::EventModifierFlagCommand | NS::EventModifierFlagOption);
-    
-    auto showAllSelector = NS::MenuItem::registerActionCallback("appShowall", [](void*,SEL,const NS::Object* pSender)
-    {
-        NS::Application::sharedApplication()->unhideAllApplications(pSender);
-    });
-
-    applicationSubMenu->addItem(NS::String::string("Show All", UTF8StringEncoding), showAllSelector, MTLSTR(""));
-    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
-
-    auto quitSelector = NS::MenuItem::registerActionCallback("appQuit", [](void*,SEL,const NS::Object* pSender)
-    {
-        NS::Application::sharedApplication()->terminate(pSender);
-    });
-
-    applicationSubMenu->addItem(NS::String::string("Quit ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), quitSelector, MTLSTR("q"));
-
-    auto windowMenuItem = NS::TransferPtr(mainMenu->addItem(MTLSTR("WindowMenu"), nullptr, MTLSTR("")));
-    auto windowSubMenu = NS::TransferPtr(NS::Menu::alloc()->init(MTLSTR("Window")));
-    windowMenuItem->setSubmenu(windowSubMenu.get());
-    
-    // TODO: The 2 items here should be on the top
-    auto minimizeSelector = NS::MenuItem::registerActionCallback("minimize", [](void*,SEL,const NS::Object* pSender)
-    {
-        NS::Application::sharedApplication()->mainWindow()->miniaturize(nullptr);
-    });
-
-    windowSubMenu->addItem(NS::String::string("Minimize", UTF8StringEncoding), minimizeSelector, MTLSTR("m"));
-    
-    auto zoomSelector = NS::MenuItem::registerActionCallback("zoom", [](void*,SEL,const NS::Object* pSender)
-    {
-        NS::Application::sharedApplication()->mainWindow()->zoom(nullptr);
-    });
-
-    windowSubMenu->addItem(NS::String::string("Zoom", UTF8StringEncoding), zoomSelector, MTLSTR(""));
-
-    NS::Application::sharedApplication()->setMainMenu(mainMenu.get());
-    NS::Application::sharedApplication()->setServicesMenu(serviceMenu.get());
-    NS::Application::sharedApplication()->setWindowsMenu(windowSubMenu.get());
-}

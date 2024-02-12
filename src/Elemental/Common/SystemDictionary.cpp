@@ -419,7 +419,7 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
     {
         if (storage->Buckets[i] == SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
-            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "Bucket %u => (EMPTY)", i);
+            SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Bucket %u => (EMPTY)", i);
         }
         else 
         {
@@ -442,7 +442,7 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
                 entryIndex = entry.Next;
             }
 
-            SystemLogDebugMessage(LogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
+            SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
         }
     }
 
@@ -456,5 +456,5 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
         currentFreeListIndex = storage->Partitions[indexFull.PartitionIndex]->Entries[indexFull.Index].Next;
     }
 
-    SystemLogDebugMessage(LogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
+    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
 }

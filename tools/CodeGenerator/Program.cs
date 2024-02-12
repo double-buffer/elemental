@@ -1,99 +1,12 @@
-﻿using System.Text;
-using CppAst;
+﻿using Elemental.Tools.CodeGenerator;
 
+var codeGenerators = new Dictionary<string, ICodeGenerator> 
+{
+    { "c-loader", new CLoaderCodeGenerator() },
+    { "dotnet", new DotnetCodeGenerator() }
+}.ToFrozenDictionary();
 
-const string template = """
-                        #define ElementalLoader
-
-                        #include <assert.h>
-                        #include "Elemental.h"
-
-                        #if defined(_WIN32)
-                           #include <windows.h>
-                        #else
-                           #include <dlfcn.h>
-                        #endif
-
-                        static void* library = NULL;
-                        static int functionPointersLoaded = 0;
-
-                        typedef struct ElementalFunctions 
-                        {
-                            ##ELEM_FUNCTIONS_DECLARATIONS##
-                        } ElementalFunctions;
-    
-                        static ElementalFunctions elementalFunctions;
-
-                        static bool LoadElementalLibrary() 
-                        {
-                            if (!library) 
-                            {
-                                #if defined(_WIN32)
-                                    library = LoadLibrary(L"Elemental.dll");
-                                #elif __APPLE__
-                                    library = dlopen("libElemental.dylib", RTLD_LAZY);
-                                #else
-                                    library = dlopen("libElemental.so", RTLD_LAZY);
-                                #endif
-
-                                if (!library) 
-                                {
-                                    return false;
-                                }
-                            }
-
-                            return true;
-                        }
-
-                        void* GetFunctionPointer(const char* functionName) 
-                        {
-                            if (!library) 
-                            {
-                                return NULL;
-                            }
-
-                            #if defined(_WIN32)
-                                return GetProcAddress(library, functionName);
-                            #else
-                                return dlsym(library, functionName);
-                            #endif
-                        }
-
-                        static bool LoadFunctionPointers() 
-                        {
-                            if (!LoadElementalLibrary() || functionPointersLoaded)
-                            {
-                                return functionPointersLoaded;
-                            }
-
-                            ##ELEM_FUNCTIONS##
-
-                            functionPointersLoaded = 1;
-                            return true;
-                        }
-                        """;
-
-const string functionTemplate = """
-    if (!LoadFunctionPointers()) 
-    {
-        assert(library);
-        return (##RETURN_TYPE##){0};
-    }
-
-    return elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
-""";
-
-const string functionTemplateVoid = """
-    if (!LoadFunctionPointers()) 
-    {
-        assert(library);
-        return;
-    }
-
-    elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
-""";
-
-if (args.Length != 2)
+if (args.Length != 3)
 {
     Console.WriteLine("Error: Wrong number of arguments!");    
     return 1;
@@ -101,77 +14,50 @@ if (args.Length != 2)
 
 // TODO: Add a caching mechanism to only re generate when needed
 
-var inputFile = args[0];
-var outputFile = args[1];
+var type = args[0];
+var inputFile = args[1];
+var output = args[2];
 
-var builder = new StringBuilder();
-builder.AppendLine(template);
-
-Console.WriteLine($"Processing file '{args[0]}'...");
-
-var compilation = CppParser.ParseFile(inputFile);
-
-var functionsDeclarationStringBuilder = new StringBuilder();
-var functionsStringBuilder = new StringBuilder();
-
-foreach (var function in compilation.Functions)
+if (!codeGenerators.ContainsKey(type))
 {
-    if (Path.GetFileName(function.SourceFile) != "Elemental.h" || function.Name == "ElemConsoleLogHandler")
-    {
-        continue;
-    }
-
-    Console.WriteLine($"Test: {function.Comment} {function.Name}");
-    Console.WriteLine($"Function: {function.Name}");
-
-    builder.AppendLine();
-    builder.Append($"static {function.ReturnType.GetDisplayName()} {function.Name}(");
-    var isFirstParameter = true;
-    var parameterValuesBuilder = new StringBuilder();
-
-    functionsStringBuilder.Append($"elementalFunctions.{function.Name} = ({function.ReturnType.GetDisplayName()} (*)(");
-    functionsDeclarationStringBuilder.Append($"{function.ReturnType.GetDisplayName()} (*{function.Name})(");
-
-    foreach (var parameter in function.Parameters)
-    {
-        if (isFirstParameter)
-        {
-            isFirstParameter = false;
-        }
-        else
-        {
-            builder.Append(", ");
-            functionsStringBuilder.Append(", ");
-            functionsDeclarationStringBuilder.Append(", ");
-            parameterValuesBuilder.Append(", ");
-        }
-
-        builder.Append($"{parameter.Type.GetDisplayName()} {parameter.Name}");
-        functionsStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
-        functionsDeclarationStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
-        parameterValuesBuilder.Append($"{parameter.Name}");
-    }
-
-    functionsStringBuilder.AppendLine($"))GetFunctionPointer(\"{function.Name}\");");
-    functionsStringBuilder.Append("    ");
-
-    functionsDeclarationStringBuilder.AppendLine($");");
-    functionsDeclarationStringBuilder.Append("    ");
-
-    builder.AppendLine(")");
-    builder.AppendLine("{");
-
-    builder.AppendLine(function.ReturnType.GetDisplayName() == "void" ? functionTemplateVoid : functionTemplate)
-           .Replace("##RETURN_TYPE##", function.ReturnType.GetDisplayName())
-           .Replace("##FUNCTION_NAME##", function.Name)
-           .Replace("##FUNCTION_PARAMETER_VALUES##", parameterValuesBuilder.ToString());
-
-    builder.AppendLine("}");
+    Console.WriteLine("Error: Wrong type of code generator!");    
+    return 1;
 }
 
-builder.Replace("##ELEM_FUNCTIONS##", functionsStringBuilder.ToString());
-builder.Replace("##ELEM_FUNCTIONS_DECLARATIONS##", functionsDeclarationStringBuilder.ToString());
+Console.WriteLine($"Generating {type} from '{inputFile}' to '{output}'...");
 
-File.WriteAllText(outputFile, builder.ToString());
+var options = GetCppParserOptions();
+var compilation = CppParser.ParseFile(inputFile, options);
+
+if (compilation.HasErrors)
+{
+    foreach (var message in compilation.Diagnostics.Messages)
+    {
+        Console.WriteLine($"{message.Type}: {message.Text}");
+    }
+}
+
+var codeGenerator = codeGenerators[type];
+codeGenerator.GenerateCode(compilation, inputFile, output);
 
 return 0;
+
+CppParserOptions GetCppParserOptions()
+{
+    var options = new CppParserOptions();
+    options.ParseSystemIncludes = false;
+
+    if (OperatingSystem.IsMacOS())
+    {
+        options.TargetSystem = "darwin";
+        options.TargetVendor = "apple";
+        options.SystemIncludeFolders.Add("/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include");
+        options.SystemIncludeFolders.Add("/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1");
+        options.SystemIncludeFolders.Add("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include");
+        options.SystemIncludeFolders.Add("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1");
+        options.SystemIncludeFolders.Add("/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/11.0.0/include");
+        options.AdditionalArguments.Add("-stdlib=libc++");
+    }
+
+    return options;
+}

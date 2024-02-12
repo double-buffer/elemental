@@ -15,9 +15,9 @@ static int functionPointersLoaded = 0;
 typedef struct ElementalFunctions 
 {
     void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
-    uint64_t (*ElemCreateApplication)(const char*);
-    void (*ElemRunApplication)(uint64_t, ElemRunHandlerPtr);
-    void (*ElemFreeApplication)(uint64_t);
+    unsigned long long (*ElemCreateApplication)(const char*);
+    void (*ElemRunApplication)(unsigned long long, ElemRunHandlerPtr);
+    void (*ElemFreeApplication)(unsigned long long);
     
 } ElementalFunctions;
 
@@ -61,12 +61,14 @@ void* GetFunctionPointer(const char* functionName)
 static bool LoadFunctionPointers() 
 {
     if (!LoadElementalLibrary() || functionPointersLoaded)
+    {
         return functionPointersLoaded;
+    }
 
     elementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetFunctionPointer("ElemConfigureLogHandler");
-    elementalFunctions.ElemCreateApplication = (uint64_t (*)(const char*))GetFunctionPointer("ElemCreateApplication");
-    elementalFunctions.ElemRunApplication = (void (*)(uint64_t, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
-    elementalFunctions.ElemFreeApplication = (void (*)(uint64_t))GetFunctionPointer("ElemFreeApplication");
+    elementalFunctions.ElemCreateApplication = (unsigned long long (*)(const char*))GetFunctionPointer("ElemCreateApplication");
+    elementalFunctions.ElemRunApplication = (void (*)(unsigned long long, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
+    elementalFunctions.ElemFreeApplication = (void (*)(unsigned long long))GetFunctionPointer("ElemFreeApplication");
     
 
     functionPointersLoaded = 1;
@@ -84,18 +86,18 @@ static void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     elementalFunctions.ElemConfigureLogHandler(logHandler);
 }
 
-static uint64_t ElemCreateApplication(const char* applicationName)
+static unsigned long long ElemCreateApplication(const char* applicationName)
 {
     if (!LoadFunctionPointers()) 
     {
         assert(library);
-        return (uint64_t){0};
+        return (unsigned long long){0};
     }
 
     return elementalFunctions.ElemCreateApplication(applicationName);
 }
 
-static void ElemRunApplication(uint64_t application, ElemRunHandlerPtr runHandler)
+static void ElemRunApplication(unsigned long long application, ElemRunHandlerPtr runHandler)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -106,7 +108,7 @@ static void ElemRunApplication(uint64_t application, ElemRunHandlerPtr runHandle
     elementalFunctions.ElemRunApplication(application, runHandler);
 }
 
-static void ElemFreeApplication(uint64_t application)
+static void ElemFreeApplication(unsigned long long application)
 {
     if (!LoadFunctionPointers()) 
     {

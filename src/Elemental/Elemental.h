@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #ifndef ElemAPI
-#define ElemAPI extern
+#define ElemAPI static
 #define UseLoader
 #endif
 
@@ -37,7 +37,7 @@ typedef struct
 
 typedef bool (*ElemRunHandlerPtr)(ElemApplicationStatus status);
 
-// ##Module_Application##
+// ##Module_ElementalApplication##
 /*
 *    This function help
 */

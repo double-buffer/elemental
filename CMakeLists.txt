@@ -16,9 +16,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(Elemental LANGUAGES C CXX)
 
-# Set Global properties like C++ Version etc.
-
-# TODO: Find a way to have only one build directory
+# TODO: Use CMAKE INSTALL !!!!!
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 include(functions)

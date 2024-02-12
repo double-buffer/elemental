@@ -1,6 +1,10 @@
-add_library(Elemental SHARED UnityBuild.cpp)
 
-target_include_directories(Elemental INTERFACE ../.)
+# TODO: Move that
+add_library(ElementalHeaders INTERFACE)
+target_include_directories(ElementalHeaders INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+add_library(Elemental SHARED UnityBuild.cpp)
+target_include_directories(Elemental PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 target_compile_options(Elemental PRIVATE -Wall -fno-objc-arc)
 target_include_directories(Elemental PRIVATE .)
