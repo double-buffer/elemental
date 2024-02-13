@@ -10,8 +10,8 @@
 #define UseLoader
 #endif
 
-#define ElemHandle uint64_t
-#define ElemApplication ElemHandle
+typedef uint64_t ElemHandle;
+typedef ElemHandle ElemApplication;
 
 typedef enum
 {
@@ -37,7 +37,7 @@ typedef struct
 
 typedef bool (*ElemRunHandlerPtr)(ElemApplicationStatus status);
 
-// ##Module_ElementalApplication##
+// ##Module_Application##
 /*
 *    This function help
 */
