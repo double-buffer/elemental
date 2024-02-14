@@ -102,12 +102,32 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         var canonicalType = type.GetCanonicalType();
         var typeName = MapType(null, type);
-        Console.WriteLine($"Generate type {type.GetDisplayName()}...");
+        Console.WriteLine($"Generate type {typeName}...");
 
         var stringBuilder = new StringBuilder();
 
         stringBuilder.AppendLine("namespace Elemental;");
         stringBuilder.AppendLine();
+
+        if (type.TypeKind == CppTypeKind.Typedef)
+        {
+            if (typeName.Contains("Handler"))
+            {
+                Console.WriteLine(canonicalType.GetDisplayName());
+                //stringBuilder.Append("$public delegate {}"
+                //"public delegate bool RunHandler(NativeApplicationStatus status);"
+            } 
+            else
+            {
+                stringBuilder.AppendLine($"public readonly record struct {typeName}");
+                stringBuilder.AppendLine("{");
+                
+                Indent(stringBuilder);
+                stringBuilder.AppendLine($"{MapType(null, canonicalType)} Value {{ get; }}");
+
+                stringBuilder.AppendLine("}");
+            }
+        }
 
         File.WriteAllText(Path.Combine(outputPath, $"{typeName}.cs"), stringBuilder.ToString());
     }
@@ -132,8 +152,9 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         return typeName switch
         {
-            "ElemApplication" => "ElementalApplication",
+            "Application" => "ElementalApplication",
             "const char*" => "ReadOnlySpan<byte>",
+            "unsigned long long" => "UInt64",
             string value when value.Contains("HandlerPtr") => typeName.Replace("Ptr", string.Empty),
             _ => typeName
         };
