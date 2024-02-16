@@ -71,6 +71,49 @@ public class CLoaderCodeGenerator : ICodeGenerator
             functionPointersLoaded = 1;
             return true;
         }
+
+        void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
+        {
+            printf("[");
+            printf("\033[36m");
+
+            // TODO: Provide a mapping function
+            if (category == ElemLogMessageCategory_Memory)
+            {
+                printf("Memory");
+            }
+            else if (category == ElemLogMessageCategory_NativeApplication)
+            {
+                printf("NativeApplication");
+            }
+            else if (category == ElemLogMessageCategory_Graphics)
+            {
+                printf("Graphics");
+            }
+            else if (category == ElemLogMessageCategory_Inputs)
+            {
+                printf("Inputs");
+            }
+
+            printf("\033[0m]");
+
+            printf("\033[32m %s", function);
+
+            if (messageType == ElemLogMessageType_Error)
+            {
+                printf("\033[31m");
+            }
+            else if (messageType == ElemLogMessageType_Warning)
+            {
+                printf("\033[33m");
+            }
+            else
+            {
+                printf("\033[0m");
+            }
+
+            printf(" %s\n\033[0m", message);
+        }
         """;
 
     const string functionTemplate = """

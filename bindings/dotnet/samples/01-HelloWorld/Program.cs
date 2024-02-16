@@ -1,6 +1,6 @@
 ﻿using Elemental;
 
-static void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, string function, string message) 
+static void LogMessageHandler(LogMessageType messageType, LogMessageCategory category, ReadOnlySpan<byte> function, ReadOnlySpan<byte> message) 
 {
     var mainForegroundColor = messageType switch
     {
@@ -16,21 +16,23 @@ static void LogMessageHandler(LogMessageType messageType, LogMessageCategory cat
     Console.Write("]");
 
     Console.ForegroundColor = ConsoleColor.Green;
-    Console.Write($" {function}");
+    Console.Write($" {System.Text.UTF8Encoding.UTF8.GetString(function)}");
 
     Console.ForegroundColor = mainForegroundColor;
-    Console.WriteLine($" {message}");
+    Console.WriteLine($" {System.Text.UTF8Encoding.UTF8.GetString(message)}");
     Console.ForegroundColor = ConsoleColor.Gray;
 }
 
 var counter = 0;
 
-using var applicationService = new NativeApplicationService(new() { LogMessageHandler = LogMessageHandler });
-using var application = applicationService.CreateApplication("Hello World");
+var applicationService = new ApplicationService();
+applicationService.ConfigureLogHandler(LogMessageHandler);
+
+var application = applicationService.CreateApplication("Hello World"u8);
 
 applicationService.RunApplication(application, (status) =>
 {
-    if (counter > 10 || !status.IsActive)
+    if (counter > 10)// || !status.IsActive)
     {
         return false;
     }
@@ -39,3 +41,6 @@ applicationService.RunApplication(application, (status) =>
     counter++;
     return true;
 });
+
+// TODO: Implement dispose
+applicationService.FreeApplication(application);

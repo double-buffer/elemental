@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <Deterministic>true</Deterministic>
-    <NoWarn>CS1668;CA5393;CA1711</NoWarn>
+    <NoWarn>CS1668;CA5393;CA1711;CA1420</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
