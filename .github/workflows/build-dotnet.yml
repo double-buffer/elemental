@@ -22,7 +22,7 @@ jobs:
     - name: Build Library
       run: |
         dotnet publish ./bindings/dotnet/src/Elemental -p:BuildNative="False" -p:Version=${{ inputs.version }} -v normal
-        dotnet publish ./bindings/dotnet/src/Elemental.Tools -p:BuildNative="False" -p:Version=${{ inputs.version }}
+        #dotnet publish ./bindings/dotnet/src/Elemental.Tools -p:BuildNative="False" -p:Version=${{ inputs.version }}
 
     - name: Upload Binaries
       uses: actions/upload-artifact@master
