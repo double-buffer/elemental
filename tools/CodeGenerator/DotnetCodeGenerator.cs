@@ -72,10 +72,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 if (result.Success)
                 {
                     currentModuleName = result.Groups[1].Value;
-                    Console.WriteLine($"Module: {result.Groups[1].Value}");
                 }
-
-                Console.WriteLine($"Test: {function.Comment} {function.Name}");
             }
 
             if (!string.IsNullOrEmpty(moduleName) && moduleName != currentModuleName)
@@ -131,13 +128,33 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         var stringBuilder = new StringBuilder();
         stringBuilder.AppendLine("namespace Elemental;");
         stringBuilder.AppendLine();
+                        
+        stringBuilder.AppendLine($"/// <summary>");
+        stringBuilder.AppendLine($"/// Defines an interface for {name} services.");
+        stringBuilder.AppendLine($"/// </summary>");
 
         stringBuilder.AppendLine($"public interface {interfaceName}");
         stringBuilder.AppendLine("{");
 
+        var firstFunction = true;
+
         foreach (var function in functions)
         {
+            if (!firstFunction)
+            {
+                stringBuilder.AppendLine();    
+            }
+            else
+            {
+                firstFunction = false;
+            }
+
             var functionName = function.Name.Replace("Elem", string.Empty);
+
+            if (function.Comment != null)
+            {
+                GenerateComment(stringBuilder, function.Comment, 1);
+            }
 
             Indent(stringBuilder);
             stringBuilder.Append($"{MapType(typeDictionary, function.ReturnType)} {functionName}(");
@@ -175,13 +192,17 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         stringBuilder.AppendLine("namespace Elemental;");
         stringBuilder.AppendLine();
 
+        stringBuilder.AppendLine("/// <inheritdoc />");
         stringBuilder.AppendLine($"public class {serviceName} : I{serviceName}");
         stringBuilder.AppendLine("{");
 
         foreach (var function in functions)
         {
             var functionName = function.Name.Replace("Elem", string.Empty);
-
+            
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("/// <inheritdoc />");
+            
             Indent(stringBuilder);
             stringBuilder.Append($"public {MapType(typeDictionary, function.ReturnType)} {functionName}(");
             var firstParameter = true;
@@ -307,8 +328,16 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         if (type.TypeKind == CppTypeKind.Typedef)
         {
+            var typeDefType = (CppTypedef)type;
+
             if (typeName.Contains("Handler"))
             {
+                if (typeDefType.Comment != null)
+                {
+                    GenerateComment(stringBuilder, typeDefType.Comment, 0);
+                }
+
+                Console.WriteLine($"{typeDefType.Comment?.Kind}");
                 var needMarshaller = false;
                 var result = FunctionPointerRegex().Match(canonicalType.GetDisplayName());
 
@@ -400,6 +429,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             {
                 return;
             }
+                
+            if (enumType.Comment != null)
+            {
+                GenerateComment(stringBuilder, enumType.Comment, 0);
+            }
 
             stringBuilder.AppendLine($"public enum {typeName}");
             stringBuilder.AppendLine("{");
@@ -431,6 +465,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             {
                 return;
             }
+            
+            if (structType.Comment != null)
+            {
+                GenerateComment(stringBuilder, structType.Comment, 0);
+            }
 
             stringBuilder.AppendLine($"public record struct {typeName}");
             stringBuilder.AppendLine("{");
@@ -445,6 +484,48 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
 
         File.WriteAllText(Path.Combine(outputPath, $"{typeName}.cs"), stringBuilder.ToString());
+    }
+
+    private void GenerateComment(StringBuilder stringBuilder, CppComment rootComment, int indentLevel)
+    {
+        foreach (var comment in rootComment.Children)
+        {
+            if (comment.ToString().Contains("##"))
+            {
+                continue;
+            }
+
+            if (comment.Kind == CppCommentKind.Paragraph)
+            {
+                var commentObject = (CppCommentParagraph)comment;
+
+                Indent(stringBuilder, indentLevel);
+                stringBuilder.AppendLine($"/// <summary>");
+
+                Indent(stringBuilder, indentLevel);
+                stringBuilder.AppendLine($"/// {commentObject.ToString().Trim()}");
+
+                Indent(stringBuilder, indentLevel);
+                stringBuilder.AppendLine($"/// </summary>");
+            }
+            else if (comment.Kind == CppCommentKind.ParamCommand)
+            {
+                var commentObject = (CppCommentParamCommand)comment;
+
+                Indent(stringBuilder, indentLevel);
+                stringBuilder.AppendLine($"/// <param name=\"{commentObject.ParamName}\">{commentObject.ChildrenToString().Trim()}</param>");
+            }
+            else if (comment.Kind == CppCommentKind.BlockCommand)
+            {
+                var commentObject = (CppCommentBlockCommand)comment;
+
+                if (commentObject.CommandName == "return")
+                {
+                    Indent(stringBuilder, indentLevel);
+                    stringBuilder.AppendLine($"/// <returns>{commentObject.ChildrenToString().Trim()}</returns>");
+                }
+            }
+        }
     }
 
     private string MapType(Dictionary<string, CppType>? typeDictionary, CppType type)

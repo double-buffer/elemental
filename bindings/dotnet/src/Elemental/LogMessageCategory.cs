@@ -1,5 +1,8 @@
 namespace Elemental;
 
+/// <summary>
+/// Enumerates the categories of log messages.
+/// </summary>
 public enum LogMessageCategory
 {
     Memory = 0,

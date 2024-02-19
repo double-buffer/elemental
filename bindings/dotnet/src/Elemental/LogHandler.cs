@@ -1,5 +1,12 @@
 namespace Elemental;
 
+/// <summary>
+/// Defines a function pointer type for log handling.
+/// </summary>
+/// <param name="messageType">The type of the log message.</param>
+/// <param name="category">The category of the log message.</param>
+/// <param name="function">The function where the log was triggered.</param>
+/// <param name="message">The log message.</param>
 [NativeMarshalling(typeof(LogHandlerMarshaller))]
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 public delegate void LogHandler(LogMessageType messageType, LogMessageCategory category, ReadOnlySpan<byte> function, ReadOnlySpan<byte> message);
