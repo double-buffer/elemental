@@ -56,9 +56,9 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         var currentModuleName = string.Empty;
         var currentModuleFunctions = new List<CppFunction>();
-        var typeDictionary = new Dictionary<string, CppType>();
 
-        var modules = new List<(int, string)>();
+        var modules = new List<(int Offset, string Name)>();
+        var moduleFunctions = new Dictionary<string, List<CppFunction>>();
         var results = ModuleNameRegex().Matches(source);
 
         foreach (Match result in results)
@@ -68,6 +68,8 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             modules.Add((result.Index, result.Groups[1].Value));
         }
 
+        modules.Add((source.Length, "End"));
+
         foreach (var function in compilation.Functions)
         {
             if (Path.GetFileName(function.SourceFile) != "Elemental.h" || function.Name == "ElemConsoleLogHandler")
@@ -75,67 +77,65 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 continue;
             }
 
-            // TODO: Find module
-            Console.WriteLine($"Function start: {function.Span.Start.Offset}");
+            var moduleName = string.Empty;
 
-            var moduleName = currentModuleName;
-
-            if (function.Comment != null)
+            foreach (var module in modules)
             {
-                var result = ModuleNameRegex().Match(function.Comment.ToString());
-
-                if (result.Success)
+                if (function.Span.Start.Offset < module.Offset)
                 {
-                    currentModuleName = result.Groups[1].Value;
+                    if (!moduleFunctions.ContainsKey(moduleName))
+                    {
+                        moduleFunctions.Add(moduleName, new List<CppFunction>());
+                    }
+
+                    moduleFunctions[moduleName].Add(function);
+                    break;
                 }
-            }
 
-            if (!string.IsNullOrEmpty(moduleName) && moduleName != currentModuleName)
-            {
-                GenerateInterface(moduleName, Path.Combine(output, "src", "Elemental"), compilation, currentModuleFunctions, typeDictionary);
-                currentModuleFunctions.Clear();
-            }
-
-            currentModuleFunctions.Add(function);
-        }
-
-        if (!string.IsNullOrEmpty(currentModuleName))
-        {
-            GenerateInterface(currentModuleName, Path.Combine(output, "src", "Elemental"), compilation, currentModuleFunctions, typeDictionary);
-            GenerateService(currentModuleName, Path.Combine(output, "src", "Elemental"), compilation, currentModuleFunctions, typeDictionary);
-            GenerateInterop(currentModuleName, Path.Combine(output, "src", "Elemental"), compilation, currentModuleFunctions, typeDictionary);
-            currentModuleFunctions.Clear();
-        }
-
-        foreach(var enumObject in compilation.Enums)
-        {
-            if (!typeDictionary.ContainsKey(enumObject.Name))
-            {
-                typeDictionary.Add(enumObject.Name, enumObject);
+                moduleName = module.Name;
             }
         }
 
-        foreach(var structObject in compilation.Classes)
+        foreach (var module in moduleFunctions)
         {
-            if (!typeDictionary.ContainsKey(structObject.Name))
-            {
-                typeDictionary.Add(structObject.Name, structObject);
-            }
+            var modulePath = GetModulePath(output, module.Key);
+
+            GenerateInterface(module.Key, modulePath, compilation, module.Value);
+            GenerateService(module.Key, modulePath, compilation, module.Value);
+            GenerateInterop(module.Key, modulePath, compilation, module.Value);
         }
 
-        foreach (var typeToGenerate in typeDictionary)
+        GenerateTypes(compilation, compilation.Enums, output, modules);
+        GenerateTypes(compilation, compilation.Typedefs, output, modules);
+        GenerateTypes(compilation, compilation.Classes, output, modules);
+    }
+
+    private void GenerateTypes(CppCompilation compilation, IEnumerable<CppType> types, string output, List<(int Offset, string Name)> modules)
+    {
+        foreach (var type in types)
         {
-            if (Path.GetFileName(typeToGenerate.Value.SourceFile) != "Elemental.h")
+            if (Path.GetFileName(type.SourceFile) != "Elemental.h" || type.GetDisplayName() == "ElemHandle")
             {
                 continue;
             }
 
-            // TODO: Change that
-            GenerateType("Application", typeToGenerate.Value, Path.Combine(output, "src", "Elemental"), compilation); 
+            var moduleName = string.Empty;
+
+            foreach (var module in modules)
+            {
+                if (type.Span.Start.Offset < module.Offset)
+                {
+                    var modulePath = GetModulePath(output, moduleName);
+                    GenerateType(moduleName, type, modulePath, compilation);
+                    break;
+                }
+
+                moduleName = module.Name;
+            }
         }
     }
-    
-    private void GenerateInterface(string name, string outputPath, CppCompilation compilation, IList<CppFunction> functions, Dictionary<string, CppType> typeDictionary)
+
+    private void GenerateInterface(string name, string outputPath, CppCompilation compilation, IList<CppFunction> functions)
     {
         var interfaceName = $"I{name}Service";
 
@@ -173,7 +173,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             }
 
             Indent(stringBuilder);
-            stringBuilder.Append($"{MapType(typeDictionary, function.ReturnType)} {functionName}(");
+            stringBuilder.Append($"{MapType(function.ReturnType)} {functionName}(");
             var firstParameter = true;
 
             foreach (var parameter in function.Parameters)
@@ -187,7 +187,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     firstParameter = false;
                 }
 
-                stringBuilder.Append($"{MapType(typeDictionary, parameter.Type)} {parameter.Name}");
+                stringBuilder.Append($"{MapType(parameter.Type)} {parameter.Name}");
             }
 
             stringBuilder.AppendLine(");");
@@ -198,7 +198,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         File.WriteAllText(Path.Combine(outputPath, $"{interfaceName}.cs"), stringBuilder.ToString());
     }
 
-    private void GenerateService(string name, string outputPath, CppCompilation compilation, IList<CppFunction> functions, Dictionary<string, CppType> typeDictionary)
+    private void GenerateService(string name, string outputPath, CppCompilation compilation, IList<CppFunction> functions)
     {
         var serviceName = $"{name}Service";
 
@@ -220,7 +220,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             stringBuilder.AppendLine("/// <inheritdoc />");
             
             Indent(stringBuilder);
-            stringBuilder.Append($"public {MapType(typeDictionary, function.ReturnType)} {functionName}(");
+            stringBuilder.Append($"public {MapType(function.ReturnType)} {functionName}(");
             var firstParameter = true;
 
             foreach (var parameter in function.Parameters)
@@ -234,7 +234,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     firstParameter = false;
                 }
 
-                stringBuilder.Append($"{MapType(typeDictionary, parameter.Type)} {parameter.Name}");
+                stringBuilder.Append($"{MapType(parameter.Type)} {parameter.Name}");
             }
 
             stringBuilder.AppendLine(")");
@@ -279,14 +279,19 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         File.WriteAllText(Path.Combine(outputPath, $"{serviceName}.cs"), stringBuilder.ToString());
     }
 
-    private void GenerateInterop(string name, string outputPath, CppCompilation compilation, IList<CppFunction> functions, Dictionary<string, CppType> typeDictionary)
+    private void GenerateInterop(string name, string outputPath, CppCompilation compilation, IList<CppFunction> functions)
     {
         var serviceName = $"{name}ServiceInterop";
 
         Console.WriteLine($"Creating interop for module '{name}'...");
 
         var stringBuilder = new StringBuilder();
-        stringBuilder.AppendLine("[assembly:DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory)]");
+
+        if (name == "Application")
+        {
+            stringBuilder.AppendLine("[assembly:DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory)]");
+        }
+
         stringBuilder.AppendLine();
         stringBuilder.AppendLine("namespace Elemental;");
         stringBuilder.AppendLine();
@@ -305,7 +310,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             stringBuilder.AppendLine("[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]");
 
             Indent(stringBuilder);
-            stringBuilder.Append($"internal static partial {MapType(typeDictionary, function.ReturnType)} {functionName}(");
+            stringBuilder.Append($"internal static partial {MapType(function.ReturnType)} {functionName}(");
             var firstParameter = true;
 
             foreach (var parameter in function.Parameters)
@@ -319,7 +324,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     firstParameter = false;
                 }
 
-                stringBuilder.Append($"{MapType(typeDictionary, parameter.Type)} {parameter.Name}");
+                stringBuilder.Append($"{MapType(parameter.Type)} {parameter.Name}");
             }
 
             stringBuilder.AppendLine(");");
@@ -361,7 +366,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 stringBuilder.AppendLine("{");
                 
                 Indent(stringBuilder);
-                stringBuilder.AppendLine($"private {MapType(null, canonicalType)} Value {{ get; }}");
+                stringBuilder.AppendLine($"private {MapType(canonicalType)} Value {{ get; }}");
 
                 stringBuilder.AppendLine();
                 Indent(stringBuilder);
@@ -614,25 +619,26 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
     }
 
-    private string MapType(Dictionary<string, CppType>? typeDictionary, CppType type)
+    private static string GetModulePath(string output, string moduleName)
     {
-        var typeName = type.GetDisplayName();
+        var modulePath = Path.Combine(output, "src", "Elemental");
 
-        if (typeDictionary != null)
+        if (moduleName != "Application")
         {
-            var customType = typeName switch
-            {
-                "const char*" or "void" => false,
-                _ => true
-            };
+            modulePath = Path.Combine(modulePath, moduleName);
 
-            if (!typeDictionary.ContainsKey(typeName) && customType)
+            if (!Directory.Exists(modulePath))
             {
-                typeDictionary.Add(typeName, type);
+                Directory.CreateDirectory(modulePath);
             }
         }
 
-        return MapType(typeName);    
+        return modulePath;
+    }
+
+    private string MapType(CppType type)
+    {
+        return MapType(type.GetDisplayName());    
     }
 
     private string MapType(string typeName)

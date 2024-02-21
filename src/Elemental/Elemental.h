@@ -106,13 +106,17 @@ ElemAPI void ElemFreeApplication(ElemApplication application);
 /**
  * Handle that represents a graphics device. 
  */
-typedef ElemHandle GraphicsDevice;
+typedef ElemHandle ElemGraphicsDevice;
 
 /**
  * Temporary Function
  */
-ElemAPI GraphicsDevice ElemCreateGraphicsDevice();
+ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice();
 
+/**
+ * Temporary Function
+ */
+ElemAPI void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
 
 
 #ifdef UseLoader

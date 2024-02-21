@@ -19,7 +19,8 @@ typedef struct ElementalFunctions
     ElemApplication (*ElemCreateApplication)(const char*);
     void (*ElemRunApplication)(ElemApplication, ElemRunHandlerPtr);
     void (*ElemFreeApplication)(ElemApplication);
-    GraphicsDevice (*ElemCreateGraphicsDevice)();
+    ElemGraphicsDevice (*ElemCreateGraphicsDevice)();
+    void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
     
 } ElementalFunctions;
 
@@ -71,7 +72,8 @@ static bool LoadFunctionPointers()
     elementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetFunctionPointer("ElemCreateApplication");
     elementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
     elementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetFunctionPointer("ElemFreeApplication");
-    elementalFunctions.ElemCreateGraphicsDevice = (GraphicsDevice (*)())GetFunctionPointer("ElemCreateGraphicsDevice");
+    elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)())GetFunctionPointer("ElemCreateGraphicsDevice");
+    elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
     
 
     functionPointersLoaded = 1;
@@ -165,13 +167,24 @@ static inline void ElemFreeApplication(ElemApplication application)
     elementalFunctions.ElemFreeApplication(application);
 }
 
-static inline GraphicsDevice ElemCreateGraphicsDevice()
+static inline ElemGraphicsDevice ElemCreateGraphicsDevice()
 {
     if (!LoadFunctionPointers()) 
     {
         assert(library);
-        return (GraphicsDevice){0};
+        return (ElemGraphicsDevice){0};
     }
 
     return elementalFunctions.ElemCreateGraphicsDevice();
+}
+
+static inline void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    elementalFunctions.ElemFreeGraphicsDevice(graphicsDevice);
 }
