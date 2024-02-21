@@ -28,7 +28,7 @@ var counter = 0;
 var applicationService = new ApplicationService();
 applicationService.ConfigureLogHandler(LogMessageHandler);
 
-var application = applicationService.CreateApplication("Hello World"u8);
+using var application = applicationService.CreateApplication("Hello World"u8);
 
 applicationService.RunApplication(application, (status) =>
 {
@@ -41,6 +41,3 @@ applicationService.RunApplication(application, (status) =>
     counter++;
     return true;
 });
-
-// TODO: Implement dispose
-applicationService.FreeApplication(application);

@@ -3,15 +3,21 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #ifndef ElemAPI
 #define ElemAPI static
 #define UseLoader
 #endif
 
-// Type definitions for handle and application representation
 typedef uint64_t ElemHandle;
+
+
+//------------------------------------------------------------------------
+// ##Module_Application##
+//------------------------------------------------------------------------
+/**
+ * Handle that represents an elemental application. 
+ */
 typedef ElemHandle ElemApplication;
 
 /**
@@ -19,11 +25,11 @@ typedef ElemHandle ElemApplication;
  */
 typedef enum
 {
-    /// Debugging message.
+    // Debugging message.
     ElemLogMessageType_Debug = 0,
-    /// Warning message.
+    // Warning message.
     ElemLogMessageType_Warning = 1,
-    /// Error message.
+    // Error message.
     ElemLogMessageType_Error = 2
 } ElemLogMessageType;
 
@@ -32,13 +38,13 @@ typedef enum
  */
 typedef enum
 {
-    /// Memory related messages.
+    // Memory related messages.
     ElemLogMessageCategory_Memory = 0,
-    /// Native application messages.
+    // Native application messages.
     ElemLogMessageCategory_NativeApplication = 1,
-    /// Graphics system messages.
+    // Graphics system messages.
     ElemLogMessageCategory_Graphics = 2,
-    /// Input system messages.
+    // Input system messages.
     ElemLogMessageCategory_Inputs = 3
 } ElemLogMessageCategory;
 
@@ -56,7 +62,7 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
  */
 typedef struct
 {
-    /// Status code.
+    // Status code.
     uint32_t Status;
 } ElemApplicationStatus;
 
@@ -67,7 +73,6 @@ typedef struct
  */
 typedef bool (*ElemRunHandlerPtr)(ElemApplicationStatus status);
 
-// ##Module_Application##
 /**
  * Configures a custom log handler for the application.
  * @param logHandler The log handler function to be used.
@@ -93,6 +98,22 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
  * @param application The application to free.
  */
 ElemAPI void ElemFreeApplication(ElemApplication application);
+
+
+//------------------------------------------------------------------------
+// ##Module_Graphics##
+//------------------------------------------------------------------------
+/**
+ * Handle that represents a graphics device. 
+ */
+typedef ElemHandle GraphicsDevice;
+
+/**
+ * Temporary Function
+ */
+ElemAPI GraphicsDevice ElemCreateGraphicsDevice();
+
+
 
 #ifdef UseLoader
 #ifndef ElementalLoader

@@ -38,7 +38,7 @@ if (compilation.HasErrors)
 }
 
 var codeGenerator = codeGenerators[type];
-codeGenerator.GenerateCode(compilation, inputFile, output);
+codeGenerator.GenerateCode(compilation, File.ReadAllText(inputFile), inputFile, output);
 
 return 0;
 

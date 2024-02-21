@@ -6,6 +6,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
         #define ElementalLoader
 
         #include <assert.h>
+        #include <stdio.h>
         #include "Elemental.h"
 
         #if defined(_WIN32)
@@ -72,7 +73,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
             return true;
         }
 
-        void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
+        static inline void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
         {
             printf("[");
             printf("\033[36m");
@@ -137,7 +138,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
     """;
 
 
-    public void GenerateCode(CppCompilation compilation, string input, string output)
+    public void GenerateCode(CppCompilation compilation, string source, string input, string output)
     {
         var builder = new StringBuilder();
         builder.AppendLine(template);
@@ -152,11 +153,8 @@ public class CLoaderCodeGenerator : ICodeGenerator
                 continue;
             }
 
-            Console.WriteLine($"Test: {function.Comment} {function.Name}");
-            Console.WriteLine($"Function: {function.Name}");
-
             builder.AppendLine();
-            builder.Append($"static {function.ReturnType.GetDisplayName()} {function.Name}(");
+            builder.Append($"static inline {function.ReturnType.GetDisplayName()} {function.Name}(");
             var isFirstParameter = true;
             var parameterValuesBuilder = new StringBuilder();
 

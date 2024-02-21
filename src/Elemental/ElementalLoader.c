@@ -1,6 +1,7 @@
 #define ElementalLoader
 
 #include <assert.h>
+#include <stdio.h>
 #include "Elemental.h"
 
 #if defined(_WIN32)
@@ -18,6 +19,7 @@ typedef struct ElementalFunctions
     ElemApplication (*ElemCreateApplication)(const char*);
     void (*ElemRunApplication)(ElemApplication, ElemRunHandlerPtr);
     void (*ElemFreeApplication)(ElemApplication);
+    GraphicsDevice (*ElemCreateGraphicsDevice)();
     
 } ElementalFunctions;
 
@@ -69,13 +71,14 @@ static bool LoadFunctionPointers()
     elementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetFunctionPointer("ElemCreateApplication");
     elementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
     elementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetFunctionPointer("ElemFreeApplication");
+    elementalFunctions.ElemCreateGraphicsDevice = (GraphicsDevice (*)())GetFunctionPointer("ElemCreateGraphicsDevice");
     
 
     functionPointersLoaded = 1;
     return true;
 }
 
-void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
+static inline void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
 {
     printf("[");
     printf("\033[36m");
@@ -118,7 +121,7 @@ void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategor
     printf(" %s\n\033[0m", message);
 }
 
-static void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
+static inline void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -129,7 +132,7 @@ static void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     elementalFunctions.ElemConfigureLogHandler(logHandler);
 }
 
-static ElemApplication ElemCreateApplication(const char* applicationName)
+static inline ElemApplication ElemCreateApplication(const char* applicationName)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -140,7 +143,7 @@ static ElemApplication ElemCreateApplication(const char* applicationName)
     return elementalFunctions.ElemCreateApplication(applicationName);
 }
 
-static void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
+static inline void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -151,7 +154,7 @@ static void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr ru
     elementalFunctions.ElemRunApplication(application, runHandler);
 }
 
-static void ElemFreeApplication(ElemApplication application)
+static inline void ElemFreeApplication(ElemApplication application)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -160,4 +163,15 @@ static void ElemFreeApplication(ElemApplication application)
     }
 
     elementalFunctions.ElemFreeApplication(application);
+}
+
+static inline GraphicsDevice ElemCreateGraphicsDevice()
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return (GraphicsDevice){0};
+    }
+
+    return elementalFunctions.ElemCreateGraphicsDevice();
 }

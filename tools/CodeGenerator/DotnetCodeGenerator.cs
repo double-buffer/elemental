@@ -1,5 +1,7 @@
 namespace Elemental.Tools.CodeGenerator;
 
+// TODO: Module directories and module before struct/groups
+
 public partial class DotnetCodeGenerator : ICodeGenerator
 {
     [GeneratedRegex(@"##Module_([^#]+)##")]
@@ -49,12 +51,22 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             }
         }
         """;
-    
-    public void GenerateCode(CppCompilation compilation, string input, string output)
+
+    public void GenerateCode(CppCompilation compilation, string source, string input, string output)
     {
         var currentModuleName = string.Empty;
         var currentModuleFunctions = new List<CppFunction>();
         var typeDictionary = new Dictionary<string, CppType>();
+
+        var modules = new List<(int, string)>();
+        var results = ModuleNameRegex().Matches(source);
+
+        foreach (Match result in results)
+        {
+            Console.WriteLine($"Module: {result.Groups[1].Value} {result.Index}");
+
+            modules.Add((result.Index, result.Groups[1].Value));
+        }
 
         foreach (var function in compilation.Functions)
         {
@@ -62,6 +74,9 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             {
                 continue;
             }
+
+            // TODO: Find module
+            Console.WriteLine($"Function start: {function.Span.Start.Offset}");
 
             var moduleName = currentModuleName;
 
@@ -115,7 +130,8 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 continue;
             }
 
-            GenerateType(typeToGenerate.Value, Path.Combine(output, "src", "Elemental"), compilation); 
+            // TODO: Change that
+            GenerateType("Application", typeToGenerate.Value, Path.Combine(output, "src", "Elemental"), compilation); 
         }
     }
     
@@ -315,7 +331,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         File.WriteAllText(Path.Combine(outputPath, $"{serviceName}.cs"), stringBuilder.ToString());
     }
 
-    private void GenerateType(CppType type, string outputPath, CppCompilation compilation)
+    private void GenerateType(string moduleName, CppType type, string outputPath, CppCompilation compilation)
     {
         var canonicalType = type.GetCanonicalType();
         var typeName = MapType(type.GetDisplayName());
@@ -332,49 +348,99 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
             if (typeName.Contains("Handler"))
             {
+                GenerateDelegate(canonicalType, typeName, stringBuilder, typeDefType);
+            }
+            else
+            {
                 if (typeDefType.Comment != null)
                 {
                     GenerateComment(stringBuilder, typeDefType.Comment, 0);
                 }
+                
+                stringBuilder.AppendLine($"public readonly record struct {typeName} : IDisposable");
+                stringBuilder.AppendLine("{");
+                
+                Indent(stringBuilder);
+                stringBuilder.AppendLine($"private {MapType(null, canonicalType)} Value {{ get; }}");
 
-                Console.WriteLine($"{typeDefType.Comment?.Kind}");
-                var needMarshaller = false;
-                var result = FunctionPointerRegex().Match(canonicalType.GetDisplayName());
+                stringBuilder.AppendLine();
+                Indent(stringBuilder);
+                stringBuilder.AppendLine("///<summary>");
+                Indent(stringBuilder);
+                stringBuilder.AppendLine("/// Disposes the handler.");
+                Indent(stringBuilder);
+                stringBuilder.AppendLine("///</summary>");
+                
+                Indent(stringBuilder);
+                stringBuilder.AppendLine("public void Dispose()");
+                Indent(stringBuilder);
+                stringBuilder.AppendLine("{");
 
-                if (result.Success)
+                Indent(stringBuilder, 2);
+                stringBuilder.AppendLine($"{moduleName}ServiceInterop.Free{typeName.Replace("Elemental", string.Empty)}(this);");
+
+                Indent(stringBuilder);
+                stringBuilder.AppendLine("}");
+
+                stringBuilder.AppendLine("}");
+            }
+        }
+        else if (type.TypeKind == CppTypeKind.Enum)
+        {
+            GenerateEnum(type, typeName, stringBuilder);
+        }
+        else if (type.TypeKind == CppTypeKind.StructOrClass)
+        {
+            GenerateStruct(type, typeName, stringBuilder);
+        }
+
+        File.WriteAllText(Path.Combine(outputPath, $"{typeName}.cs"), stringBuilder.ToString());
+    }
+
+    private void GenerateDelegate(CppType canonicalType, string typeName, StringBuilder stringBuilder, CppTypedef typeDefType)
+    {
+        if (typeDefType.Comment != null)
+        {
+            GenerateComment(stringBuilder, typeDefType.Comment, 0);
+        }
+
+        var needMarshaller = false;
+        var result = FunctionPointerRegex().Match(canonicalType.GetDisplayName());
+
+        if (result.Success)
+        {
+            stringBuilder.Append("##MARSHALLER##");
+            stringBuilder.AppendLine("[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
+            stringBuilder.Append($"public delegate {result.Groups[1].Value.Trim()} {typeName}(");
+
+            var parameterResults = FunctionPointerParameterRegex().Matches(result.Groups[2].Value);
+            var firstParameter = true;
+            var parametersDeclaration = new StringBuilder();
+            var parametersValue = new StringBuilder();
+            var customBeforeCode = new StringBuilder();
+
+            foreach (Match parameterResult in parameterResults)
+            {
+                if (!firstParameter)
                 {
-                    stringBuilder.Append("##MARSHALLER##");
-                    stringBuilder.AppendLine("[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
-                    stringBuilder.Append($"public delegate {result.Groups[1].Value.Trim()} {typeName}(");
+                    stringBuilder.Append(", ");
+                    parametersDeclaration.Append(", ");
+                    parametersValue.Append(", ");
+                }
+                else
+                {
+                    firstParameter = false;
+                }
 
-                    var parameterResults = FunctionPointerParameterRegex().Matches(result.Groups[2].Value);
-                    var firstParameter = true;
-                    var parametersDeclaration = new StringBuilder();
-                    var parametersValue = new StringBuilder();
-                    var customBeforeCode = new StringBuilder();
+                var parameterType = MapType(parameterResult.Groups[1].Value.Trim());
+                var parameterName = parameterResult.Groups[2].Value.Trim();
 
-                    foreach (Match parameterResult in parameterResults)
-                    {
-                        if (!firstParameter)
-                        {
-                            stringBuilder.Append(", ");
-                            parametersDeclaration.Append(", ");
-                            parametersValue.Append(", ");
-                        }
-                        else
-                        {
-                            firstParameter = false;
-                        }
+                if (parameterType.Contains("Span"))
+                {
+                    needMarshaller = true;
 
-                        var parameterType = MapType(parameterResult.Groups[1].Value.Trim());
-                        var parameterName = parameterResult.Groups[2].Value.Trim();
-                        
-                        if (parameterType.Contains("Span"))
-                        {
-                            needMarshaller = true;
-
-                            customBeforeCode.AppendLine();
-                            customBeforeCode.AppendLine($$"""
+                    customBeforeCode.AppendLine();
+                    customBeforeCode.AppendLine($$"""
                                     var {{parameterName}}Counter = 0;
                                     var {{parameterName}}Pointer = (byte*){{parameterName}};
 
@@ -385,105 +451,125 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
                                     {{parameterName}}Counter++;
                             """);
-                        }
-
-                        stringBuilder.Append($"{parameterType} {parameterName}");
-                        parametersDeclaration.Append($"{MapTypeToUnmanaged(parameterType)} {parameterName}");
-                        parametersValue.Append($"{MapValueToUnmanaged(parameterType, parameterName)}");
-                    }
-
-                    stringBuilder.AppendLine(");");
-
-                    if (!needMarshaller)
-                    {
-                        stringBuilder.Replace("##MARSHALLER##", string.Empty);
-                    }
-                    else
-                    {
-                        stringBuilder.Replace("##MARSHALLER##", $"[NativeMarshalling(typeof({typeName}Marshaller))]\n");
-                        stringBuilder.AppendLine();
-                        stringBuilder.AppendLine(HandlerMarshallerTemplate);
-                        stringBuilder.Replace("##TYPENAME##", typeName);
-                        stringBuilder.Replace("##PARAMETERS_DECLARATION##", parametersDeclaration.ToString());
-                        stringBuilder.Replace("##PARAMETERS_VALUE##", parametersValue.ToString());
-                        stringBuilder.Replace("##CUSTOM_BEFORE_CODE##", customBeforeCode.ToString());
-                    }
                 }
-            } 
+
+                stringBuilder.Append($"{parameterType} {parameterName}");
+                parametersDeclaration.Append($"{MapTypeToUnmanaged(parameterType)} {parameterName}");
+                parametersValue.Append($"{MapValueToUnmanaged(parameterType, parameterName)}");
+            }
+
+            stringBuilder.AppendLine(");");
+
+            if (!needMarshaller)
+            {
+                stringBuilder.Replace("##MARSHALLER##", string.Empty);
+            }
             else
             {
-                stringBuilder.AppendLine($"public readonly record struct {typeName}");
-                stringBuilder.AppendLine("{");
-                
-                Indent(stringBuilder);
-                stringBuilder.AppendLine($"{MapType(null, canonicalType)} Value {{ get; }}");
-
-                stringBuilder.AppendLine("}");
+                stringBuilder.Replace("##MARSHALLER##", $"[NativeMarshalling(typeof({typeName}Marshaller))]\n");
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine(HandlerMarshallerTemplate);
+                stringBuilder.Replace("##TYPENAME##", typeName);
+                stringBuilder.Replace("##PARAMETERS_DECLARATION##", parametersDeclaration.ToString());
+                stringBuilder.Replace("##PARAMETERS_VALUE##", parametersValue.ToString());
+                stringBuilder.Replace("##CUSTOM_BEFORE_CODE##", customBeforeCode.ToString());
             }
         }
-        else if (type.TypeKind == CppTypeKind.Enum)
+    }
+
+    private void GenerateEnum(CppType type, string typeName, StringBuilder stringBuilder)
+    {
+        var enumType = type as CppEnum;
+
+        if (enumType == null)
         {
-            var enumType = type as CppEnum;
-            
-            if (enumType == null)
-            {
-                return;
-            }
-                
-            if (enumType.Comment != null)
-            {
-                GenerateComment(stringBuilder, enumType.Comment, 0);
-            }
-
-            stringBuilder.AppendLine($"public enum {typeName}");
-            stringBuilder.AppendLine("{");
-            
-            for (var i = 0; i < enumType.Items.Count; i++)
-            {
-                var member = enumType.Items[i];
-
-                Indent(stringBuilder);
-                stringBuilder.Append($"{member.Name.Split('_')[1]} = {member.Value}");
-
-                if (i == enumType.Items.Count - 1)
-                {
-                    stringBuilder.AppendLine();
-                }
-                else
-                {
-                    stringBuilder.AppendLine(",");
-                }
-            }
-
-            stringBuilder.AppendLine("}");
+            return;
         }
-        else if (type.TypeKind == CppTypeKind.StructOrClass)
+
+        if (enumType.Comment != null)
         {
-            var structType = type as CppClass;
-            
-            if (structType == null)
-            {
-                return;
-            }
-            
-            if (structType.Comment != null)
-            {
-                GenerateComment(stringBuilder, structType.Comment, 0);
-            }
-
-            stringBuilder.AppendLine($"public record struct {typeName}");
-            stringBuilder.AppendLine("{");
-            
-            foreach (var field in structType.Fields)
-            {
-                Indent(stringBuilder);
-                stringBuilder.AppendLine($"public {MapType(field.Type.GetDisplayName())} {field.Name} {{ get; set; }}");
-            }
-
-            stringBuilder.AppendLine("}");
+            GenerateComment(stringBuilder, enumType.Comment, 0);
         }
 
-        File.WriteAllText(Path.Combine(outputPath, $"{typeName}.cs"), stringBuilder.ToString());
+        stringBuilder.AppendLine($"public enum {typeName}");
+        stringBuilder.AppendLine("{");
+
+        var firstField = true;
+
+        for (var i = 0; i < enumType.Items.Count; i++)
+        { 
+            if (!firstField)
+            {
+                stringBuilder.AppendLine();    
+            }
+            else
+            {
+                firstField = false;
+            }
+
+            var member = enumType.Items[i];
+
+            if (member.Comment != null)
+            {
+                GenerateComment(stringBuilder, member.Comment, 1);
+            }
+
+            Indent(stringBuilder);
+            stringBuilder.Append($"{member.Name.Split('_')[1]} = {member.Value}");
+
+            if (i == enumType.Items.Count - 1)
+            {
+                stringBuilder.AppendLine();
+            }
+            else
+            {
+                stringBuilder.AppendLine(",");
+            }
+        }
+
+        stringBuilder.AppendLine("}");
+    }
+
+    private void GenerateStruct(CppType type, string typeName, StringBuilder stringBuilder)
+    {
+        var structType = type as CppClass;
+
+        if (structType == null)
+        {
+            return;
+        }
+
+        if (structType.Comment != null)
+        {
+            GenerateComment(stringBuilder, structType.Comment, 0);
+        }
+
+        stringBuilder.AppendLine($"public record struct {typeName}");
+        stringBuilder.AppendLine("{");
+
+        var firstField = true;
+
+        foreach (var field in structType.Fields)
+        {
+            if (!firstField)
+            {
+                stringBuilder.AppendLine();    
+            }
+            else
+            {
+                firstField = false;
+            }
+
+            if (field.Comment != null)
+            {
+                GenerateComment(stringBuilder, field.Comment, 1);
+            }
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine($"public {MapType(field.Type.GetDisplayName())} {field.Name} {{ get; set; }}");
+        }
+
+        stringBuilder.AppendLine("}");
     }
 
     private void GenerateComment(StringBuilder stringBuilder, CppComment rootComment, int indentLevel)
