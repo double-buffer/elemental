@@ -1,4 +1,4 @@
-namespace Elemental;
+namespace Elemental.Graphics;
 
 /// <summary>
 /// Defines an interface for Graphics services.

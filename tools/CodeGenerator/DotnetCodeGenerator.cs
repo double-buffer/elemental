@@ -1,7 +1,5 @@
 namespace Elemental.Tools.CodeGenerator;
 
-// TODO: Module directories and module before struct/groups
-
 public partial class DotnetCodeGenerator : ICodeGenerator
 {
     [GeneratedRegex(@"##Module_([^#]+)##")]
@@ -63,8 +61,6 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         foreach (Match result in results)
         {
-            Console.WriteLine($"Module: {result.Groups[1].Value} {result.Index}");
-
             modules.Add((result.Index, result.Groups[1].Value));
         }
 
@@ -142,7 +138,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         Console.WriteLine($"Creating interface for module '{name}'...");
 
         var stringBuilder = new StringBuilder();
-        stringBuilder.AppendLine("namespace Elemental;");
+        stringBuilder.AppendLine($"namespace {GetNamespace(name)};");
         stringBuilder.AppendLine();
                         
         stringBuilder.AppendLine($"/// <summary>");
@@ -158,39 +154,22 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         {
             if (!firstFunction)
             {
-                stringBuilder.AppendLine();    
+                stringBuilder.AppendLine();
             }
             else
             {
                 firstFunction = false;
             }
 
-            var functionName = function.Name.Replace("Elem", string.Empty);
+            var containsStringParameters = GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters: false);
+            stringBuilder.AppendLine(";");
 
-            if (function.Comment != null)
+            if (containsStringParameters)
             {
-                GenerateComment(stringBuilder, function.Comment, 1);
+                stringBuilder.AppendLine();
+                GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters: true);
+                stringBuilder.AppendLine(";");
             }
-
-            Indent(stringBuilder);
-            stringBuilder.Append($"{MapType(function.ReturnType)} {functionName}(");
-            var firstParameter = true;
-
-            foreach (var parameter in function.Parameters)
-            {
-                if (!firstParameter)
-                {
-                    stringBuilder.Append(", ");
-                }
-                else
-                {
-                    firstParameter = false;
-                }
-
-                stringBuilder.Append($"{MapType(parameter.Type)} {parameter.Name}");
-            }
-
-            stringBuilder.AppendLine(");");
         }
 
         stringBuilder.AppendLine("}");
@@ -205,7 +184,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         Console.WriteLine($"Creating service for module '{name}'...");
 
         var stringBuilder = new StringBuilder();
-        stringBuilder.AppendLine("namespace Elemental;");
+        stringBuilder.AppendLine($"namespace {GetNamespace(name)};");
         stringBuilder.AppendLine();
 
         stringBuilder.AppendLine("/// <inheritdoc />");
@@ -214,69 +193,69 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         foreach (var function in functions)
         {
-            var functionName = function.Name.Replace("Elem", string.Empty);
+            var containsStringParameters = GenerateServiceFunction(serviceName, stringBuilder, function, generateStringParameters: false);
             
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("/// <inheritdoc />");
-            
-            Indent(stringBuilder);
-            stringBuilder.Append($"public {MapType(function.ReturnType)} {functionName}(");
-            var firstParameter = true;
-
-            foreach (var parameter in function.Parameters)
+            if (containsStringParameters)
             {
-                if (!firstParameter)
-                {
-                    stringBuilder.Append(", ");
-                }
-                else
-                {
-                    firstParameter = false;
-                }
-
-                stringBuilder.Append($"{MapType(parameter.Type)} {parameter.Name}");
+                GenerateServiceFunction(serviceName, stringBuilder, function, generateStringParameters: true);
             }
-
-            stringBuilder.AppendLine(")");
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("{");
-
-            Indent(stringBuilder, 2);
-
-            if (function.ReturnType.GetDisplayName() != "void")
-            {
-                stringBuilder.Append("return ");
-            }
-
-            stringBuilder.Append($"{serviceName}Interop.{functionName}(");
-            
-            firstParameter = true;
-
-            foreach (var parameter in function.Parameters)
-            {
-                if (!firstParameter)
-                {
-                    stringBuilder.Append(", ");
-                }
-                else
-                {
-                    firstParameter = false;
-                }
-
-                stringBuilder.Append($"{parameter.Name}");
-            }
-
-            stringBuilder.AppendLine(");");
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("}");
-            stringBuilder.AppendLine();
         }
 
         stringBuilder.AppendLine("}");
 
         File.WriteAllText(Path.Combine(outputPath, $"{serviceName}.cs"), stringBuilder.ToString());
+    }
+
+    private bool GenerateServiceFunction(string serviceName, StringBuilder stringBuilder, CppFunction function, bool generateStringParameters)
+    {
+        var functionName = function.Name.Replace("Elem", string.Empty);
+        var firstParameter = true;
+
+        var containsStringParameters = GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters, appendPublic: true);
+        stringBuilder.AppendLine();
+
+        Indent(stringBuilder);
+        stringBuilder.AppendLine("{");
+
+        Indent(stringBuilder, 2);
+
+        if (function.ReturnType.GetDisplayName() != "void")
+        {
+            stringBuilder.Append("return ");
+        }
+
+        stringBuilder.Append($"{serviceName}Interop.{functionName}(");
+
+        firstParameter = true;
+
+        foreach (var parameter in function.Parameters)
+        {
+            if (!firstParameter)
+            {
+                stringBuilder.Append(", ");
+            }
+            else
+            {
+                firstParameter = false;
+            }
+
+            if (parameter.Type.GetDisplayName() == "const char*" && generateStringParameters)
+            {
+                stringBuilder.Append($"Encoding.UTF8.GetBytes({parameter.Name})");
+            }
+            else
+            {
+                stringBuilder.Append($"{parameter.Name}");
+            }
+        }
+
+        stringBuilder.AppendLine(");");
+
+        Indent(stringBuilder);
+        stringBuilder.AppendLine("}");
+        stringBuilder.AppendLine();
+
+        return containsStringParameters;
     }
 
     private void GenerateInterop(string name, string outputPath, CppCompilation compilation, IList<CppFunction> functions)
@@ -290,10 +269,10 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         if (name == "Application")
         {
             stringBuilder.AppendLine("[assembly:DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory)]");
+            stringBuilder.AppendLine();
         }
 
-        stringBuilder.AppendLine();
-        stringBuilder.AppendLine("namespace Elemental;");
+        stringBuilder.AppendLine($"namespace {GetNamespace(name)};");
         stringBuilder.AppendLine();
 
         stringBuilder.AppendLine($"internal static partial class {serviceName}");
@@ -344,7 +323,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         var stringBuilder = new StringBuilder();
 
-        stringBuilder.AppendLine("namespace Elemental;");
+        stringBuilder.AppendLine($"namespace {GetNamespace(moduleName)};");
         stringBuilder.AppendLine();
 
         if (type.TypeKind == CppTypeKind.Typedef)
@@ -577,6 +556,56 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         stringBuilder.AppendLine("}");
     }
 
+    private bool GenerateModuleFunctionDefinition(StringBuilder stringBuilder, CppFunction function, bool generateStringParameters, bool appendPublic = false)
+    {
+        var containsStringParameters = false;
+        var functionName = function.Name.Replace("Elem", string.Empty);
+
+        if (function.Comment != null)
+        {
+            GenerateComment(stringBuilder, function.Comment, 1);
+        }
+
+        Indent(stringBuilder);
+        
+        if (appendPublic)
+        {
+            stringBuilder.Append("public ");
+        }
+
+        stringBuilder.Append($"{MapType(function.ReturnType)} {functionName}(");
+        var firstParameter = true;
+
+        foreach (var parameter in function.Parameters)
+        {
+            if (!firstParameter)
+            {
+                stringBuilder.Append(", ");
+            }
+            else
+            {
+                firstParameter = false;
+            }
+
+            var parameterType = MapType(parameter.Type);
+
+            if (parameter.Type.GetDisplayName() == "const char*")
+            {
+                containsStringParameters = true;
+
+                if (generateStringParameters)
+                {
+                    parameterType = "string";
+                }
+            }
+
+            stringBuilder.Append($"{parameterType} {parameter.Name}");
+        }
+
+        stringBuilder.Append(")");
+        return containsStringParameters;
+    }
+
     private void GenerateComment(StringBuilder stringBuilder, CppComment rootComment, int indentLevel)
     {
         foreach (var comment in rootComment.Children)
@@ -617,6 +646,16 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 }
             }
         }
+    }
+
+    private string GetNamespace(string moduleName)
+    {
+        if (moduleName == "Application")
+        {
+            return "Elemental";
+        }
+
+        return $"Elemental.{moduleName}";
     }
 
     private static string GetModulePath(string output, string moduleName)

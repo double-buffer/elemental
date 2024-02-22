@@ -1,4 +1,4 @@
-namespace Elemental;
+namespace Elemental.Graphics;
 
 /// <summary>
 /// Handle that represents a graphics device.

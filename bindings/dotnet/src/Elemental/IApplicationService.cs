@@ -19,6 +19,13 @@ public interface IApplicationService
     ElementalApplication CreateApplication(ReadOnlySpan<byte> applicationName);
 
     /// <summary>
+    /// Creates a new application instance.
+    /// </summary>
+    /// <param name="applicationName">The name of the application.</param>
+    /// <returns>Returns an application handle.</returns>
+    ElementalApplication CreateApplication(string applicationName);
+
+    /// <summary>
     /// Runs the specified application with the provided run handler.
     /// </summary>
     /// <param name="application">The application to run.</param>

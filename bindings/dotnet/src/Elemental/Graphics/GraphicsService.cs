@@ -1,15 +1,19 @@
-namespace Elemental;
+namespace Elemental.Graphics;
 
 /// <inheritdoc />
 public class GraphicsService : IGraphicsService
 {
-    /// <inheritdoc />
+    /// <summary>
+    /// Temporary Function
+    /// </summary>
     public GraphicsDevice CreateGraphicsDevice()
     {
         return GraphicsServiceInterop.CreateGraphicsDevice();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Temporary Function
+    /// </summary>
     public void FreeGraphicsDevice(GraphicsDevice graphicsDevice)
     {
         GraphicsServiceInterop.FreeGraphicsDevice(graphicsDevice);

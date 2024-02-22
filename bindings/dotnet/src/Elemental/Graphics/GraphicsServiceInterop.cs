@@ -1,5 +1,4 @@
-
-namespace Elemental;
+namespace Elemental.Graphics;
 
 internal static partial class GraphicsServiceInterop
 {
