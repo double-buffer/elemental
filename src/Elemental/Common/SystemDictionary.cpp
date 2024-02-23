@@ -3,6 +3,8 @@
 #include "SystemLogging.h"
 
 #define SYSTEM_DICTIONARY_HASH_SEED 123456789
+
+// TODO: Convert the indexes to uint32_t and use maxsize for empty
 #define SYSTEM_DICTIONARY_INDEX_EMPTY -1
 
 template<typename TValue>

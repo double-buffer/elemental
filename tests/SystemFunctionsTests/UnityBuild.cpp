@@ -6,12 +6,14 @@
 #include "IOTests.cpp"
 #include "LibraryProcessTests.cpp"
 #include "DictionaryTests.cpp"
+#include "DataPoolTests.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"
 #include "SystemMemory.cpp"
 #include "SystemFunctions.cpp"
 #include "SystemDictionary.cpp"
+#include "SystemDataPool.cpp"
 #include "SystemInputs.cpp"
 
 #ifdef _DEBUG
