@@ -60,7 +60,6 @@ ElemHandle SystemAddDataPoolItem(SystemDataPool<T> dataPool, T data)
     SystemDataPoolHandle result = {};
     auto storage = dataPool.Storage;
 
-    // TODO: Freelist lookup
     // TODO: Atomics!
     auto index = SYSTEM_DATAPOOL_INDEX_EMPTY;
 
@@ -99,15 +98,13 @@ void SystemRemoveDataPoolItem(SystemDataPool<T> dataPool, ElemHandle handle)
 
     // TODO: Atomic!
 
-    if (dataPoolHandle.Version != SYSTEM_DATAPOOL_INDEX_EMPTY)
+    if (dataPoolHandle.Version == storage->Data[dataPoolHandle.Index].Version)
     {
         storage->Data[dataPoolHandle.Index].Version++;
     }
 
     storage->Data[dataPoolHandle.Index].Next = storage->FreeListIndex;
     storage->FreeListIndex = dataPoolHandle.Index;
-
-    // TODO: Freelist handling
 }
 
 template<typename T>
