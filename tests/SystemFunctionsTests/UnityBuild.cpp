@@ -14,10 +14,9 @@
 #include "SystemFunctions.cpp"
 #include "SystemDictionary.cpp"
 #include "SystemDataPool.cpp"
-#include "SystemInputs.cpp"
 
 #ifdef _DEBUG
-void LogMessageHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message)
+void LogMessageHandler(ElemLogMessageType messageType, ElemLogMessageCategory, const char* function, const char* message)
 {
     if (messageType == ElemLogMessageType_Error)
     {

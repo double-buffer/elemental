@@ -205,8 +205,11 @@ UTEST(DataPool, ConcurrentAdd)
 
     for (int32_t i = 0; i < threadCount; i++)
     {
-        threadParameters[i] = { dataPool, i, itemCount / threadCount };
+        threadParameters[i].DataPool = dataPool;
+        threadParameters[i].ItemCount = itemCount / threadCount;
+        threadParameters[i].ThreadId = i;
         threadParameters[i].Handles = SystemPushArray<ElemHandle>(stackMemoryArena, threadParameters[i].ItemCount);
+
         threads[i] = SystemCreateThread(DataPoolConcurrentAddFunction, &threadParameters[i]);
     }
 
@@ -218,7 +221,7 @@ UTEST(DataPool, ConcurrentAdd)
 
     // Assert
     auto dataPoolCount = SystemGetDataPoolItemCount(dataPool);
-    ASSERT_EQ(itemCount, dataPoolCount);
+    ASSERT_EQ(itemCount, (int32_t)dataPoolCount);
 
     for (int32_t i = 0; i < threadCount; i++)
     {
@@ -227,13 +230,13 @@ UTEST(DataPool, ConcurrentAdd)
         for (int32_t j = 0; j < itemCount / threadCount; j++)
         {
             auto testData = SystemGetDataPoolItem(dataPool, threadParameter.Handles[j]);
-            ASSERT_EQ(threadParameter.ThreadId * threadParameter.ItemCount + j, testData->Data);
+            ASSERT_EQ((uint64_t)threadParameter.ThreadId * threadParameter.ItemCount + j, testData->Data);
 
             auto testDataFull = SystemGetDataPoolItemFull(dataPool, threadParameter.Handles[j]);
-            ASSERT_EQ(threadParameter.ThreadId * threadParameter.ItemCount + j, testDataFull->Data1);
-            ASSERT_EQ(threadParameter.ThreadId * threadParameter.ItemCount + j + 1, testDataFull->Data2);
-            ASSERT_EQ(threadParameter.ThreadId * threadParameter.ItemCount + j + 2, testDataFull->Data3);
-            ASSERT_EQ(threadParameter.ThreadId * threadParameter.ItemCount + j + 3, testDataFull->Data4);
+            ASSERT_EQ((uint64_t)threadParameter.ThreadId * threadParameter.ItemCount + j, testDataFull->Data1);
+            ASSERT_EQ((uint64_t)threadParameter.ThreadId * threadParameter.ItemCount + j + 1, testDataFull->Data2);
+            ASSERT_EQ((uint64_t)threadParameter.ThreadId * threadParameter.ItemCount + j + 2, testDataFull->Data3);
+            ASSERT_EQ((uint64_t)threadParameter.ThreadId * threadParameter.ItemCount + j + 3, testDataFull->Data4);
         }
     }
 }
@@ -254,8 +257,11 @@ UTEST(DataPool, ConcurrentRemove)
 
     for (int32_t i = 0; i < threadCount; i++)
     {
-        threadParameters[i] = { dataPool, i, itemCount / 2 / threadCount };
+        threadParameters[i].DataPool = dataPool;
+        threadParameters[i].ItemCount = itemCount / 2 / threadCount;
+        threadParameters[i].ThreadId = i;
         threadParameters[i].Handles = SystemPushArray<ElemHandle>(stackMemoryArena, threadParameters[i].ItemCount);
+
         threads[i] = SystemCreateThread(DataPoolConcurrentAddFunction, &threadParameters[i]);
     }
 
@@ -267,10 +273,12 @@ UTEST(DataPool, ConcurrentRemove)
 
     for (int32_t i = 0; i < threadCount; i++)
     {
-        threadParameters2[i] = { dataPool, i, itemCount / 2 / threadCount };
+        threadParameters2[i].DataPool = dataPool;
+        threadParameters2[i].ItemCount = itemCount / 2 / threadCount;
+        threadParameters2[i].ThreadId = i;
         threadParameters2[i].Handles = SystemPushArray<ElemHandle>(stackMemoryArena, threadParameters2[i].ItemCount);
-        threads2[i] = SystemCreateThread(DataPoolConcurrentAddFunction, &threadParameters2[i]);
 
+        threads2[i] = SystemCreateThread(DataPoolConcurrentAddFunction, &threadParameters2[i]);
         threads[i] = SystemCreateThread(DataPoolConcurrentRemoveFunction, &threadParameters[i]);
     }
 
@@ -284,5 +292,5 @@ UTEST(DataPool, ConcurrentRemove)
 
     // Assert
     auto dataPoolCount = SystemGetDataPoolItemCount(dataPool);
-    ASSERT_EQ(itemCount / 2, dataPoolCount);
+    ASSERT_EQ((size_t)itemCount / 2, dataPoolCount);
 }
