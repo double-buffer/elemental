@@ -5,22 +5,8 @@ target_link_libraries(Direct3D12 INTERFACE dxgi dxguid)
 # TODO: Do we really need that?
 target_link_libraries(Direct3D12 INTERFACE d3d12)
 
-# TODO: Move that
-add_library(ElementalHeaders INTERFACE)
-target_include_directories(ElementalHeaders INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_compile_options(Elemental PRIVATE -EHs)
 
-add_library(Elemental SHARED UnityBuild.cpp)
-
-target_include_directories(Elemental PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-target_compile_options(Elemental PRIVATE -W4 -EHs)
-target_compile_options(Elemental PRIVATE -Wno-unused-parameter)
-target_compile_options(Elemental PRIVATE -Wno-missing-field-initializers)
-target_precompile_headers(Elemental PRIVATE PreCompiledHeader.h)
-
-target_include_directories(Elemental PRIVATE .)
-target_link_libraries(Elemental PRIVATE common)
-target_link_libraries(Elemental PRIVATE external_dependencies)
 target_link_libraries(Elemental PRIVATE Direct3D12)
 target_link_libraries(Elemental PRIVATE Dwmapi UxTheme onecore)
 target_compile_definitions(Elemental PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)

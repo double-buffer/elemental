@@ -13,7 +13,7 @@ bool RunHandler(ElemApplicationStatus status)
     return true;
 }
 
-int main()
+int main(void)
 {
     ElemConfigureLogHandler(ElemConsoleLogHandler);
     

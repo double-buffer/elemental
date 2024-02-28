@@ -1,17 +1,3 @@
-
-# TODO: Move that
-add_library(ElementalHeaders INTERFACE)
-target_include_directories(ElementalHeaders INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-add_library(Elemental SHARED UnityBuild.cpp)
-target_include_directories(Elemental PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-target_compile_options(Elemental PRIVATE -Wall -fno-objc-arc)
-target_include_directories(Elemental PRIVATE .)
-target_precompile_headers(Elemental PRIVATE PreCompiledHeader.h)
-
-target_link_libraries(Elemental PRIVATE common)
-target_link_libraries(Elemental PRIVATE external_dependencies)
-
+target_compile_options(Elemental PRIVATE -fno-objc-arc)
 target_compile_definitions(Elemental PRIVATE __BLOCKS__)
 target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")

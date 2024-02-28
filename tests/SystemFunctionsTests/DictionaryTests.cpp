@@ -368,7 +368,7 @@ UTEST(Dictionary, ContainsKey_KeyStruct)
 UTEST(Dictionary, Enumeration) 
 {
     // Arrange
-    auto maxEntries = 100;
+    const int32_t maxEntries = 100;
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, DictionaryTestStruct>(stackMemoryArena, maxEntries);
     

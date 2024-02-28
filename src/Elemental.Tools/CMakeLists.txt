@@ -1,13 +1,13 @@
 add_library(Elemental.Tools SHARED UnityBuild.cpp)
 
-target_compile_options(Elemental.Tools PRIVATE -W4)
-target_compile_options(Elemental.Tools PRIVATE -Wno-unused-parameter)
 target_precompile_headers(Elemental.Tools PRIVATE PreCompiledHeader.h)
 
 target_link_libraries(Elemental.Tools PRIVATE common)
 target_link_libraries(Elemental.Tools PRIVATE external_dependencies)
 target_link_libraries(Elemental.Tools PRIVATE tools_external_dependencies)
-target_link_libraries(Elemental.Tools PRIVATE ElementalHeaders)
+target_link_libraries(Elemental.Tools PRIVATE Elemental)
+
+target_compile_options(Elemental.Tools PRIVATE -Wno-language-extension-token)
 
 if(WIN32)
     target_include_directories(Elemental.Tools PRIVATE ../Elemental/Windows/)

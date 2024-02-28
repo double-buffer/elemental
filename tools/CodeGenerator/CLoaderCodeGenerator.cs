@@ -25,7 +25,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
 
         static ElementalFunctions elementalFunctions;
 
-        static bool LoadElementalLibrary() 
+        static bool LoadElementalLibrary(void) 
         {
             if (!library) 
             {
@@ -60,7 +60,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
             #endif
         }
 
-        static bool LoadFunctionPointers() 
+        static bool LoadFunctionPointers(void) 
         {
             if (!LoadElementalLibrary() || functionPointersLoaded)
             {
@@ -161,24 +161,33 @@ public class CLoaderCodeGenerator : ICodeGenerator
             functionsStringBuilder.Append($"elementalFunctions.{function.Name} = ({function.ReturnType.GetDisplayName()} (*)(");
             functionsDeclarationStringBuilder.Append($"{function.ReturnType.GetDisplayName()} (*{function.Name})(");
 
-            foreach (var parameter in function.Parameters)
+            if (function.Parameters.Count == 0)
             {
-                if (isFirstParameter)
+                builder.Append("void");
+                functionsStringBuilder.Append("void");
+                functionsDeclarationStringBuilder.Append("void");
+            }
+            else
+            {
+                foreach (var parameter in function.Parameters)
                 {
-                    isFirstParameter = false;
-                }
-                else
-                {
-                    builder.Append(", ");
-                    functionsStringBuilder.Append(", ");
-                    functionsDeclarationStringBuilder.Append(", ");
-                    parameterValuesBuilder.Append(", ");
-                }
+                    if (isFirstParameter)
+                    {
+                        isFirstParameter = false;
+                    }
+                    else
+                    {
+                        builder.Append(", ");
+                        functionsStringBuilder.Append(", ");
+                        functionsDeclarationStringBuilder.Append(", ");
+                        parameterValuesBuilder.Append(", ");
+                    }
 
-                builder.Append($"{parameter.Type.GetDisplayName()} {parameter.Name}");
-                functionsStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
-                functionsDeclarationStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
-                parameterValuesBuilder.Append($"{parameter.Name}");
+                    builder.Append($"{parameter.Type.GetDisplayName()} {parameter.Name}");
+                    functionsStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
+                    functionsDeclarationStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
+                    parameterValuesBuilder.Append($"{parameter.Name}");
+                }
             }
 
             functionsStringBuilder.AppendLine($"))GetFunctionPointer(\"{function.Name}\");");

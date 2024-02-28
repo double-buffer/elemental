@@ -111,7 +111,7 @@ typedef ElemHandle ElemGraphicsDevice;
 /**
  * Temporary Function
  */
-ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice();
+ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice(void);
 
 /**
  * Temporary Function
