@@ -3,7 +3,7 @@ add_executable(SystemFunctionsTests UnityBuild.cpp)
 target_link_libraries(SystemFunctionsTests PRIVATE common)
 target_link_libraries(SystemFunctionsTests PRIVATE external_dependencies)
 target_link_libraries(SystemFunctionsTests PRIVATE utest)
-target_link_libraries(SystemFunctionsTests PRIVATE Elemental)
+target_link_libraries(SystemFunctionsTests PRIVATE ElementalInterface)
 
 if(WIN32)
     target_compile_options(SystemFunctionsTests PRIVATE -EHs -MD)

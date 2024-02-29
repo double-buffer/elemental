@@ -15,3 +15,6 @@ target_link_libraries(Elemental PRIVATE external_dependencies)
 add_subdirectory(${ELEM_PLATFORM_DIR})
 
 copy_platform_dependencies(Elemental)
+
+add_library(ElementalInterface INTERFACE)
+target_include_directories(ElementalInterface INTERFACE .)
