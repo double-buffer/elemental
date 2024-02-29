@@ -62,9 +62,10 @@ if(WIN32)
     target_link_libraries(Direct3D12 INTERFACE d3d12)
 
     function(copy_direct3d12_to_target target)
+        # TODO: To Fix
+        set(DIRECT3D12_VERSION "1.611.2")
         file(GLOB DIRECT3D12_DLLS 
              "${CMAKE_BINARY_DIR}/external/packages/Microsoft.Direct3D.D3D12_${DIRECT3D12_VERSION}/build/native/bin/x64/*.dll")
-        
         foreach(DLL ${DIRECT3D12_DLLS})
             get_filename_component(DLL_NAME "${DLL}" NAME)
             add_custom_command(TARGET ${target} POST_BUILD

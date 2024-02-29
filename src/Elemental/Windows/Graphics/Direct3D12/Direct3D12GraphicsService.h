@@ -1,7 +1,6 @@
 #pragma once
 
 #include "SystemMemory.h"
-#include "Win32Window.h"
 #include "GraphicsObject.h"
 #include "Direct3D12Common.h"
 #include "Direct3D12PipelineState.h"

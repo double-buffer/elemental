@@ -60,10 +60,12 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
 /**
  * Represents the status of an application.
  */
-typedef struct
+typedef enum
 {
-    // Status code.
-    uint32_t Status;
+    // Active status.
+    ElemApplicationStatus_Active = 0,
+    // Closing status.
+    ElemApplicationStatus_Closing = 1
 } ElemApplicationStatus;
 
 /**

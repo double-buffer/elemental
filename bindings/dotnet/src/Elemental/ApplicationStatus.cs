@@ -3,10 +3,15 @@ namespace Elemental;
 /// <summary>
 /// Represents the status of an application.
 /// </summary>
-public record struct ApplicationStatus
+public enum ApplicationStatus
 {
     /// <summary>
-    /// Status code.
+    /// Active status.
     /// </summary>
-    public uint Status { get; set; }
+    Active = 0,
+
+    /// <summary>
+    /// Closing status.
+    /// </summary>
+    Closing = 1
 }

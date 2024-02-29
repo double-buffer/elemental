@@ -9,7 +9,7 @@ using var application = applicationService.CreateApplication("Hello World"u8);
 
 applicationService.RunApplication(application, (status) =>
 {
-    if (counter > 10)// || !status.IsActive)
+    if (counter > 10 || status != ApplicationStatus.Active)
     {
         return false;
     }

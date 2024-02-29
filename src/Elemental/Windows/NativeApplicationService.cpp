@@ -47,8 +47,7 @@ void ProcessMessages(ElemApplication application)
 	{
         if (message.message == WM_QUIT)
         {
-            // TODO:
-            //application->SetStatus(NativeApplicationStatusFlags::Closing, 1);
+            windowsApplicationFull.Status = ElemApplicationStatus_Closing;
         }
 
         TranslateMessage(&message);
@@ -97,13 +96,13 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
     while (canRun) 
     {
         ProcessMessages(application);
-        //canRun = runHandler(application->Status); // TODO: Use Pool
+        // TODO: Use Pool
         canRun = runHandler(windowsApplicationFull.Status);
-/*
-        if (application->IsStatusActive(NativeApplicationStatusFlags::Closing))
+
+        if (windowsApplicationFull.Status == ElemApplicationStatus_Closing)
         {
             canRun = false;
-        }*/
+        }
     }
 }
 

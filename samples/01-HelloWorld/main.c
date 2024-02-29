@@ -4,7 +4,7 @@ int32_t counter = 0;
 
 bool RunHandler(ElemApplicationStatus status)
 {
-    if (counter > 10)// || !status.IsActive)
+    if (counter > 10 || status != ElemApplicationStatus_Active)
     {
         return false;
     }
