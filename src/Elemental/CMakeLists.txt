@@ -13,3 +13,5 @@ target_link_libraries(Elemental PRIVATE common)
 target_link_libraries(Elemental PRIVATE external_dependencies)
 
 add_subdirectory(${ELEM_PLATFORM_DIR})
+
+copy_platform_dependencies(Elemental)
