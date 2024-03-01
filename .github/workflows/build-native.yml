@@ -44,6 +44,7 @@ jobs:
     - name: Build Tests
       run: |
         cmake --build ./build --target SystemFunctionsTests --config Release
+        cmake --build ./build --target ApplicationTests --config Release
           
     # Conditional Vulkan Loader steps for Windows
     - name: Download Vulkan Loader
@@ -86,5 +87,6 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./build/bin/Release/SystemFunctionsTests*
-
+        path: |
+          ./build/bin/Release/SystemFunctionsTests*
+          ./build/bin/Release/ApplicationTests*

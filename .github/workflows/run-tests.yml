@@ -33,7 +33,10 @@ jobs:
       if: inputs.platform == 'osx'
       run: |
         chmod +x ./Tests/SystemFunctionsTests
+        chmod +x ./Tests/ApplicationTests
 
     - name: Run Native System Functions Tests
       run: ./Tests/SystemFunctionsTests
     
+    - name: Run Application Tests
+      run: ./Tests/ApplicationTests
