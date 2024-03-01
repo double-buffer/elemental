@@ -58,7 +58,7 @@ void VulkanInitGraphicsService(GraphicsServiceOptions* options)
     _vulkanGraphicsDiagnostics = options->GraphicsDiagnostics;
 
     AssertIfFailed(volkInitialize());
-    assert(volkGetInstanceVersion() >= VK_API_VERSION_1_3);
+    SystemAssert(volkGetInstanceVersion() >= VK_API_VERSION_1_3);
 
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     appInfo.apiVersion = VK_API_VERSION_1_3;
@@ -617,7 +617,7 @@ void* VulkanCreateSwapChain(void* windowPointer, void* commandQueuePointer, Swap
 
     VkBool32 isPresentSupported;
     AssertIfFailed(vkGetPhysicalDeviceSurfaceSupportKHR(graphicsDevice->PhysicalDevice, swapChain->CommandQueue->FamilyIndex, swapChain->WindowSurface, &isPresentSupported));
-    assert(isPresentSupported == 1);
+    SystemAssert(isPresentSupported == 1);
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
     AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceCapabilities));
@@ -626,7 +626,7 @@ void* VulkanCreateSwapChain(void* windowPointer, void* commandQueuePointer, Swap
     VkSurfaceFormatKHR surfaceFormats[16];
     vkGetPhysicalDeviceSurfaceFormatsKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceFormatCount, nullptr);
     vkGetPhysicalDeviceSurfaceFormatsKHR(graphicsDevice->PhysicalDevice, swapChain->WindowSurface, &surfaceFormatCount, surfaceFormats);
-    assert(surfaceFormatCount > 0);
+    SystemAssert(surfaceFormatCount > 0);
 
     VkSwapchainCreateInfoKHR swapChainCreateInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     swapChainCreateInfo.surface = swapChain->WindowSurface;
@@ -950,7 +950,7 @@ void VulkanSetShader(void* commandListPointer, void* shaderPointer)
         }
 
         auto pipelineState = graphicsDevice->PipelineStates[hash];
-        assert(pipelineState.PipelineState != nullptr);
+        SystemAssert(pipelineState.PipelineState != nullptr);
 
         vkCmdBindPipeline(commandList->DeviceObject, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineState.PipelineState);
         commandList->CurrentPipelineState = pipelineState;
@@ -961,7 +961,7 @@ void VulkanSetShader(void* commandListPointer, void* shaderPointer)
 void VulkanSetShaderConstants(void* commandListPointer, uint32_t slot, void* constantValues, int32_t constantValueCount)
 {
     auto commandList = (VulkanCommandList*)commandListPointer;
-    assert(commandList->CurrentShader != nullptr);
+    SystemAssert(commandList->CurrentShader != nullptr);
 
     // TODO: There seems that there was a memory leak in the old engine. Check that again!
     vkCmdPushConstants(commandList->DeviceObject, commandList->CurrentShader->PipelineLayout, VK_SHADER_STAGE_ALL, 0, (uint32_t)constantValueCount, constantValues);
@@ -1051,7 +1051,7 @@ VulkanCommandPoolItem* VulkanGetCommandPool(VulkanCommandQueue* commandQueue)
         }
         else
         {
-            assert(commandPoolItem->IsInUse == false);
+            SystemAssert(commandPoolItem->IsInUse == false);
 
             if (commandPoolItem->Fence.FenceValue > 0)
             {
@@ -1120,7 +1120,7 @@ VulkanCommandList* VulkanGetCommandList(VulkanCommandQueue* commandQueue, Vulkan
         }
     }
 
-    assert(commandList != nullptr);
+    SystemAssert(commandList != nullptr);
     return commandList;
 }
     
@@ -1346,7 +1346,7 @@ static VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags
 
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
-        assert(!"Vulkan validation error encountered!");
+        SystemAssert(!"Vulkan validation error encountered!");
     }
 
     return VK_FALSE;

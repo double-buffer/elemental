@@ -111,7 +111,7 @@ DWORD WINAPI InputThread(LPVOID lpParam)
     while (globalInputState) 
     {
         auto inputDevicesCount = (int32_t)globalHidInputDevices.size();
-        assert(inputDevicesCount <= 32);
+        SystemAssert(inputDevicesCount <= 32);
 
         if (inputDevicesCount == 0)
         {

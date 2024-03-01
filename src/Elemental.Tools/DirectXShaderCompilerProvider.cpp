@@ -37,7 +37,7 @@ bool DirectXShaderCompilerProvider::IsCompilerInstalled()
     
 Span<uint8_t> DirectXShaderCompilerProvider::CompileShader(MemoryArena memoryArena, std::vector<ShaderCompilerLogEntry>& logList, std::vector<ShaderMetaData>& metaDataList, Span<uint8_t> shaderCode, ShaderStage shaderStage, uint8_t* entryPoint, ShaderLanguage shaderLanguage, GraphicsApi graphicsApi, ShaderCompilationOptions* options)
 {
-    assert(_createInstanceFunc != nullptr);
+    SystemAssert(_createInstanceFunc != nullptr);
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
 

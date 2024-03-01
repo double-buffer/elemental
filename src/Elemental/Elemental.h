@@ -39,13 +39,15 @@ typedef enum
 typedef enum
 {
     // Memory related messages.
-    ElemLogMessageCategory_Memory = 0,
+    ElemLogMessageCategory_Assert = 0,
+    // Memory related messages.
+    ElemLogMessageCategory_Memory = 1,
     // Native application messages.
-    ElemLogMessageCategory_NativeApplication = 1,
+    ElemLogMessageCategory_NativeApplication = 2,
     // Graphics system messages.
-    ElemLogMessageCategory_Graphics = 2,
+    ElemLogMessageCategory_Graphics = 3,
     // Input system messages.
-    ElemLogMessageCategory_Inputs = 3
+    ElemLogMessageCategory_Inputs = 4
 } ElemLogMessageCategory;
 
 /**

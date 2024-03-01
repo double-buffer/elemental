@@ -1,0 +1,3 @@
+add_executable(ApplicationTests UnityBuild.cpp)
+target_link_libraries(ApplicationTests PRIVATE utest)
+target_link_libraries(ApplicationTests PRIVATE Elemental)

@@ -1,13 +1,14 @@
 #pragma once
 
 #include "SystemMemory.h"
+#include "SystemLogging.h"
 
 #undef assert
 
 #ifdef _DEBUG
-    #define assert(expression) if (!(expression)) { int* ptr = 0; *ptr = 0; }
+    #define SystemAssert(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); int* ptr = 0; *ptr = 0; }
 #else
-    #define assert(expression)
+    #define SystemAssert(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); exit(1); }
 #endif
 
 // TODO: Remove AssertIfFailed, only use assert is some specific places

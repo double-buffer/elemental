@@ -39,5 +39,6 @@ add_subdirectory(src/Elemental)
 add_subdirectory(src/Elemental.Tools)
 
 add_subdirectory(tests/SystemFunctionsTests)
+add_subdirectory(tests/ApplicationTests)
 
 add_subdirectory(samples/01-HelloWorld)

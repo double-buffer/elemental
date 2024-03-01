@@ -16,7 +16,12 @@ public class CLoaderCodeGenerator : ICodeGenerator
            #include <dlfcn.h>
         #endif
 
-        static void* library = NULL;
+        #if defined(_WIN32)
+            static HMODULE library = NULL;
+        #else
+            static void* library = NULL;
+        #endif
+
         static int functionPointersLoaded = 0;
 
         typedef struct ElementalFunctions 
@@ -55,7 +60,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
             }
 
             #if defined(_WIN32)
-                return GetProcAddress(library, functionName);
+                return (void*)GetProcAddress(library, functionName);
             #else
                 return dlsym(library, functionName);
             #endif
@@ -79,8 +84,11 @@ public class CLoaderCodeGenerator : ICodeGenerator
             printf("[");
             printf("\033[36m");
 
-            // TODO: Provide a mapping function
-            if (category == ElemLogMessageCategory_Memory)
+            if (category == ElemLogMessageCategory_Assert)
+            {
+                printf("Assert");
+            }
+            else if (category == ElemLogMessageCategory_Memory)
             {
                 printf("Memory");
             }

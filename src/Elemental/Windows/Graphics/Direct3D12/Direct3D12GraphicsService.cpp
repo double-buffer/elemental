@@ -471,7 +471,7 @@ void Direct3D12WaitForSwapChainOnCpu(void* swapChainPointer)
 
     if (WaitForSingleObjectEx(swapChain->WaitHandle, 1000, true) == WAIT_TIMEOUT)
     {
-        assert("Wait for SwapChain timeout");
+        SystemAssert("Wait for SwapChain timeout");
     }
 }
 
@@ -674,7 +674,7 @@ void Direct3D12SetShader(void* commandListPointer, void* shaderPointer)
         }
 
         auto pipelineState = graphicsDevice->PipelineStates[hash].PipelineState;
-        assert(pipelineState != nullptr);
+        SystemAssert(pipelineState != nullptr);
 
         commandList->DeviceObject->SetPipelineState(pipelineState.Get());
         commandList->DeviceObject->SetGraphicsRootSignature(shader->RootSignature.Get());
@@ -763,7 +763,7 @@ CommandAllocatorPoolItem* Direct3D12GetCommandAllocator(Direct3D12CommandQueue* 
         }
         else
         {
-            assert(commandAllocatorPoolItem->IsInUse == false);
+            SystemAssert(commandAllocatorPoolItem->IsInUse == false);
 
             if (commandAllocatorPoolItem->Fence.FenceValue > 0)
             {
@@ -819,7 +819,7 @@ Direct3D12CommandList* Direct3D12GetCommandList(Direct3D12CommandQueue* commandQ
     }
     else
     {
-        assert(commandListPoolItem->CommandList);
+        SystemAssert(commandListPoolItem->CommandList);
         auto commandList = (Direct3D12CommandList*)commandListPoolItem->CommandList;
 
         if (commandList->IsUsed)
