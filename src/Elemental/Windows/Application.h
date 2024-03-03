@@ -1,13 +1,19 @@
 #pragma once
 
 #include "Elemental.h"
+#include "SystemMemory.h"
 
-struct WindowsApplication
+struct ApplicationData
 {
     HINSTANCE ApplicationInstance;
 };
 
-struct WindowsApplicationFull
+struct ApplicationDataFull
 {
     ElemApplicationStatus Status;
 };
+
+extern MemoryArena ApplicationMemoryArena;
+
+ApplicationData* GetApplicationData(ElemApplication application);
+ApplicationDataFull* GetApplicationDataFull(ElemApplication application);

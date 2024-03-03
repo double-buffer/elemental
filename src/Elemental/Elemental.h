@@ -19,6 +19,7 @@ typedef uint64_t ElemHandle;
  * Handle that represents an elemental application. 
  */
 typedef ElemHandle ElemApplication;
+typedef ElemHandle ElemWindow;
 
 /**
  * Enumerates the types of log messages.
@@ -51,15 +52,6 @@ typedef enum
 } ElemLogMessageCategory;
 
 /**
- * Defines a function pointer type for log handling.
- * @param messageType The type of the log message.
- * @param category The category of the log message.
- * @param function The function where the log was triggered.
- * @param message The log message.
- */
-typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message);
-
-/**
  * Represents the status of an application.
  */
 typedef enum
@@ -69,6 +61,38 @@ typedef enum
     // Closing status.
     ElemApplicationStatus_Closing = 1
 } ElemApplicationStatus;
+
+typedef enum
+{
+    ElemWindowState_Normal = 0,
+    ElemWindowState_Minimized = 1,
+    ElemWindowState_Maximized = 2,
+    ElemWindowState_FullScreen = 3
+} ElemWindowState;
+
+typedef struct
+{
+    const char* Title;
+    int32_t Width;
+    int32_t Height;
+    ElemWindowState WindowState;
+} ElemWindowOptions;
+
+typedef struct
+{
+    int32_t Width;
+    int32_t Height;
+    float UIScale;
+} ElemWindowSize;
+
+/**
+ * Defines a function pointer type for log handling.
+ * @param messageType The type of the log message.
+ * @param category The category of the log message.
+ * @param function The function where the log was triggered.
+ * @param message The log message.
+ */
+typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message);
 
 /**
  * Defines a function pointer type for application run handling.
@@ -91,17 +115,28 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 ElemAPI ElemApplication ElemCreateApplication(const char* applicationName);
 
 /**
+ * Frees resources associated with the given application.
+ * @param application The application to free.
+ */
+ElemAPI void ElemFreeApplication(ElemApplication application);
+
+/**
  * Runs the specified application with the provided run handler.
  * @param application The application to run.
  * @param runHandler The function to call on each run iteration.
  */
 ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler);
 
-/**
- * Frees resources associated with the given application.
- * @param application The application to free.
- */
-ElemAPI void ElemFreeApplication(ElemApplication application);
+
+ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options);
+
+ElemAPI void ElemFreeWindow(ElemWindow window);
+
+ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window);
+
+ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
+
+ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
 
 
 //------------------------------------------------------------------------

@@ -12,7 +12,6 @@ endif()
 
 add_compile_options(-Wno-unused-parameter)
 add_compile_options(-Wno-missing-field-initializers)
-add_compile_options(-Wno-gnu-zero-variadic-macro-arguments)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
@@ -46,3 +45,4 @@ add_subdirectory(tests/SystemFunctionsTests)
 add_subdirectory(tests/ApplicationTests)
 
 add_subdirectory(samples/01-HelloWorld)
+add_subdirectory(samples/02-HelloWindow)

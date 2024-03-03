@@ -23,8 +23,13 @@ typedef struct ElementalFunctions
 {
     void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
     ElemApplication (*ElemCreateApplication)(const char*);
-    void (*ElemRunApplication)(ElemApplication, ElemRunHandlerPtr);
     void (*ElemFreeApplication)(ElemApplication);
+    void (*ElemRunApplication)(ElemApplication, ElemRunHandlerPtr);
+    ElemWindow (*ElemCreateWindow)(ElemApplication, const ElemWindowOptions*);
+    void (*ElemFreeWindow)(ElemWindow);
+    ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
+    void (*ElemSetWindowTitle)(ElemWindow, const char*);
+    void (*ElemSetWindowState)(ElemWindow, ElemWindowState);
     ElemGraphicsDevice (*ElemCreateGraphicsDevice)(void);
     void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
     
@@ -76,8 +81,13 @@ static bool LoadFunctionPointers(void)
 
     elementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetFunctionPointer("ElemConfigureLogHandler");
     elementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetFunctionPointer("ElemCreateApplication");
-    elementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
     elementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetFunctionPointer("ElemFreeApplication");
+    elementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
+    elementalFunctions.ElemCreateWindow = (ElemWindow (*)(ElemApplication, const ElemWindowOptions*))GetFunctionPointer("ElemCreateWindow");
+    elementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetFunctionPointer("ElemFreeWindow");
+    elementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetFunctionPointer("ElemGetWindowRenderSize");
+    elementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetFunctionPointer("ElemSetWindowTitle");
+    elementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetFunctionPointer("ElemSetWindowState");
     elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(void))GetFunctionPointer("ElemCreateGraphicsDevice");
     elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
     
@@ -140,6 +150,12 @@ static inline void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
         return;
     }
 
+    if (!elementalFunctions.ElemConfigureLogHandler) 
+    {
+        assert(elementalFunctions.ElemConfigureLogHandler);
+        return;
+    }
+
     elementalFunctions.ElemConfigureLogHandler(logHandler);
 }
 
@@ -151,18 +167,13 @@ static inline ElemApplication ElemCreateApplication(const char* applicationName)
         return (ElemApplication){0};
     }
 
-    return elementalFunctions.ElemCreateApplication(applicationName);
-}
-
-static inline void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
-{
-    if (!LoadFunctionPointers()) 
+    if (!elementalFunctions.ElemCreateApplication) 
     {
-        assert(library);
-        return;
+        assert(elementalFunctions.ElemCreateApplication);
+        return (ElemApplication){0};
     }
 
-    elementalFunctions.ElemRunApplication(application, runHandler);
+    return elementalFunctions.ElemCreateApplication(applicationName);
 }
 
 static inline void ElemFreeApplication(ElemApplication application)
@@ -173,7 +184,115 @@ static inline void ElemFreeApplication(ElemApplication application)
         return;
     }
 
+    if (!elementalFunctions.ElemFreeApplication) 
+    {
+        assert(elementalFunctions.ElemFreeApplication);
+        return;
+    }
+
     elementalFunctions.ElemFreeApplication(application);
+}
+
+static inline void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemRunApplication) 
+    {
+        assert(elementalFunctions.ElemRunApplication);
+        return;
+    }
+
+    elementalFunctions.ElemRunApplication(application, runHandler);
+}
+
+static inline ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return (ElemWindow){0};
+    }
+
+    if (!elementalFunctions.ElemCreateWindow) 
+    {
+        assert(elementalFunctions.ElemCreateWindow);
+        return (ElemWindow){0};
+    }
+
+    return elementalFunctions.ElemCreateWindow(application, options);
+}
+
+static inline void ElemFreeWindow(ElemWindow window)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemFreeWindow) 
+    {
+        assert(elementalFunctions.ElemFreeWindow);
+        return;
+    }
+
+    elementalFunctions.ElemFreeWindow(window);
+}
+
+static inline ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return (ElemWindowSize){0};
+    }
+
+    if (!elementalFunctions.ElemGetWindowRenderSize) 
+    {
+        assert(elementalFunctions.ElemGetWindowRenderSize);
+        return (ElemWindowSize){0};
+    }
+
+    return elementalFunctions.ElemGetWindowRenderSize(window);
+}
+
+static inline void ElemSetWindowTitle(ElemWindow window, const char* title)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemSetWindowTitle) 
+    {
+        assert(elementalFunctions.ElemSetWindowTitle);
+        return;
+    }
+
+    elementalFunctions.ElemSetWindowTitle(window, title);
+}
+
+static inline void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemSetWindowState) 
+    {
+        assert(elementalFunctions.ElemSetWindowState);
+        return;
+    }
+
+    elementalFunctions.ElemSetWindowState(window, windowState);
 }
 
 static inline ElemGraphicsDevice ElemCreateGraphicsDevice(void)
@@ -181,6 +300,12 @@ static inline ElemGraphicsDevice ElemCreateGraphicsDevice(void)
     if (!LoadFunctionPointers()) 
     {
         assert(library);
+        return (ElemGraphicsDevice){0};
+    }
+
+    if (!elementalFunctions.ElemCreateGraphicsDevice) 
+    {
+        assert(elementalFunctions.ElemCreateGraphicsDevice);
         return (ElemGraphicsDevice){0};
     }
 
@@ -192,6 +317,12 @@ static inline void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     if (!LoadFunctionPointers()) 
     {
         assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemFreeGraphicsDevice) 
+    {
+        assert(elementalFunctions.ElemFreeGraphicsDevice);
         return;
     }
 

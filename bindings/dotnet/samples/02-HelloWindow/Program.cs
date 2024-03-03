@@ -1,24 +1,26 @@
 ﻿using Elemental;
 
-using var applicationService = new NativeApplicationService();
-using var application = applicationService.CreateApplication("Hello Window");
+var applicationService = new ApplicationService();
+applicationService.ConfigureLogHandler(DefaultLogHandlers.ConsoleLogHandler);
 
-using var window = applicationService.CreateWindow(application, new NativeWindowOptions
+using var application = applicationService.CreateApplication("Hello Window"u8);
+
+using var window = applicationService.CreateWindow(application, new WindowOptions
 {
-    Title = "Hello Window!",
+    Title = "Hello Windows!"u8,
     Width = 1280,
     Height = 720
 });
 
 applicationService.RunApplication(application, (status) =>
 {
-    if (status.IsClosing)
+    if (status == ApplicationStatus.Closing)
     {
         Console.WriteLine("Closing Application...");
     }
 
     var renderSize = applicationService.GetWindowRenderSize(window);
-    applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: {renderSize})");
+    applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: {renderSize.Width})");
 
     Thread.Sleep(5);
 

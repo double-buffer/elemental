@@ -133,6 +133,12 @@ public class CLoaderCodeGenerator : ICodeGenerator
             return (##RETURN_TYPE##){0};
         }
 
+        if (!elementalFunctions.##FUNCTION_NAME##) 
+        {
+            assert(elementalFunctions.##FUNCTION_NAME##);
+            return (##RETURN_TYPE##){0};
+        }
+
         return elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
     """;
 
@@ -140,6 +146,12 @@ public class CLoaderCodeGenerator : ICodeGenerator
         if (!LoadFunctionPointers()) 
         {
             assert(library);
+            return;
+        }
+
+        if (!elementalFunctions.##FUNCTION_NAME##) 
+        {
+            assert(elementalFunctions.##FUNCTION_NAME##);
             return;
         }
 

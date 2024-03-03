@@ -11,6 +11,9 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     [GeneratedRegex(@"((?:\bconst\b\s+)?[\w&]+(?:\s*\*+\s*|\s+))(?:(\w+)\s*)\b")]
     private static partial Regex FunctionPointerParameterRegex();
 
+    [GeneratedRegex(@"(?:const\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\*")]
+    private static partial Regex ConstStructPointerRegex();
+
     private const string HandlerMarshallerTemplate = """
         [CustomMarshaller(typeof(##TYPENAME##), MarshalMode.ManagedToUnmanagedIn, typeof(##TYPENAME##Marshaller))]
         internal static unsafe class ##TYPENAME##Marshaller
@@ -514,6 +517,19 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         stringBuilder.AppendLine("}");
     }
 
+    private bool NeedCustomMarshaller(CppClass structType)
+    {
+        foreach (var field in structType.Fields)
+        {
+            if (MapType(field.Type).Contains("ReadOnlySpan"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void GenerateStruct(CppType type, string typeName, StringBuilder stringBuilder)
     {
         var structType = type as CppClass;
@@ -528,7 +544,14 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             GenerateComment(stringBuilder, structType.Comment, 0);
         }
 
-        stringBuilder.AppendLine($"public record struct {typeName}");
+        var needsCustomMarshaller = NeedCustomMarshaller(structType);
+
+        if (needsCustomMarshaller)
+        {
+            stringBuilder.AppendLine($"[NativeMarshalling(typeof({typeName}Marshaller))]");
+        }
+
+        stringBuilder.AppendLine($"public ref struct {typeName}");
         stringBuilder.AppendLine("{");
 
         var firstField = true;
@@ -554,6 +577,86 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
 
         stringBuilder.AppendLine("}");
+
+        if (needsCustomMarshaller)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine($"[CustomMarshaller(typeof({typeName}), MarshalMode.ManagedToUnmanagedIn, typeof({typeName}Marshaller))]");
+            stringBuilder.AppendLine($"internal static unsafe class {typeName}Marshaller");
+            stringBuilder.AppendLine("{");
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine($"internal unsafe struct {typeName}Unsafe");
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("{");
+
+            firstField = true;
+            var unsafeFields = new List<CppField>();
+
+            foreach (var field in structType.Fields)
+            {
+                if (!firstField)
+                {
+                    stringBuilder.AppendLine();    
+                }
+                else
+                {
+                    firstField = false;
+                }
+
+                Indent(stringBuilder, 2);
+                stringBuilder.AppendLine($"public {MapType(field.Type.GetDisplayName(), isUnsafe: true)} {field.Name} {{ get; set; }}");
+
+                if (field.Type.GetDisplayName().Contains("const char*"))
+                {
+                    unsafeFields.Add(field);
+                }
+            }
+
+            foreach (var unsafeField in unsafeFields)
+            {
+                Indent(stringBuilder, 2);
+                stringBuilder.AppendLine($"public nint {unsafeField.Name}GCHandle {{ get; set; }}");
+            }
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("}");
+            stringBuilder.AppendLine();
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine($"public static {typeName}Unsafe ConvertToUnmanaged({typeName} managed)");
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("{");
+
+            Indent(stringBuilder, 2);
+            stringBuilder.AppendLine($"var result = new {typeName}Unsafe();");
+
+            foreach (var unsafeField in unsafeFields)
+            {
+                stringBuilder.AppendLine($"var {unsafeField.Name}Handle = GCHandle.Alloc(managed.{unsafeField.Name}.ToArray(), GCHandleType.Pinned);");
+                stringBuilder.AppendLine($"result.{unsafeField.Name} = (byte*){unsafeField.Name}Handle.AddrOfPinnedObject();");
+                stringBuilder.AppendLine($"result.{unsafeField.Name}GCHandle = GCHandle.ToIntPtr({unsafeField.Name}Handle);");
+            }
+
+            Indent(stringBuilder, 2);
+            stringBuilder.AppendLine("return result;");
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("}");
+            stringBuilder.AppendLine();
+    
+            Indent(stringBuilder);
+            stringBuilder.AppendLine($"public static void Free({typeName}Unsafe _)");
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("{");
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("}");
+            
+            stringBuilder.AppendLine("}");
+        }
     }
 
     private bool GenerateModuleFunctionDefinition(StringBuilder stringBuilder, CppFunction function, bool generateStringParameters, bool appendPublic = false)
@@ -680,16 +783,17 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         return MapType(type.GetDisplayName());    
     }
 
-    private string MapType(string typeName)
+    private string MapType(string typeName, bool isUnsafe = false)
     {
         typeName = typeName.Replace("Elem", string.Empty);
 
         return typeName switch
         {
             "Application" => "ElementalApplication",
-            "const char*" => "ReadOnlySpan<byte>",
+            "const char*" => !isUnsafe ? "ReadOnlySpan<byte>" : "byte*",
             "unsigned long long" => "UInt64",
             "unsigned int" => "uint",
+            string value when ConstStructPointerRegex().IsMatch(value) => "in " + ConstStructPointerRegex().Match(value).Groups[1].Value,
             string value when value.Contains("HandlerPtr") => typeName.Replace("Ptr", string.Empty),
             _ => typeName
         };

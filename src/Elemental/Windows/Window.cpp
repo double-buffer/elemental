@@ -1,12 +1,116 @@
 #include "Window.h"
 
 #include "Libs/Win32DarkMode/DarkMode.h"
-
 #include "SystemFunctions.h"
+#include "Application.h"
 
 // TODO: To Remove
 #include "Win32Application.h"
 #include "Win32Window.h"
+
+
+ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto width = 1280;
+    auto height = 720;
+    auto title = "Elemental Window";
+
+    if (options != nullptr)
+    {
+        if (options->Title)
+        {
+            title = options->Title;
+        }
+
+        if (options->Width != 0)
+        {
+            width = options->Width;
+        }
+
+        if (options->Height != 0)
+        {
+            height = options->Height;
+        }
+    }
+
+    auto applicationData = GetApplicationData(application);
+
+    auto nativeWindow = new Win32Window();
+    
+    auto window = CreateWindowEx(
+        WS_EX_DLGMODALFRAME,
+        L"ElementalWindowClass",
+        SystemConvertUtf8ToWideChar(stackMemoryArena, title).Pointer,
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        width,
+        height,
+        nullptr,
+        nullptr,
+        applicationData->ApplicationInstance,
+        nativeWindow);
+   
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+    auto mainScreenDpi = GetDpiForWindow(window);
+    auto mainScreenScaling = static_cast<float>(mainScreenDpi) / 96.0f;
+
+    RECT clientRectangle;
+    clientRectangle.left = 0;
+    clientRectangle.top = 0;
+    clientRectangle.right = (LONG)((float)width * mainScreenScaling);
+    clientRectangle.bottom = (LONG)((float)height * mainScreenScaling);
+
+    AdjustWindowRectExForDpi(&clientRectangle, WS_OVERLAPPEDWINDOW, false, 0, mainScreenDpi);
+
+    width = (int32_t)(clientRectangle.right - clientRectangle.left);
+    height = (int32_t)(clientRectangle.bottom - clientRectangle.top);
+
+    // Compute the position of the window to center it 
+    RECT desktopRectangle;
+    GetClientRect(GetDesktopWindow(), &desktopRectangle);
+    int32_t x = (int32_t)((desktopRectangle.right / 2) - (width / 2));
+    int32_t y = (int32_t)((desktopRectangle.bottom / 2) - (height / 2));
+
+    // Dark mode
+    // TODO: Don't include the full library for this
+    InitDarkMode();
+    BOOL value = TRUE;
+    
+    if (ShouldAppUseDarkMode())
+    {
+        DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+    }
+
+    SetWindowPos(window, nullptr, x, y, width, height, 0);
+    ShowWindow(window, SW_NORMAL);
+
+    return 0;
+}
+
+ElemAPI void ElemFreeWindow(ElemWindow window)
+{
+}
+
+ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
+{
+    return {};
+}
+
+ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
+{
+    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, title);
+}
+
+ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
+{
+}
+
+
+
+
 
 DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions* options)
 {

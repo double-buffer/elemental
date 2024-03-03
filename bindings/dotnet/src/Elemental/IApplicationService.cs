@@ -26,15 +26,27 @@ public interface IApplicationService
     ElementalApplication CreateApplication(string applicationName);
 
     /// <summary>
+    /// Frees resources associated with the given application.
+    /// </summary>
+    /// <param name="application">The application to free.</param>
+    void FreeApplication(ElementalApplication application);
+
+    /// <summary>
     /// Runs the specified application with the provided run handler.
     /// </summary>
     /// <param name="application">The application to run.</param>
     /// <param name="runHandler">The function to call on each run iteration.</param>
     void RunApplication(ElementalApplication application, RunHandler runHandler);
 
-    /// <summary>
-    /// Frees resources associated with the given application.
-    /// </summary>
-    /// <param name="application">The application to free.</param>
-    void FreeApplication(ElementalApplication application);
+    Window CreateWindow(ElementalApplication application, in WindowOptions options);
+
+    void FreeWindow(Window window);
+
+    WindowSize GetWindowRenderSize(Window window);
+
+    void SetWindowTitle(Window window, ReadOnlySpan<byte> title);
+
+    void SetWindowTitle(Window window, string title);
+
+    void SetWindowState(Window window, WindowState windowState);
 }

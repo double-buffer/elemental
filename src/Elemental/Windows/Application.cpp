@@ -5,8 +5,8 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-static MemoryArena applicationMemoryArena;
-static SystemDataPool<WindowsApplication, WindowsApplicationFull> applicationPool;
+static MemoryArena ApplicationMemoryArena;
+static SystemDataPool<ApplicationData, ApplicationDataFull> applicationPool;
 
 // TODO: IMPORTANT: Move common code to his own project?
 
@@ -15,10 +15,10 @@ static SystemDataPool<WindowsApplication, WindowsApplicationFull> applicationPoo
 
 void InitMemory()
 {
-    if (applicationMemoryArena.Storage == nullptr)
+    if (ApplicationMemoryArena.Storage == nullptr)
     {
-        applicationMemoryArena = SystemAllocateMemoryArena();
-        applicationPool = SystemCreateDataPool<WindowsApplication, WindowsApplicationFull>(applicationMemoryArena, 10);
+        ApplicationMemoryArena = SystemAllocateMemoryArena();
+        applicationPool = SystemCreateDataPool<ApplicationData, ApplicationDataFull>(ApplicationMemoryArena, 10);
 
         SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
 
@@ -26,6 +26,16 @@ void InitMemory()
         SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode");
         #endif
     }
+}
+
+ApplicationData* GetApplicationData(ElemApplication application)
+{
+    return SystemGetDataPoolItem(applicationPool, application);
+}
+
+ApplicationDataFull* GetApplicationDataFull(ElemApplication application)
+{
+    return SystemGetDataPoolItemFull(applicationPool, application);
 }
 
 void ProcessMessages(ElemApplication application)
@@ -36,9 +46,9 @@ void ProcessMessages(ElemApplication application)
 	{
         if (message.message == WM_QUIT)
         {
-            auto windowsApplicationFull = SystemGetDataPoolItemFull(applicationPool, application);
-            SystemAssert(windowsApplicationFull);
-            windowsApplicationFull->Status = ElemApplicationStatus_Closing;
+            auto applicationDataFull = SystemGetDataPoolItemFull(applicationPool, application);
+            SystemAssert(applicationDataFull);
+            applicationDataFull->Status = ElemApplicationStatus_Closing;
         }
 
         TranslateMessage(&message);
@@ -118,24 +128,24 @@ ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
 {
     InitMemory();
 
-    WindowsApplication windowsApplication = {};
-    windowsApplication.ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
+    ApplicationData applicationData = {};
+    applicationData.ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
 
-    WindowsApplicationFull windowsApplicationFull = {};
-    windowsApplicationFull.Status = ElemApplicationStatus_Active;
+    ApplicationDataFull applicationDataFull = {};
+    applicationDataFull.Status = ElemApplicationStatus_Active;
 
     WNDCLASS windowClass {};
     windowClass.style = CS_HREDRAW | CS_VREDRAW;
     windowClass.lpfnWndProc = WindowCallBack;
-	windowClass.hInstance = windowsApplication.ApplicationInstance;
+	windowClass.hInstance = applicationData.ApplicationInstance;
 	windowClass.lpszClassName = L"ElementalWindowClass";
 	windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
     windowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
 
     RegisterClass(&windowClass);
 
-    auto handle = SystemAddDataPoolItem(applicationPool, windowsApplication); 
-    SystemAddDataPoolItemFull(applicationPool, handle, windowsApplicationFull);
+    auto handle = SystemAddDataPoolItem(applicationPool, applicationData); 
+    SystemAddDataPoolItemFull(applicationPool, handle, applicationDataFull);
     return handle;
 }
 
@@ -152,12 +162,12 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
     {
         ProcessMessages(application);
 
-        auto windowsApplicationFull = SystemGetDataPoolItemFull(applicationPool, application);
-        SystemAssert(windowsApplicationFull);
+        auto applicationDataFull = SystemGetDataPoolItemFull(applicationPool, application);
+        SystemAssert(applicationDataFull);
 
-        canRun = runHandler(windowsApplicationFull->Status);
+        canRun = runHandler(applicationDataFull->Status);
 
-        if (windowsApplicationFull->Status == ElemApplicationStatus_Closing)
+        if (applicationDataFull->Status == ElemApplicationStatus_Closing)
         {
             canRun = false;
         }

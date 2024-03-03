@@ -33,6 +33,15 @@ public class ApplicationService : IApplicationService
     }
 
     /// <summary>
+    /// Frees resources associated with the given application.
+    /// </summary>
+    /// <param name="application">The application to free.</param>
+    public void FreeApplication(ElementalApplication application)
+    {
+        ApplicationServiceInterop.FreeApplication(application);
+    }
+
+    /// <summary>
     /// Runs the specified application with the provided run handler.
     /// </summary>
     /// <param name="application">The application to run.</param>
@@ -42,13 +51,34 @@ public class ApplicationService : IApplicationService
         ApplicationServiceInterop.RunApplication(application, runHandler);
     }
 
-    /// <summary>
-    /// Frees resources associated with the given application.
-    /// </summary>
-    /// <param name="application">The application to free.</param>
-    public void FreeApplication(ElementalApplication application)
+    public Window CreateWindow(ElementalApplication application, in WindowOptions options)
     {
-        ApplicationServiceInterop.FreeApplication(application);
+        return ApplicationServiceInterop.CreateWindow(application, options);
+    }
+
+    public void FreeWindow(Window window)
+    {
+        ApplicationServiceInterop.FreeWindow(window);
+    }
+
+    public WindowSize GetWindowRenderSize(Window window)
+    {
+        return ApplicationServiceInterop.GetWindowRenderSize(window);
+    }
+
+    public void SetWindowTitle(Window window, ReadOnlySpan<byte> title)
+    {
+        ApplicationServiceInterop.SetWindowTitle(window, title);
+    }
+
+    public void SetWindowTitle(Window window, string title)
+    {
+        ApplicationServiceInterop.SetWindowTitle(window, Encoding.UTF8.GetBytes(title));
+    }
+
+    public void SetWindowState(Window window, WindowState windowState)
+    {
+        ApplicationServiceInterop.SetWindowState(window, windowState);
     }
 
 }
