@@ -38,5 +38,5 @@ result.TitleGCHandle = GCHandle.ToIntPtr(TitleHandle);
 
     public static void Free(WindowOptionsUnsafe _)
     {
-    } 
+    }
 }

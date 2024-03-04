@@ -9,6 +9,7 @@
    #include <windows.h>
 #else
    #include <dlfcn.h>
+   #include <unistd.h>
 #endif
 
 #if defined(_WIN32)
@@ -164,13 +165,27 @@ static inline ElemApplication ElemCreateApplication(const char* applicationName)
     if (!LoadFunctionPointers()) 
     {
         assert(library);
-        return (ElemApplication){0};
+
+        #ifdef __cplusplus
+        ElemApplication result = {};
+        #else
+        ElemApplication result = (ElemApplication){0};
+        #endif
+
+        return result;
     }
 
     if (!elementalFunctions.ElemCreateApplication) 
     {
         assert(elementalFunctions.ElemCreateApplication);
-        return (ElemApplication){0};
+
+        #ifdef __cplusplus
+        ElemApplication result = {};
+        #else
+        ElemApplication result = (ElemApplication){0};
+        #endif
+
+        return result;
     }
 
     return elementalFunctions.ElemCreateApplication(applicationName);
@@ -215,13 +230,27 @@ static inline ElemWindow ElemCreateWindow(ElemApplication application, const Ele
     if (!LoadFunctionPointers()) 
     {
         assert(library);
-        return (ElemWindow){0};
+
+        #ifdef __cplusplus
+        ElemWindow result = {};
+        #else
+        ElemWindow result = (ElemWindow){0};
+        #endif
+
+        return result;
     }
 
     if (!elementalFunctions.ElemCreateWindow) 
     {
         assert(elementalFunctions.ElemCreateWindow);
-        return (ElemWindow){0};
+
+        #ifdef __cplusplus
+        ElemWindow result = {};
+        #else
+        ElemWindow result = (ElemWindow){0};
+        #endif
+
+        return result;
     }
 
     return elementalFunctions.ElemCreateWindow(application, options);
@@ -249,13 +278,27 @@ static inline ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     if (!LoadFunctionPointers()) 
     {
         assert(library);
-        return (ElemWindowSize){0};
+
+        #ifdef __cplusplus
+        ElemWindowSize result = {};
+        #else
+        ElemWindowSize result = (ElemWindowSize){0};
+        #endif
+
+        return result;
     }
 
     if (!elementalFunctions.ElemGetWindowRenderSize) 
     {
         assert(elementalFunctions.ElemGetWindowRenderSize);
-        return (ElemWindowSize){0};
+
+        #ifdef __cplusplus
+        ElemWindowSize result = {};
+        #else
+        ElemWindowSize result = (ElemWindowSize){0};
+        #endif
+
+        return result;
     }
 
     return elementalFunctions.ElemGetWindowRenderSize(window);
@@ -300,13 +343,27 @@ static inline ElemGraphicsDevice ElemCreateGraphicsDevice(void)
     if (!LoadFunctionPointers()) 
     {
         assert(library);
-        return (ElemGraphicsDevice){0};
+
+        #ifdef __cplusplus
+        ElemGraphicsDevice result = {};
+        #else
+        ElemGraphicsDevice result = (ElemGraphicsDevice){0};
+        #endif
+
+        return result;
     }
 
     if (!elementalFunctions.ElemCreateGraphicsDevice) 
     {
         assert(elementalFunctions.ElemCreateGraphicsDevice);
-        return (ElemGraphicsDevice){0};
+
+        #ifdef __cplusplus
+        ElemGraphicsDevice result = {};
+        #else
+        ElemGraphicsDevice result = (ElemGraphicsDevice){0};
+        #endif
+
+        return result;
     }
 
     return elementalFunctions.ElemCreateGraphicsDevice();

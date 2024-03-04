@@ -3,6 +3,7 @@
 #include "Elemental.h"
 #include "SystemMemory.h"
 
+// TODO: Refactor with prefix for Win32
 struct ApplicationData
 {
     HINSTANCE ApplicationInstance;

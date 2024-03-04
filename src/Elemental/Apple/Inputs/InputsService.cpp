@@ -53,7 +53,7 @@ void DeviceMatchingCallback(void* context, IOReturn result, void* sender, IOHIDD
             return;
         }
 
-        CFIndex reportSize = (CFIndex)reportSizeNumber;
+        //CFIndex reportSize = (CFIndex)reportSizeNumber;
 
         HidInputDevice hidInputDevice = {};
         hidInputDevice.DeviceId = hidInputDevicesCount;

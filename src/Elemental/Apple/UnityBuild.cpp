@@ -1,7 +1,7 @@
 #include "CircularList.h"
 
-#include "MacOSApplicationDelegate.cpp"
-#include "NativeApplicationService.cpp"
+#include "MacOSApplication.cpp"
+#include "MacOSWindow.cpp"
 #include "Graphics/GraphicsService.cpp"
 #include "Graphics/Metal/MetalGraphicsService.cpp"
 #include "Inputs/InputsService.cpp"
@@ -11,5 +11,6 @@
 #include "SystemMemory.cpp"
 #include "SystemFunctions.cpp"
 #include "SystemDictionary.cpp"
+#include "SystemDataPool.cpp"
 #include "SystemInputs.cpp"
 

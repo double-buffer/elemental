@@ -14,6 +14,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
            #include <windows.h>
         #else
            #include <dlfcn.h>
+           #include <unistd.h>
         #endif
 
         #if defined(_WIN32)
@@ -130,13 +131,27 @@ public class CLoaderCodeGenerator : ICodeGenerator
         if (!LoadFunctionPointers()) 
         {
             assert(library);
-            return (##RETURN_TYPE##){0};
+
+            #ifdef __cplusplus
+            ##RETURN_TYPE## result = {};
+            #else
+            ##RETURN_TYPE## result = (##RETURN_TYPE##){0};
+            #endif
+
+            return result;
         }
 
         if (!elementalFunctions.##FUNCTION_NAME##) 
         {
             assert(elementalFunctions.##FUNCTION_NAME##);
-            return (##RETURN_TYPE##){0};
+
+            #ifdef __cplusplus
+            ##RETURN_TYPE## result = {};
+            #else
+            ##RETURN_TYPE## result = (##RETURN_TYPE##){0};
+            #endif
+
+            return result;
         }
 
         return elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);

@@ -1,11 +1,18 @@
 #pragma once
 
-struct MacOSWindow
+#include "Elemental.h"
+
+struct MacOSWindowData
 {
     NS::SharedPtr<NS::Window> WindowHandle;
+};
+
+struct MacOSWindowDataFull
+{
     uint32_t Width;
     uint32_t Height;
     float_t UIScale;
 };
 
-DllExport void Native_SetWindowState(MacOSWindow* window, NativeWindowState windowState);
+MacOSWindowData* GetMacOSWindowData(ElemWindow window);
+MacOSWindowDataFull* GetMacOSWindowDataFull(ElemWindow window);

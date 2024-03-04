@@ -6,6 +6,7 @@
 #include "MetalTexture.h"
 
 #include "SystemMemory.h"
+#include "SystemFunctions.h"
 #include "SystemLogging.h"
 
 MemoryArena metalMemoryArena;
@@ -228,7 +229,7 @@ DllExport Fence Native_ExecuteCommandLists(void* commandQueuePointer, void** com
 
         waitCommandBuffer->setLabel(MTLSTR("WaitCommandBuffer"));
 
-        for (uint32_t i = 0; i < fenceToWaitCount; i++)
+        for (int32_t i = 0; i < fenceToWaitCount; i++)
         {
             auto fenceToWait = fencesToWait[i];
             auto commandQueueToWait = (MetalCommandQueue*)fenceToWait.CommandQueuePointer;
@@ -241,7 +242,7 @@ DllExport Fence Native_ExecuteCommandLists(void* commandQueuePointer, void** com
 
     uint64_t fenceValue = 0;
 
-    for (uint32_t i = 0; i < commandListCount; i++)
+    for (int32_t i = 0; i < commandListCount; i++)
     {
         auto commandList = (MetalCommandList*)commandLists[i];
 
@@ -296,13 +297,14 @@ DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePo
     auto graphicsDevice = commandQueue->GraphicsDevice;
     
     // TODO: Refactor: this is MacOS specific code!
-    auto window = (MacOSWindow*)windowPointer;
-    auto contentView = window->WindowHandle->contentView();
+    //auto window = (MacOSWindow*)windowPointer;
+    //auto contentView = window->WindowHandle->contentView();
 
     auto metalLayer = NS::TransferPtr(CA::MetalLayer::layer());
-    contentView->setLayer(metalLayer.get());
+    //contentView->setLayer(metalLayer.get());
     
-    auto renderSize = Native_GetWindowRenderSize((MacOSWindow*)windowPointer);
+    // TODO: To Change
+    /*auto renderSize = {};//ElemGetWindowRenderSize((MacOSWindow*)windowPointer);
 
     if (options->Width != 0) 
     {
@@ -317,7 +319,7 @@ DllExport void* Native_CreateSwapChain(void* windowPointer, void* commandQueuePo
     metalLayer->setDevice(graphicsDevice->MetalDevice.get());
     metalLayer->setPixelFormat(MTL::PixelFormatBGRA8Unorm_sRGB);
     metalLayer->setFramebufferOnly(true);
-    metalLayer->setDrawableSize(CGSizeMake(renderSize.Width, renderSize.Height));
+    metalLayer->setDrawableSize(CGSizeMake(renderSize.Width, renderSize.Height));*/
 
     auto swapChain = new MetalSwapChain();
     swapChain->GraphicsDevice = graphicsDevice;
@@ -419,7 +421,7 @@ DllExport void* Native_CreateShader(void* graphicsDevicePointer, ShaderPart* sha
     auto shader = new MetalShader();
     shader->GraphicsDevice = graphicsDevice;
 
-    for (uint32_t i = 0; i < shaderPartCount; i++)
+    for (int32_t i = 0; i < shaderPartCount; i++)
     {
         auto shaderPart = shaderParts[i];
 
@@ -691,12 +693,12 @@ DllExport void Native_DispatchMesh(void* commandListPointer, uint32_t threadGrou
         return;
     }
 
-    assert(commandList->CurrentShader->AmplificationShader.get() == nullptr 
+    SystemAssert(commandList->CurrentShader->AmplificationShader.get() == nullptr 
        || (commandList->CurrentShader->AmplificationThreadCount.width > 0 
         && commandList->CurrentShader->AmplificationThreadCount.height > 0 
         && commandList->CurrentShader->AmplificationThreadCount.depth > 0));
         
-    assert(commandList->CurrentShader->MeshShader.get() == nullptr 
+    SystemAssert(commandList->CurrentShader->MeshShader.get() == nullptr 
        || (commandList->CurrentShader->MeshThreadCount.width > 0 
         && commandList->CurrentShader->MeshThreadCount.height > 0 
         && commandList->CurrentShader->MeshThreadCount.depth > 0));

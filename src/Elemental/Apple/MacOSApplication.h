@@ -1,27 +1,32 @@
 #pragma once
 
-#include "ElementalOld.h"
+#include "Elemental.h"
+#include "SystemMemory.h"
 
-class MacOSApplicationDelegate;
+class MacOSApplicationDelegate : public NS::ApplicationDelegate
+{
+    public:
+        MacOSApplicationDelegate(ElemApplication application);
+        ~MacOSApplicationDelegate();
 
-struct MacOSApplication
+        bool applicationShouldTerminateAfterLastWindowClosed(NS::Application* pSender ) override;
+        NS::TerminateReply applicationShouldTerminate(NS::Application* pSender) override;
+
+    private:
+        ElemApplication _application;
+};
+
+struct MacOSApplicationData
+{
+};
+
+struct MacOSApplicationDataFull
 {
     MacOSApplicationDelegate* ApplicationDelegate;
-    NativeApplicationStatus Status;
-
-    MacOSApplication()
-    {
-        Status.Status = 0;
-        SetStatus(NativeApplicationStatusFlags::Active, 1);
-    }
-    
-    bool IsStatusActive(NativeApplicationStatusFlags flag) 
-    {
-        return (Status.Status & flag) != 0;
-    }
-    
-    void SetStatus(NativeApplicationStatusFlags flag, int value) 
-    {
-        Status.Status |= value << (flag - 1);
-    }
+    ElemApplicationStatus Status;
 };
+
+extern MemoryArena ApplicationMemoryArena;
+
+MacOSApplicationData* GetMacOSApplicationData(ElemApplication application);
+MacOSApplicationDataFull* GetMacOSApplicationDataFull(ElemApplication application);

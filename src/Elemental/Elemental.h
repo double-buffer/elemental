@@ -73,16 +73,17 @@ typedef enum
 typedef struct
 {
     const char* Title;
-    int32_t Width;
-    int32_t Height;
+    uint32_t Width;
+    uint32_t Height;
     ElemWindowState WindowState;
 } ElemWindowOptions;
 
 typedef struct
 {
-    int32_t Width;
-    int32_t Height;
+    uint32_t Width;
+    uint32_t Height;
     float UIScale;
+    ElemWindowState WindowState;
 } ElemWindowSize;
 
 /**

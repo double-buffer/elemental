@@ -5,14 +5,15 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-static MemoryArena ApplicationMemoryArena;
-static SystemDataPool<ApplicationData, ApplicationDataFull> applicationPool;
+MemoryArena ApplicationMemoryArena;
+SystemDataPool<ApplicationData, ApplicationDataFull> applicationPool;
 
 // TODO: IMPORTANT: Move common code to his own project?
 
 // TODO: OLD CODE
 //static SystemDictionary<HWND, WindowsWindow> windowMap;
 
+// TODO: Rename
 void InitMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
@@ -46,6 +47,7 @@ void ProcessMessages(ElemApplication application)
 	{
         if (message.message == WM_QUIT)
         {
+        // TODO: Use shorter verison
             auto applicationDataFull = SystemGetDataPoolItemFull(applicationPool, application);
             SystemAssert(applicationDataFull);
             applicationDataFull->Status = ElemApplicationStatus_Closing;
@@ -128,6 +130,7 @@ ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
 {
     InitMemory();
 
+    // TODO: Refactor
     ApplicationData applicationData = {};
     applicationData.ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
 
@@ -162,6 +165,7 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
     {
         ProcessMessages(application);
 
+        // TODO: Use shorter verison
         auto applicationDataFull = SystemGetDataPoolItemFull(applicationPool, application);
         SystemAssert(applicationDataFull);
 
