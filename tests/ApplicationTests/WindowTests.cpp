@@ -5,8 +5,8 @@
 UTEST(Window, CreateWindow) 
 {
     // Arrange
-    auto width = 1280u;
-    auto height = 720u;
+    auto width = 640u;
+    auto height = 480u;
 
     InitLog();
     auto application = ElemCreateApplication("TestApplication");
