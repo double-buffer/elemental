@@ -1,4 +1,4 @@
-#include "Application.h"
+#include "Win32Application.h"
 
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
@@ -6,7 +6,7 @@
 #include "SystemMemory.h"
 
 MemoryArena ApplicationMemoryArena;
-SystemDataPool<ApplicationData, ApplicationDataFull> applicationPool;
+SystemDataPool<Win32ApplicationData, Win32ApplicationDataFull> applicationPool;
 
 // TODO: IMPORTANT: Move common code to his own project?
 
@@ -14,12 +14,12 @@ SystemDataPool<ApplicationData, ApplicationDataFull> applicationPool;
 //static SystemDictionary<HWND, WindowsWindow> windowMap;
 
 // TODO: Rename
-void InitMemory()
+void InitApplicationMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
     {
         ApplicationMemoryArena = SystemAllocateMemoryArena();
-        applicationPool = SystemCreateDataPool<ApplicationData, ApplicationDataFull>(ApplicationMemoryArena, 10);
+        applicationPool = SystemCreateDataPool<Win32ApplicationData, Win32ApplicationDataFull>(ApplicationMemoryArena, 10);
 
         SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
 
@@ -29,12 +29,12 @@ void InitMemory()
     }
 }
 
-ApplicationData* GetApplicationData(ElemApplication application)
+Win32ApplicationData* GetApplicationData(ElemApplication application)
 {
     return SystemGetDataPoolItem(applicationPool, application);
 }
 
-ApplicationDataFull* GetApplicationDataFull(ElemApplication application)
+Win32ApplicationDataFull* GetApplicationDataFull(ElemApplication application)
 {
     return SystemGetDataPoolItemFull(applicationPool, application);
 }
@@ -47,8 +47,7 @@ void ProcessMessages(ElemApplication application)
 	{
         if (message.message == WM_QUIT)
         {
-        // TODO: Use shorter verison
-            auto applicationDataFull = SystemGetDataPoolItemFull(applicationPool, application);
+            auto applicationDataFull = GetApplicationDataFull(application);
             SystemAssert(applicationDataFull);
             applicationDataFull->Status = ElemApplicationStatus_Closing;
         }
@@ -128,27 +127,28 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
 
 ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
 {
-    InitMemory();
+    InitApplicationMemory();
 
-    // TODO: Refactor
-    ApplicationData applicationData = {};
-    applicationData.ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
-
-    ApplicationDataFull applicationDataFull = {};
-    applicationDataFull.Status = ElemApplicationStatus_Active;
+    auto instance = (HINSTANCE)GetModuleHandle(nullptr);
 
     WNDCLASS windowClass {};
     windowClass.style = CS_HREDRAW | CS_VREDRAW;
     windowClass.lpfnWndProc = WindowCallBack;
-	windowClass.hInstance = applicationData.ApplicationInstance;
+	windowClass.hInstance = instance;
 	windowClass.lpszClassName = L"ElementalWindowClass";
 	windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
     windowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
 
     RegisterClass(&windowClass);
 
-    auto handle = SystemAddDataPoolItem(applicationPool, applicationData); 
-    SystemAddDataPoolItemFull(applicationPool, handle, applicationDataFull);
+    auto handle = SystemAddDataPoolItem(applicationPool, {
+        .ApplicationInstance = instance
+    }); 
+
+    SystemAddDataPoolItemFull(applicationPool, handle, {
+        .Status = ElemApplicationStatus_Active
+    });
+
     return handle;
 }
 
@@ -165,8 +165,7 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
     {
         ProcessMessages(application);
 
-        // TODO: Use shorter verison
-        auto applicationDataFull = SystemGetDataPoolItemFull(applicationPool, application);
+        auto applicationDataFull = GetApplicationDataFull(application);
         SystemAssert(applicationDataFull);
 
         canRun = runHandler(applicationDataFull->Status);

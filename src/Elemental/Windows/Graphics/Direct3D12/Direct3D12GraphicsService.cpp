@@ -360,7 +360,7 @@ void Direct3D12FreeTexture(void* texturePointer)
 
 void* Direct3D12CreateSwapChain(void* windowPointer, void* commandQueuePointer, SwapChainOptions* options)
 {
-    auto window = (Win32Window*)windowPointer;
+    //auto window = (Win32Window*)nullptr;//windowPointer;
     auto commandQueue = (Direct3D12CommandQueue*)commandQueuePointer;
     auto graphicsDevice = commandQueue->GraphicsDevice;
 
@@ -368,9 +368,9 @@ void* Direct3D12CreateSwapChain(void* windowPointer, void* commandQueuePointer, 
 
     if (options->Width == 0 || options->Height == 0)
     {
-        auto windowRenderSize = Native_GetWindowRenderSize(window);
+        /*auto windowRenderSize = Native_GetWindowRenderSize(window);
         swapChainDesc.Width = windowRenderSize.Width;
-        swapChainDesc.Height = windowRenderSize.Height;
+        swapChainDesc.Height = windowRenderSize.Height;*/
     }
     else
     {
@@ -394,8 +394,8 @@ void* Direct3D12CreateSwapChain(void* windowPointer, void* commandQueuePointer, 
     
     auto swapChain = new Direct3D12SwapChain(graphicsDevice);
 
-    AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)window->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));  
-    AssertIfFailed(_dxgiFactory->MakeWindowAssociation((HWND)window->WindowHandle, DXGI_MWA_NO_ALT_ENTER)); 
+    AssertIfFailed(_dxgiFactory->CreateSwapChainForHwnd(commandQueue->DeviceObject.Get(), (HWND)/*window->WindowHandle*/0, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain->DeviceObject.GetAddressOf()));  
+    AssertIfFailed(_dxgiFactory->MakeWindowAssociation((HWND)/*window->WindowHandle*/0, DXGI_MWA_NO_ALT_ENTER)); 
  
     swapChain->DeviceObject->SetMaximumFrameLatency(options->MaximumFrameLatency);
     swapChain->CommandQueue = commandQueue;

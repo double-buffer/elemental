@@ -1,7 +1,7 @@
 #include "CircularList.h"
 
-#include "Application.cpp"
-#include "Window.cpp"
+#include "Win32Application.cpp"
+#include "Win32Window.cpp"
 #include "Graphics/Direct3D12/Direct3D12GraphicsService.cpp"
 #include "Vulkan/VulkanGraphicsService.cpp"
 #include "Graphics/GraphicsService.cpp"

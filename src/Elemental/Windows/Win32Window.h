@@ -1,13 +1,16 @@
 #pragma once
-#include "ElementalOld.h"
 
-struct Win32Window
+#include "Elemental.h"
+
+struct Win32WindowData
 {
     HWND WindowHandle;
-    WINDOWPLACEMENT WindowPlacement;
-    uint32_t Width;
-    uint32_t Height;
-    float UIScale;
 };
 
-DllExport void Native_SetWindowState(Win32Window *window, NativeWindowState windowState);
+struct Win32WindowDataFull
+{
+    WINDOWPLACEMENT WindowPlacement;
+};
+
+Win32WindowData* GetWin32WindowData(ElemWindow window);
+Win32WindowDataFull* GetWin32WindowDataFull(ElemWindow window);

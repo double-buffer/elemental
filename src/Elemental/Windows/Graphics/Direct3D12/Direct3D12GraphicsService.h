@@ -18,7 +18,6 @@
 // TODO: We need to forward declare all the other functions
 // TODO: Split that in multiple files
 
-NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow);
 static void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext);
 
 void Direct3D12WaitForFenceOnCpu(Fence fence);

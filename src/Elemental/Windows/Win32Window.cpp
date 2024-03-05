@@ -1,16 +1,33 @@
-#include "Window.h"
-
-#include "Libs/Win32DarkMode/DarkMode.h"
-#include "SystemFunctions.h"
-#include "Application.h"
-
-// TODO: To Remove
-#include "Win32Application.h"
 #include "Win32Window.h"
+#include "Win32Application.h"
+#include "SystemDataPool.h"
+#include "SystemFunctions.h"
+#include "Libs/Win32DarkMode/DarkMode.h"
 
+SystemDataPool<Win32WindowData, Win32WindowDataFull> windowDataPool;
+
+void InitWindowMemory()
+{
+    if (!windowDataPool.Storage)
+    {
+        windowDataPool = SystemCreateDataPool<Win32WindowData, Win32WindowDataFull>(ApplicationMemoryArena, 10);
+    }
+}
+
+Win32WindowData* GetWin32WindowData(ElemWindow window)
+{
+    return SystemGetDataPoolItem(windowDataPool, window);
+}
+
+Win32WindowDataFull* GetWin32WindowDataFull(ElemWindow window)
+{
+    return SystemGetDataPoolItemFull(windowDataPool, window);
+}
 
 ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
 {
+    InitWindowMemory();
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto width = 1280;
     auto height = 720;
@@ -36,8 +53,6 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
 
     auto applicationData = GetApplicationData(application);
 
-    auto nativeWindow = new Win32Window();
-    
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
@@ -50,7 +65,7 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
         nullptr,
         nullptr,
         applicationData->ApplicationInstance,
-        nativeWindow);
+        nullptr); // TODO: Pass info to createwindow event
    
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
@@ -87,21 +102,55 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     SetWindowPos(window, nullptr, x, y, width, height, 0);
     ShowWindow(window, SW_NORMAL);
 
-    return 0;
+    auto handle = SystemAddDataPoolItem(windowDataPool, {
+        .WindowHandle = window
+    }); 
+
+    SystemAddDataPoolItemFull(windowDataPool, handle, {
+        .WindowPlacement = {}
+    });
+
+    return handle;
 }
 
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
+    SystemRemoveDataPoolItem(windowDataPool, window);
 }
 
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 {
-    return {};
+    auto windowData = GetWin32WindowData(window);
+    SystemAssert(windowData);
+
+    RECT windowRectangle;
+	GetClientRect(windowData->WindowHandle, &windowRectangle);
+
+    auto mainScreenDpi = GetDpiForWindow(windowData->WindowHandle);
+    auto mainScreenScaling = static_cast<float>(mainScreenDpi) / 96.0f;
+
+    auto width = (uint32_t)(windowRectangle.right - windowRectangle.left);
+    auto height = (uint32_t)(windowRectangle.bottom - windowRectangle.top);
+    auto uiScale = mainScreenScaling;
+
+    return 
+    {
+        .Width = width,
+        .Height = height,
+        .UIScale = uiScale,
+        .WindowState = ElemWindowState_Normal // TODO
+    };
 }
 
 ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, title);
+    auto windowData = GetWin32WindowData(window);
+    SystemAssert(windowData);
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto wideTitle = SystemConvertUtf8ToWideChar(stackMemoryArena, title);
+
+    SetWindowText(windowData->WindowHandle, wideTitle.Pointer);
 }
 
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
@@ -111,7 +160,7 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 
 
 
-
+/*
 DllExport void* Native_CreateWindow(Win32Application* nativeApplication, NativeWindowOptions* options)
 {
     // BUG: Random Memory bug and sometimes function is really slow
@@ -189,7 +238,7 @@ DllExport void Native_FreeWindow(Win32Window* window)
     delete window;
 }
 
-DllExport NativeWindowSize Native_GetWindowRenderSize(Win32Window* nativeWindow)
+DllExport NativeWindowSize Native_GetWindowRenderSize(void* nativeWindow)
 {
     RECT windowRectangle;
 	GetClientRect(nativeWindow->WindowHandle, &windowRectangle);
@@ -290,4 +339,4 @@ DllExport void Native_SetWindowState(Win32Window* window, NativeWindowState wind
             ShowWindow(window->WindowHandle, SW_MINIMIZE);
         }
     }
-}
+}*/

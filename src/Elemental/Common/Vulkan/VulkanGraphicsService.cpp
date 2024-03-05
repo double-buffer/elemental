@@ -607,10 +607,10 @@ void* VulkanCreateSwapChain(void* windowPointer, void* commandQueuePointer, Swap
     swapChain->MaximumFrameLatency = options->MaximumFrameLatency;
 
     #ifdef _WINDOWS
-    auto window = (Win32Window*)windowPointer;
+    //auto window = (Win32Window*)nullptr;//windowPointer;
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
     surfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
-    surfaceCreateInfo.hwnd = window->WindowHandle;
+    surfaceCreateInfo.hwnd = (HWND)0;//window->WindowHandle;
 
     AssertIfFailed(vkCreateWin32SurfaceKHR(_vulkanInstance, &surfaceCreateInfo, nullptr, &swapChain->WindowSurface));
     #endif
@@ -642,9 +642,9 @@ void* VulkanCreateSwapChain(void* windowPointer, void* commandQueuePointer, Swap
     
     if (options->Width == 0 || options->Height == 0)
     {
-        auto windowRenderSize = Native_GetWindowRenderSize(window);
+        /*auto windowRenderSize = Native_GetWindowRenderSize(window);
         swapChainCreateInfo.imageExtent.width = windowRenderSize.Width;
-        swapChainCreateInfo.imageExtent.height = windowRenderSize.Height;
+        swapChainCreateInfo.imageExtent.height = windowRenderSize.Height;*/
     }
     else
     {
