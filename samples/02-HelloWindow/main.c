@@ -2,6 +2,24 @@
 
 static ElemWindow globalWindow;
 
+const char* GetWindowStateLabel(ElemWindowState state)
+{
+    if (state == ElemWindowState_FullScreen)
+    {
+        return "FullScreen";
+    }
+    else if (state == ElemWindowState_Maximized)
+    {
+        return "Maximized";
+    }
+    else if (state == ElemWindowState_Minimized)
+    {
+        return "Minimized";
+    }
+
+    return "Normal";
+}
+
 bool RunHandler(ElemApplicationStatus status)
 {
     if (status == ElemApplicationStatus_Closing)
@@ -13,7 +31,7 @@ bool RunHandler(ElemApplicationStatus status)
     ElemWindowSize renderSize = ElemGetWindowRenderSize(globalWindow);
 
     char temp[255];
-    sprintf(temp, "Hello Window! (Current RenderSize: Width=%d, Height=%d, UIScale=%.2f)", renderSize.Width, renderSize.Height, renderSize.UIScale);
+    sprintf(temp, "Hello Window! (Current RenderSize: Width=%d, Height=%d, UIScale=%.2f, State=%s)", renderSize.Width, renderSize.Height, renderSize.UIScale, GetWindowStateLabel(renderSize.WindowState));
     ElemSetWindowTitle(globalWindow, temp);
 
     #ifdef WIN32

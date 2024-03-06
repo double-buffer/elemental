@@ -214,13 +214,86 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         var functionName = function.Name.Replace("Elem", string.Empty);
         var firstParameter = true;
 
-        var containsStringParameters = GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters, appendPublic: true);
+        var customMarshallerTypes = new Dictionary<string, CppType>();
+
+        foreach (var parameter in function.Parameters)
+        {
+            if (parameter.Type is CppPointerType pointerType)
+            {
+                var qualifiedType = pointerType.ElementType as CppQualifiedType;
+
+                if (qualifiedType == null)
+                {
+                    continue;
+                }
+
+                var structType = qualifiedType.ElementType as CppClass;
+                
+                if (structType != null)
+                {
+                    if (NeedCustomMarshaller(structType))
+                    {
+                        customMarshallerTypes.Add(parameter.Name, structType);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        var containsStringParameters = GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters, appendPublic: true, appendUnsafe: customMarshallerTypes.Count > 0);
         stringBuilder.AppendLine();
 
         Indent(stringBuilder);
         stringBuilder.AppendLine("{");
 
-        Indent(stringBuilder, 2);
+        var currentTabLevel = 2;
+
+        foreach (var parameterToMarshal in customMarshallerTypes)
+        {
+            if (parameterToMarshal.Value is CppClass structType)
+            {
+                foreach (var field in structType.Fields)
+                {
+                    if (NeedCustomMarshaller(field.Type))
+                    {
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"fixed ({MapType(field.Type.GetDisplayName(), isUnsafe: true)} {field.Name}Pinned = {parameterToMarshal.Key}.{field.Name})");
+
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine("{");
+
+                        currentTabLevel++;
+                    }
+                }
+            }
+        }
+
+        foreach (var parameterToMarshal in customMarshallerTypes)
+        {
+            Indent(stringBuilder, currentTabLevel);
+            stringBuilder.AppendLine($"var {parameterToMarshal.Key}Unsafe = new {MapType(parameterToMarshal.Value.GetDisplayName())}Unsafe();");
+
+            if (parameterToMarshal.Value is CppClass structType)
+            {
+                foreach (var field in structType.Fields)
+                {
+                    if (NeedCustomMarshaller(field.Type))
+                    {
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"{parameterToMarshal.Key}Unsafe.{field.Name} = {field.Name}Pinned;");
+                    }
+                    else
+                    {
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"{parameterToMarshal.Key}Unsafe.{field.Name} = {parameterToMarshal.Key}.{field.Name};");
+                    }
+                }
+            }
+
+            stringBuilder.AppendLine();
+        }
+
+        Indent(stringBuilder, currentTabLevel);
 
         if (function.ReturnType.GetDisplayName() != "void")
         {
@@ -246,6 +319,10 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             {
                 stringBuilder.Append($"Encoding.UTF8.GetBytes({parameter.Name})");
             }
+            else if (customMarshallerTypes.ContainsKey(parameter.Name))
+            {
+                stringBuilder.Append($"{parameter.Name}Unsafe");
+            }
             else
             {
                 stringBuilder.Append($"{parameter.Name}");
@@ -253,6 +330,23 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
 
         stringBuilder.AppendLine(");");
+
+        foreach (var parameterToMarshal in customMarshallerTypes)
+        {
+            if (parameterToMarshal.Value is CppClass structType)
+            {
+                foreach (var field in structType.Fields)
+                {
+                    if (NeedCustomMarshaller(field.Type))
+                    {
+                        currentTabLevel--;
+
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine("}");
+                    }
+                }
+            }
+        }
 
         Indent(stringBuilder);
         stringBuilder.AppendLine("}");
@@ -304,6 +398,27 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 else
                 {
                     firstParameter = false;
+                }
+
+                if (parameter.Type is CppPointerType pointerType)
+                {
+                    var qualifiedType = pointerType.ElementType as CppQualifiedType;
+
+                    if (qualifiedType == null)
+                    {
+                        continue;
+                    }
+
+                    var structType = qualifiedType.ElementType as CppClass;
+                    
+                    if (structType != null)
+                    {
+                        if (NeedCustomMarshaller(structType))
+                        {
+                            stringBuilder.Append($"{MapType(parameter.Type)}Unsafe {parameter.Name}");
+                            continue;
+                        }
+                    }
                 }
 
                 stringBuilder.Append($"{MapType(parameter.Type)} {parameter.Name}");
@@ -521,10 +636,20 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         foreach (var field in structType.Fields)
         {
-            if (MapType(field.Type).Contains("ReadOnlySpan"))
+            if (NeedCustomMarshaller(field.Type))
             {
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    private bool NeedCustomMarshaller(CppType type)
+    {
+        if (MapType(type).Contains("ReadOnlySpan"))
+        {
+            return true;
         }
 
         return false;
@@ -545,11 +670,6 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
 
         var needsCustomMarshaller = NeedCustomMarshaller(structType);
-
-        if (needsCustomMarshaller)
-        {
-            stringBuilder.AppendLine($"[NativeMarshalling(typeof({typeName}Marshaller))]");
-        }
 
         stringBuilder.AppendLine($"public ref struct {typeName}");
         stringBuilder.AppendLine("{");
@@ -581,13 +701,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         if (needsCustomMarshaller)
         {
             stringBuilder.AppendLine();
-            stringBuilder.AppendLine($"[CustomMarshaller(typeof({typeName}), MarshalMode.ManagedToUnmanagedIn, typeof({typeName}Marshaller))]");
-            stringBuilder.AppendLine($"internal static unsafe class {typeName}Marshaller");
-            stringBuilder.AppendLine("{");
-
-            Indent(stringBuilder);
             stringBuilder.AppendLine($"internal unsafe struct {typeName}Unsafe");
-            Indent(stringBuilder);
             stringBuilder.AppendLine("{");
 
             firstField = true;
@@ -604,7 +718,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     firstField = false;
                 }
 
-                Indent(stringBuilder, 2);
+                Indent(stringBuilder);
                 stringBuilder.AppendLine($"public {MapType(field.Type.GetDisplayName(), isUnsafe: true)} {field.Name} {{ get; set; }}");
 
                 if (field.Type.GetDisplayName().Contains("const char*"))
@@ -612,54 +726,12 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     unsafeFields.Add(field);
                 }
             }
-
-            foreach (var unsafeField in unsafeFields)
-            {
-                Indent(stringBuilder, 2);
-                stringBuilder.AppendLine($"public nint {unsafeField.Name}GCHandle {{ get; set; }}");
-            }
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("}");
-            stringBuilder.AppendLine();
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine($"public static {typeName}Unsafe ConvertToUnmanaged({typeName} managed)");
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("{");
-
-            Indent(stringBuilder, 2);
-            stringBuilder.AppendLine($"var result = new {typeName}Unsafe();");
-
-            foreach (var unsafeField in unsafeFields)
-            {
-                stringBuilder.AppendLine($"var {unsafeField.Name}Handle = GCHandle.Alloc(managed.{unsafeField.Name}.ToArray(), GCHandleType.Pinned);");
-                stringBuilder.AppendLine($"result.{unsafeField.Name} = (byte*){unsafeField.Name}Handle.AddrOfPinnedObject();");
-                stringBuilder.AppendLine($"result.{unsafeField.Name}GCHandle = GCHandle.ToIntPtr({unsafeField.Name}Handle);");
-            }
-
-            Indent(stringBuilder, 2);
-            stringBuilder.AppendLine("return result;");
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("}");
-            stringBuilder.AppendLine();
-    
-            Indent(stringBuilder);
-            stringBuilder.AppendLine($"public static void Free({typeName}Unsafe _)");
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("{");
-
-            Indent(stringBuilder);
-            stringBuilder.AppendLine("}");
             
             stringBuilder.AppendLine("}");
         }
     }
 
-    private bool GenerateModuleFunctionDefinition(StringBuilder stringBuilder, CppFunction function, bool generateStringParameters, bool appendPublic = false)
+    private bool GenerateModuleFunctionDefinition(StringBuilder stringBuilder, CppFunction function, bool generateStringParameters, bool appendPublic = false, bool appendUnsafe = false)
     {
         var containsStringParameters = false;
         var functionName = function.Name.Replace("Elem", string.Empty);
@@ -674,6 +746,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         if (appendPublic)
         {
             stringBuilder.Append("public ");
+        }
+
+        if (appendUnsafe)
+        {
+            stringBuilder.Append("unsafe ");
         }
 
         stringBuilder.Append($"{MapType(function.ReturnType)} {functionName}(");

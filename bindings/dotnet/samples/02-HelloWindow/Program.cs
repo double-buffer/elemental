@@ -7,9 +7,7 @@ using var application = applicationService.CreateApplication("Hello Window"u8);
 
 using var window = applicationService.CreateWindow(application, new WindowOptions
 {
-    Title = "Hello Windows!"u8,
-    Width = 1280,
-    Height = 720
+    Title = "Hello Window!"u8
 });
 
 applicationService.RunApplication(application, (status) =>
@@ -20,7 +18,7 @@ applicationService.RunApplication(application, (status) =>
     }
 
     var renderSize = applicationService.GetWindowRenderSize(window);
-    applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: {renderSize.Width})");
+    //applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: {renderSize.Width})");
 
     Thread.Sleep(5);
 

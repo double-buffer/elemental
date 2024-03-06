@@ -22,7 +22,7 @@ internal static partial class ApplicationServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateWindow")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial Window CreateWindow(ElementalApplication application, in WindowOptions options);
+    internal static partial Window CreateWindow(ElementalApplication application, in WindowOptionsUnsafe options);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeWindow")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

@@ -51,9 +51,18 @@ public class ApplicationService : IApplicationService
         ApplicationServiceInterop.RunApplication(application, runHandler);
     }
 
-    public Window CreateWindow(ElementalApplication application, in WindowOptions options)
+    public unsafe Window CreateWindow(ElementalApplication application, in WindowOptions options)
     {
-        return ApplicationServiceInterop.CreateWindow(application, options);
+        fixed (byte* TitlePinned = options.Title)
+        {
+            var optionsUnsafe = new WindowOptionsUnsafe();
+            optionsUnsafe.Title = TitlePinned;
+            optionsUnsafe.Width = options.Width;
+            optionsUnsafe.Height = options.Height;
+            optionsUnsafe.WindowState = options.WindowState;
+
+            return ApplicationServiceInterop.CreateWindow(application, optionsUnsafe);
+        }
     }
 
     public void FreeWindow(Window window)
