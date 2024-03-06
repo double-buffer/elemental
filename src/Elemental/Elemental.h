@@ -19,6 +19,10 @@ typedef uint64_t ElemHandle;
  * Handle that represents an elemental application. 
  */
 typedef ElemHandle ElemApplication;
+
+/**
+ * Handle that represents an elemental window. 
+ */
 typedef ElemHandle ElemWindow;
 
 /**
@@ -62,27 +66,48 @@ typedef enum
     ElemApplicationStatus_Closing = 1
 } ElemApplicationStatus;
 
+/**
+ * Enumerates the possible window states.
+ */
 typedef enum
 {
+    // Window is in normal state.
     ElemWindowState_Normal = 0,
+    // Window is minimized.
     ElemWindowState_Minimized = 1,
+    // Window is maximized.
     ElemWindowState_Maximized = 2,
+    // Window is in full screen mode.
     ElemWindowState_FullScreen = 3
 } ElemWindowState;
 
+/**
+ * Specifies options for window creation.
+ */
 typedef struct
 {
+    // Title of the window.
     const char* Title;
+    // Width of the window in pixels.
     uint32_t Width;
-    uint32_t Height;
+    // Height of the window in pixels.
+    uint32_t Height; 
+    // Initial state of the window.
     ElemWindowState WindowState;
 } ElemWindowOptions;
 
+/**
+ * Contains information about the size and scale of a window.
+ */
 typedef struct
 {
+    // Width of the window's render area in pixels.
     uint32_t Width;
+    // Height of the window's render area in pixels.
     uint32_t Height;
+    // Scale factor for the UI, useful for DPI adjustments.
     float UIScale;
+    // Current state of the window.
     ElemWindowState WindowState;
 } ElemWindowSize;
 
@@ -128,15 +153,44 @@ ElemAPI void ElemFreeApplication(ElemApplication application);
  */
 ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler);
 
-
+/**
+ * Creates a window for an application with specified options.
+ *
+ * @param application The associated application instance.
+ * @param options Window creation options; uses defaults if NULL.
+ * @return A handle to the created window.
+ */
 ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options);
 
+/**
+ * Frees resources for a specified window. Call when the window is no longer needed.
+ *
+ * @param window The window instance to free.
+ */
 ElemAPI void ElemFreeWindow(ElemWindow window);
 
+/**
+ * Gets the render size of a window, accounting for DPI scaling.
+ *
+ * @param window The window instance.
+ * @return Render size of the window.
+ */
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window);
 
+/**
+ * Sets a window's title.
+ *
+ * @param window The window instance.
+ * @param title New title for the window.
+ */
 ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
 
+/**
+ * Changes the state of a window (e.g., minimize, maximize).
+ *
+ * @param window The window instance.
+ * @param windowState New state for the window.
+ */
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
 
 

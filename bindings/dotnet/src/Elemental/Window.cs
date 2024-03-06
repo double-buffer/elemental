@@ -1,5 +1,8 @@
 namespace Elemental;
 
+/// <summary>
+/// Handle that represents an elemental window.
+/// </summary>
 public readonly record struct Window : IDisposable
 {
     private UInt64 Value { get; }

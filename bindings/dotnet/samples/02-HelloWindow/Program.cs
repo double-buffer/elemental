@@ -18,7 +18,7 @@ applicationService.RunApplication(application, (status) =>
     }
 
     var renderSize = applicationService.GetWindowRenderSize(window);
-    //applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: {renderSize.Width})");
+    applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: Width={renderSize.Width}, Height={renderSize.Height}, UIScale={renderSize.UIScale}, State={renderSize.WindowState})");
 
     Thread.Sleep(5);
 
