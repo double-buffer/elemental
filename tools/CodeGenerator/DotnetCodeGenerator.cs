@@ -780,6 +780,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             }
 
             stringBuilder.Append($"{parameterType} {parameter.Name}");
+
+            if (parameter.Name == "options")
+            {
+                stringBuilder.Append(" = default");
+            }
         }
 
         stringBuilder.Append(")");
@@ -790,7 +795,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         foreach (var comment in rootComment.Children)
         {
-            if (comment.ToString().Contains("##"))
+            if (comment.ToString().Contains("##") || comment.ToString().Trim() == string.Empty)
             {
                 continue;
             }

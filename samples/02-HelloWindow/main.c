@@ -48,7 +48,7 @@ int main(void)
     ElemConfigureLogHandler(ElemConsoleLogHandler);
     
     ElemApplication application = ElemCreateApplication("Hello World");
-    globalWindow = ElemCreateWindow(application, &(ElemWindowOptions) { .Title = "Hello Window!", .WindowState = ElemWindowState_Maximized });
+    globalWindow = ElemCreateWindow(application, &(ElemWindowOptions) { .Title = "Hello Window!" });
 
     // TODO: Allow to pass parameters to the run handler?
     ElemRunApplication(application, RunHandler);

@@ -113,6 +113,7 @@ typedef struct
 
 /**
  * Defines a function pointer type for log handling.
+ *
  * @param messageType The type of the log message.
  * @param category The category of the log message.
  * @param function The function where the log was triggered.
@@ -122,6 +123,7 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
 
 /**
  * Defines a function pointer type for application run handling.
+ *
  * @param status The current application status.
  * @return Returns true to continue running, false to exit.
  */
@@ -129,12 +131,14 @@ typedef bool (*ElemRunHandlerPtr)(ElemApplicationStatus status);
 
 /**
  * Configures a custom log handler for the application.
+ *
  * @param logHandler The log handler function to be used.
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
 /**
  * Creates a new application instance.
+ *
  * @param applicationName The name of the application.
  * @return Returns an application handle.
  */
@@ -148,6 +152,7 @@ ElemAPI void ElemFreeApplication(ElemApplication application);
 
 /**
  * Runs the specified application with the provided run handler.
+ *
  * @param application The application to run.
  * @param runHandler The function to call on each run iteration.
  */
