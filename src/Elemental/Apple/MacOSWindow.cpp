@@ -30,19 +30,22 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     auto width = 1280;
     auto height = 720;
 
-    if (options->Title)
+    if (options != nullptr)
     {
-        title = options->Title;
-    }
+        if (options->Title)
+        {
+            title = options->Title;
+        }
 
-    if (options->Width != 0)
-    {
-        width = options->Width;
-    }
+        if (options->Width != 0)
+        {
+            width = options->Width;
+        }
 
-    if (options->Height != 0)
-    {
-        height = options->Height;
+        if (options->Height != 0)
+        {
+            height = options->Height;
+        }
     }
 
     CGRect windowSize =
