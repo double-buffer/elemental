@@ -176,14 +176,22 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     }
 
     SetWindowPos(window, nullptr, x, y, width, height, 0);
-    ShowWindow(window, SW_NORMAL);
+    ShowWindow(window, SW_SHOWNORMAL);
+
+    WINDOWPLACEMENT windowPlacement;
+    GetWindowPlacement(window, &windowPlacement);
+
+    DWORD windowStyle = GetWindowLong(window, GWL_STYLE);
+    DWORD windowExStyle = GetWindowLong(window, GWL_EXSTYLE);
 
     auto handle = SystemAddDataPoolItem(windowDataPool, {
         .WindowHandle = window
     }); 
 
     SystemAddDataPoolItemFull(windowDataPool, handle, {
-        .WindowPlacement = {}
+        .WindowPlacement = windowPlacement,
+        .WindowStyle = windowStyle,
+        .WindowExStyle = windowExStyle
     });
 
     SystemAddDictionaryEntry(windowDictionary, window, handle);
@@ -194,6 +202,10 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
 
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
+    auto windowData = GetWin32WindowData(window);
+    SystemAssert(windowData);
+
+    SystemRemoveDictionaryEntry(windowDictionary, windowData->WindowHandle);
     SystemRemoveDataPoolItem(windowDataPool, window);
 }
 
@@ -226,13 +238,11 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     {
         windowState = ElemWindowState_FullScreen;
     }
-    
-    else if (width == 0 && height == 0)
+    else if (windowPlacement.showCmd == SW_MINIMIZE || windowPlacement.showCmd == SW_SHOWMINIMIZED)
     {
         windowState = ElemWindowState_Minimized;
     }
-    
-    else if (windowPlacement.showCmd == SW_MAXIMIZE)
+    else if (windowPlacement.showCmd == SW_MAXIMIZE || windowPlacement.showCmd == SW_SHOWMAXIMIZED)
     {
         windowState = ElemWindowState_Maximized;
     }
@@ -259,49 +269,54 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
 
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
-    // BUG: When we first maximize and then switch to fullscreen, we have borders
-    // It is ok when we switch to fullscren from a normal window
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
     auto windowDataFull = GetWin32WindowDataFull(window);
     SystemAssert(windowDataFull);
 
-    auto windowStyle = GetWindowLong(windowData->WindowHandle, GWL_STYLE);
+    DWORD windowStyle = GetWindowLong(windowData->WindowHandle, GWL_STYLE);
 
     if (windowState == ElemWindowState_FullScreen && (windowStyle & WS_OVERLAPPEDWINDOW))
     {
         WINDOWPLACEMENT windowPlacement;
         GetWindowPlacement(windowData->WindowHandle, &windowPlacement);
+
+        DWORD windowExStyle = GetWindowLong(windowData->WindowHandle, GWL_EXSTYLE);
+
         windowDataFull->WindowPlacement = windowPlacement;
+        windowDataFull->WindowStyle = windowStyle;
+        windowDataFull->WindowExStyle = windowExStyle;
 
         MONITORINFO monitorInfos = { sizeof(monitorInfos) };
         GetMonitorInfo(MonitorFromWindow(windowData->WindowHandle, MONITOR_DEFAULTTOPRIMARY), &monitorInfos);
 
-        SetWindowLong(windowData->WindowHandle, GWL_STYLE, windowStyle & ~WS_OVERLAPPEDWINDOW);
+        SetWindowLong(windowData->WindowHandle, GWL_STYLE, WS_VISIBLE);
+        SetWindowLong(windowData->WindowHandle, GWL_EXSTYLE, WS_EX_APPWINDOW);
+
         SetWindowPos(windowData->WindowHandle, HWND_TOP,
             monitorInfos.rcMonitor.left, monitorInfos.rcMonitor.top,
             monitorInfos.rcMonitor.right - monitorInfos.rcMonitor.left,
             monitorInfos.rcMonitor.bottom - monitorInfos.rcMonitor.top,
             SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
-        ShowWindow(windowData->WindowHandle, SW_MAXIMIZE);
+        ShowWindow(windowData->WindowHandle, SW_SHOWMAXIMIZED);
     }
     else 
     {
-        SetWindowLong(windowData->WindowHandle, GWL_STYLE, windowStyle | WS_OVERLAPPEDWINDOW);
+        SetWindowLong(windowData->WindowHandle, GWL_STYLE, windowDataFull->WindowStyle);
+        SetWindowLong(windowData->WindowHandle, GWL_EXSTYLE, windowDataFull->WindowExStyle);
+
         SetWindowPlacement(windowData->WindowHandle, &windowDataFull->WindowPlacement);
-        SetWindowPos(windowData->WindowHandle, NULL, 0, 0, 0, 0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
         if (windowState == ElemWindowState_Maximized)
         {
-            ShowWindow(windowData->WindowHandle, SW_MAXIMIZE);
+            ShowWindow(windowData->WindowHandle, SW_SHOWMAXIMIZED);
         }
-        
+
         else if (windowState == ElemWindowState_Minimized)
         {
-            ShowWindow(windowData->WindowHandle, SW_MINIMIZE);
+            ShowWindow(windowData->WindowHandle, SW_SHOWMINIMIZED);
         }
     }
 }

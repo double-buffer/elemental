@@ -10,6 +10,8 @@ struct Win32WindowData
 struct Win32WindowDataFull
 {
     WINDOWPLACEMENT WindowPlacement;
+    DWORD WindowStyle;
+    DWORD WindowExStyle;
 };
 
 Win32WindowData* GetWin32WindowData(ElemWindow window);

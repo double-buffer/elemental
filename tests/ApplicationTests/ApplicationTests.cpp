@@ -30,9 +30,10 @@ UTEST(Application, CreateApplication)
     ElemConfigureLogHandler(TestLogHandler);
 
     // Act
-    ElemCreateApplication("TestApplication");
+    auto application = ElemCreateApplication("TestApplication");
 
     // Assert
+    ElemFreeApplication(application);
     ASSERT_TRUE(TestInitCalled);
 }
 
@@ -46,5 +47,6 @@ UTEST(Application, RunApplication)
     ElemRunApplication(application, TestRunHandler); 
 
     // Assert
+    ElemFreeApplication(application);
     ASSERT_EQ(10, TestCounter);
 }
