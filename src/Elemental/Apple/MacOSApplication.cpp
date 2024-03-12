@@ -34,30 +34,22 @@ MacOSApplicationDataFull* GetMacOSApplicationDataFull(ElemApplication applicatio
 
 void ProcessEvents(ElemApplication application) 
 {
-    NS::SharedPtr<NS::Event> rawEvent; 
+    NS::Event* rawEvent = nullptr; 
 
     // BUG: It seems we have a memory leak when we move the mouse inside the window 😟
-    // BUG: If we press a key like Q or A while the app is running and then quit the app it crash 😢
 
     do 
     {
         auto applicationDataFull = GetMacOSApplicationDataFull(application);
         SystemAssert(applicationDataFull);
 
-        /*if (applicationDataFull->Status == ElemApplicationStatus_Active) 
-        {*/
-            rawEvent = NS::RetainPtr(NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode(), true));
-        //}
-    
-        /*
-        if (!rawEvent.get())
-        {
-            applicationDataFull->Status = ElemApplicationStatus_Active;
-            return;
-        }*/
+        rawEvent = NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode(), true);
 
-        NS::Application::sharedApplication()->sendEvent(rawEvent.get());
-    } while (rawEvent.get() != nullptr);
+        if (rawEvent)
+        {
+            NS::Application::sharedApplication()->sendEvent(rawEvent);
+        }
+    } while (rawEvent != nullptr);
 }
 
 void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
@@ -160,21 +152,9 @@ ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
     applicationDataFull.Status = ElemApplicationStatus_Active;
     SystemAddDataPoolItemFull(applicationPool, handle, applicationDataFull);
     
-    NS::ProcessInfo::processInfo()->disableSuddenTermination();
-
-    // TODO: Is it really needed? 
-    ProcessSerialNumber processSerialNumber = {0, kCurrentProcess};
-    TransformProcessType(&processSerialNumber, kProcessTransformToForegroundApplication);
-
-
     NS::Application* pSharedApplication = NS::Application::sharedApplication();
     pSharedApplication->setDelegate(applicationDataFull.ApplicationDelegate);
     pSharedApplication->setActivationPolicy(NS::ActivationPolicy::ActivationPolicyRegular);
-
-    // TODO: It is not needed it seems
-    ProcessSerialNumber psn = { 0, kCurrentProcess }; 
-	TransformProcessType(& psn, kProcessTransformToForegroundApplication);
-
     pSharedApplication->activateIgnoringOtherApps(true);
     pSharedApplication->finishLaunching();
 
@@ -219,6 +199,7 @@ MacOSApplicationDelegate::~MacOSApplicationDelegate()
 
 bool MacOSApplicationDelegate::applicationShouldTerminateAfterLastWindowClosed(NS::Application* pSender)
 {
+    printf("Teeeeeeest\n");
     // TODO: It doesn't seems to be working :(
     return true;
 }

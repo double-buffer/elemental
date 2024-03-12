@@ -29,8 +29,11 @@
 #include <Foundation/Foundation.hpp>
 #include "AppKitPrivate.hpp"
 
+
 namespace NS
 {
+    class Application;
+
 	// metal-cpp defines a very limited NSDate already
     class DateOverride : public Date {
     public:
@@ -82,7 +85,7 @@ namespace NS
 			virtual					~ApplicationDelegate() { }
 			virtual void			applicationWillFinishLaunching( Notification* pNotification ) { }
 			virtual void			applicationDidFinishLaunching( Notification* pNotification ) { }
-			virtual bool			applicationShouldTerminateAfterLastWindowClosed( class Application* pSender ) { return false; }
+			virtual bool			applicationShouldTerminateAfterLastWindowClosed(NS::Application* pSender ) { return false; }
         	virtual NS::TerminateReply applicationShouldTerminate(NS::Application* pSender) { return TerminateReplyTerminateNow; };
         	virtual void 			applicationWillTerminate(NS::Notification* pNotification) { }; 
 	};
