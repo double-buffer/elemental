@@ -1,8 +1,8 @@
 #=======================================================================
 # DirectX Shader Compiler
 #=======================================================================
-set(DXC_VERSION_OFFICIAL "v1.7.2308")
-set(DXC_VERSION_CUSTOM "v2024-01-10")
+set(DXC_VERSION_OFFICIAL "v1.8.2403")
+set(DXC_VERSION_CUSTOM "v2024-03-12")
 
 add_library(dxc INTERFACE)
 
@@ -25,7 +25,7 @@ endif()
 #=======================================================================
 # SPIRV-Cross Compiler
 #=======================================================================
-set(SPIRV_CROSS_VERSION "v2024-01-10")
+set(SPIRV_CROSS_VERSION "v2024-03-12")
 
 add_library(spirv-cross INTERFACE)
 target_include_directories(spirv-cross INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/spirv-cross/include/)

@@ -205,6 +205,7 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
+    // TODO: Remove HWND
     SystemRemoveDictionaryEntry(windowDictionary, windowData->WindowHandle);
     SystemRemoveDataPoolItem(windowDataPool, window);
 }

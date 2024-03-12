@@ -7,5 +7,6 @@ struct MetalCommandQueue
     MetalGraphicsDevice* GraphicsDevice;
     NS::SharedPtr<MTL::CommandQueue> DeviceObject;
     NS::SharedPtr<MTL::SharedEvent> Fence;
-    std::atomic_uint64_t FenceValue;
+    //std::atomic_uint64_t FenceValue;
+    uint64_t FenceValue;
 };

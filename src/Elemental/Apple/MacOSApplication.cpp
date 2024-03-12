@@ -153,7 +153,6 @@ ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
     InitApplicationMemory();
 
     MacOSApplicationData applicationData = {};
-    //applicationData.ApplicationInstance = (HINSTANCE)GetModuleHandle(nullptr);
     auto handle = SystemAddDataPoolItem(applicationPool, applicationData); 
 
     MacOSApplicationDataFull applicationDataFull = {};

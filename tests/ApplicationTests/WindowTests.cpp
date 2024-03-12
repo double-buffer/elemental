@@ -67,9 +67,11 @@ UTEST_F_TEARDOWN(Window_SetWindowState)
     auto application = ElemCreateApplication("TestApplication");
     ElemWindowOptions options = { .Width = width, .Height = height, .WindowState = utest_fixture->SourceState };
     auto window = ElemCreateWindow(application, &options); 
+    ElemRunApplication(application, TestIterationRunHandler);
 
     // Act
     ElemSetWindowState(window, utest_fixture->DestinationState);
+    ElemRunApplication(application, TestIterationRunHandler);
 
     // Assert
     auto size = ElemGetWindowRenderSize(window);    
@@ -109,15 +111,21 @@ UTEST_F(Window_SetWindowState, Maximized_FullScreen)
     utest_fixture->DestinationState = ElemWindowState_FullScreen;
 }
 
+UTEST_F(Window_SetWindowState, Normal_Maximized) 
+{
+    utest_fixture->SourceState = ElemWindowState_Normal;
+    utest_fixture->DestinationState = ElemWindowState_Maximized;
+}
+
+UTEST_F(Window_SetWindowState, FullScreen_Maximized) 
+{
+    utest_fixture->SourceState = ElemWindowState_FullScreen;
+    utest_fixture->DestinationState = ElemWindowState_Maximized;
+}
+
 UTEST_F(Window_SetWindowState, Normal_Minimized) 
 {
     utest_fixture->SourceState = ElemWindowState_Normal;
-    utest_fixture->DestinationState = ElemWindowState_Minimized;
-}
-
-UTEST_F(Window_SetWindowState, FullScreen_Minimized) 
-{
-    utest_fixture->SourceState = ElemWindowState_FullScreen;
     utest_fixture->DestinationState = ElemWindowState_Minimized;
 }
 

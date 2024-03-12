@@ -37,6 +37,7 @@ namespace NS
 	{
 		public:
 			CGRect		frame();
+			CGRect		visibleFrame();
 			CGFloat     backingScaleFactor();
 	};
 
@@ -45,6 +46,11 @@ namespace NS
 _NS_INLINE CGRect NS::Screen::frame()
 {
 	return Object::sendMessage<CGRect>(this, _APPKIT_PRIVATE_SEL(frame));
+}
+
+_NS_INLINE CGRect NS::Screen::visibleFrame()
+{
+	return Object::sendMessage<CGRect>(this, _APPKIT_PRIVATE_SEL(visibleFrame));
 }
 
 _NS_INLINE CGFloat NS::Screen::backingScaleFactor()

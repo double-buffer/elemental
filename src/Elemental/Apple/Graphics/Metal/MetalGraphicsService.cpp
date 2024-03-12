@@ -248,7 +248,8 @@ DllExport Fence Native_ExecuteCommandLists(void* commandQueuePointer, void** com
 
         if (i == commandListCount - 1)
         {
-            fenceValue = commandQueue->FenceValue.fetch_add(1) + 1;
+            //fenceValue = commandQueue->FenceValue.fetch_add(1) + 1;
+            fenceValue += 1;
             commandList->DeviceObject->encodeSignalEvent(commandQueue->Fence.get(), fenceValue);
         }
 

@@ -42,6 +42,7 @@ namespace NS
 
 			View*              	contentView();
 			Screen*				screen();
+            WindowStyleMask     styleMask();
 			void				setContentView( const View* pContentView );
 			void				makeKeyAndOrderFront( const Object* pSender );
 			void				setTitle( const String* pTitle );
@@ -78,6 +79,11 @@ _NS_INLINE NS::View * NS::Window::contentView()
 _NS_INLINE NS::Screen* NS::Window::screen()
 {
     return Object::sendMessage<Screen*>(this, _APPKIT_PRIVATE_SEL(screen));
+}
+
+_NS_INLINE NS::WindowStyleMask NS::Window::styleMask()
+{
+    return Object::sendMessage<WindowStyleMask>(this, _APPKIT_PRIVATE_SEL(styleMask));
 }
 
 _NS_INLINE void NS::Window::setContentView( const NS::View* pContentView )

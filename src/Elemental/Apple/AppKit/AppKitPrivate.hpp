@@ -202,8 +202,14 @@ _APPKIT_PRIVATE_DEF_SEL( backingScaleFactor,
 _APPKIT_PRIVATE_DEF_SEL( frame,
 						"frame" );
 
+_APPKIT_PRIVATE_DEF_SEL( visibleFrame,
+						"visibleFrame" );
+
 _APPKIT_PRIVATE_DEF_SEL( screen,
 						"screen" );
+
+_APPKIT_PRIVATE_DEF_SEL( styleMask,
+						"styleMask" );
 
 _APPKIT_PRIVATE_DEF_SEL( isMiniaturized,
 						"isMiniaturized" );
