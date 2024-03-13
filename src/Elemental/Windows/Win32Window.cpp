@@ -3,7 +3,6 @@
 #include "SystemDataPool.h"
 #include "SystemDictionary.h"
 #include "SystemFunctions.h"
-#include "Libs/Win32DarkMode/DarkMode.h"
 
 SystemDataPool<Win32WindowData, Win32WindowDataFull> windowDataPool;
 SystemDictionary<HWND, ElemWindow> windowDictionary;
@@ -12,54 +11,76 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
 {
 	switch (message)
 	{
-    case WM_ACTIVATE:
-	{
-		//isAppActive = !(wParam == WA_INACTIVE);
-		break;
-	}
+        case WM_MENUCHAR:
+        {
+            return MAKELRESULT(0, MNC_CLOSE);
+        }
 
-    case WM_MENUCHAR:
-        return MAKELRESULT(0, MNC_CLOSE);
-
-    case WM_SYSKEYDOWN:
-		if (wParam == VK_RETURN)
-		{
-			if ((HIWORD(lParam) & KF_ALTDOWN))
-			{
-                if (!SystemDictionaryContainsKey(windowDictionary, window))
+        case WM_SYSKEYDOWN:
+        {
+            if (wParam == VK_RETURN)
+            {
+                if ((HIWORD(lParam) & KF_ALTDOWN))
                 {
-                    SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot enter fullscreen because window is not valid.");
+                    if (!SystemDictionaryContainsKey(windowDictionary, window))
+                    {
+                        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot enter fullscreen because window is not valid.");
+                    }
+
+                    auto windowHandle = windowDictionary[window];
+                    ElemSetWindowState(windowHandle, ElemWindowState_FullScreen);
                 }
-
-                auto windowHandle = windowDictionary[window];
-                ElemSetWindowState(windowHandle, ElemWindowState_FullScreen);
             }
-		}
-		break;
+            break;
+        }
 
-    case WM_DPICHANGED:
-    {
-        RECT* const prcNewWindow = (RECT*)lParam;
-        SetWindowPos(window,
-            NULL,
-            prcNewWindow ->left,
-            prcNewWindow ->top,
-            prcNewWindow->right - prcNewWindow->left,
-            prcNewWindow->bottom - prcNewWindow->top,
-            SWP_NOZORDER | SWP_NOACTIVATE);
+        case WM_DPICHANGED:
+        {
+            auto newSize = (RECT*)lParam;
 
-        break;
-    }
+            SetWindowPos(window, nullptr,
+                newSize ->left,
+                newSize ->top,
+                newSize->right - newSize->left,
+                newSize->bottom - newSize->top,
+                SWP_NOZORDER | SWP_NOACTIVATE);
 
-	case WM_CLOSE:
-	case WM_DESTROY:
-	{
-		PostQuitMessage(0);
-		break;
-	}
+            break;
+        }
+
+        case WM_CLOSE:
+        {
+            if (!SystemDictionaryContainsKey(windowDictionary, window))
+            {
+                SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot destroy window because the window is not known.");
+            }
+
+            auto windowHandle = windowDictionary[window];
+            ElemFreeWindow(windowHandle);
+            break;
+        }
 	}
 
 	return DefWindowProc(window, message, wParam, lParam);
+}
+
+bool ShouldAppUseDarkMode()
+{
+    auto uxthemeLibrary = LoadLibraryEx(L"uxtheme.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+    if (!uxthemeLibrary)
+    {
+        return false;
+    }
+
+    auto shouldAppsUseDarkModeFunction = (bool (WINAPI *)())GetProcAddress(uxthemeLibrary, MAKEINTRESOURCEA(132));
+
+    if (!shouldAppsUseDarkModeFunction)
+    {
+        return false;
+    }
+
+	return shouldAppsUseDarkModeFunction();
 }
 
 void InitWindowMemory(ElemApplication application)
@@ -69,7 +90,7 @@ void InitWindowMemory(ElemApplication application)
         windowDataPool = SystemCreateDataPool<Win32WindowData, Win32WindowDataFull>(ApplicationMemoryArena, 10);
         windowDictionary = SystemCreateDictionary<HWND, ElemWindow>(ApplicationMemoryArena, 10);
 
-        auto applicationData = GetApplicationData(application);
+        auto applicationData = GetWin32ApplicationData(application);
         SystemAssert(applicationData);
 
         WNDCLASS windowClass {};
@@ -77,7 +98,7 @@ void InitWindowMemory(ElemApplication application)
         windowClass.lpfnWndProc = WindowCallBack;
         windowClass.hInstance = applicationData->ApplicationInstance;
         windowClass.lpszClassName = L"ElementalWindowClass";
-        windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+        windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
         windowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
 
         RegisterClass(&windowClass);
@@ -127,7 +148,9 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
         }
     }
 
-    auto applicationData = GetApplicationData(application);
+    auto applicationData = GetWin32ApplicationData(application);
+    auto applicationDataFull = GetWin32ApplicationDataFull(application);
+    applicationDataFull->WindowCount++;
 
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
@@ -148,31 +171,27 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     auto mainScreenDpi = GetDpiForWindow(window);
     auto mainScreenScaling = static_cast<float>(mainScreenDpi) / 96.0f;
 
-    RECT clientRectangle;
-    clientRectangle.left = 0;
-    clientRectangle.top = 0;
-    clientRectangle.right = (LONG)((float)width * mainScreenScaling);
-    clientRectangle.bottom = (LONG)((float)height * mainScreenScaling);
+    RECT clientRectangle
+    {
+        .left = 0,
+        .top = 0,
+        .right = (LONG)((float)width * mainScreenScaling),
+        .bottom = (LONG)((float)height * mainScreenScaling)
+    };
 
     AdjustWindowRectExForDpi(&clientRectangle, WS_OVERLAPPEDWINDOW, false, 0, mainScreenDpi);
-
     width = (int32_t)(clientRectangle.right - clientRectangle.left);
     height = (int32_t)(clientRectangle.bottom - clientRectangle.top);
 
-    // Compute the position of the window to center it 
     RECT desktopRectangle;
     GetClientRect(GetDesktopWindow(), &desktopRectangle);
-    int32_t x = (int32_t)((desktopRectangle.right / 2) - (width / 2));
-    int32_t y = (int32_t)((desktopRectangle.bottom / 2) - (height / 2));
+    auto x = (int32_t)(desktopRectangle.right / 2 - width / 2);
+    auto y = (int32_t)(desktopRectangle.bottom / 2 - height / 2);
 
-    // Dark mode
-    // TODO: Don't include the full library for this
-    InitDarkMode();
-    BOOL value = TRUE;
-    
     if (ShouldAppUseDarkMode())
     {
-        DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+        auto enableDarkMode = 1u;
+        DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &enableDarkMode, sizeof(enableDarkMode));
     }
 
     SetWindowPos(window, nullptr, x, y, width, height, 0);
@@ -189,6 +208,7 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     }); 
 
     SystemAddDataPoolItemFull(windowDataPool, handle, {
+        .Application = application,
         .WindowPlacement = windowPlacement,
         .WindowStyle = windowStyle,
         .WindowExStyle = windowExStyle
@@ -205,7 +225,17 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
-    // TODO: Remove HWND
+    auto windowDataFull = GetWin32WindowDataFull(window);
+    auto applicationDataFull = GetWin32ApplicationDataFull(windowDataFull->Application);
+    applicationDataFull->WindowCount--;
+
+    if (applicationDataFull->WindowCount == 0)
+    {
+        PostQuitMessage(0);
+    }
+
+    DestroyWindow(windowData->WindowHandle);
+
     SystemRemoveDictionaryEntry(windowDictionary, windowData->WindowHandle);
     SystemRemoveDataPoolItem(windowDataPool, window);
 }

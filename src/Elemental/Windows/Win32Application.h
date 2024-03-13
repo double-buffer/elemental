@@ -12,9 +12,10 @@ struct Win32ApplicationData
 struct Win32ApplicationDataFull
 {
     ElemApplicationStatus Status;
+    int32_t WindowCount;
 };
 
 extern MemoryArena ApplicationMemoryArena;
 
-Win32ApplicationData* GetApplicationData(ElemApplication application);
-Win32ApplicationDataFull* GetApplicationDataFull(ElemApplication application);
+Win32ApplicationData* GetWin32ApplicationData(ElemApplication application);
+Win32ApplicationDataFull* GetWin32ApplicationDataFull(ElemApplication application);

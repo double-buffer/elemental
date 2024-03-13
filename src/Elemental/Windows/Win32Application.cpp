@@ -24,12 +24,12 @@ void InitApplicationMemory()
     }
 }
 
-Win32ApplicationData* GetApplicationData(ElemApplication application)
+Win32ApplicationData* GetWin32ApplicationData(ElemApplication application)
 {
     return SystemGetDataPoolItem(applicationPool, application);
 }
 
-Win32ApplicationDataFull* GetApplicationDataFull(ElemApplication application)
+Win32ApplicationDataFull* GetWin32ApplicationDataFull(ElemApplication application)
 {
     return SystemGetDataPoolItemFull(applicationPool, application);
 }
@@ -42,7 +42,7 @@ void ProcessMessages(ElemApplication application)
 	{
         if (message.message == WM_QUIT)
         {
-            auto applicationDataFull = GetApplicationDataFull(application);
+            auto applicationDataFull = GetWin32ApplicationDataFull(application);
             SystemAssert(applicationDataFull);
             applicationDataFull->Status = ElemApplicationStatus_Closing;
         }
@@ -71,7 +71,8 @@ ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
     }); 
 
     SystemAddDataPoolItemFull(applicationPool, handle, {
-        .Status = ElemApplicationStatus_Active
+        .Status = ElemApplicationStatus_Active,
+        .WindowCount = 0
     });
 
     return handle;
@@ -90,7 +91,7 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
     {
         ProcessMessages(application);
 
-        auto applicationDataFull = GetApplicationDataFull(application);
+        auto applicationDataFull = GetWin32ApplicationDataFull(application);
         SystemAssert(applicationDataFull);
 
         canRun = runHandler(applicationDataFull->Status);

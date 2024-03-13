@@ -27,6 +27,7 @@ UTEST(Window, CreateWindow)
     ASSERT_EQ(ElemWindowState_Normal, size.WindowState);
 }
 
+// TODO: Only run those tests for Windows/MacOS/Linux
 UTEST(Window, CreateWindowWithState) 
 {
     // Arrange
@@ -46,7 +47,66 @@ UTEST(Window, CreateWindowWithState)
     ASSERT_EQ(ElemWindowState_Maximized, size.WindowState);
 }
 
-// TODO: Only run those tests for Windows/MacOS/Linux
+ElemWindow testLastWindowClosedWindow = 0;
+bool testLastWindowDestroyed = false;
+int32_t testLastWindowClosedCounter = 0;
+
+bool TestLastWindowCLosedRunHandler(ElemApplicationStatus status)
+{
+    testLastWindowClosedCounter++;
+
+    if (testLastWindowClosedCounter >= 128 || status == ElemApplicationStatus_Closing)
+    {
+        return false;
+    }
+
+    if (!testLastWindowDestroyed)
+    {
+        ElemFreeWindow(testLastWindowClosedWindow);
+        testLastWindowDestroyed = true;
+    }
+
+    return true;
+}
+
+UTEST(Window, LastWindowClosed) 
+{
+    // Arrange
+    InitLog();
+    testLastWindowClosedCounter = 0;
+    testLastWindowDestroyed = false;
+    auto application = ElemCreateApplication("TestApplication");
+    testLastWindowClosedWindow = ElemCreateWindow(application, nullptr); 
+
+    // Act
+    ElemRunApplication(application, TestLastWindowCLosedRunHandler);
+
+    // Assert
+    ElemFreeApplication(application);
+
+    ASSERT_EQ(1, testLastWindowClosedCounter);
+}
+
+UTEST(Window, LastWindowClosedWithRemainingWindow) 
+{
+    // Arrange
+    InitLog();
+    testLastWindowClosedCounter = 0;
+    testLastWindowDestroyed = false;
+    auto application = ElemCreateApplication("TestApplication");
+    testLastWindowClosedWindow = ElemCreateWindow(application, nullptr); 
+    auto testWindow = ElemCreateWindow(application, nullptr); 
+
+    // Act
+    ElemRunApplication(application, TestLastWindowCLosedRunHandler);
+
+    // Assert
+    ElemFreeWindow(testWindow);
+    ElemFreeApplication(application);
+
+    ASSERT_EQ(128, testLastWindowClosedCounter);
+}
+
 struct Window_SetWindowState
 {
     ElemWindowState SourceState;
