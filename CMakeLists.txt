@@ -32,7 +32,7 @@ project(Elemental LANGUAGES C CXX)
 
 # TODO: Use CMAKE INSTALL ?
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/utilities/cmake)
 include(functions)
 
 # TODO: Don't include tools dep for the runtime
@@ -44,5 +44,7 @@ add_subdirectory(src/Elemental.Tools)
 add_subdirectory(tests/SystemFunctionsTests)
 add_subdirectory(tests/ApplicationTests)
 
+# TODO: Use a sub cmakefile?
 add_subdirectory(samples/01-HelloWorld)
 add_subdirectory(samples/02-HelloWindow)
+add_subdirectory(samples/03-HelloTriangle)

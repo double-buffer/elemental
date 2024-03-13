@@ -2,6 +2,9 @@
 
 #include "SystemFunctions.cpp"
 
+// TODO: Remove AssertIfFailed, only use assert is some specific places
+#define AssertIfFailed(result) result
+
 #include "DirectXShaderCompilerProvider.cpp"
 #include "SpirvCrossShaderCompilerProvider.cpp"
 #include "MetalShaderCompilerProvider.cpp"

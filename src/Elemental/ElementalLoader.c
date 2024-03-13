@@ -31,6 +31,8 @@ typedef struct ElementalFunctions
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
     void (*ElemSetWindowTitle)(ElemWindow, const char*);
     void (*ElemSetWindowState)(ElemWindow, ElemWindowState);
+    void (*ElemEnableGraphicsDebugLayer)(void);
+    ElemGraphicsDeviceInfoList (*ElemGetAvailableGraphicsDevices)(void);
     ElemGraphicsDevice (*ElemCreateGraphicsDevice)(void);
     void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
     
@@ -89,6 +91,8 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetFunctionPointer("ElemGetWindowRenderSize");
     elementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetFunctionPointer("ElemSetWindowTitle");
     elementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetFunctionPointer("ElemSetWindowState");
+    elementalFunctions.ElemEnableGraphicsDebugLayer = (void (*)(void))GetFunctionPointer("ElemEnableGraphicsDebugLayer");
+    elementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoList (*)(void))GetFunctionPointer("ElemGetAvailableGraphicsDevices");
     elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(void))GetFunctionPointer("ElemCreateGraphicsDevice");
     elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
     
@@ -336,6 +340,54 @@ static inline void ElemSetWindowState(ElemWindow window, ElemWindowState windowS
     }
 
     elementalFunctions.ElemSetWindowState(window, windowState);
+}
+
+static inline void ElemEnableGraphicsDebugLayer(void)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemEnableGraphicsDebugLayer) 
+    {
+        assert(elementalFunctions.ElemEnableGraphicsDebugLayer);
+        return;
+    }
+
+    elementalFunctions.ElemEnableGraphicsDebugLayer();
+}
+
+static inline ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemGraphicsDeviceInfoList result = {};
+        #else
+        ElemGraphicsDeviceInfoList result = (ElemGraphicsDeviceInfoList){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemGetAvailableGraphicsDevices) 
+    {
+        assert(elementalFunctions.ElemGetAvailableGraphicsDevices);
+
+        #ifdef __cplusplus
+        ElemGraphicsDeviceInfoList result = {};
+        #else
+        ElemGraphicsDeviceInfoList result = (ElemGraphicsDeviceInfoList){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemGetAvailableGraphicsDevices();
 }
 
 static inline ElemGraphicsDevice ElemCreateGraphicsDevice(void)

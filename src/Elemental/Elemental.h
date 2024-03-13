@@ -207,6 +207,29 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
  */
 typedef ElemHandle ElemGraphicsDevice;
 
+typedef enum
+{
+    ElemGraphicsApi_Direct3D12
+} ElemGraphicsApi;
+
+typedef struct
+{
+    const char* DeviceName;
+    ElemGraphicsApi GraphicsApi;
+    uint64_t DeviceId;
+    uint64_t AvailableMemory;
+} ElemGraphicsDeviceInfo;
+
+typedef struct
+{
+    ElemGraphicsDeviceInfo* Items;
+    uint32_t Length;
+} ElemGraphicsDeviceInfoList;
+
+ElemAPI void ElemEnableGraphicsDebugLayer(void);
+
+ElemAPI ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void);
+
 /**
  * Temporary Function
  */

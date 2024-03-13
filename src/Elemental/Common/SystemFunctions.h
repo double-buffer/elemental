@@ -11,9 +11,6 @@
     #define SystemAssert(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); exit(1); }
 #endif
 
-// TODO: Remove AssertIfFailed, only use assert is some specific places
-#define AssertIfFailed(result) result
-
 //---------------------------------------------------------------------------------------------------------------
 // Math functions
 //---------------------------------------------------------------------------------------------------------------

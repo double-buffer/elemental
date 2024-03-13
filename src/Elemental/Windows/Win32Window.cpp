@@ -83,7 +83,7 @@ bool ShouldAppUseDarkMode()
 	return shouldAppsUseDarkModeFunction();
 }
 
-void InitWindowMemory(ElemApplication application)
+void InitWin32WindowMemory(ElemApplication application)
 {
     if (!windowDataPool.Storage)
     {
@@ -117,7 +117,7 @@ Win32WindowDataFull* GetWin32WindowDataFull(ElemWindow window)
 
 ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
 {
-    InitWindowMemory(application);
+    InitWin32WindowMemory(application);
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto width = 1280;

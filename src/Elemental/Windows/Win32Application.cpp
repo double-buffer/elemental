@@ -8,8 +8,7 @@
 MemoryArena ApplicationMemoryArena;
 SystemDataPool<Win32ApplicationData, Win32ApplicationDataFull> applicationPool;
 
-// TODO: Rename
-void InitApplicationMemory()
+void InitWin32ApplicationMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
     {
@@ -62,7 +61,7 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
 
 ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
 {
-    InitApplicationMemory();
+    InitWin32ApplicationMemory();
 
     auto instance = (HINSTANCE)GetModuleHandle(nullptr);
 

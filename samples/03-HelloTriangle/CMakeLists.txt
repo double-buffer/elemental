@@ -1,0 +1,2 @@
+add_executable(HelloTriangle Main.c)
+target_link_libraries(HelloTriangle PRIVATE ElementalInterface)

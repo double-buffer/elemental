@@ -2,10 +2,10 @@
 
 #include "Win32Application.cpp"
 #include "Win32Window.cpp"
-#include "Graphics/Direct3D12/Direct3D12GraphicsService.cpp"
-#include "Vulkan/VulkanGraphicsService.cpp"
-#include "Graphics/GraphicsService.cpp"
-#include "Inputs/InputsService.cpp"
+
+#include "Graphics/GraphicsDevice.cpp"
+
+#include "Graphics/Direct3D12/Direct3D12GraphicsDevice.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"
