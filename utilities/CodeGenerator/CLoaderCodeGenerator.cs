@@ -123,9 +123,46 @@ public class CLoaderCodeGenerator : ICodeGenerator
                 printf("\033[0m");
             }
 
-            printf(" %s\n\033[0m", message);
+            printf(" %s\033[0m\n", message);
             fflush(stdout);
         }
+
+        static inline void ElemConsoleErrorLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
+        {
+            if (messageType != ElemLogMessageType_Error)
+            {
+                return;
+            }
+
+            printf("[");
+            printf("\033[36m");
+
+            if (category == ElemLogMessageCategory_Assert)
+            {
+                printf("Assert");
+            }
+            else if (category == ElemLogMessageCategory_Memory)
+            {
+                printf("Memory");
+            }
+            else if (category == ElemLogMessageCategory_NativeApplication)
+            {
+                printf("NativeApplication");
+            }
+            else if (category == ElemLogMessageCategory_Graphics)
+            {
+                printf("Graphics");
+            }
+            else if (category == ElemLogMessageCategory_Inputs)
+            {
+                printf("Inputs");
+            }
+
+            printf("\033[0m]");
+            printf("\033[32m %s\033[31m %s\033[0m\n", function, message);
+            fflush(stdout);
+        }
+
         """;
 
     const string functionTemplate = """
