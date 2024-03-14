@@ -124,6 +124,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
             }
 
             printf(" %s\n\033[0m", message);
+            fflush(stdout);
         }
         """;
 

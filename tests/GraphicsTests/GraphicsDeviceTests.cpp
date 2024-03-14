@@ -8,7 +8,6 @@ UTEST(GraphicsDevice, GetAvailableGraphicsDevices)
     InitLog();
     auto application = ElemCreateApplication("TestGraphics");
 
-    printf("Teeeest\n");
     // Act
     auto graphicsDevices = ElemGetAvailableGraphicsDevices();
 

@@ -25,7 +25,6 @@ void InitDirect3D12()
 
     UINT dxgiCreateFactoryFlags = 0;
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test1"); 
     if (direct3D12DebugLayerEnabled)
     {
         auto sdkDllPath = SystemConcatBuffers<char>(stackMemoryArena, SystemGetExecutableFolderPath(stackMemoryArena), "D3D12SDKLayers.dll");
