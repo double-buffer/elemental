@@ -6,7 +6,7 @@ extern bool testForceVulkanApi;
 
 void InitLog()
 {
-    #ifdef _DEBUG
+//    #ifdef _DEBUG
     ElemConfigureLogHandler(ElemConsoleLogHandler);
-    #endif
+//    #endif
 }
