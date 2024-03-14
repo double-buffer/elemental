@@ -45,4 +45,4 @@ jobs:
     - name: Run Graphics Tests
       if: inputs.platform == 'win'
       shell: cmd
-      run: Tests/GraphicsTests
+      run: "./Tests/GraphicsTests"
