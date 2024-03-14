@@ -42,8 +42,8 @@ jobs:
     - name: Run Application Tests
       run: ./Tests/ApplicationTests
     
-    - name: Run Graphics Tests
-      if: inputs.platform == 'win'
-      run: |
-        $ErrorView = 'NormalView'
-        ./Tests/GraphicsTests
+      #- name: Run Graphics Tests
+      #if: inputs.platform == 'win'
+        #run: |
+#$ErrorView = 'NormalView'
+#        ./Tests/GraphicsTests

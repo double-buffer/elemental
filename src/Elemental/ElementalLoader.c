@@ -33,8 +33,9 @@ typedef struct ElementalFunctions
     void (*ElemSetWindowState)(ElemWindow, ElemWindowState);
     void (*ElemEnableGraphicsDebugLayer)(void);
     ElemGraphicsDeviceInfoList (*ElemGetAvailableGraphicsDevices)(void);
-    ElemGraphicsDevice (*ElemCreateGraphicsDevice)(void);
+    ElemGraphicsDevice (*ElemCreateGraphicsDevice)(const ElemGraphicsDeviceOptions*);
     void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
+    ElemGraphicsDeviceInfo (*ElemGetGraphicsDeviceInfo)(ElemGraphicsDevice);
     
 } ElementalFunctions;
 
@@ -93,8 +94,9 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetFunctionPointer("ElemSetWindowState");
     elementalFunctions.ElemEnableGraphicsDebugLayer = (void (*)(void))GetFunctionPointer("ElemEnableGraphicsDebugLayer");
     elementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoList (*)(void))GetFunctionPointer("ElemGetAvailableGraphicsDevices");
-    elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(void))GetFunctionPointer("ElemCreateGraphicsDevice");
+    elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(const ElemGraphicsDeviceOptions*))GetFunctionPointer("ElemCreateGraphicsDevice");
     elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
+    elementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetFunctionPointer("ElemGetGraphicsDeviceInfo");
     
 
     functionPointersLoaded = 1;
@@ -428,7 +430,7 @@ static inline ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void)
     return elementalFunctions.ElemGetAvailableGraphicsDevices();
 }
 
-static inline ElemGraphicsDevice ElemCreateGraphicsDevice(void)
+static inline ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -456,7 +458,7 @@ static inline ElemGraphicsDevice ElemCreateGraphicsDevice(void)
         return result;
     }
 
-    return elementalFunctions.ElemCreateGraphicsDevice();
+    return elementalFunctions.ElemCreateGraphicsDevice(options);
 }
 
 static inline void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
@@ -474,4 +476,35 @@ static inline void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     }
 
     elementalFunctions.ElemFreeGraphicsDevice(graphicsDevice);
+}
+
+static inline ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemGraphicsDeviceInfo result = {};
+        #else
+        ElemGraphicsDeviceInfo result = (ElemGraphicsDeviceInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemGetGraphicsDeviceInfo) 
+    {
+        assert(elementalFunctions.ElemGetGraphicsDeviceInfo);
+
+        #ifdef __cplusplus
+        ElemGraphicsDeviceInfo result = {};
+        #else
+        ElemGraphicsDeviceInfo result = (ElemGraphicsDeviceInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemGetGraphicsDeviceInfo(graphicsDevice);
 }

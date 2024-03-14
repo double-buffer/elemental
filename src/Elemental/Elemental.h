@@ -227,19 +227,18 @@ typedef struct
     uint32_t Length;
 } ElemGraphicsDeviceInfoList;
 
+typedef struct
+{
+    uint64_t DeviceId;
+} ElemGraphicsDeviceOptions;
+
 ElemAPI void ElemEnableGraphicsDebugLayer(void);
 
 ElemAPI ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void);
 
-/**
- * Temporary Function
- */
-ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice(void);
-
-/**
- * Temporary Function
- */
+ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 ElemAPI void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
+ElemAPI ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);
 
 
 #ifdef UseLoader

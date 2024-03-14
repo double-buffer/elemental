@@ -62,6 +62,8 @@ int main(void)
         ElemSetWindowTitle(globalWindow, temp);
     }
 
+    ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(selectedGraphicsDevice ? &(ElemGraphicsDeviceOptions) { .DeviceId = selectedGraphicsDevice->DeviceId } : NULL);
+
     ElemRunApplication(application, RunHandler);
     ElemFreeApplication(application);
 
