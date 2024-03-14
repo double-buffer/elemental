@@ -43,4 +43,6 @@ jobs:
       run: ./Tests/ApplicationTests
     
     - name: Run Graphics Tests
+      if: inputs.platform == 'win'
+      shell: cmd
       run: ./Tests/GraphicsTests
