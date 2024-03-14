@@ -33,8 +33,15 @@ bool RunHandler(ElemApplicationStatus status)
     return true;
 }
 
-int main(void)
+int main(int argc, const char* argv[]) 
 {
+    bool useVulkan = false;
+
+    if (argc > 1 && strcmp(argv[1], "--vulkan") == 0)
+    {
+        useVulkan = true;
+    }
+
     ElemConfigureLogHandler(ElemConsoleLogHandler);
     
     ElemApplication application = ElemCreateApplication("Hello Triangle");
@@ -47,22 +54,32 @@ int main(void)
 
     for (uint32_t i = 0; i < graphicsDevices.Length; i++)
     {
+        if (graphicsDevices.Items[i].GraphicsApi != ElemGraphicsApi_Vulkan && useVulkan)
+        {
+            continue;
+        }
+
         printf("GraphicsDevice %s\n", graphicsDevices.Items[i].DeviceName);
         selectedGraphicsDevice = &graphicsDevices.Items[i];
+        break;
     }
     
-    if (selectedGraphicsDevice)
+    if (!selectedGraphicsDevice)
     {
-        char temp[255];
-        sprintf(temp, "Hello Triangle! (GraphicsDevice: DeviceName=%s, GraphicsApi=%s, DeviceId=%llu, AvailableMemory=%llu)", 
-                            selectedGraphicsDevice->DeviceName, 
-                            GetGraphicsApiLabel(selectedGraphicsDevice->GraphicsApi),
-                            selectedGraphicsDevice->DeviceId, 
-                            selectedGraphicsDevice->AvailableMemory);
-        ElemSetWindowTitle(globalWindow, temp);
+        return 1;
     }
 
-    ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(selectedGraphicsDevice ? &(ElemGraphicsDeviceOptions) { .DeviceId = selectedGraphicsDevice->DeviceId } : NULL);
+    uint64_t deviceId = selectedGraphicsDevice->DeviceId;
+
+    char temp[255];
+    sprintf(temp, "Hello Triangle! (GraphicsDevice: DeviceName=%s, GraphicsApi=%s, DeviceId=%llu, AvailableMemory=%llu)", 
+                        selectedGraphicsDevice->DeviceName, 
+                        GetGraphicsApiLabel(selectedGraphicsDevice->GraphicsApi),
+                        selectedGraphicsDevice->DeviceId, 
+                        selectedGraphicsDevice->AvailableMemory);
+    ElemSetWindowTitle(globalWindow, temp);
+
+    ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(&(ElemGraphicsDeviceOptions) { .DeviceId = deviceId });
 
     ElemRunApplication(application, RunHandler);
     ElemFreeApplication(application);

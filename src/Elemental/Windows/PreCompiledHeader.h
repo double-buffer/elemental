@@ -15,7 +15,8 @@
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
 
-// TODO: Include vulkan headers if needed
+
+
 
 #define PackedStruct struct __attribute__((__packed__))
 #define ElemAPI extern "C" __declspec(dllexport)

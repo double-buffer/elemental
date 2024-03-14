@@ -1,15 +1,35 @@
 #include "Elemental.h"
 #include "SystemFunctions.h"
+#include "SystemMemory.h"
 #include "Direct3D12/Direct3D12GraphicsDevice.h"
+#include "Vulkan/VulkanGraphicsDevice.h"
+
+#define GRAPHICS_MAXDEVICES 16
 
 ElemAPI void ElemEnableGraphicsDebugLayer()
 {
     Direct3D12EnableGraphicsDebugLayer();
+    VulkanEnableGraphicsDebugLayer();
 }
 
 ElemAPI ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices()
 {
-    return Direct3D12GetAvailableGraphicsDevices();
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto result = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, GRAPHICS_MAXDEVICES);
+    
+    auto direct3DDevices = Direct3D12GetAvailableGraphicsDevices();
+    auto direct3DDeviceCount = direct3DDevices.Length;
+    SystemCopyBuffer(result, ReadOnlySpan<ElemGraphicsDeviceInfo>(direct3DDevices.Items, direct3DDeviceCount));
+
+    auto vulkanDevices = VulkanGetAvailableGraphicsDevices();
+    auto vulkanDeviceCount = vulkanDevices.Length;
+    SystemCopyBuffer(result.Slice(direct3DDeviceCount), ReadOnlySpan<ElemGraphicsDeviceInfo>(vulkanDevices.Items, vulkanDeviceCount));
+
+    return 
+    {
+        .Items = result.Pointer,
+        .Length = direct3DDeviceCount + vulkanDeviceCount
+    };
 }
 
 ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options)
@@ -42,7 +62,7 @@ ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOpti
  
     if (selectedDevice.GraphicsApi == ElemGraphicsApi_Vulkan)
     {
-        return {};//VulkanCreateGraphicsDevice(options);
+        return VulkanCreateGraphicsDevice(&localOptions);
     }
     else
     {

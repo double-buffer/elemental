@@ -6,7 +6,7 @@
 
 #define D3D12SDK_VERSION 613
 #define D3D12SDK_PATH ".\\"
-#define DIRECT3D12_MAXDEVICES 10
+#define DIRECT3D12_MAXDEVICES 10u
 
 MemoryArena Direct3D12GraphicsMemoryArena;
 SystemDataPool<Direct3D12GraphicsDeviceData, Direct3D12GraphicsDeviceDataFull> direct3D12GraphicsDevicePool;
@@ -17,7 +17,27 @@ ComPtr<ID3D12Debug6> direct3D12DebugInterface;
 ComPtr<IDXGIFactory6> dxgiFactory; 
 ComPtr<ID3D12DeviceFactory> direct3D12DeviceFactory;
 
-// TODO: Use new CreateStateObject for PSO?
+void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void* context)
+{
+    if (severity == D3D12_MESSAGE_SEVERITY_INFO)
+    {
+        return;
+    }
+
+    auto messageType = ElemLogMessageType_Debug;
+
+    if (severity == D3D12_MESSAGE_SEVERITY_WARNING)
+    {
+        messageType = ElemLogMessageType_Warning;
+    }
+    else if(severity == D3D12_MESSAGE_SEVERITY_ERROR || severity == D3D12_MESSAGE_SEVERITY_CORRUPTION)
+    {
+        messageType = ElemLogMessageType_Error;
+    }
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", description);
+}
 
 void InitDirect3D12()
 {
@@ -36,7 +56,7 @@ void InitDirect3D12()
 
         if (sdkLayerExists)
         {
-            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init DirectX12 Debug Mode");
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init Direct3D12 Debug Mode");
 
             AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebugInterface.GetAddressOf())));
             dxgiCreateFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
@@ -60,28 +80,6 @@ void InitDirect3D12()
     }
 
     AssertIfFailed(CreateDXGIFactory2(dxgiCreateFactoryFlags, IID_PPV_ARGS(dxgiFactory.GetAddressOf())));
-}
-
-void Direct3D12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void* context)
-{
-    if (severity == D3D12_MESSAGE_SEVERITY_INFO)
-    {
-        return;
-    }
-
-    auto messageType = ElemLogMessageType_Debug;
-
-    if (severity == D3D12_MESSAGE_SEVERITY_WARNING)
-    {
-        messageType = ElemLogMessageType_Warning;
-    }
-    else if(severity == D3D12_MESSAGE_SEVERITY_ERROR || severity == D3D12_MESSAGE_SEVERITY_CORRUPTION)
-    {
-        messageType = ElemLogMessageType_Error;
-    }
-
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", description);
 }
 
 void InitDirect3D12GraphicsDeviceMemory()
