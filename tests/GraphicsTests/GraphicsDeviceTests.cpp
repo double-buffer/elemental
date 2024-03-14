@@ -10,7 +10,7 @@ UTEST(GraphicsDevice, GetAvailableGraphicsDevices)
 
     printf("Teeeest\n");
     // Act
-    /*auto graphicsDevices = ElemGetAvailableGraphicsDevices();
+    auto graphicsDevices = ElemGetAvailableGraphicsDevices();
 
     // Assert
     ElemFreeApplication(application);
@@ -26,5 +26,5 @@ UTEST(GraphicsDevice, GetAvailableGraphicsDevices)
         }
     }
 
-    ASSERT_LE(1u, deviceCount);*/
+    ASSERT_LE(1u, deviceCount);
 }

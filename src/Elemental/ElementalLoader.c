@@ -145,6 +145,7 @@ static inline void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLog
     }
 
     printf(" %s\n\033[0m", message);
+    fflush(stdout);
 }
 
 static inline void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
