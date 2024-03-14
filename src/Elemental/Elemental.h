@@ -209,7 +209,8 @@ typedef ElemHandle ElemGraphicsDevice;
 
 typedef enum
 {
-    ElemGraphicsApi_Direct3D12
+    ElemGraphicsApi_Direct3D12,
+    ElemGraphicsApi_Vulkan
 } ElemGraphicsApi;
 
 typedef struct

@@ -17,6 +17,8 @@ ComPtr<ID3D12Debug6> direct3D12DebugInterface;
 ComPtr<IDXGIFactory6> dxgiFactory; 
 ComPtr<ID3D12DeviceFactory> direct3D12DeviceFactory;
 
+// TODO: Use new CreateStateObject for PSO?
+
 void InitDirect3D12()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();

@@ -4,20 +4,19 @@ static ElemWindow globalWindow;
 
 const char* GetWindowStateLabel(ElemWindowState state)
 {
-    if (state == ElemWindowState_FullScreen)
+    switch (state)
     {
-        return "FullScreen";
-    }
-    else if (state == ElemWindowState_Maximized)
-    {
-        return "Maximized";
-    }
-    else if (state == ElemWindowState_Minimized)
-    {
-        return "Minimized";
+        case ElemWindowState_FullScreen:
+            return "FullScreen";
+        case ElemWindowState_Maximized:
+            return "Maximized";
+        case ElemWindowState_Minimized:
+            return "Minimized";
+        case ElemWindowState_Normal:
+            return "Normal";
     }
 
-    return "Normal";
+    return "Unknown";
 }
 
 bool RunHandler(ElemApplicationStatus status)

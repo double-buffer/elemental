@@ -8,6 +8,9 @@ const char* GetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
     {
         case ElemGraphicsApi_Direct3D12:
             return "Direct3D12";
+
+        case ElemGraphicsApi_Vulkan:
+            return "Vulkan";
     }
 
     return "Unknown";

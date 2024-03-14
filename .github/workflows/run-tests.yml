@@ -34,9 +34,13 @@ jobs:
       run: |
         chmod +x ./Tests/SystemFunctionsTests
         chmod +x ./Tests/ApplicationTests
+        chmod +x ./Tests/GraphicsTests
 
     - name: Run Native System Functions Tests
       run: ./Tests/SystemFunctionsTests
     
     - name: Run Application Tests
       run: ./Tests/ApplicationTests
+    
+    - name: Run Graphics Tests
+      run: ./Tests/GraphicsTests

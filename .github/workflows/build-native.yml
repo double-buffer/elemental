@@ -90,3 +90,4 @@ jobs:
         path: |
           ./build/bin/Release/SystemFunctionsTests*
           ./build/bin/Release/ApplicationTests*
+          ./build/bin/Release/GraphicsTests*
