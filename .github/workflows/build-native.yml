@@ -45,6 +45,7 @@ jobs:
       run: |
         cmake --build ./build --target SystemFunctionsTests --config Release
         cmake --build ./build --target ApplicationTests --config Release
+        cmake --build ./build --target GraphicsTests --config Release
           
     # Conditional Vulkan Loader steps for Windows
     - name: Download Vulkan Loader
