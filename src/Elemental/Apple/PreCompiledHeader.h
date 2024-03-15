@@ -16,6 +16,7 @@
 #include "AppKit/AppKit.hpp"
 #include <IOKit/hid/IOHIDManager.h>
 
-#define DllExport extern "C" __attribute__((visibility("default"))) 
 #define ElemAPI extern "C" __attribute__((visibility("default")))
 #define PackedStruct struct __attribute__((__packed__))
+#define AssertIfFailed(expression) SystemAssert(SUCCEEDED((expression)))
+#define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))

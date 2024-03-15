@@ -2,9 +2,19 @@
 
 #include "MacOSApplication.cpp"
 #include "MacOSWindow.cpp"
-#include "Graphics/GraphicsService.cpp"
-#include "Graphics/Metal/MetalGraphicsService.cpp"
-#include "Inputs/InputsService.cpp"
+
+// TODO: only Include vulkan headers if needed
+
+#define VK_ENABLE_BETA_EXTENSIONS
+#define VK_USE_PLATFORM_WIN32_KHR
+#define VOLK_IMPLEMENTATION
+#include "volk.h"
+
+#include "Graphics/MetalGraphicsDevice.cpp"
+
+#include "Graphics/VulkanGraphicsDevice.cpp"
+
+#include "Graphics/GraphicsDevice.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"

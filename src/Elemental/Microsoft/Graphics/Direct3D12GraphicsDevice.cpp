@@ -178,6 +178,7 @@ ElemGraphicsDevice Direct3D12CreateGraphicsDevice(const ElemGraphicsDeviceOption
 {
     InitDirect3D12GraphicsDeviceMemory();
 
+    // TODO: Extract check device code to a separate function and call it here too
     ComPtr<IDXGIAdapter4> graphicsAdapter;
     DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;

@@ -2,8 +2,12 @@
 
 #include "Elemental.h"
 #include "SystemMemory.h"
+
 #ifdef WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
+#endif
+#ifdef __APPLE__
+
 #endif
 #include "volk.h"
 

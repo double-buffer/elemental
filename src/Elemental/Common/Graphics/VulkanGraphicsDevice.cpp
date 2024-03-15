@@ -71,8 +71,11 @@ void InitVulkan()
                 VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
                 VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
                 VK_KHR_SURFACE_EXTENSION_NAME,
-                #ifdef WIN32
+                #ifdef _WIN32
                 VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+                #endif
+                #ifdef __APPLE__
+                VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
                 #endif
             };
 
@@ -88,6 +91,10 @@ void InitVulkan()
             VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
             validationFeatures.enabledValidationFeatureCount = ARRAYSIZE(enabledValidationFeatures);
             validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
+
+            #ifdef __APPLE__
+            createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+            #endif
 
             createInfo.pNext = &validationFeatures;
 
@@ -109,10 +116,17 @@ void InitVulkan()
             #ifdef WIN32
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME
             #endif
+            #ifdef __APPLE__
+            VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+            #endif
         };
         
         createInfo.ppEnabledExtensionNames = extensions;
         createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+
+        #ifdef __APPLE__
+        createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+        #endif
 
         AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &vulkanInstance));
     }
@@ -172,6 +186,39 @@ void VulkanEnableGraphicsDebugLayer()
     vulkanDebugLayerEnabled = true;
 }
 
+bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
+{
+    #ifdef __APPLE__
+    return true;
+    #else
+    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures {};
+    presentIdFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
+
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = {};
+    meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    meshShaderFeatures.pNext = &presentIdFeatures;
+
+    VkPhysicalDeviceFeatures2 features2 = {};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+
+    #ifndef __APPLE__
+    features2.pNext = &meshShaderFeatures;
+    #endif
+
+    vkGetPhysicalDeviceFeatures2(device, &features2);
+    
+    if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader && presentIdFeatures.presentId)
+    {
+        return true;
+    }
+    
+    return false;
+    #endif
+}
+
 ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices()
 {
     InitVulkanGraphicsDeviceMemory();
@@ -194,23 +241,7 @@ ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices()
         VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
         vkGetPhysicalDeviceMemoryProperties(devices[i], &deviceMemoryProperties);
 
-        VkPhysicalDeviceFeatures deviceFeatures;
-        vkGetPhysicalDeviceFeatures(devices[i], &deviceFeatures);
-
-        VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures {};
-        presentIdFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
-
-        VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = {};
-        meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
-        meshShaderFeatures.pNext = &presentIdFeatures;
-
-        VkPhysicalDeviceFeatures2 features2 = {};
-        features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
-        features2.pNext = &meshShaderFeatures;
-
-        vkGetPhysicalDeviceFeatures2(devices[i], &features2);
-
-        if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader && presentIdFeatures.presentId)
+        if (VulkanCheckGraphicsDeviceCompatibility(devices[i]))
         {
             deviceInfos[currentDeviceInfoIndex++] = VulkanConstructGraphicsDeviceInfo(deviceProperties, deviceMemoryProperties);
         }
@@ -239,14 +270,17 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
 
     for (uint32_t i = 0; i < deviceCount; i++)
     {
-        vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
-        vkGetPhysicalDeviceMemoryProperties(devices[i], &deviceMemoryProperties);
-
-        if ((options != nullptr && options->DeviceId == deviceProperties.deviceID) || options == nullptr || options->DeviceId == 0)
+        if (VulkanCheckGraphicsDeviceCompatibility(devices[i]))
         {
-            physicalDevice = devices[i];
-            foundDevice = true;
-            break;
+            vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
+            vkGetPhysicalDeviceMemoryProperties(devices[i], &deviceMemoryProperties);
+
+            if ((options != nullptr && options->DeviceId == deviceProperties.deviceID) || options == nullptr || options->DeviceId == 0)
+            {
+                physicalDevice = devices[i];
+                foundDevice = true;
+                break;
+            }
         }
     }
 
@@ -297,9 +331,12 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     const char* extensions[] =
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_PRESENT_ID_EXTENSION_NAME,
-        VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+        #ifndef __APPLE__ // TODO: Not supported yet on MacOS
         VK_EXT_MESH_SHADER_EXTENSION_NAME
+        #endif
+        #ifdef __APPLE__
+        VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+        #endif
     };
 
     createInfo.ppEnabledExtensionNames = extensions;
@@ -307,9 +344,12 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
 
     VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     features.features.multiDrawIndirect = true;
-    features.features.pipelineStatisticsQuery = true;
     features.features.shaderInt16 = true;
     features.features.shaderInt64 = true;
+
+    #ifndef __APPLE__
+    features.features.pipelineStatisticsQuery = true;
+    #endif
 
     VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     features12.timelineSemaphore = true;
@@ -327,7 +367,9 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
 
     if (vulkanDebugLayerEnabled)
     {
+        #ifndef __APPLE__
         features12.bufferDeviceAddressCaptureReplay = true;
+        #endif
     }
 
     VkPhysicalDeviceVulkan13Features features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
@@ -340,18 +382,10 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     meshFeatures.taskShader = true;
     meshFeatures.meshShaderQueries = true;
 
-    VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
-    presentIdFeatures.presentId = true;
-    
-    VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR };
-    presentWaitFeatures.presentWait = true;
-
     createInfo.pNext = &features;
     features.pNext = &features12;
     features12.pNext = &features13;
-    features13.pNext = &presentIdFeatures;
-    presentIdFeatures.pNext = &presentWaitFeatures;
-    presentWaitFeatures.pNext = &meshFeatures;
+    features13.pNext = &meshFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailed(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
