@@ -176,8 +176,7 @@ ElemGraphicsDeviceInfoList Direct3D12GetAvailableGraphicsDevices()
 
 ElemGraphicsDevice Direct3D12CreateGraphicsDevice(const ElemGraphicsDeviceOptions* options)
 {
-    SystemAssert(options);
-    SystemAssert(options->DeviceId);
+    InitDirect3D12GraphicsDeviceMemory();
 
     ComPtr<IDXGIAdapter4> graphicsAdapter;
     DXGI_ADAPTER_DESC3 adapterDescription = {};
@@ -187,7 +186,7 @@ ElemGraphicsDevice Direct3D12CreateGraphicsDevice(const ElemGraphicsDeviceOption
     {
         AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
 
-        if (options->DeviceId == *(uint64_t *)&adapterDescription.AdapterLuid)
+        if ((options != nullptr && options->DeviceId == *(uint64_t *)&adapterDescription.AdapterLuid) || options == nullptr || options->DeviceId == 0)
         {
             foundAdapter = true;
             break;

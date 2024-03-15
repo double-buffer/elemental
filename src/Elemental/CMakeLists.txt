@@ -1,5 +1,5 @@
 if(WIN32)
-    set(ELEM_PLATFORM_DIR Windows)
+    set(ELEM_PLATFORM_DIR Microsoft)
 elseif(APPLE)
     set(ELEM_PLATFORM_DIR Apple)
 endif()

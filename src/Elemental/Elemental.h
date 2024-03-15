@@ -215,6 +215,12 @@ typedef enum
 
 typedef struct
 {
+    bool EnableDebugLayer;
+    bool PreferVulkan;
+} ElemGraphicsOptions;
+
+typedef struct
+{
     const char* DeviceName;
     ElemGraphicsApi GraphicsApi;
     uint64_t DeviceId;
@@ -232,7 +238,7 @@ typedef struct
     uint64_t DeviceId;
 } ElemGraphicsDeviceOptions;
 
-ElemAPI void ElemEnableGraphicsDebugLayer(void);
+ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options);
 
 ElemAPI ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void);
 

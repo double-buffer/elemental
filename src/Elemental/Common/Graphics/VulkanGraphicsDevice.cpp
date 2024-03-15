@@ -225,8 +225,7 @@ ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices()
 
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options)
 {
-    SystemAssert(options);
-    SystemAssert(options->DeviceId);
+    InitVulkanGraphicsDeviceMemory();
 
     auto deviceCount = VULKAN_MAXDEVICES;
     VkPhysicalDevice devices[VULKAN_MAXDEVICES];
@@ -243,7 +242,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
         vkGetPhysicalDeviceMemoryProperties(devices[i], &deviceMemoryProperties);
 
-        if (deviceProperties.deviceID == options->DeviceId)
+        if ((options != nullptr && options->DeviceId == deviceProperties.deviceID) || options == nullptr || options->DeviceId == 0)
         {
             physicalDevice = devices[i];
             foundDevice = true;
@@ -385,5 +384,5 @@ ElemGraphicsDeviceInfo VulkanGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDe
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
-    return {};
+    return VulkanConstructGraphicsDeviceInfo(graphicsDeviceDataFull->DeviceProperties, graphicsDeviceDataFull->DeviceMemoryProperties);
 }

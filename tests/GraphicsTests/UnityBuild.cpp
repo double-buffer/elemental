@@ -11,6 +11,6 @@ int main(int argc, const char *const argv[])
     {
         testForceVulkanApi = true;
     }
-
+    
     return utest_main(argc, argv);
 }

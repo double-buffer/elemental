@@ -31,7 +31,7 @@ typedef struct ElementalFunctions
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
     void (*ElemSetWindowTitle)(ElemWindow, const char*);
     void (*ElemSetWindowState)(ElemWindow, ElemWindowState);
-    void (*ElemEnableGraphicsDebugLayer)(void);
+    void (*ElemSetGraphicsOptions)(const ElemGraphicsOptions*);
     ElemGraphicsDeviceInfoList (*ElemGetAvailableGraphicsDevices)(void);
     ElemGraphicsDevice (*ElemCreateGraphicsDevice)(const ElemGraphicsDeviceOptions*);
     void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
@@ -92,7 +92,7 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetFunctionPointer("ElemGetWindowRenderSize");
     elementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetFunctionPointer("ElemSetWindowTitle");
     elementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetFunctionPointer("ElemSetWindowState");
-    elementalFunctions.ElemEnableGraphicsDebugLayer = (void (*)(void))GetFunctionPointer("ElemEnableGraphicsDebugLayer");
+    elementalFunctions.ElemSetGraphicsOptions = (void (*)(const ElemGraphicsOptions*))GetFunctionPointer("ElemSetGraphicsOptions");
     elementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoList (*)(void))GetFunctionPointer("ElemGetAvailableGraphicsDevices");
     elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(const ElemGraphicsDeviceOptions*))GetFunctionPointer("ElemCreateGraphicsDevice");
     elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
@@ -382,7 +382,7 @@ static inline void ElemSetWindowState(ElemWindow window, ElemWindowState windowS
     elementalFunctions.ElemSetWindowState(window, windowState);
 }
 
-static inline void ElemEnableGraphicsDebugLayer(void)
+static inline void ElemSetGraphicsOptions(const ElemGraphicsOptions* options)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -390,13 +390,13 @@ static inline void ElemEnableGraphicsDebugLayer(void)
         return;
     }
 
-    if (!elementalFunctions.ElemEnableGraphicsDebugLayer) 
+    if (!elementalFunctions.ElemSetGraphicsOptions) 
     {
-        assert(elementalFunctions.ElemEnableGraphicsDebugLayer);
+        assert(elementalFunctions.ElemSetGraphicsOptions);
         return;
     }
 
-    elementalFunctions.ElemEnableGraphicsDebugLayer();
+    elementalFunctions.ElemSetGraphicsOptions(options);
 }
 
 static inline ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void)

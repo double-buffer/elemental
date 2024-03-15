@@ -10,10 +10,14 @@ extern bool testForceVulkanApi;
 
 void InitLog()
 {
+    ElemGraphicsOptions options = { .PreferVulkan = testForceVulkanApi };
+
     #ifdef _DEBUG
     ElemConfigureLogHandler(ElemConsoleLogHandler);
-    ElemEnableGraphicsDebugLayer();
+    options.EnableDebugLayer = true;
     #else
     ElemConfigureLogHandler(ElemConsoleErrorLogHandler);
     #endif
+
+    ElemSetGraphicsOptions(&options);
 }

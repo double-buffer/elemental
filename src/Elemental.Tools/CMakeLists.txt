@@ -10,7 +10,7 @@ target_link_libraries(Elemental.Tools PRIVATE Elemental)
 target_compile_options(Elemental.Tools PRIVATE -Wno-language-extension-token)
 
 if(WIN32)
-    target_include_directories(Elemental.Tools PRIVATE ../Elemental/Windows/)
+    target_include_directories(Elemental.Tools PRIVATE ../Elemental/Microsoft/)
     target_compile_options(Elemental.Tools PRIVATE -EHs -MD)
     target_compile_definitions(Elemental.Tools PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
     target_link_libraries(Elemental.Tools PRIVATE Dwmapi UxTheme onecore)

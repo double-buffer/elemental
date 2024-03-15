@@ -11,11 +11,13 @@
 #define VOLK_IMPLEMENTATION
 #include "volk.h"
 
+#include "Graphics/Direct3D12GraphicsDevice.cpp"
+
+#include "Graphics/VulkanGraphicsDevice.cpp"
+
 #include "Graphics/GraphicsDevice.cpp"
 
-#include "Graphics/Direct3D12/Direct3D12GraphicsDevice.cpp"
 
-#include "Vulkan/VulkanGraphicsDevice.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"
