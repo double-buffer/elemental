@@ -171,21 +171,6 @@ ElemGraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDevicePropert
     };
 }
 
-VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
-{
-    return SystemGetDataPoolItem(vulkanGraphicsDevicePool, graphicsDevice);
-}
-
-VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice)
-{
-    return SystemGetDataPoolItemFull(vulkanGraphicsDevicePool, graphicsDevice);
-}
-
-void VulkanEnableGraphicsDebugLayer()
-{
-    vulkanDebugLayerEnabled = true;
-}
-
 bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
 {
     #ifdef __APPLE__
@@ -217,6 +202,21 @@ bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
     
     return false;
     #endif
+}
+
+VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
+{
+    return SystemGetDataPoolItem(vulkanGraphicsDevicePool, graphicsDevice);
+}
+
+VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice)
+{
+    return SystemGetDataPoolItemFull(vulkanGraphicsDevicePool, graphicsDevice);
+}
+
+void VulkanEnableGraphicsDebugLayer()
+{
+    vulkanDebugLayerEnabled = true;
 }
 
 ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices()

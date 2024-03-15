@@ -97,7 +97,6 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
 
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
-    printf("Free window\n");
     auto windowData = GetMacOSWindowData(window);
 
     if (!windowData)

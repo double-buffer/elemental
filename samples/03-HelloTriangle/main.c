@@ -11,6 +11,9 @@ const char* GetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
 
         case ElemGraphicsApi_Vulkan:
             return "Vulkan";
+
+        case ElemGraphicsApi_Metal:
+            return "Metal";
     }
 
     return "Unknown";

@@ -15,6 +15,8 @@ void InitMetal()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
+    // TODO: There is nothing in code to enable that 😢
+
     if (metalDebugLayerEnabled)
     {
         auto sdkLayerExists = false;
@@ -22,10 +24,6 @@ void InitMetal()
         if (sdkLayerExists)
         {
             SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init Metal Debug Mode");
-        }
-        else
-        {
-            SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "D3D12SDKLayers.dll not found but EnableGraphicsDebugLayer() was called. Debug layer will not be enabled."); 
         }
     }
     else
@@ -45,19 +43,28 @@ void InitMetalGraphicsDeviceMemory()
     }
 }
 
-/*
-ElemGraphicsDeviceInfo MetalConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 adapterDescription)
+ElemGraphicsDeviceInfo MetalConstructGraphicsDeviceInfo(const MTL::Device* device)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
+    auto deviceName = ReadOnlySpan<char>(device->name()->utf8String());
+    auto destinationDeviceName = SystemPushArray<char>(stackMemoryArena, deviceName.Length);
+    SystemCopyBuffer<char>(destinationDeviceName, deviceName);
+
     return 
     {
-        .DeviceName = SystemConvertWideCharToUtf8(stackMemoryArena, adapterDescription.Description).Pointer,
+        .DeviceName = destinationDeviceName.Pointer,
         .GraphicsApi = ElemGraphicsApi_Metal,
-        .DeviceId = *(uint64_t *)&adapterDescription.AdapterLuid,
-        .AvailableMemory = adapterDescription.DedicatedVideoMemory
+        .DeviceId = device->registryID(),
+        .AvailableMemory = device->recommendedMaxWorkingSetSize()
     };
-}*/
+}
+
+bool MetalCheckGraphicsDeviceCompatibility(const MTL::Device* device)
+{
+    // TODO: 
+    return device->supportsRaytracing();
+}
 
 MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
 {
@@ -81,6 +88,13 @@ ElemGraphicsDeviceInfoList MetalGetAvailableGraphicsDevices()
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, METAL_MAXDEVICES);
     auto currentDeviceInfoIndex = 0u;
+
+    auto device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
+    
+    if (MetalCheckGraphicsDeviceCompatibility(device.get()))
+    {
+        deviceInfos[currentDeviceInfoIndex++] = MetalConstructGraphicsDeviceInfo(device.get());
+    }
 
     return
     {
