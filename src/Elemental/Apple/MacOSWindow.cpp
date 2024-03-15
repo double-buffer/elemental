@@ -71,14 +71,23 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     windowHandle->center();
     windowHandle->makeKeyAndOrderFront(nullptr);
 
+    auto applicationDataFull = GetMacOSApplicationDataFull(application);
+    applicationDataFull->WindowCount++;
+
     auto handle = SystemAddDataPoolItem(windowDataPool, {
         .WindowHandle = windowHandle
     }); 
+    
+    auto windowDelegate = new MacOSWindowDelegate(handle);
+    windowHandle->setDelegate(windowDelegate);
 
     SystemAddDataPoolItemFull(windowDataPool, handle, {
         .Width = (uint32_t)width,
         .Height = (uint32_t)height,
-        .UIScale = 1.0f
+        .UIScale = 1.0f,
+        .WindowDelegate = windowDelegate,
+        .Application = application,
+        .ClosingCalled = false
     });
 
     ElemSetWindowState(handle, windowState);
@@ -88,13 +97,34 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
 
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
+    printf("Free window\n");
     auto windowData = GetMacOSWindowData(window);
-    SystemAssert(windowData);
 
-    windowData->WindowHandle->close();
-    windowData->WindowHandle.reset();
+    if (!windowData)
+    {
+        return;
+    }
+
+    auto windowDataFull = GetMacOSWindowDataFull(window);
+    SystemAssert(windowDataFull);
 
     SystemRemoveDataPoolItem(windowDataPool, window);
+
+    if (!windowDataFull->ClosingCalled)
+    {
+        windowData->WindowHandle->close();
+    }
+
+    auto applicationDataFull = GetMacOSApplicationDataFull(windowDataFull->Application);
+    SystemAssert(applicationDataFull);
+    applicationDataFull->WindowCount--;
+
+    if (applicationDataFull->WindowCount == 0)
+    {
+        applicationDataFull->Status = ElemApplicationStatus_Closing;
+    }
+
+    windowData->WindowHandle.reset();
 }
 
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
@@ -177,4 +207,27 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
     {
         windowData->WindowHandle->miniaturize(nullptr);
     }
+}
+
+MacOSWindowDelegate::MacOSWindowDelegate(ElemWindow window)
+{
+    _window = window;
+}
+
+MacOSWindowDelegate::~MacOSWindowDelegate()
+{
+}
+
+void MacOSWindowDelegate::windowWillClose(NS::Notification* pNotification)
+{            
+    auto windowDataFull = GetMacOSWindowDataFull(_window);
+
+    if (!windowDataFull)
+    {
+        return;
+    }
+
+    windowDataFull->ClosingCalled = true;
+
+    ElemFreeWindow(_window);
 }

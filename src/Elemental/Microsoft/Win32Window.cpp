@@ -226,7 +226,10 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
     SystemAssert(windowData);
 
     auto windowDataFull = GetWin32WindowDataFull(window);
+    SystemAssert(windowDataFull);
+
     auto applicationDataFull = GetWin32ApplicationDataFull(windowDataFull->Application);
+    SystemAssert(applicationDataFull);
     applicationDataFull->WindowCount--;
 
     if (applicationDataFull->WindowCount == 0)

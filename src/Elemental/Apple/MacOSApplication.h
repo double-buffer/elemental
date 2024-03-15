@@ -24,6 +24,7 @@ struct MacOSApplicationDataFull
 {
     MacOSApplicationDelegate* ApplicationDelegate;
     ElemApplicationStatus Status;
+    int32_t WindowCount;
 };
 
 extern MemoryArena ApplicationMemoryArena;

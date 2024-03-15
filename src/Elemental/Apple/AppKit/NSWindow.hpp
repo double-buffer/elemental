@@ -34,6 +34,13 @@
 
 namespace NS
 {
+    class WindowDelegate
+	{
+		public:
+			virtual					~WindowDelegate() { }
+			virtual void			windowWillClose( Notification* pNotification ) { }
+	};
+
 	class Window : public Referencing< Window >
 	{
 		public:
@@ -44,6 +51,7 @@ namespace NS
 			Screen*				screen();
             WindowStyleMask     styleMask();
 			void				setContentView( const View* pContentView );
+			void 				setDelegate( const WindowDelegate* pDelegate );
 			void				makeKeyAndOrderFront( const Object* pSender );
 			void				setTitle( const String* pTitle );
 			void				center();
@@ -74,6 +82,24 @@ _NS_INLINE NS::Window* NS::Window::init( CGRect contentRect, WindowStyleMask sty
 _NS_INLINE NS::View * NS::Window::contentView()
 {
     return Object::sendMessage<View *>(this, _APPKIT_PRIVATE_SEL(contentView));
+}
+
+_NS_INLINE void NS::Window::setDelegate( const WindowDelegate* pWindowDelegate )
+{
+	// TODO: Use a more suitable Object instead of NS::Value?
+	// NOTE: this pWrapper is only held with a weak reference
+	NS::Value* pWrapper = NS::Value::value( pWindowDelegate );
+
+	typedef void (*DispatchFunction)( NS::Value*, SEL, void* );
+
+	DispatchFunction willClose = []( Value* pSelf, SEL, void* pNotification ){
+		auto pDel = reinterpret_cast< NS::WindowDelegate* >( pSelf->pointerValue() );
+		pDel->windowWillClose( (NS::Notification *)pNotification );
+	};
+
+	class_addMethod( (Class)_NS_PRIVATE_CLS( NSValue ), _APPKIT_PRIVATE_SEL( windowWillClose_ ), (IMP)willClose, "v@:@" );
+
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( setDelegate_ ), pWrapper );
 }
 
 _NS_INLINE NS::Screen* NS::Window::screen()

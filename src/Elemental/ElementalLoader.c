@@ -5,11 +5,12 @@
 #include "Elemental.h"
 
 #if defined(_WIN32)
-   #define UNICODE
-   #include <windows.h>
+    #define UNICODE
+    #include <windows.h>
 #else
-   #include <dlfcn.h>
-   #include <unistd.h>
+    #include <dlfcn.h>
+    #include <unistd.h>
+    #include <string.h>
 #endif
 
 #if defined(_WIN32)

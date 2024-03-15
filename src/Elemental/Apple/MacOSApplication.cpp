@@ -185,6 +185,11 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
 
 ElemAPI void ElemFreeApplication(ElemApplication application)
 {
+    auto applicationDataFull = GetMacOSApplicationDataFull(application);
+    SystemAssert(applicationDataFull);
+
+    delete applicationDataFull->ApplicationDelegate;
+    
     SystemRemoveDataPoolItem(applicationPool, application);
 }
 
@@ -199,8 +204,6 @@ MacOSApplicationDelegate::~MacOSApplicationDelegate()
 
 bool MacOSApplicationDelegate::applicationShouldTerminateAfterLastWindowClosed(NS::Application* pSender)
 {
-    printf("Teeeeeeest\n");
-    // TODO: It doesn't seems to be working :(
     return true;
 }
 
