@@ -31,7 +31,7 @@ public static class DefaultLogHandlers
         Console.Write($" {System.Text.UTF8Encoding.UTF8.GetString(function)}");
 
         Console.ForegroundColor = mainForegroundColor;
-        Console.WriteLine($" {System.Text.UTF8Encoding.UTF8.GetString(message)}");
+        Console.WriteLine($" {messageType}: {System.Text.UTF8Encoding.UTF8.GetString(message)}");
         Console.ForegroundColor = ConsoleColor.Gray;
     }
 }

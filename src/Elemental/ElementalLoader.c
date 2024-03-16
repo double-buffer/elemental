@@ -5,12 +5,12 @@
 #include "Elemental.h"
 
 #if defined(_WIN32)
-    #define UNICODE
-    #include <windows.h>
+   #define UNICODE
+   #include <windows.h>
 #else
-    #include <dlfcn.h>
-    #include <unistd.h>
-    #include <string.h>
+   #include <dlfcn.h>
+   #include <unistd.h>
+   #include <string.h>
 #endif
 
 #if defined(_WIN32)
@@ -37,6 +37,8 @@ typedef struct ElementalFunctions
     ElemGraphicsDevice (*ElemCreateGraphicsDevice)(const ElemGraphicsDeviceOptions*);
     void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
     ElemGraphicsDeviceInfo (*ElemGetGraphicsDeviceInfo)(ElemGraphicsDevice);
+    ElemGraphicsCommandQueue (*ElemCreateGraphicsCommandQueue)(ElemGraphicsDevice, ElemGraphicsCommandQueueType, const ElemGraphicsCommandQueueOptions*);
+    void (*ElemFreeGraphicsCommandQueue)(ElemGraphicsCommandQueue);
     
 } ElementalFunctions;
 
@@ -98,6 +100,8 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(const ElemGraphicsDeviceOptions*))GetFunctionPointer("ElemCreateGraphicsDevice");
     elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
     elementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetFunctionPointer("ElemGetGraphicsDeviceInfo");
+    elementalFunctions.ElemCreateGraphicsCommandQueue = (ElemGraphicsCommandQueue (*)(ElemGraphicsDevice, ElemGraphicsCommandQueueType, const ElemGraphicsCommandQueueOptions*))GetFunctionPointer("ElemCreateGraphicsCommandQueue");
+    elementalFunctions.ElemFreeGraphicsCommandQueue = (void (*)(ElemGraphicsCommandQueue))GetFunctionPointer("ElemFreeGraphicsCommandQueue");
     
 
     functionPointersLoaded = 1;
@@ -136,11 +140,15 @@ static inline void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLog
 
     if (messageType == ElemLogMessageType_Error)
     {
-        printf("\033[31m");
+        printf("\033[31m Error:");
     }
     else if (messageType == ElemLogMessageType_Warning)
     {
-        printf("\033[33m");
+        printf("\033[33m Warning:");
+    }
+    else if (messageType == ElemLogMessageType_Debug)
+    {
+        printf("\033[0m Debug:");
     }
     else
     {
@@ -183,7 +191,7 @@ static inline void ElemConsoleErrorLogHandler(ElemLogMessageType messageType, El
     }
 
     printf("\033[0m]");
-    printf("\033[32m %s\033[31m %s\033[0m\n", function, message);
+    printf("\033[32m %s\033[31m Error: %s\033[0m\n", function, message);
     fflush(stdout);
 }
 
@@ -508,4 +516,52 @@ static inline ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevic
     }
 
     return elementalFunctions.ElemGetGraphicsDeviceInfo(graphicsDevice);
+}
+
+static inline ElemGraphicsCommandQueue ElemCreateGraphicsCommandQueue(ElemGraphicsDevice graphicsDevice, ElemGraphicsCommandQueueType type, const ElemGraphicsCommandQueueOptions* options)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemGraphicsCommandQueue result = {};
+        #else
+        ElemGraphicsCommandQueue result = (ElemGraphicsCommandQueue){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemCreateGraphicsCommandQueue) 
+    {
+        assert(elementalFunctions.ElemCreateGraphicsCommandQueue);
+
+        #ifdef __cplusplus
+        ElemGraphicsCommandQueue result = {};
+        #else
+        ElemGraphicsCommandQueue result = (ElemGraphicsCommandQueue){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemCreateGraphicsCommandQueue(graphicsDevice, type, options);
+}
+
+static inline void ElemFreeGraphicsCommandQueue(ElemGraphicsCommandQueue commandQueue)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemFreeGraphicsCommandQueue) 
+    {
+        assert(elementalFunctions.ElemFreeGraphicsCommandQueue);
+        return;
+    }
+
+    elementalFunctions.ElemFreeGraphicsCommandQueue(commandQueue);
 }

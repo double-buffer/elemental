@@ -9,11 +9,13 @@
 #include "volk.h"
 
 #include "Graphics/Direct3D12GraphicsDevice.cpp"
+#include "Graphics/Direct3D12CommandList.cpp"
 
-#include "Graphics/VulkanGraphicsDevice.cpp"
+#include "Graphics/Vulkan/VulkanGraphicsDevice.cpp"
+#include "Graphics/Vulkan/VulkanCommandList.cpp"
 
 #include "Graphics/GraphicsDevice.cpp"
-
+#include "Graphics/CommandList.cpp"
 
 
 #include "SystemPlatformFunctions.cpp"

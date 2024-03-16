@@ -21,6 +21,7 @@
 #define PackedStruct struct __attribute__((__packed__))
 #define ElemAPI extern "C" __declspec(dllexport)
 #define AssertIfFailed(expression) SystemAssert(SUCCEEDED((expression)))
+#define AssertIfFailedReturnNullHandle(expression) SystemAssertReturnNullHandle(SUCCEEDED((expression)))
 
 struct WindowsEvent
 {

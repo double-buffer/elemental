@@ -4,7 +4,7 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-#define VULKAN_MAXDEVICES 10u
+#define VULKAN_MAX_DEVICES 10u
 
 MemoryArena VulkanGraphicsMemoryArena;
 SystemDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull> vulkanGraphicsDevicePool;
@@ -148,7 +148,7 @@ void InitVulkanGraphicsDeviceMemory()
     if (!VulkanGraphicsMemoryArena.Storage)
     {
         VulkanGraphicsMemoryArena = SystemAllocateMemoryArena();
-        vulkanGraphicsDevicePool = SystemCreateDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAXDEVICES);
+        vulkanGraphicsDevicePool = SystemCreateDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_DEVICES);
 
         InitVulkan();
     }
@@ -224,11 +224,11 @@ ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices()
     InitVulkanGraphicsDeviceMemory();
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, VULKAN_MAXDEVICES);
+    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, VULKAN_MAX_DEVICES);
     auto currentDeviceInfoIndex = 0u;
 
-    uint32_t deviceCount = VULKAN_MAXDEVICES;
-    VkPhysicalDevice devices[VULKAN_MAXDEVICES];
+    uint32_t deviceCount = VULKAN_MAX_DEVICES;
+    VkPhysicalDevice devices[VULKAN_MAX_DEVICES];
 
     AssertIfFailed(vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, nullptr));
     AssertIfFailed(vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, devices));
@@ -256,10 +256,11 @@ ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices()
 
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options)
 {
+    // TODO: Review features selection
     InitVulkanGraphicsDeviceMemory();
 
-    auto deviceCount = VULKAN_MAXDEVICES;
-    VkPhysicalDevice devices[VULKAN_MAXDEVICES];
+    auto deviceCount = VULKAN_MAX_DEVICES;
+    VkPhysicalDevice devices[VULKAN_MAX_DEVICES];
     VkPhysicalDevice physicalDevice = {};
     VkPhysicalDeviceProperties deviceProperties = {};
     VkPhysicalDeviceMemoryProperties deviceMemoryProperties {};
@@ -284,7 +285,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         }
     }
 
-    SystemAssert(foundDevice);
+    SystemAssertReturnNullHandle(foundDevice);
 
     uint32_t queueFamilyCount = 0;
     VkQueueFamilyProperties queueFamilies[32];
@@ -388,7 +389,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features13.pNext = &meshFeatures;
 
     VkDevice device = nullptr;
-    AssertIfFailed(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
+    AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
     volkLoadDevice(device);
 
     auto handle = SystemAddDataPoolItem(vulkanGraphicsDevicePool, {
@@ -406,6 +407,8 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
 
 void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 {
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
@@ -415,6 +418,8 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
 ElemGraphicsDeviceInfo VulkanGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)
 {
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 

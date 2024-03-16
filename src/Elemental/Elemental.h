@@ -10,7 +10,9 @@
 #endif
 
 typedef uint64_t ElemHandle;
+#define ELEM_HANDLE_NULL UINT64_MAX
 
+// TODO: Add Functions to get native handlers for app and window so that client code can use interop for other things
 
 //------------------------------------------------------------------------
 // ##Module_Application##
@@ -207,12 +209,20 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
  */
 typedef ElemHandle ElemGraphicsDevice;
 
+typedef ElemHandle ElemGraphicsCommandQueue;
+
 typedef enum
 {
     ElemGraphicsApi_Direct3D12,
     ElemGraphicsApi_Vulkan,
     ElemGraphicsApi_Metal
 } ElemGraphicsApi;
+
+typedef enum
+{
+    ElemGraphicsCommandQueueType_Graphics,
+    ElemGraphicsCommandQueueType_Compute
+} ElemGraphicsCommandQueueType;
 
 typedef struct
 {
@@ -239,6 +249,11 @@ typedef struct
     uint64_t DeviceId;
 } ElemGraphicsDeviceOptions;
 
+typedef struct
+{
+    const char* DebugName;
+} ElemGraphicsCommandQueueOptions;
+
 ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options);
 
 ElemAPI ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void);
@@ -247,6 +262,8 @@ ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOpti
 ElemAPI void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
 ElemAPI ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);
 
+ElemAPI ElemGraphicsCommandQueue ElemCreateGraphicsCommandQueue(ElemGraphicsDevice graphicsDevice, ElemGraphicsCommandQueueType type, const ElemGraphicsCommandQueueOptions* options);
+ElemAPI void ElemFreeGraphicsCommandQueue(ElemGraphicsCommandQueue commandQueue);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

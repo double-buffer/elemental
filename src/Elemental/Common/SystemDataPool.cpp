@@ -73,6 +73,8 @@ ElemHandle SystemAddDataPoolItem(SystemDataPool<T, TFull> dataPool, T data)
 {
     SystemDataPoolHandle result = {};
     auto storage = dataPool.Storage;
+    SystemAssert(storage);
+
     auto index = SYSTEM_DATAPOOL_INDEX_EMPTY;
 
     do
@@ -91,8 +93,7 @@ ElemHandle SystemAddDataPoolItem(SystemDataPool<T, TFull> dataPool, T data)
         if (storage->CurrentIndex >= storage->Data.Length)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Data Pool is full.");
-            result.Version = SYSTEM_DATAPOOL_INDEX_EMPTY;
-            return PackSystemDataPoolHandle(result);
+            return ELEM_HANDLE_NULL;
         }
 
         index = SystemAtomicAdd(storage->CurrentIndex, 1);
@@ -124,6 +125,9 @@ void SystemAddDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle han
     }
     
     auto storage = dataPool.Storage;
+    SystemAssert(storage);
+    SystemAssert(handle != ELEM_HANDLE_NULL);
+
     auto dataPoolHandle = UnpackSystemDataPoolHandle(handle);
 
     storage->DataFull[dataPoolHandle.Index] = data;
@@ -133,6 +137,9 @@ template<typename T, typename TFull>
 void SystemRemoveDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle)
 {
     auto storage = dataPool.Storage;
+    SystemAssert(storage);
+    SystemAssert(handle != ELEM_HANDLE_NULL);
+
     auto dataPoolHandle = UnpackSystemDataPoolHandle(handle);
 
     if (dataPoolHandle.Version != storage->Data[dataPoolHandle.Index].Version)
@@ -154,6 +161,9 @@ template<typename T, typename TFull>
 T* SystemGetDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle)
 {
     auto storage = dataPool.Storage;
+    SystemAssert(storage);
+    SystemAssert(handle != ELEM_HANDLE_NULL);
+    
     auto dataPoolHandle = UnpackSystemDataPoolHandle(handle);
     
     T* result = nullptr;   
@@ -171,6 +181,8 @@ TFull* SystemGetDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle h
 {
     auto storage = dataPool.Storage;
     auto dataPoolHandle = UnpackSystemDataPoolHandle(handle);
+    SystemAssert(storage);
+    SystemAssert(handle != ELEM_HANDLE_NULL);
     
     TFull* result = nullptr;   
 
@@ -185,5 +197,6 @@ TFull* SystemGetDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle h
 template<typename T, typename TFull>
 size_t SystemGetDataPoolItemCount(SystemDataPool<T, TFull> dataPool)
 {
+    SystemAssert(dataPool.Storage);
     return dataPool.Storage->ItemCount;
 }

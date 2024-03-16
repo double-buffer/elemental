@@ -55,6 +55,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
     public void GenerateCode(CppCompilation compilation, string source, string input, string output)
     {
+        // TODO: Add support for null handle 
         var currentModuleName = string.Empty;
         var currentModuleFunctions = new List<CppFunction>();
 

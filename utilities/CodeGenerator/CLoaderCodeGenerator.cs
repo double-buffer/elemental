@@ -15,6 +15,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
         #else
            #include <dlfcn.h>
            #include <unistd.h>
+           #include <string.h>
         #endif
 
         #if defined(_WIN32)
@@ -112,11 +113,15 @@ public class CLoaderCodeGenerator : ICodeGenerator
 
             if (messageType == ElemLogMessageType_Error)
             {
-                printf("\033[31m");
+                printf("\033[31m Error:");
             }
             else if (messageType == ElemLogMessageType_Warning)
             {
-                printf("\033[33m");
+                printf("\033[33m Warning:");
+            }
+            else if (messageType == ElemLogMessageType_Debug)
+            {
+                printf("\033[0m Debug:");
             }
             else
             {
@@ -159,7 +164,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
             }
 
             printf("\033[0m]");
-            printf("\033[32m %s\033[31m %s\033[0m\n", function, message);
+            printf("\033[32m %s\033[31m Error: %s\033[0m\n", function, message);
             fflush(stdout);
         }
 

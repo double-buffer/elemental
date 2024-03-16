@@ -7,8 +7,10 @@
 
 #ifdef _DEBUG
     #define SystemAssert(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); int* ptr = 0; *ptr = 0; }
+    #define SystemAssertReturnNullHandle(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); int* ptr = 0; *ptr = 0; }
 #else
     #define SystemAssert(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); exit(1); }
+    #define SystemAssertReturnNullHandle(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); return ELEM_HANDLE_NULL; }
 #endif
 
 //---------------------------------------------------------------------------------------------------------------

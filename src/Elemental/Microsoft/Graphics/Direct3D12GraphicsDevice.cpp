@@ -6,12 +6,14 @@
 
 #define D3D12SDK_VERSION 613
 #define D3D12SDK_PATH ".\\"
-#define DIRECT3D12_MAXDEVICES 10u
+#define DIRECT3D12_MAX_DEVICES 10u
 
-MemoryArena Direct3D12GraphicsMemoryArena;
+MemoryArena Direct3D12MemoryArena;
+bool Direct3D12DebugLayerEnabled = false;
+
 SystemDataPool<Direct3D12GraphicsDeviceData, Direct3D12GraphicsDeviceDataFull> direct3D12GraphicsDevicePool;
 
-bool direct3D12DebugLayerEnabled = false;
+bool direct3D12DebugInitialized = false;
 ComPtr<IDXGIDebug1> dxgiDebugInterface;
 ComPtr<ID3D12Debug6> direct3D12DebugInterface;
 ComPtr<IDXGIFactory6> dxgiFactory; 
@@ -49,7 +51,7 @@ void InitDirect3D12()
 
     UINT dxgiCreateFactoryFlags = 0;
 
-    if (direct3D12DebugLayerEnabled)
+    if (Direct3D12DebugLayerEnabled)
     {
         auto sdkDllPath = SystemConcatBuffers<char>(stackMemoryArena, SystemGetExecutableFolderPath(stackMemoryArena), "D3D12SDKLayers.dll");
         auto sdkLayerExists = SystemFileExists(sdkDllPath);
@@ -67,6 +69,8 @@ void InitDirect3D12()
             {
                 direct3D12DebugInterface->EnableDebugLayer();
                 direct3D12DebugInterface->SetEnableSynchronizedCommandQueueValidation(true);
+
+                direct3D12DebugInitialized = true;
             }
         }
         else
@@ -84,10 +88,10 @@ void InitDirect3D12()
 
 void InitDirect3D12GraphicsDeviceMemory()
 {
-    if (!Direct3D12GraphicsMemoryArena.Storage)
+    if (!Direct3D12MemoryArena.Storage)
     {
-        Direct3D12GraphicsMemoryArena = SystemAllocateMemoryArena();
-        direct3D12GraphicsDevicePool = SystemCreateDataPool<Direct3D12GraphicsDeviceData, Direct3D12GraphicsDeviceDataFull>(Direct3D12GraphicsMemoryArena, DIRECT3D12_MAXDEVICES);
+        Direct3D12MemoryArena = SystemAllocateMemoryArena();
+        direct3D12GraphicsDevicePool = SystemCreateDataPool<Direct3D12GraphicsDeviceData, Direct3D12GraphicsDeviceDataFull>(Direct3D12MemoryArena, DIRECT3D12_MAX_DEVICES);
 
         InitDirect3D12();
     }
@@ -106,6 +110,43 @@ ElemGraphicsDeviceInfo Direct3D12ConstructGraphicsDeviceInfo(DXGI_ADAPTER_DESC3 
     };
 }
 
+bool Direct3D12CheckGraphicsDeviceCompatibility(ComPtr<IDXGIAdapter4> graphicsAdapter)
+{
+    DXGI_ADAPTER_DESC3 adapterDescription = {};
+    AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
+    
+    if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE) == 0)
+    {
+        ComPtr<ID3D12Device> tempDevice;
+        auto result = direct3D12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(tempDevice.GetAddressOf()));
+
+        if (tempDevice == nullptr || FAILED(result))
+        {
+            return false;
+        }
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS deviceOptions = {};
+        AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &deviceOptions, sizeof(deviceOptions)));
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS7 deviceOptions7 = {};
+        AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &deviceOptions7, sizeof(deviceOptions7)));
+
+        D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = {};
+        shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_8;
+        AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
+
+        if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
+            deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
+            deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
+            shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 Direct3D12GraphicsDeviceData* GetDirect3D12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
 {
     return SystemGetDataPoolItem(direct3D12GraphicsDevicePool, graphicsDevice);
@@ -118,7 +159,7 @@ Direct3D12GraphicsDeviceDataFull* GetDirect3D12GraphicsDeviceDataFull(ElemGraphi
 
 void Direct3D12EnableGraphicsDebugLayer()
 {
-    direct3D12DebugLayerEnabled = true;
+    Direct3D12DebugLayerEnabled = true;
 }
 
 ElemGraphicsDeviceInfoList Direct3D12GetAvailableGraphicsDevices()
@@ -126,44 +167,19 @@ ElemGraphicsDeviceInfoList Direct3D12GetAvailableGraphicsDevices()
     InitDirect3D12GraphicsDeviceMemory();
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, DIRECT3D12_MAXDEVICES);
+    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, DIRECT3D12_MAX_DEVICES);
     auto currentDeviceInfoIndex = 0u;
 
     ComPtr<IDXGIAdapter4> graphicsAdapter;
 
     for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.ReleaseAndGetAddressOf())); i++)
     {
-        DXGI_ADAPTER_DESC3 adapterDescription = {};
-        AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
-        
-        if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE) == 0)
+        if (Direct3D12CheckGraphicsDeviceCompatibility(graphicsAdapter))
         {
-            ComPtr<ID3D12Device> tempDevice;
-            AssertIfFailed(direct3D12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(tempDevice.GetAddressOf())));
+            DXGI_ADAPTER_DESC3 adapterDescription = {};
+            AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
 
-            if (tempDevice == nullptr)
-            {
-                continue;
-            }
-
-            D3D12_FEATURE_DATA_D3D12_OPTIONS deviceOptions = {};
-            AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &deviceOptions, sizeof(deviceOptions)));
-
-            D3D12_FEATURE_DATA_D3D12_OPTIONS7 deviceOptions7 = {};
-            AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &deviceOptions7, sizeof(deviceOptions7)));
-
-            D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = {};
-            shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_8;
-
-            AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
-
-            if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
-                deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
-                deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
-                shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8)
-            {
-                deviceInfos[currentDeviceInfoIndex++] = Direct3D12ConstructGraphicsDeviceInfo(adapterDescription);
-            }
+            deviceInfos[currentDeviceInfoIndex++] = Direct3D12ConstructGraphicsDeviceInfo(adapterDescription);
         }
     }
 
@@ -178,30 +194,32 @@ ElemGraphicsDevice Direct3D12CreateGraphicsDevice(const ElemGraphicsDeviceOption
 {
     InitDirect3D12GraphicsDeviceMemory();
 
-    // TODO: Extract check device code to a separate function and call it here too
     ComPtr<IDXGIAdapter4> graphicsAdapter;
     DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;
 
     for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
     {
-        AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
-
-        if ((options != nullptr && options->DeviceId == *(uint64_t *)&adapterDescription.AdapterLuid) || options == nullptr || options->DeviceId == 0)
+        if (Direct3D12CheckGraphicsDeviceCompatibility(graphicsAdapter))
         {
-            foundAdapter = true;
-            break;
+            AssertIfFailed(graphicsAdapter->GetDesc3(&adapterDescription));
+
+            if ((options != nullptr && options->DeviceId == *(uint64_t *)&adapterDescription.AdapterLuid) || options == nullptr || options->DeviceId == 0)
+            {
+                foundAdapter = true;
+                break;
+            }
         }
     }
 
-    SystemAssert(foundAdapter);
+    SystemAssertReturnNullHandle(foundAdapter);
 
     ComPtr<ID3D12Device10> device;
-    AssertIfFailed(direct3D12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(device.GetAddressOf())));
+    AssertIfFailedReturnNullHandle(direct3D12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(device.GetAddressOf())));
 
     ComPtr<ID3D12InfoQueue1> debugInfoQueue;
 
-    if (direct3D12DebugLayerEnabled)
+    if (Direct3D12DebugLayerEnabled && direct3D12DebugInitialized)
     {
         AssertIfFailed(device->QueryInterface(IID_PPV_ARGS(debugInfoQueue.GetAddressOf())));
 
@@ -226,6 +244,8 @@ ElemGraphicsDevice Direct3D12CreateGraphicsDevice(const ElemGraphicsDeviceOption
 
 void Direct3D12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 {
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
     auto graphicsDeviceData = GetDirect3D12GraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
@@ -265,11 +285,16 @@ void Direct3D12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
         {
             AssertIfFailed(dxgiDebugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, (DXGI_DEBUG_RLO_FLAGS)(DXGI_DEBUG_RLO_IGNORE_INTERNAL | DXGI_DEBUG_RLO_DETAIL)));
         }
+
+        SystemFreeMemoryArena(Direct3D12MemoryArena);
+        Direct3D12MemoryArena = {};
     }
 }
 
 ElemGraphicsDeviceInfo Direct3D12GetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)
 {
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
     auto graphicsDeviceDataFull = GetDirect3D12GraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 

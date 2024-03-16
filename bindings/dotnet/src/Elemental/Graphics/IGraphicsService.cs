@@ -5,13 +5,15 @@ namespace Elemental.Graphics;
 /// </summary>
 public interface IGraphicsService
 {
-    /// <summary>
-    /// Temporary Function
-    /// </summary>
-    GraphicsDevice CreateGraphicsDevice();
+    void SetGraphicsOptions(in GraphicsOptions options = default);
 
-    /// <summary>
-    /// Temporary Function
-    /// </summary>
+    GraphicsDeviceInfoList GetAvailableGraphicsDevices();
+
+    GraphicsDevice CreateGraphicsDevice(in GraphicsDeviceOptions options = default);
+
     void FreeGraphicsDevice(GraphicsDevice graphicsDevice);
+
+    GraphicsDeviceInfo GetGraphicsDeviceInfo(GraphicsDevice graphicsDevice);
+
+    GraphicsCommandQueue CreateGraphicsCommandQueue(GraphicsDevice graphicsDevice, GraphicsCommandQueueType type, in GraphicsCommandQueueOptions options = default);
 }

@@ -1,7 +1,9 @@
 #include "GraphicsDeviceTests.cpp"
+#include "CommandListTests.cpp"
 #include "utest.h"
 
 bool testForceVulkanApi = false;
+bool testHasLogErrors = false;
 
 UTEST_STATE();
 
@@ -11,6 +13,11 @@ int main(int argc, const char *const argv[])
     {
         testForceVulkanApi = true;
     }
-    
-    return utest_main(argc, argv);
+
+    InitLog();
+    auto initGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto returnCode = utest_main(argc, argv);
+    ElemFreeGraphicsDevice(initGraphicsDevice);
+
+    return returnCode;
 }

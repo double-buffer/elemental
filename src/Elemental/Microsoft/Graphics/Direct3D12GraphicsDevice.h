@@ -14,7 +14,8 @@ struct Direct3D12GraphicsDeviceDataFull
     ComPtr<ID3D12InfoQueue1> DebugInfoQueue;
 };
 
-extern MemoryArena Direct3D12GraphicsMemoryArena;
+extern MemoryArena Direct3D12MemoryArena;
+extern bool Direct3D12DebugLayerEnabled;
 
 Direct3D12GraphicsDeviceData* GetDirect3D12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 Direct3D12GraphicsDeviceDataFull* GetDirect3D12GraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);

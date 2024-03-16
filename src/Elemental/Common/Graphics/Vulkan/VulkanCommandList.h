@@ -1,0 +1,17 @@
+#pragma once
+
+#include "Elemental.h"
+
+struct VulkanGraphicsCommandQueueData
+{
+};
+
+struct VulkanGraphicsCommandQueueDataFull
+{
+};
+
+VulkanGraphicsCommandQueueData* GetVulkanGraphicsCommandQueueData(ElemGraphicsCommandQueue graphicsCommandQueue);
+VulkanGraphicsCommandQueueDataFull* GetVulkanGraphicsCommandQueueDataFull(ElemGraphicsCommandQueue graphicsCommandQueue);
+
+ElemGraphicsCommandQueue VulkanCreateGraphicsCommandQueue(ElemGraphicsDevice graphicsDevice, ElemGraphicsCommandQueueType type, const ElemGraphicsCommandQueueOptions* options);
+void VulkanFreeGraphicsCommandQueue(ElemGraphicsCommandQueue commandQueue);
