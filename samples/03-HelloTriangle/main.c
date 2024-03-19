@@ -7,8 +7,8 @@ const char* GetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
 {
     switch (graphicsApi)
     {
-        case ElemGraphicsApi_Direct3D12:
-            return "Direct3D12";
+        case ElemGraphicsApi_DirectX12:
+            return "DirectX12";
 
         case ElemGraphicsApi_Vulkan:
             return "Vulkan";

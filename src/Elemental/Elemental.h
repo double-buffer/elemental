@@ -215,7 +215,7 @@ typedef ElemHandle ElemFence;
 
 typedef enum
 {
-    ElemGraphicsApi_Direct3D12,
+    ElemGraphicsApi_DirectX12,
     ElemGraphicsApi_Vulkan,
     ElemGraphicsApi_Metal
 } ElemGraphicsApi;

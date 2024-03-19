@@ -8,8 +8,8 @@
 #define VOLK_IMPLEMENTATION
 #include "volk.h"
 
-#include "Graphics/Direct3D12GraphicsDevice.cpp"
-#include "Graphics/Direct3D12CommandList.cpp"
+#include "Graphics/DirectX12GraphicsDevice.cpp"
+#include "Graphics/DirectX12CommandList.cpp"
 
 #include "Graphics/Vulkan/VulkanGraphicsDevice.cpp"
 #include "Graphics/Vulkan/VulkanCommandList.cpp"

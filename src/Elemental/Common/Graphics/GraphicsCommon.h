@@ -1,20 +1,20 @@
 extern bool useVulkan;
 
 #ifdef _WIN32
-#include "Microsoft/Graphics/Direct3D12GraphicsDevice.h"
+#include "Microsoft/Graphics/DirectX12GraphicsDevice.h"
 #include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 
 #define DispatchGraphicsFunction(functionName, ...) \
     if (useVulkan) \
         Vulkan##functionName(__VA_ARGS__); \
     else \
-        Direct3D12##functionName(__VA_ARGS__);
+        DirectX12##functionName(__VA_ARGS__);
 
 #define DispatchReturnGraphicsFunction(functionName, ...) \
     if (useVulkan) \
         return Vulkan##functionName(__VA_ARGS__); \
     else \
-        return Direct3D12##functionName(__VA_ARGS__);
+        return DirectX12##functionName(__VA_ARGS__);
 #endif
 
 #ifdef __APPLE__
