@@ -1,12 +1,32 @@
 #include "Elemental.h"
 #include "GraphicsCommon.h"
 
-ElemAPI ElemGraphicsCommandQueue ElemCreateGraphicsCommandQueue(ElemGraphicsDevice graphicsDevice, ElemGraphicsCommandQueueType type, const ElemGraphicsCommandQueueOptions* options)
+ElemAPI ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
 {
-    DispatchReturnGraphicsFunction(CreateGraphicsCommandQueue, graphicsDevice, type, options);
+    DispatchReturnGraphicsFunction(CreateCommandQueue, graphicsDevice, type, options);
 }
 
-ElemAPI void ElemFreeGraphicsCommandQueue(ElemGraphicsCommandQueue commandQueue)
+ElemAPI void ElemFreeCommandQueue(ElemCommandQueue commandQueue)
 {
-    DispatchGraphicsFunction(FreeGraphicsCommandQueue, commandQueue);
+    DispatchGraphicsFunction(FreeCommandQueue, commandQueue);
+}
+
+ElemAPI ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+{
+    DispatchReturnGraphicsFunction(CreateCommandList, commandQueue, options);
+}
+
+ElemAPI void ElemCommitCommandList(ElemCommandList commandList)
+{
+    DispatchGraphicsFunction(CommitCommandList, commandList);
+}
+
+ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
+{
+    DispatchReturnGraphicsFunction(ExecuteCommandList, commandQueue, commandList, options);
+}
+
+ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
+{
+    DispatchReturnGraphicsFunction(ExecuteCommandLists, commandQueue, commandLists, options);
 }

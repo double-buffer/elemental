@@ -81,7 +81,7 @@ void MetalEnableGraphicsDebugLayer()
     metalDebugLayerEnabled = true;
 }
 
-ElemGraphicsDeviceInfoList MetalGetAvailableGraphicsDevices()
+ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices()
 {
     InitMetalGraphicsDeviceMemory();
 

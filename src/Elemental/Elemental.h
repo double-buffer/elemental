@@ -209,7 +209,9 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
  */
 typedef ElemHandle ElemGraphicsDevice;
 
-typedef ElemHandle ElemGraphicsCommandQueue;
+typedef ElemHandle ElemCommandQueue;
+typedef ElemHandle ElemCommandList;
+typedef ElemHandle ElemFence;
 
 typedef enum
 {
@@ -220,9 +222,9 @@ typedef enum
 
 typedef enum
 {
-    ElemGraphicsCommandQueueType_Graphics,
-    ElemGraphicsCommandQueueType_Compute
-} ElemGraphicsCommandQueueType;
+    ElemCommandQueueType_Graphics,
+    ElemCommandQueueType_Compute
+} ElemCommandQueueType;
 
 typedef struct
 {
@@ -242,7 +244,7 @@ typedef struct
 {
     ElemGraphicsDeviceInfo* Items;
     uint32_t Length;
-} ElemGraphicsDeviceInfoList;
+} ElemGraphicsDeviceInfoSpan;
 
 typedef struct
 {
@@ -252,18 +254,46 @@ typedef struct
 typedef struct
 {
     const char* DebugName;
-} ElemGraphicsCommandQueueOptions;
+} ElemCommandQueueOptions;
+
+typedef struct
+{
+    const char* DebugName;
+} ElemCommandListOptions;
+
+typedef struct
+{
+    ElemCommandList* Items;
+    uint32_t Length;
+} ElemCommandListSpan;
+
+typedef struct
+{
+    ElemFence* Items;
+    uint32_t Length;
+} ElemFenceSpan;
+
+typedef struct
+{
+    bool InsertFence;
+    ElemFenceSpan FencesToWait;
+} ElemExecuteCommandListOptions;
 
 ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options);
 
-ElemAPI ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void);
+ElemAPI ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void);
 
 ElemAPI ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 ElemAPI void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
 ElemAPI ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);
 
-ElemAPI ElemGraphicsCommandQueue ElemCreateGraphicsCommandQueue(ElemGraphicsDevice graphicsDevice, ElemGraphicsCommandQueueType type, const ElemGraphicsCommandQueueOptions* options);
-ElemAPI void ElemFreeGraphicsCommandQueue(ElemGraphicsCommandQueue commandQueue);
+ElemAPI ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
+ElemAPI void ElemFreeCommandQueue(ElemCommandQueue commandQueue);
+ElemAPI ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
+ElemAPI void ElemCommitCommandList(ElemCommandList commandList);
+
+ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);
+ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

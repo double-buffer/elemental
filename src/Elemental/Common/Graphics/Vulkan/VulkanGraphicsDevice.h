@@ -29,7 +29,7 @@ VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphic
 VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
 void VulkanEnableGraphicsDebugLayer();
-ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices();
+ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices();
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
 ElemGraphicsDeviceInfo VulkanGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);

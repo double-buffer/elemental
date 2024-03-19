@@ -16,7 +16,7 @@ ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options)
     }
 }
 
-ElemAPI ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices()
+ElemAPI ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices()
 {
     DispatchReturnGraphicsFunction(GetAvailableGraphicsDevices);
 }

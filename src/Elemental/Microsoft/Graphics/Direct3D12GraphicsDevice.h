@@ -21,7 +21,7 @@ Direct3D12GraphicsDeviceData* GetDirect3D12GraphicsDeviceData(ElemGraphicsDevice
 Direct3D12GraphicsDeviceDataFull* GetDirect3D12GraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
 void Direct3D12EnableGraphicsDebugLayer();
-ElemGraphicsDeviceInfoList Direct3D12GetAvailableGraphicsDevices();
+ElemGraphicsDeviceInfoSpan Direct3D12GetAvailableGraphicsDevices();
 ElemGraphicsDevice Direct3D12CreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void Direct3D12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
 ElemGraphicsDeviceInfo Direct3D12GetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);

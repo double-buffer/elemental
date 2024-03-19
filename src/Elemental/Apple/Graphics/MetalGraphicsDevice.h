@@ -17,7 +17,7 @@ MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsD
 MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
 void MetalEnableGraphicsDebugLayer();
-ElemGraphicsDeviceInfoList MetalGetAvailableGraphicsDevices();
+ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices();
 ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void MetalFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
 ElemGraphicsDeviceInfo MetalGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);

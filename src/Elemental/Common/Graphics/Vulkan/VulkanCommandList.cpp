@@ -4,31 +4,50 @@
 
 #define VULKAN_MAX_COMMANDQUEUES 10u
 
-SystemDataPool<VulkanGraphicsCommandQueueData, VulkanGraphicsCommandQueueDataFull> vulkanGraphicsCommandQueuePool;
+SystemDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull> vulkanCommandQueuePool;
 
 void InitVulkanCommandListMemory()
 {
-    if (!vulkanGraphicsCommandQueuePool.Storage)
+    if (!vulkanCommandQueuePool.Storage)
     {
-        vulkanGraphicsCommandQueuePool = SystemCreateDataPool<VulkanGraphicsCommandQueueData, VulkanGraphicsCommandQueueDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDQUEUES);
+        vulkanCommandQueuePool = SystemCreateDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDQUEUES);
     }
 }
 
-VulkanGraphicsCommandQueueData* GetVulkanGraphicsCommandQueueData(ElemGraphicsCommandQueue graphicsDevice)
+VulkanCommandQueueData* GetVulkanCommandQueueData(ElemCommandQueue graphicsDevice)
 {
-    return SystemGetDataPoolItem(vulkanGraphicsCommandQueuePool, graphicsDevice);
+    return SystemGetDataPoolItem(vulkanCommandQueuePool, graphicsDevice);
 }
 
-VulkanGraphicsCommandQueueDataFull* GetVulkanGraphicsCommandQueueDataFull(ElemGraphicsCommandQueue graphicsDevice)
+VulkanCommandQueueDataFull* GetVulkanCommandQueueDataFull(ElemCommandQueue graphicsDevice)
 {
-    return SystemGetDataPoolItemFull(vulkanGraphicsCommandQueuePool, graphicsDevice);
+    return SystemGetDataPoolItemFull(vulkanCommandQueuePool, graphicsDevice);
 }
 
-ElemGraphicsCommandQueue VulkanCreateGraphicsCommandQueue(ElemGraphicsDevice graphicsDevice, ElemGraphicsCommandQueueType type, const ElemGraphicsCommandQueueOptions* options)
+ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
 {
     return ELEM_HANDLE_NULL;
 }
 
-void VulkanFreeGraphicsCommandQueue(ElemGraphicsCommandQueue commandQueue)
+void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
 {
+}
+
+ElemCommandList VulkanCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+{
+    return ELEM_HANDLE_NULL;
+}
+
+void VulkanCommitCommandList(ElemCommandList commandList)
+{
+}
+
+ElemFence VulkanExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
+{
+    return ELEM_HANDLE_NULL;
+}
+
+ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
+{
+    return ELEM_HANDLE_NULL;
 }

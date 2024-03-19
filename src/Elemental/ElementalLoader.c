@@ -33,12 +33,16 @@ typedef struct ElementalFunctions
     void (*ElemSetWindowTitle)(ElemWindow, const char*);
     void (*ElemSetWindowState)(ElemWindow, ElemWindowState);
     void (*ElemSetGraphicsOptions)(const ElemGraphicsOptions*);
-    ElemGraphicsDeviceInfoList (*ElemGetAvailableGraphicsDevices)(void);
+    ElemGraphicsDeviceInfoSpan (*ElemGetAvailableGraphicsDevices)(void);
     ElemGraphicsDevice (*ElemCreateGraphicsDevice)(const ElemGraphicsDeviceOptions*);
     void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
     ElemGraphicsDeviceInfo (*ElemGetGraphicsDeviceInfo)(ElemGraphicsDevice);
-    ElemGraphicsCommandQueue (*ElemCreateGraphicsCommandQueue)(ElemGraphicsDevice, ElemGraphicsCommandQueueType, const ElemGraphicsCommandQueueOptions*);
-    void (*ElemFreeGraphicsCommandQueue)(ElemGraphicsCommandQueue);
+    ElemCommandQueue (*ElemCreateCommandQueue)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*);
+    void (*ElemFreeCommandQueue)(ElemCommandQueue);
+    ElemCommandList (*ElemCreateCommandList)(ElemCommandQueue, const ElemCommandListOptions*);
+    void (*ElemCommitCommandList)(ElemCommandList);
+    ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*);
+    ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*);
     
 } ElementalFunctions;
 
@@ -96,12 +100,16 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetFunctionPointer("ElemSetWindowTitle");
     elementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetFunctionPointer("ElemSetWindowState");
     elementalFunctions.ElemSetGraphicsOptions = (void (*)(const ElemGraphicsOptions*))GetFunctionPointer("ElemSetGraphicsOptions");
-    elementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoList (*)(void))GetFunctionPointer("ElemGetAvailableGraphicsDevices");
+    elementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoSpan (*)(void))GetFunctionPointer("ElemGetAvailableGraphicsDevices");
     elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(const ElemGraphicsDeviceOptions*))GetFunctionPointer("ElemCreateGraphicsDevice");
     elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
     elementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetFunctionPointer("ElemGetGraphicsDeviceInfo");
-    elementalFunctions.ElemCreateGraphicsCommandQueue = (ElemGraphicsCommandQueue (*)(ElemGraphicsDevice, ElemGraphicsCommandQueueType, const ElemGraphicsCommandQueueOptions*))GetFunctionPointer("ElemCreateGraphicsCommandQueue");
-    elementalFunctions.ElemFreeGraphicsCommandQueue = (void (*)(ElemGraphicsCommandQueue))GetFunctionPointer("ElemFreeGraphicsCommandQueue");
+    elementalFunctions.ElemCreateCommandQueue = (ElemCommandQueue (*)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*))GetFunctionPointer("ElemCreateCommandQueue");
+    elementalFunctions.ElemFreeCommandQueue = (void (*)(ElemCommandQueue))GetFunctionPointer("ElemFreeCommandQueue");
+    elementalFunctions.ElemCreateCommandList = (ElemCommandList (*)(ElemCommandQueue, const ElemCommandListOptions*))GetFunctionPointer("ElemCreateCommandList");
+    elementalFunctions.ElemCommitCommandList = (void (*)(ElemCommandList))GetFunctionPointer("ElemCommitCommandList");
+    elementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandList");
+    elementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandLists");
     
 
     functionPointersLoaded = 1;
@@ -408,16 +416,16 @@ static inline void ElemSetGraphicsOptions(const ElemGraphicsOptions* options)
     elementalFunctions.ElemSetGraphicsOptions(options);
 }
 
-static inline ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void)
+static inline ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void)
 {
     if (!LoadFunctionPointers()) 
     {
         assert(library);
 
         #ifdef __cplusplus
-        ElemGraphicsDeviceInfoList result = {};
+        ElemGraphicsDeviceInfoSpan result = {};
         #else
-        ElemGraphicsDeviceInfoList result = (ElemGraphicsDeviceInfoList){0};
+        ElemGraphicsDeviceInfoSpan result = (ElemGraphicsDeviceInfoSpan){0};
         #endif
 
         return result;
@@ -428,9 +436,9 @@ static inline ElemGraphicsDeviceInfoList ElemGetAvailableGraphicsDevices(void)
         assert(elementalFunctions.ElemGetAvailableGraphicsDevices);
 
         #ifdef __cplusplus
-        ElemGraphicsDeviceInfoList result = {};
+        ElemGraphicsDeviceInfoSpan result = {};
         #else
-        ElemGraphicsDeviceInfoList result = (ElemGraphicsDeviceInfoList){0};
+        ElemGraphicsDeviceInfoSpan result = (ElemGraphicsDeviceInfoSpan){0};
         #endif
 
         return result;
@@ -518,38 +526,38 @@ static inline ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevic
     return elementalFunctions.ElemGetGraphicsDeviceInfo(graphicsDevice);
 }
 
-static inline ElemGraphicsCommandQueue ElemCreateGraphicsCommandQueue(ElemGraphicsDevice graphicsDevice, ElemGraphicsCommandQueueType type, const ElemGraphicsCommandQueueOptions* options)
+static inline ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
 {
     if (!LoadFunctionPointers()) 
     {
         assert(library);
 
         #ifdef __cplusplus
-        ElemGraphicsCommandQueue result = {};
+        ElemCommandQueue result = {};
         #else
-        ElemGraphicsCommandQueue result = (ElemGraphicsCommandQueue){0};
+        ElemCommandQueue result = (ElemCommandQueue){0};
         #endif
 
         return result;
     }
 
-    if (!elementalFunctions.ElemCreateGraphicsCommandQueue) 
+    if (!elementalFunctions.ElemCreateCommandQueue) 
     {
-        assert(elementalFunctions.ElemCreateGraphicsCommandQueue);
+        assert(elementalFunctions.ElemCreateCommandQueue);
 
         #ifdef __cplusplus
-        ElemGraphicsCommandQueue result = {};
+        ElemCommandQueue result = {};
         #else
-        ElemGraphicsCommandQueue result = (ElemGraphicsCommandQueue){0};
+        ElemCommandQueue result = (ElemCommandQueue){0};
         #endif
 
         return result;
     }
 
-    return elementalFunctions.ElemCreateGraphicsCommandQueue(graphicsDevice, type, options);
+    return elementalFunctions.ElemCreateCommandQueue(graphicsDevice, type, options);
 }
 
-static inline void ElemFreeGraphicsCommandQueue(ElemGraphicsCommandQueue commandQueue)
+static inline void ElemFreeCommandQueue(ElemCommandQueue commandQueue)
 {
     if (!LoadFunctionPointers()) 
     {
@@ -557,11 +565,121 @@ static inline void ElemFreeGraphicsCommandQueue(ElemGraphicsCommandQueue command
         return;
     }
 
-    if (!elementalFunctions.ElemFreeGraphicsCommandQueue) 
+    if (!elementalFunctions.ElemFreeCommandQueue) 
     {
-        assert(elementalFunctions.ElemFreeGraphicsCommandQueue);
+        assert(elementalFunctions.ElemFreeCommandQueue);
         return;
     }
 
-    elementalFunctions.ElemFreeGraphicsCommandQueue(commandQueue);
+    elementalFunctions.ElemFreeCommandQueue(commandQueue);
+}
+
+static inline ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemCommandList result = {};
+        #else
+        ElemCommandList result = (ElemCommandList){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemCreateCommandList) 
+    {
+        assert(elementalFunctions.ElemCreateCommandList);
+
+        #ifdef __cplusplus
+        ElemCommandList result = {};
+        #else
+        ElemCommandList result = (ElemCommandList){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemCreateCommandList(commandQueue, options);
+}
+
+static inline void ElemCommitCommandList(ElemCommandList commandList)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemCommitCommandList) 
+    {
+        assert(elementalFunctions.ElemCommitCommandList);
+        return;
+    }
+
+    elementalFunctions.ElemCommitCommandList(commandList);
+}
+
+static inline ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemFence result = {};
+        #else
+        ElemFence result = (ElemFence){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemExecuteCommandList) 
+    {
+        assert(elementalFunctions.ElemExecuteCommandList);
+
+        #ifdef __cplusplus
+        ElemFence result = {};
+        #else
+        ElemFence result = (ElemFence){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemExecuteCommandList(commandQueue, commandList, options);
+}
+
+static inline ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemFence result = {};
+        #else
+        ElemFence result = (ElemFence){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemExecuteCommandLists) 
+    {
+        assert(elementalFunctions.ElemExecuteCommandLists);
+
+        #ifdef __cplusplus
+        ElemFence result = {};
+        #else
+        ElemFence result = (ElemFence){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemExecuteCommandLists(commandQueue, commandLists, options);
 }

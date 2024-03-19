@@ -219,7 +219,7 @@ void VulkanEnableGraphicsDebugLayer()
     vulkanDebugLayerEnabled = true;
 }
 
-ElemGraphicsDeviceInfoList VulkanGetAvailableGraphicsDevices()
+ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices()
 {
     InitVulkanGraphicsDeviceMemory();
 

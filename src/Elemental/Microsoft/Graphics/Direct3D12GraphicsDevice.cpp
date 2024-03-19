@@ -68,7 +68,8 @@ void InitDirect3D12()
             if (direct3D12DebugInterface)
             {
                 direct3D12DebugInterface->EnableDebugLayer();
-                direct3D12DebugInterface->SetEnableSynchronizedCommandQueueValidation(true);
+                direct3D12DebugInterface->SetEnableGPUBasedValidation(true);
+                direct3D12DebugInterface->SetEnableAutoName(true);
 
                 direct3D12DebugInitialized = true;
             }
@@ -162,7 +163,7 @@ void Direct3D12EnableGraphicsDebugLayer()
     Direct3D12DebugLayerEnabled = true;
 }
 
-ElemGraphicsDeviceInfoList Direct3D12GetAvailableGraphicsDevices()
+ElemGraphicsDeviceInfoSpan Direct3D12GetAvailableGraphicsDevices()
 {
     InitDirect3D12GraphicsDeviceMemory();
 

@@ -1,7 +1,7 @@
 #include "Elemental.h"
 
 static ElemWindow globalWindow;
-static ElemGraphicsCommandQueue globalGraphicsCommandQueue;
+static ElemCommandQueue globalCommandQueue;
 
 const char* GetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
 {
@@ -34,6 +34,12 @@ bool RunHandler(ElemApplicationStatus status)
         usleep(5000);
     #endif
 
+    ElemCommandList commandList = ElemCreateCommandList(globalCommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
+
+    ElemCommitCommandList(commandList);
+
+    ElemExecuteCommandList(globalCommandQueue, commandList, NULL);
+
     return true;
 }
 
@@ -63,11 +69,11 @@ int main(int argc, const char* argv[])
                         graphicsDeviceInfo.AvailableMemory);
     ElemSetWindowTitle(globalWindow, temp);
 
-    globalGraphicsCommandQueue = ElemCreateGraphicsCommandQueue(graphicsDevice, ElemGraphicsCommandQueueType_Graphics, &(ElemGraphicsCommandQueueOptions) { .DebugName = "TestCommandQueue" });
+    globalCommandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
 
     ElemRunApplication(application, RunHandler);
 
-    ElemFreeGraphicsCommandQueue(globalGraphicsCommandQueue);
+    ElemFreeCommandQueue(globalCommandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
     ElemFreeApplication(application);
 
