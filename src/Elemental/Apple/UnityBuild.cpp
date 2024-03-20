@@ -11,10 +11,13 @@
 #include "volk.h"
 
 #include "Graphics/MetalGraphicsDevice.cpp"
+#include "Graphics/MetalCommandList.cpp"
 
-#include "Graphics/VulkanGraphicsDevice.cpp"
+#include "Graphics/Vulkan/VulkanGraphicsDevice.cpp"
+#include "Graphics/Vulkan/VulkanCommandList.cpp"
 
 #include "Graphics/GraphicsDevice.cpp"
+#include "Graphics/CommandList.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"

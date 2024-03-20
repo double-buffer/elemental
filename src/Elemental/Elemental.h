@@ -276,6 +276,7 @@ typedef struct
 typedef struct
 {
     bool InsertFence;
+    bool FenceAwaitableOnCpu;
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
 

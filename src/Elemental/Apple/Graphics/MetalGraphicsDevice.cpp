@@ -9,7 +9,7 @@
 MemoryArena MetalGraphicsMemoryArena;
 SystemDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull> metalGraphicsDevicePool;
 
-bool metalDebugLayerEnabled = false;
+bool MetalDebugLayerEnabled = false;
 
 void InitMetal()
 {
@@ -17,7 +17,7 @@ void InitMetal()
 
     // TODO: There is nothing in code to enable that 😢
 
-    if (metalDebugLayerEnabled)
+    if (MetalDebugLayerEnabled)
     {
         auto sdkLayerExists = false;
 
@@ -78,7 +78,7 @@ MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice g
 
 void MetalEnableGraphicsDebugLayer()
 {
-    metalDebugLayerEnabled = true;
+    MetalDebugLayerEnabled = true;
 }
 
 ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices()
@@ -107,14 +107,44 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
 {
     InitMetalGraphicsDeviceMemory();
 
-    return {};
+    bool foundAdapter = false;
+    auto device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
+    
+    if (MetalCheckGraphicsDeviceCompatibility(device.get()))
+    {
+        foundAdapter = true;
+    }
+
+    SystemAssertReturnNullHandle(foundAdapter);
+    
+    // TODO: No debug message queue on metal 😞 
+
+    auto handle = SystemAddDataPoolItem(metalGraphicsDevicePool, {
+        .Device = device
+    }); 
+
+    SystemAddDataPoolItemFull(metalGraphicsDevicePool, handle, {
+    });
+
+    return handle;
 }
 
 void MetalFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 {
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+    
+    graphicsDeviceData->Device.reset();
 }
 
 ElemGraphicsDeviceInfo MetalGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)
 {
-    return {};
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    return MetalConstructGraphicsDeviceInfo(graphicsDeviceData->Device.get());
 }

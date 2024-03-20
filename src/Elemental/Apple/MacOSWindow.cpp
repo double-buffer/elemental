@@ -72,6 +72,7 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     windowHandle->makeKeyAndOrderFront(nullptr);
 
     auto applicationDataFull = GetMacOSApplicationDataFull(application);
+    SystemAssertReturnNullHandle(applicationDataFull);
     applicationDataFull->WindowCount++;
 
     auto handle = SystemAddDataPoolItem(windowDataPool, {

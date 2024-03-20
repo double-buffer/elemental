@@ -14,14 +14,14 @@ void InitVulkanCommandListMemory()
     }
 }
 
-VulkanCommandQueueData* GetVulkanCommandQueueData(ElemCommandQueue graphicsDevice)
+VulkanCommandQueueData* GetVulkanCommandQueueData(ElemCommandQueue commandQueue)
 {
-    return SystemGetDataPoolItem(vulkanCommandQueuePool, graphicsDevice);
+    return SystemGetDataPoolItem(vulkanCommandQueuePool, commandQueue);
 }
 
-VulkanCommandQueueDataFull* GetVulkanCommandQueueDataFull(ElemCommandQueue graphicsDevice)
+VulkanCommandQueueDataFull* GetVulkanCommandQueueDataFull(ElemCommandQueue commandQueue)
 {
-    return SystemGetDataPoolItemFull(vulkanCommandQueuePool, graphicsDevice);
+    return SystemGetDataPoolItemFull(vulkanCommandQueuePool, commandQueue);
 }
 
 ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
@@ -40,11 +40,6 @@ ElemCommandList VulkanCreateCommandList(ElemCommandQueue commandQueue, const Ele
 
 void VulkanCommitCommandList(ElemCommandList commandList)
 {
-}
-
-ElemFence VulkanExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
-{
-    return ELEM_HANDLE_NULL;
 }
 
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)

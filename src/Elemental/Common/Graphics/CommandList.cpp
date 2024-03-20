@@ -23,7 +23,13 @@ ElemAPI void ElemCommitCommandList(ElemCommandList commandList)
 
 ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
 {
-    DispatchReturnGraphicsFunction(ExecuteCommandList, commandQueue, commandList, options);
+    ElemCommandListSpan commandListSpan = 
+    {
+        .Items = &commandList,
+        .Length = 1
+    };
+
+    DispatchReturnGraphicsFunction(ExecuteCommandLists, commandQueue, commandListSpan, options);
 }
 
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)

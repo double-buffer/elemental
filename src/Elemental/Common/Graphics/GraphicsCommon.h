@@ -19,7 +19,7 @@ extern bool useVulkan;
 
 #ifdef __APPLE__
 #include "Apple/Graphics/MetalGraphicsDevice.h"
-#include "Graphics/VulkanGraphicsDevice.h"
+#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 
 #define DispatchGraphicsFunction(functionName, ...) \
     if (useVulkan) \

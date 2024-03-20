@@ -5,13 +5,16 @@
 
 struct MetalGraphicsDeviceData
 {
+    NS::SharedPtr<MTL::Device> Device;
 };
 
 struct MetalGraphicsDeviceDataFull
 {
+    uint32_t Reserved;
 };
 
 extern MemoryArena MetalGraphicsMemoryArena;
+extern bool MetalDebugLayerEnabled;
 
 MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);

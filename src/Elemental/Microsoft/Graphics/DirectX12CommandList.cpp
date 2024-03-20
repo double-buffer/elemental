@@ -16,14 +16,14 @@ void InitDirectX12CommandListMemory()
     }
 }
 
-DirectX12CommandQueueData* GetDirectX12CommandQueueData(ElemCommandQueue graphicsDevice)
+DirectX12CommandQueueData* GetDirectX12CommandQueueData(ElemCommandQueue commandQueue)
 {
-    return SystemGetDataPoolItem(direct3D12CommandQueuePool, graphicsDevice);
+    return SystemGetDataPoolItem(direct3D12CommandQueuePool, commandQueue);
 }
 
-DirectX12CommandQueueDataFull* GetDirectX12CommandQueueDataFull(ElemCommandQueue graphicsDevice)
+DirectX12CommandQueueDataFull* GetDirectX12CommandQueueDataFull(ElemCommandQueue commandQueue)
 {
-    return SystemGetDataPoolItemFull(direct3D12CommandQueuePool, graphicsDevice);
+    return SystemGetDataPoolItemFull(direct3D12CommandQueuePool, commandQueue);
 }
 
 ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
@@ -85,11 +85,6 @@ ElemCommandList DirectX12CreateCommandList(ElemCommandQueue commandQueue, const 
 
 void DirectX12CommitCommandList(ElemCommandList commandList)
 {
-}
-
-ElemFence DirectX12ExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
-{
-    return ELEM_HANDLE_NULL;
 }
 
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)

@@ -21,7 +21,7 @@ UTEST(CommandList, CreateCommandList)
     ASSERT_FALSE(testHasLogErrors);
 }
 
-UTEST(CommandList, CreateCommandListWithoutPreviousCommitted) 
+UTEST(CommandList, CreateCommandListWithoutPreviousCommittedOnSameThread) 
 {
     // Arrange
     InitLog();
@@ -84,7 +84,7 @@ UTEST(CommandList, ExecuteCommandListWithInsertFence)
     ElemCommitCommandList(commandList);
 
     // Act
-    ElemExecuteCommandListOptions executeOptions = { .InsertFence = true }; 
+    ElemExecuteCommandListOptions executeOptions = { .InsertFence = true, .FenceAwaitableOnCpu = true }; 
     auto fence = ElemExecuteCommandList(commandQueue, commandList, &executeOptions);
     ElemWaitForFenceOnCpu(fence);
 
