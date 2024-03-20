@@ -51,3 +51,7 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
 {
     return ELEM_HANDLE_NULL;
 }
+
+void VulkanWaitForFenceOnCpu(ElemFence fence)
+{
+}

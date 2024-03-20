@@ -294,6 +294,7 @@ ElemAPI void ElemCommitCommandList(ElemCommandList commandList);
 
 ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
+ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

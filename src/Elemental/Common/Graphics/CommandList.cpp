@@ -30,3 +30,8 @@ ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCom
 {
     DispatchReturnGraphicsFunction(ExecuteCommandLists, commandQueue, commandLists, options);
 }
+
+ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence)
+{
+    DispatchGraphicsFunction(WaitForFenceOnCpu, fence);
+}

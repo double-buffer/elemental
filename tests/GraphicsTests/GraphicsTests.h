@@ -8,6 +8,7 @@
 
 extern bool testForceVulkanApi;
 extern bool testHasLogErrors;
+extern ElemGraphicsDevice sharedGraphicsDevice;
 
 static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
 {
@@ -75,4 +76,9 @@ void InitLog()
     #endif
 
     ElemSetGraphicsOptions(&options);
+}
+
+ElemGraphicsDevice GetSharedGraphicsDevice()
+{
+    return sharedGraphicsDevice;
 }

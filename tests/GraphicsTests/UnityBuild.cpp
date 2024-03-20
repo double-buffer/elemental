@@ -4,6 +4,7 @@
 
 bool testForceVulkanApi = false;
 bool testHasLogErrors = false;
+ElemGraphicsDevice sharedGraphicsDevice = ELEM_HANDLE_NULL;
 
 UTEST_STATE();
 
@@ -15,9 +16,9 @@ int main(int argc, const char *const argv[])
     }
 
     InitLog();
-    auto initGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    sharedGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto returnCode = utest_main(argc, argv);
-    ElemFreeGraphicsDevice(initGraphicsDevice);
+    ElemFreeGraphicsDevice(sharedGraphicsDevice);
 
     return returnCode;
 }

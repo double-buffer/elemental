@@ -20,3 +20,4 @@ void VulkanCommitCommandList(ElemCommandList commandList);
 
 ElemFence VulkanExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
+void VulkanWaitForFenceOnCpu(ElemFence fence);

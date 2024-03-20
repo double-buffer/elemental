@@ -43,6 +43,7 @@ typedef struct ElementalFunctions
     void (*ElemCommitCommandList)(ElemCommandList);
     ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*);
     ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*);
+    void (*ElemWaitForFenceOnCpu)(ElemFence);
     
 } ElementalFunctions;
 
@@ -110,6 +111,7 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemCommitCommandList = (void (*)(ElemCommandList))GetFunctionPointer("ElemCommitCommandList");
     elementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandList");
     elementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandLists");
+    elementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetFunctionPointer("ElemWaitForFenceOnCpu");
     
 
     functionPointersLoaded = 1;
@@ -682,4 +684,21 @@ static inline ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, E
     }
 
     return elementalFunctions.ElemExecuteCommandLists(commandQueue, commandLists, options);
+}
+
+static inline void ElemWaitForFenceOnCpu(ElemFence fence)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemWaitForFenceOnCpu) 
+    {
+        assert(elementalFunctions.ElemWaitForFenceOnCpu);
+        return;
+    }
+
+    elementalFunctions.ElemWaitForFenceOnCpu(fence);
 }

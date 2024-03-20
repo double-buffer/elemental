@@ -96,3 +96,7 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
 {
     return ELEM_HANDLE_NULL;
 }
+
+void DirectX12WaitForFenceOnCpu(ElemFence fence)
+{
+}

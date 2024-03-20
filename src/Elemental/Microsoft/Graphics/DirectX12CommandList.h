@@ -22,3 +22,4 @@ void DirectX12CommitCommandList(ElemCommandList commandList);
 
 ElemFence DirectX12ExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
+void DirectX12WaitForFenceOnCpu(ElemFence fence);
