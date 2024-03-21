@@ -41,6 +41,11 @@ void VulkanResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
 {
 }
 
+ElemTexture VulkanGetSwapChainBackBufferTexture(ElemSwapChain swapChain)
+{
+    return ELEM_HANDLE_NULL;
+}
+
 void VulkanPresentSwapChain(ElemSwapChain swapChain)
 {
 }

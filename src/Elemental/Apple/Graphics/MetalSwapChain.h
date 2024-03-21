@@ -10,8 +10,8 @@ struct MetalSwapChainDataFull
 {
 };
 
-MetalSwapChainData* GetMetalSwapChainData(ElemSwapChain commandQueue);
-MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain commandQueue);
+MetalSwapChainData* GetMetalSwapChainData(ElemSwapChain swapChain);
+MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain swapChain);
 
 ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
 void MetalFreeSwapChain(ElemSwapChain swapChain);

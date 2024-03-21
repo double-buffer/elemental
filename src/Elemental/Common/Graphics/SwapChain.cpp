@@ -16,6 +16,11 @@ ElemAPI void ElemResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32
     DispatchGraphicsFunction(ResizeSwapChain, swapChain, width, height);
 }
 
+ElemAPI ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain)
+{
+    DispatchReturnGraphicsFunction(GetSwapChainBackBufferTexture, swapChain);
+}
+
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain)
 {
     DispatchGraphicsFunction(PresentSwapChain, swapChain);

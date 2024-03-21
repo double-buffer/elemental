@@ -10,7 +10,7 @@
 #endif
 
 typedef uint64_t ElemHandle;
-#define ELEM_HANDLE_NULL UINT64_MAX
+#define ELEM_HANDLE_NULL 0 // TODO: Modify this so that 0 is the new null value
 
 // TODO: Add Functions to get native handlers for app and window so that client code can use interop for other things
 
@@ -212,6 +212,7 @@ typedef ElemHandle ElemGraphicsDevice;
 typedef ElemHandle ElemCommandQueue;
 typedef ElemHandle ElemCommandList;
 typedef ElemHandle ElemSwapChain;
+typedef ElemHandle ElemTexture;
 
 typedef enum
 {
@@ -231,6 +232,19 @@ typedef enum
     ElemSwapChainFormat_Default = 0,
     ElemSwapChainFormat_HighDynamicRange = 1
 } ElemSwapChainFormat;
+
+typedef enum
+{
+    ElemRenderPassLoadAction_Discard = 0,
+    ElemRenderPassLoadAction_Load = 1,
+    ElemRenderPassLoadAction_Clear = 2
+} ElemRenderPassLoadAction;
+
+typedef enum
+{
+    ElemRenderPassStoreAction_Store = 0,
+    ElemRenderPassStoreAction_Discard = 1
+} ElemRenderPassStoreAction;
 
 typedef struct
 {
@@ -300,6 +314,33 @@ typedef struct
     uint32_t MaximumFrameLatency;
 } ElemSwapChainOptions;
 
+typedef struct
+{
+    float Red;
+    float Green;
+    float Blue;
+    float Alpha;
+} ElemColor;
+
+typedef struct
+{
+    ElemTexture RenderTarget;
+    ElemColor ClearColor;
+    ElemRenderPassLoadAction LoadAction;
+    ElemRenderPassStoreAction StoreAction;
+} ElemRenderPassRenderTarget;
+
+typedef struct
+{
+    ElemRenderPassRenderTarget* Items;
+    uint32_t Length;
+} ElemRenderPassRenderTargetSpan;
+
+typedef struct
+{
+    ElemRenderPassRenderTargetSpan RenderTargets;
+} ElemBeginRenderPassOptions;
+
 ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options);
 
 ElemAPI ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void);
@@ -320,10 +361,12 @@ ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
 ElemAPI void ElemResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
-// TODO: GetSwapChainBackbufferTexture
-// TODO: Do we need a getSwapChainInfo? we have the info in the texture of the backbuffer
+ElemAPI ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain);
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain);
+
+ElemAPI void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options);
+ElemAPI void ElemEndRenderPass(ElemCommandList commandList);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

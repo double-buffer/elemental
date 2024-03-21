@@ -31,14 +31,14 @@ struct SystemDataPoolHandle
 
 ElemHandle PackSystemDataPoolHandle(SystemDataPoolHandle handle)
 {
-    return ((uint64_t)handle.Version << 32) | handle.Index;
+    return ((uint64_t)handle.Version << 32) | (handle.Index + 1);
 }
 
 SystemDataPoolHandle UnpackSystemDataPoolHandle(uint64_t packedValue)
 {
     SystemDataPoolHandle result = {};
 
-    result.Index = (uint32_t)(packedValue & 0xFFFFFFFF);
+    result.Index = (uint32_t)(packedValue & 0xFFFFFFFF) - 1;
     result.Version = (uint32_t)(packedValue >> 32);
     return result;
 }

@@ -13,8 +13,8 @@ struct DirectX12SwapChainDataFull
     ElemCommandQueue CommandQueue;
 };
 
-DirectX12SwapChainData* GetDirectX12SwapChainData(ElemSwapChain commandQueue);
-DirectX12SwapChainDataFull* GetDirectX12SwapChainDataFull(ElemSwapChain commandQueue);
+DirectX12SwapChainData* GetDirectX12SwapChainData(ElemSwapChain swapChain);
+DirectX12SwapChainDataFull* GetDirectX12SwapChainDataFull(ElemSwapChain swapChain);
 
 ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
 void DirectX12FreeSwapChain(ElemSwapChain swapChain);

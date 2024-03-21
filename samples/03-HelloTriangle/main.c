@@ -31,6 +31,22 @@ bool RunHandler(ElemApplicationStatus status)
 
     ElemCommandList commandList = ElemCreateCommandList(globalCommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
 
+    ElemBeginRenderPass(commandList, &(ElemBeginRenderPassOptions) {
+        .RenderTargets = 
+        {
+            .Items = (ElemRenderPassRenderTarget[]){ 
+                {
+                    ElemGetSwapChainBackBufferTexture(globalSwapChain),
+                    .ClearColor = { 1.0f, 0.0f, 0.0f, 1.0f },
+                    .LoadAction = ElemRenderPassLoadAction_Clear
+                }
+            },
+            .Length = 1
+        }
+    });
+
+    ElemEndRenderPass(commandList);
+
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(globalCommandQueue, commandList, NULL);
 

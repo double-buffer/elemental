@@ -47,8 +47,11 @@ typedef struct ElementalFunctions
     ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     void (*ElemResizeSwapChain)(ElemSwapChain, unsigned int, unsigned int);
+    ElemTexture (*ElemGetSwapChainBackBufferTexture)(ElemSwapChain);
     void (*ElemPresentSwapChain)(ElemSwapChain);
     void (*ElemWaitForSwapChainOnCpu)(ElemSwapChain);
+    void (*ElemBeginRenderPass)(ElemCommandList, const ElemBeginRenderPassOptions*);
+    void (*ElemEndRenderPass)(ElemCommandList);
     
 } ElementalFunctions;
 
@@ -120,8 +123,11 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*))GetFunctionPointer("ElemCreateSwapChain");
     elementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetFunctionPointer("ElemFreeSwapChain");
     elementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetFunctionPointer("ElemResizeSwapChain");
+    elementalFunctions.ElemGetSwapChainBackBufferTexture = (ElemTexture (*)(ElemSwapChain))GetFunctionPointer("ElemGetSwapChainBackBufferTexture");
     elementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetFunctionPointer("ElemPresentSwapChain");
     elementalFunctions.ElemWaitForSwapChainOnCpu = (void (*)(ElemSwapChain))GetFunctionPointer("ElemWaitForSwapChainOnCpu");
+    elementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassOptions*))GetFunctionPointer("ElemBeginRenderPass");
+    elementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetFunctionPointer("ElemEndRenderPass");
     
 
     functionPointersLoaded = 1;
@@ -778,6 +784,37 @@ static inline void ElemResizeSwapChain(ElemSwapChain swapChain, unsigned int wid
     elementalFunctions.ElemResizeSwapChain(swapChain, width, height);
 }
 
+static inline ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemTexture result = {};
+        #else
+        ElemTexture result = (ElemTexture){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemGetSwapChainBackBufferTexture) 
+    {
+        assert(elementalFunctions.ElemGetSwapChainBackBufferTexture);
+
+        #ifdef __cplusplus
+        ElemTexture result = {};
+        #else
+        ElemTexture result = (ElemTexture){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemGetSwapChainBackBufferTexture(swapChain);
+}
+
 static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
 {
     if (!LoadFunctionPointers()) 
@@ -810,4 +847,38 @@ static inline void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain)
     }
 
     elementalFunctions.ElemWaitForSwapChainOnCpu(swapChain);
+}
+
+static inline void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemBeginRenderPass) 
+    {
+        assert(elementalFunctions.ElemBeginRenderPass);
+        return;
+    }
+
+    elementalFunctions.ElemBeginRenderPass(commandList, options);
+}
+
+static inline void ElemEndRenderPass(ElemCommandList commandList)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemEndRenderPass) 
+    {
+        assert(elementalFunctions.ElemEndRenderPass);
+        return;
+    }
+
+    elementalFunctions.ElemEndRenderPass(commandList);
 }

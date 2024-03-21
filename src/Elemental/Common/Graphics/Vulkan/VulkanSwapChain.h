@@ -10,8 +10,8 @@ struct VulkanSwapChainDataFull
 {
 };
 
-VulkanSwapChainData* GetVulkanSwapChainData(ElemSwapChain commandQueue);
-VulkanSwapChainDataFull* GetVulkanSwapChainDataFull(ElemSwapChain commandQueue);
+VulkanSwapChainData* GetVulkanSwapChainData(ElemSwapChain swapChain);
+VulkanSwapChainDataFull* GetVulkanSwapChainDataFull(ElemSwapChain swapChain);
 
 ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
 void VulkanFreeSwapChain(ElemSwapChain swapChain);

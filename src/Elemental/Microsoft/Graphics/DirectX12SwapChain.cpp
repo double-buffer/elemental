@@ -1,6 +1,7 @@
 #include "DirectX12SwapChain.h"
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
+#include "DirectX12Texture.h"
 #include "../Win32Window.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
@@ -109,6 +110,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     }); 
 
     SystemAddDataPoolItemFull(directX12SwapChainPool, handle, {
+        .CommandQueue = commandQueue
     });
 
     return handle;
@@ -138,6 +140,11 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
 
 void DirectX12ResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
 {
+}
+
+ElemTexture DirectX12GetSwapChainBackBufferTexture(ElemSwapChain swapChain)
+{
+    return ELEM_HANDLE_NULL;
 }
 
 void DirectX12PresentSwapChain(ElemSwapChain swapChain)

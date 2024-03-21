@@ -39,6 +39,11 @@ void MetalResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t heig
 {
 }
 
+ElemTexture MetalGetSwapChainBackBufferTexture(ElemSwapChain swapChain)
+{
+    return ELEM_HANDLE_NULL;
+}
+
 void MetalPresentSwapChain(ElemSwapChain swapChain)
 {
 }
