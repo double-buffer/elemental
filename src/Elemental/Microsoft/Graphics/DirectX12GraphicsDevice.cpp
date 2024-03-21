@@ -6,18 +6,18 @@
 
 #define D3D12SDK_VERSION 613
 #define D3D12SDK_PATH ".\\"
-#define DIRECT3D12_MAX_DEVICES 10u
+#define DIRECTX12_MAX_DEVICES 10u
 
 MemoryArena DirectX12MemoryArena;
 bool DirectX12DebugLayerEnabled = false;
+ComPtr<IDXGIFactory6> DxgiFactory; 
 
-SystemDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull> direct3D12GraphicsDevicePool;
+SystemDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull> directX12GraphicsDevicePool;
 
-bool direct3D12DebugInitialized = false;
+bool directX12DebugInitialized = false;
 ComPtr<IDXGIDebug1> dxgiDebugInterface;
-ComPtr<ID3D12Debug6> direct3D12DebugInterface;
-ComPtr<IDXGIFactory6> dxgiFactory; 
-ComPtr<ID3D12DeviceFactory> direct3D12DeviceFactory;
+ComPtr<ID3D12Debug6> directX12DebugInterface;
+ComPtr<ID3D12DeviceFactory> directX12DeviceFactory;
 
 void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void* context)
 {
@@ -37,6 +37,11 @@ void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE
         messageType = ElemLogMessageType_Error;
     }
 
+    if (strstr(description, "Live ID3D12Device at") && strstr(description, "Refcount: 1"))
+    {
+        return;
+    }
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", description);
 }
@@ -45,9 +50,9 @@ void InitDirectX12()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    ComPtr<ID3D12SDKConfiguration1> direct3D12SdkConfiguration;
-    AssertIfFailed(D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(direct3D12SdkConfiguration.GetAddressOf())));
-    AssertIfFailed(direct3D12SdkConfiguration->CreateDeviceFactory(D3D12SDK_VERSION, D3D12SDK_PATH, IID_PPV_ARGS(direct3D12DeviceFactory.GetAddressOf())));
+    ComPtr<ID3D12SDKConfiguration1> directX12SdkConfiguration;
+    AssertIfFailed(D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(directX12SdkConfiguration.GetAddressOf())));
+    AssertIfFailed(directX12SdkConfiguration->CreateDeviceFactory(D3D12SDK_VERSION, D3D12SDK_PATH, IID_PPV_ARGS(directX12DeviceFactory.GetAddressOf())));
 
     UINT dxgiCreateFactoryFlags = 0;
 
@@ -63,15 +68,15 @@ void InitDirectX12()
             AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebugInterface.GetAddressOf())));
             dxgiCreateFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
-            AssertIfFailed(direct3D12DeviceFactory->GetConfigurationInterface(CLSID_D3D12Debug, IID_PPV_ARGS(direct3D12DebugInterface.GetAddressOf())));
+            AssertIfFailed(directX12DeviceFactory->GetConfigurationInterface(CLSID_D3D12Debug, IID_PPV_ARGS(directX12DebugInterface.GetAddressOf())));
 
-            if (direct3D12DebugInterface)
+            if (directX12DebugInterface)
             {
-                direct3D12DebugInterface->EnableDebugLayer();
-                direct3D12DebugInterface->SetEnableGPUBasedValidation(true);
-                direct3D12DebugInterface->SetEnableAutoName(true);
+                directX12DebugInterface->EnableDebugLayer();
+                directX12DebugInterface->SetEnableGPUBasedValidation(true);
+                directX12DebugInterface->SetEnableAutoName(true);
 
-                direct3D12DebugInitialized = true;
+                directX12DebugInitialized = true;
             }
         }
         else
@@ -84,7 +89,7 @@ void InitDirectX12()
         SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init DirectX12..."); 
     }
 
-    AssertIfFailed(CreateDXGIFactory2(dxgiCreateFactoryFlags, IID_PPV_ARGS(dxgiFactory.GetAddressOf())));
+    AssertIfFailed(CreateDXGIFactory2(dxgiCreateFactoryFlags, IID_PPV_ARGS(DxgiFactory.GetAddressOf())));
 }
 
 void InitDirectX12GraphicsDeviceMemory()
@@ -92,7 +97,7 @@ void InitDirectX12GraphicsDeviceMemory()
     if (!DirectX12MemoryArena.Storage)
     {
         DirectX12MemoryArena = SystemAllocateMemoryArena();
-        direct3D12GraphicsDevicePool = SystemCreateDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull>(DirectX12MemoryArena, DIRECT3D12_MAX_DEVICES);
+        directX12GraphicsDevicePool = SystemCreateDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_DEVICES);
 
         InitDirectX12();
     }
@@ -119,7 +124,7 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<IDXGIAdapter4> graphicsAda
     if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE) == 0)
     {
         ComPtr<ID3D12Device> tempDevice;
-        auto result = direct3D12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(tempDevice.GetAddressOf()));
+        auto result = directX12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(tempDevice.GetAddressOf()));
 
         if (tempDevice == nullptr || FAILED(result))
         {
@@ -150,12 +155,12 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<IDXGIAdapter4> graphicsAda
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
 {
-    return SystemGetDataPoolItem(direct3D12GraphicsDevicePool, graphicsDevice);
+    return SystemGetDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
 }
 
 DirectX12GraphicsDeviceDataFull* GetDirectX12GraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice)
 {
-    return SystemGetDataPoolItemFull(direct3D12GraphicsDevicePool, graphicsDevice);
+    return SystemGetDataPoolItemFull(directX12GraphicsDevicePool, graphicsDevice);
 }
 
 void DirectX12EnableGraphicsDebugLayer()
@@ -168,12 +173,12 @@ ElemGraphicsDeviceInfoSpan DirectX12GetAvailableGraphicsDevices()
     InitDirectX12GraphicsDeviceMemory();
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, DIRECT3D12_MAX_DEVICES);
+    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, DIRECTX12_MAX_DEVICES);
     auto currentDeviceInfoIndex = 0u;
 
     ComPtr<IDXGIAdapter4> graphicsAdapter;
 
-    for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.ReleaseAndGetAddressOf())); i++)
+    for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != DxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.ReleaseAndGetAddressOf())); i++)
     {
         if (DirectX12CheckGraphicsDeviceCompatibility(graphicsAdapter))
         {
@@ -199,7 +204,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;
 
-    for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
+    for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != DxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
     {
         if (DirectX12CheckGraphicsDeviceCompatibility(graphicsAdapter))
         {
@@ -216,28 +221,29 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     SystemAssertReturnNullHandle(foundAdapter);
 
     ComPtr<ID3D12Device10> device;
-    AssertIfFailedReturnNullHandle(direct3D12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(device.GetAddressOf())));
+    AssertIfFailedReturnNullHandle(directX12DeviceFactory->CreateDevice(graphicsAdapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(device.GetAddressOf())));
 
     ComPtr<ID3D12InfoQueue1> debugInfoQueue;
+    DWORD debugCallBackCookie = 0;
 
-    if (DirectX12DebugLayerEnabled && direct3D12DebugInitialized)
+    if (DirectX12DebugLayerEnabled && directX12DebugInitialized)
     {
         AssertIfFailed(device->QueryInterface(IID_PPV_ARGS(debugInfoQueue.GetAddressOf())));
 
         if (debugInfoQueue)
         {
-            DWORD callBackCookie = 0;
-            AssertIfFailed(debugInfoQueue->RegisterMessageCallback(DirectX12DebugReportCallback, D3D12_MESSAGE_CALLBACK_IGNORE_FILTERS, nullptr, &callBackCookie));
+            AssertIfFailed(debugInfoQueue->RegisterMessageCallback(DirectX12DebugReportCallback, D3D12_MESSAGE_CALLBACK_IGNORE_FILTERS, nullptr, &debugCallBackCookie));
         }
     }
 
-    auto handle = SystemAddDataPoolItem(direct3D12GraphicsDevicePool, {
+    auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
         .Device = device
     }); 
 
-    SystemAddDataPoolItemFull(direct3D12GraphicsDevicePool, handle, {
+    SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
         .AdapterDescription = adapterDescription,
-        .DebugInfoQueue = debugInfoQueue
+        .DebugInfoQueue = debugInfoQueue,
+        .DebugCallBackCookie = debugCallBackCookie
     });
 
     return handle;
@@ -255,40 +261,43 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     graphicsDeviceData->Device.Reset();
 
+    SystemRemoveDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
+
     if (graphicsDeviceDataFull->DebugInfoQueue)
     {
-        graphicsDeviceDataFull->DebugInfoQueue.Reset();
+        //graphicsDeviceDataFull->DebugInfoQueue.Reset();
     }
 
-    SystemRemoveDataPoolItem(direct3D12GraphicsDevicePool, graphicsDevice);
-
-    if (SystemGetDataPoolItemCount(direct3D12GraphicsDevicePool) == 0)
+    if (SystemGetDataPoolItemCount(directX12GraphicsDevicePool) == 0)
     {
-        if (direct3D12DebugInterface)
+
+        if (directX12DebugInterface)
         {
-            direct3D12DebugInterface.Reset();
-            direct3D12DebugInterface = nullptr;
+            directX12DebugInterface.Reset();
+            directX12DebugInterface = nullptr;
         }
 
-        if (dxgiFactory)
+        if (DxgiFactory)
         {
-            dxgiFactory.Reset();
-            dxgiFactory = nullptr;
+            DxgiFactory.Reset();
+            DxgiFactory = nullptr;
         }
 
-        if (direct3D12DeviceFactory)
+        if (directX12DeviceFactory)
         {
-            direct3D12DeviceFactory.Reset();
-            direct3D12DeviceFactory = nullptr;
+            directX12DeviceFactory.Reset();
+            directX12DeviceFactory = nullptr;
         }
 
         if (dxgiDebugInterface)
         {
             AssertIfFailed(dxgiDebugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, (DXGI_DEBUG_RLO_FLAGS)(DXGI_DEBUG_RLO_IGNORE_INTERNAL | DXGI_DEBUG_RLO_DETAIL)));
+            graphicsDeviceDataFull->DebugInfoQueue->UnregisterMessageCallback(graphicsDeviceDataFull->DebugCallBackCookie);
         }
 
         SystemFreeMemoryArena(DirectX12MemoryArena);
         DirectX12MemoryArena = {};
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing DirectX12");
     }
 }
 

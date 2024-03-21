@@ -71,7 +71,7 @@ UTEST(CommandList, ExecuteCommandListWithoutInsertFence)
     ElemFreeCommandQueue(commandQueue);
 
     ASSERT_FALSE(testHasLogErrors);
-    ASSERT_EQ(ELEM_HANDLE_NULL, fence);
+    ASSERT_EQ(ELEM_HANDLE_NULL, fence.CommandQueue);
 }
 
 UTEST(CommandList, ExecuteCommandListWithInsertFence) 
@@ -92,8 +92,10 @@ UTEST(CommandList, ExecuteCommandListWithInsertFence)
     ElemFreeCommandQueue(commandQueue);
 
     ASSERT_FALSE(testHasLogErrors);
-    ASSERT_NE(ELEM_HANDLE_NULL, fence);
+    ASSERT_NE(ELEM_HANDLE_NULL, fence.CommandQueue);
 }
 
+// TODO: Test Cannot wait fence on cpu if flag was not passed
 // TODO: Test mutli threading create command list
+// TODO: Test also one / multi thread with multiple frame in flight (if we don't use swapchain it can grow dynamically)
 // TODO: Test Fences, assign a buffer counter at each step and check the result

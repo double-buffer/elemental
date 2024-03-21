@@ -12,10 +12,12 @@ struct DirectX12GraphicsDeviceDataFull
 {
     DXGI_ADAPTER_DESC3 AdapterDescription;
     ComPtr<ID3D12InfoQueue1> DebugInfoQueue;
+    DWORD DebugCallBackCookie;
 };
 
 extern MemoryArena DirectX12MemoryArena;
 extern bool DirectX12DebugLayerEnabled;
+extern ComPtr<IDXGIFactory6> DxgiFactory; 
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 DirectX12GraphicsDeviceDataFull* GetDirectX12GraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);

@@ -44,6 +44,11 @@ typedef struct ElementalFunctions
     ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*);
     ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*);
     void (*ElemWaitForFenceOnCpu)(ElemFence);
+    ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*);
+    void (*ElemFreeSwapChain)(ElemSwapChain);
+    void (*ElemResizeSwapChain)(ElemSwapChain, unsigned int, unsigned int);
+    void (*ElemPresentSwapChain)(ElemSwapChain);
+    void (*ElemWaitForSwapChainOnCpu)(ElemSwapChain);
     
 } ElementalFunctions;
 
@@ -112,6 +117,11 @@ static bool LoadFunctionPointers(void)
     elementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandList");
     elementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandLists");
     elementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetFunctionPointer("ElemWaitForFenceOnCpu");
+    elementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*))GetFunctionPointer("ElemCreateSwapChain");
+    elementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetFunctionPointer("ElemFreeSwapChain");
+    elementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetFunctionPointer("ElemResizeSwapChain");
+    elementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetFunctionPointer("ElemPresentSwapChain");
+    elementalFunctions.ElemWaitForSwapChainOnCpu = (void (*)(ElemSwapChain))GetFunctionPointer("ElemWaitForSwapChainOnCpu");
     
 
     functionPointersLoaded = 1;
@@ -701,4 +711,103 @@ static inline void ElemWaitForFenceOnCpu(ElemFence fence)
     }
 
     elementalFunctions.ElemWaitForFenceOnCpu(fence);
+}
+
+static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+
+        #ifdef __cplusplus
+        ElemSwapChain result = {};
+        #else
+        ElemSwapChain result = (ElemSwapChain){0};
+        #endif
+
+        return result;
+    }
+
+    if (!elementalFunctions.ElemCreateSwapChain) 
+    {
+        assert(elementalFunctions.ElemCreateSwapChain);
+
+        #ifdef __cplusplus
+        ElemSwapChain result = {};
+        #else
+        ElemSwapChain result = (ElemSwapChain){0};
+        #endif
+
+        return result;
+    }
+
+    return elementalFunctions.ElemCreateSwapChain(commandQueue, window, options);
+}
+
+static inline void ElemFreeSwapChain(ElemSwapChain swapChain)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemFreeSwapChain) 
+    {
+        assert(elementalFunctions.ElemFreeSwapChain);
+        return;
+    }
+
+    elementalFunctions.ElemFreeSwapChain(swapChain);
+}
+
+static inline void ElemResizeSwapChain(ElemSwapChain swapChain, unsigned int width, unsigned int height)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemResizeSwapChain) 
+    {
+        assert(elementalFunctions.ElemResizeSwapChain);
+        return;
+    }
+
+    elementalFunctions.ElemResizeSwapChain(swapChain, width, height);
+}
+
+static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemPresentSwapChain) 
+    {
+        assert(elementalFunctions.ElemPresentSwapChain);
+        return;
+    }
+
+    elementalFunctions.ElemPresentSwapChain(swapChain);
+}
+
+static inline void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain)
+{
+    if (!LoadFunctionPointers()) 
+    {
+        assert(library);
+        return;
+    }
+
+    if (!elementalFunctions.ElemWaitForSwapChainOnCpu) 
+    {
+        assert(elementalFunctions.ElemWaitForSwapChainOnCpu);
+        return;
+    }
+
+    elementalFunctions.ElemWaitForSwapChainOnCpu(swapChain);
 }

@@ -10,13 +10,15 @@
 
 #include "Graphics/DirectX12GraphicsDevice.cpp"
 #include "Graphics/DirectX12CommandList.cpp"
+#include "Graphics/DirectX12SwapChain.cpp"
 
 #include "Graphics/Vulkan/VulkanGraphicsDevice.cpp"
 #include "Graphics/Vulkan/VulkanCommandList.cpp"
+#include "Graphics/Vulkan/VulkanSwapChain.cpp"
 
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
-
+#include "Graphics/SwapChain.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"

@@ -1,5 +1,6 @@
 #include "GraphicsDeviceTests.cpp"
 #include "CommandListTests.cpp"
+#include "SwapChainTests.cpp"
 #include "utest.h"
 
 bool testForceVulkanApi = false;

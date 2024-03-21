@@ -211,7 +211,7 @@ typedef ElemHandle ElemGraphicsDevice;
 
 typedef ElemHandle ElemCommandQueue;
 typedef ElemHandle ElemCommandList;
-typedef ElemHandle ElemFence;
+typedef ElemHandle ElemSwapChain;
 
 typedef enum
 {
@@ -225,6 +225,12 @@ typedef enum
     ElemCommandQueueType_Graphics,
     ElemCommandQueueType_Compute
 } ElemCommandQueueType;
+
+typedef enum
+{
+    ElemSwapChainFormat_Default = 0,
+    ElemSwapChainFormat_HighDynamicRange = 1
+} ElemSwapChainFormat;
 
 typedef struct
 {
@@ -263,6 +269,12 @@ typedef struct
 
 typedef struct
 {
+    ElemCommandQueue CommandQueue;
+    uint64_t FenceValue;
+} ElemFence;
+
+typedef struct
+{
     ElemCommandList* Items;
     uint32_t Length;
 } ElemCommandListSpan;
@@ -280,6 +292,14 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
 
+typedef struct
+{
+    uint32_t Width;
+    uint32_t Height;
+    ElemSwapChainFormat Format;
+    uint32_t MaximumFrameLatency;
+} ElemSwapChainOptions;
+
 ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options);
 
 ElemAPI ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void);
@@ -292,10 +312,18 @@ ElemAPI ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevic
 ElemAPI void ElemFreeCommandQueue(ElemCommandQueue commandQueue);
 ElemAPI ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
 ElemAPI void ElemCommitCommandList(ElemCommandList commandList);
-
 ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
+// TODO: ResetCommandAllocation?
+
+ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
+ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
+ElemAPI void ElemResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
+// TODO: GetSwapChainBackbufferTexture
+// TODO: Do we need a getSwapChainInfo? we have the info in the texture of the backbuffer
+ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
+ElemAPI void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

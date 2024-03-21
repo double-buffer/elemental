@@ -1,7 +1,7 @@
 #include "Elemental.h"
 
-static ElemWindow globalWindow;
 static ElemCommandQueue globalCommandQueue;
+static ElemSwapChain globalSwapChain;
 
 const char* GetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
 {
@@ -27,18 +27,14 @@ bool RunHandler(ElemApplicationStatus status)
         return false;
     }
 
-    // TODO: Temporary
-    #ifdef WIN32
-        Sleep(5);
-    #else
-        usleep(5000);
-    #endif
+    ElemWaitForSwapChainOnCpu(globalSwapChain);
 
     ElemCommandList commandList = ElemCreateCommandList(globalCommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
 
     ElemCommitCommandList(commandList);
-
     ElemExecuteCommandList(globalCommandQueue, commandList, NULL);
+
+    ElemPresentSwapChain(globalSwapChain);
 
     return true;
 }
@@ -56,7 +52,7 @@ int main(int argc, const char* argv[])
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = useVulkan });
     
     ElemApplication application = ElemCreateApplication("Hello Triangle");
-    globalWindow = ElemCreateWindow(application, NULL);
+    ElemWindow window = ElemCreateWindow(application, NULL);
     
     ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
@@ -67,12 +63,14 @@ int main(int argc, const char* argv[])
                         GetGraphicsApiLabel(graphicsDeviceInfo.GraphicsApi),
                         graphicsDeviceInfo.DeviceId, 
                         graphicsDeviceInfo.AvailableMemory);
-    ElemSetWindowTitle(globalWindow, temp);
+    ElemSetWindowTitle(window, temp);
 
     globalCommandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
+    globalSwapChain = ElemCreateSwapChain(globalCommandQueue, window, &(ElemSwapChainOptions) { });
 
     ElemRunApplication(application, RunHandler);
 
+    ElemFreeSwapChain(globalSwapChain);
     ElemFreeCommandQueue(globalCommandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
     ElemFreeApplication(application);
