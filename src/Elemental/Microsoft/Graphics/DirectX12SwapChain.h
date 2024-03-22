@@ -2,14 +2,18 @@
 
 #include "Elemental.h"
 
+#define DIRECTX12_MAX_SWAPCHAIN_BUFFERS 3
+
 struct DirectX12SwapChainData
 {
     ComPtr<IDXGISwapChain4> DeviceObject;
     HANDLE WaitHandle;
+    ElemTexture BackBufferTextures[DIRECTX12_MAX_SWAPCHAIN_BUFFERS];
 };
 
 struct DirectX12SwapChainDataFull
 {
+    ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
 };
 

@@ -4,13 +4,20 @@
 
 struct DirectX12TextureData
 {
+    ComPtr<ID3D12Resource> DeviceObject;
+    D3D12_RESOURCE_DESC ResourceDescription;
+    bool IsPresentTexture;
+    D3D12_CPU_DESCRIPTOR_HANDLE RtvDescriptor;
 };
 
 struct DirectX12TextureDataFull
 {
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 DirectX12TextureData* GetDirectX12TextureData(ElemTexture texture);
 DirectX12TextureDataFull* GetDirectX12TextureDataFull(ElemTexture texture);
 
-void InitDirectX12TextureMemory();
+ElemTexture CreateDirectX12TextureFromResource(ElemGraphicsDevice graphicsDevice, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
+            
+void DirectX12FreeTexture(ElemTexture texture);

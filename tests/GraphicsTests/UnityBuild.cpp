@@ -1,6 +1,7 @@
 #include "GraphicsDeviceTests.cpp"
 #include "CommandListTests.cpp"
 #include "SwapChainTests.cpp"
+#include "TextureTests.cpp"
 #include "RenderingTests.cpp"
 #include "utest.h"
 

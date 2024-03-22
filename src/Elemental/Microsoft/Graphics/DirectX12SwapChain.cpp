@@ -29,6 +29,25 @@ DirectX12SwapChainDataFull* GetDirectX12SwapChainDataFull(ElemSwapChain swapChai
     return SystemGetDataPoolItemFull(directX12SwapChainPool, swapChain);
 }
 
+void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
+{
+    SystemAssert(swapChain != ELEM_HANDLE_NULL);
+
+    auto swapChainData = GetDirectX12SwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    auto swapChainDataFull = GetDirectX12SwapChainDataFull(swapChain);
+    SystemAssert(swapChainDataFull);
+
+    for (uint32_t i = 0; i < DIRECTX12_MAX_SWAPCHAIN_BUFFERS; i++)
+    {
+        ComPtr<ID3D12Resource> backBuffer;
+        AssertIfFailed(swapChainData->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
+
+        swapChainData->BackBufferTextures[i] = CreateDirectX12TextureFromResource(swapChainDataFull->GraphicsDevice, backBuffer, true);
+    }
+}
+
 ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -38,6 +57,9 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     
     auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
+
+    auto commandQueueDataFull = GetDirectX12CommandQueueDataFull(commandQueue);
+    SystemAssert(commandQueueDataFull);
 
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
@@ -62,7 +84,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
 
         if (options->Format == ElemSwapChainFormat_HighDynamicRange)
         {
-            format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+            format = DXGI_FORMAT_R10G10B10A2_UNORM;
         }
 
         // TODO: Check boundaries
@@ -80,7 +102,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .Format = format,
         .SampleDesc = { 1, 0 },
         .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-        .BufferCount = 3,
+        .BufferCount = DIRECTX12_MAX_SWAPCHAIN_BUFFERS,
         .Scaling = DXGI_SCALING_STRETCH,
         .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
         .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
@@ -97,12 +119,15 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     AssertIfFailedReturnNullHandle(DxgiFactory->CreateSwapChainForHwnd(commandQueueData->DeviceObject.Get(), windowData->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain.GetAddressOf()));  
     AssertIfFailedReturnNullHandle(DxgiFactory->MakeWindowAssociation(windowData->WindowHandle, DXGI_MWA_NO_ALT_ENTER));
 
+    if (options && options->Format == ElemSwapChainFormat_HighDynamicRange)
+    {
+        // TODO: See https://learn.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
+        // TODO: See https://panoskarabelas.com/blog/posts/hdr_in_under_10_minutes/
+        swapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020);
+    }
+
     swapChain->SetMaximumFrameLatency(maximumFrameLatency);
     auto waitHandle = swapChain->GetFrameLatencyWaitableObject();
-
-    // TODO: Create backbuffers RTVs
-
-
 
     auto handle = SystemAddDataPoolItem(directX12SwapChainPool, {
         .DeviceObject = swapChain,
@@ -110,9 +135,12 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     }); 
 
     SystemAddDataPoolItemFull(directX12SwapChainPool, handle, {
+        .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
         .CommandQueue = commandQueue
     });
 
+    CreateDirectX12SwapChainRenderTargetViews(handle);
+    
     return handle;
 }
 
@@ -132,6 +160,14 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     // Note that in the test an empty command list was used, that may be the problem
     ElemWaitForFenceOnCpu(fence);
 
+    for (uint32_t i = 0; i < DIRECTX12_MAX_SWAPCHAIN_BUFFERS; i++)
+    {
+        if (swapChainData->BackBufferTextures[i])
+        {
+            DirectX12FreeTexture(swapChainData->BackBufferTextures[i]);
+        }
+    }
+
     if (swapChainData->DeviceObject)
     {
         swapChainData->DeviceObject.Reset();
@@ -144,7 +180,12 @@ void DirectX12ResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
 
 ElemTexture DirectX12GetSwapChainBackBufferTexture(ElemSwapChain swapChain)
 {
-    return ELEM_HANDLE_NULL;
+    SystemAssert(swapChain != ELEM_HANDLE_NULL);
+
+    auto swapChainData = GetDirectX12SwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    return swapChainData->BackBufferTextures[swapChainData->DeviceObject->GetCurrentBackBufferIndex()];
 }
 
 void DirectX12PresentSwapChain(ElemSwapChain swapChain)

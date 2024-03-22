@@ -37,7 +37,7 @@ bool RunHandler(ElemApplicationStatus status)
             .Items = (ElemRenderPassRenderTarget[]){ 
                 {
                     ElemGetSwapChainBackBufferTexture(globalSwapChain),
-                    .ClearColor = { 1.0f, 0.0f, 0.0f, 1.0f },
+                    .ClearColor = { 1.0f, 1.0f, 0.0f, 1.0f },
                     .LoadAction = ElemRenderPassLoadAction_Clear
                 }
             },
