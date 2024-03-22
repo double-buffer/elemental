@@ -10,7 +10,7 @@
 #endif
 
 typedef uint64_t ElemHandle;
-#define ELEM_HANDLE_NULL 0 // TODO: Modify this so that 0 is the new null value
+#define ELEM_HANDLE_NULL 0u // TODO: Modify this so that 0 is the new null value
 
 // TODO: Add Functions to get native handlers for app and window so that client code can use interop for other things
 
@@ -216,15 +216,15 @@ typedef ElemHandle ElemTexture;
 
 typedef enum
 {
-    ElemGraphicsApi_DirectX12,
-    ElemGraphicsApi_Vulkan,
-    ElemGraphicsApi_Metal
+    ElemGraphicsApi_DirectX12 = 0,
+    ElemGraphicsApi_Vulkan = 1,
+    ElemGraphicsApi_Metal = 2
 } ElemGraphicsApi;
 
 typedef enum
 {
-    ElemCommandQueueType_Graphics,
-    ElemCommandQueueType_Compute
+    ElemCommandQueueType_Graphics = 0,
+    ElemCommandQueueType_Compute = 1
 } ElemCommandQueueType;
 
 typedef enum

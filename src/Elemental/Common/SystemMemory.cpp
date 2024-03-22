@@ -1,7 +1,12 @@
 #include "SystemMemory.h"
 #include "SystemFunctions.h"
-#include "SystemLogging.h"
 #include "SystemPlatformFunctions.h"
+
+#ifdef ElemAPI
+#include "SystemLogging.h"
+#else
+#define SystemLogErrorMessage(category, format, ...)
+#endif
 
 #define MEMORYARENA_DEFAULT_SIZE 64 * 1024 * 1024
 #define MEMORYARENA_DEFAULT_ALIGNMENT 8

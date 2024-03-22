@@ -1,6 +1,11 @@
 #include "SystemPlatformFunctions.h"
 #include "SystemFunctions.h"
+
+#ifdef ElemAPI
 #include "SystemLogging.h"
+#else
+#define SystemLogErrorMessage(category, format, ...)
+#endif 
 
 SystemPlatformAllocationInfos systemPlatformAllocationInfos;
 

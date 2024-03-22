@@ -3,11 +3,11 @@ namespace Elemental.Tools.CodeGenerator;
 public class CLoaderCodeGenerator : ICodeGenerator
 {
     const string template = """
-        #define ElementalLoader
+        #define ##LIBRARY_NAME##Loader
 
         #include <assert.h>
         #include <stdio.h>
-        #include "Elemental.h"
+        #include "##SOURCE_HEADER##"
 
         #if defined(_WIN32)
            #define UNICODE
@@ -19,33 +19,33 @@ public class CLoaderCodeGenerator : ICodeGenerator
         #endif
 
         #if defined(_WIN32)
-            static HMODULE library = NULL;
+            static HMODULE library##LIBRARY_NAME## = NULL;
         #else
-            static void* library = NULL;
+            static void* library##LIBRARY_NAME## = NULL;
         #endif
 
-        static int functionPointersLoaded = 0;
+        static int functionPointersLoaded##LIBRARY_NAME## = 0;
 
-        typedef struct ElementalFunctions 
+        typedef struct ##LIBRARY_NAME##Functions 
         {
             ##ELEM_FUNCTIONS_DECLARATIONS##
-        } ElementalFunctions;
+        } ##LIBRARY_NAME##Functions;
 
-        static ElementalFunctions elementalFunctions;
+        static ##LIBRARY_NAME##Functions list##LIBRARY_NAME##Functions;
 
-        static bool LoadElementalLibrary(void) 
+        static bool Load##LIBRARY_NAME##Library(void) 
         {
-            if (!library) 
+            if (!library##LIBRARY_NAME##) 
             {
                 #if defined(_WIN32)
-                    library = LoadLibrary(L"Elemental.dll");
+                    library##LIBRARY_NAME## = LoadLibrary(L"##DLL_NAME##.dll");
                 #elif __APPLE__
-                    library = dlopen("libElemental.dylib", RTLD_LAZY);
+                    library##LIBRARY_NAME## = dlopen("lib##DLL_NAME##.dylib", RTLD_LAZY);
                 #else
-                    library = dlopen("libElemental.so", RTLD_LAZY);
+                    library##LIBRARY_NAME## = dlopen("lib##DLL_NAME##.so", RTLD_LAZY);
                 #endif
 
-                if (!library) 
+                if (!library##LIBRARY_NAME##) 
                 {
                     return false;
                 }
@@ -54,33 +54,35 @@ public class CLoaderCodeGenerator : ICodeGenerator
             return true;
         }
 
-        void* GetFunctionPointer(const char* functionName) 
+        void* Get##LIBRARY_NAME##FunctionPointer(const char* functionName) 
         {
-            if (!library) 
+            if (!library##LIBRARY_NAME##) 
             {
                 return NULL;
             }
 
             #if defined(_WIN32)
-                return (void*)GetProcAddress(library, functionName);
+                return (void*)GetProcAddress(library##LIBRARY_NAME##, functionName);
             #else
-                return dlsym(library, functionName);
+                return dlsym(library##LIBRARY_NAME##, functionName);
             #endif
         }
 
-        static bool LoadFunctionPointers(void) 
+        static bool Load##LIBRARY_NAME##FunctionPointers(void) 
         {
-            if (!LoadElementalLibrary() || functionPointersLoaded)
+            if (!Load##LIBRARY_NAME##Library() || functionPointersLoaded##LIBRARY_NAME##)
             {
-                return functionPointersLoaded;
+                return functionPointersLoaded##LIBRARY_NAME##;
             }
 
             ##ELEM_FUNCTIONS##
 
-            functionPointersLoaded = 1;
+            functionPointersLoaded##LIBRARY_NAME## = 1;
             return true;
         }
+        """;
 
+    const string defaultLogsTemplate = """
         static inline void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
         {
             printf("[");
@@ -171,9 +173,9 @@ public class CLoaderCodeGenerator : ICodeGenerator
         """;
 
     const string functionTemplate = """
-        if (!LoadFunctionPointers()) 
+        if (!Load##LIBRARY_NAME##FunctionPointers()) 
         {
-            assert(library);
+            assert(library##LIBRARY_NAME##);
 
             #ifdef __cplusplus
             ##RETURN_TYPE## result = {};
@@ -184,9 +186,9 @@ public class CLoaderCodeGenerator : ICodeGenerator
             return result;
         }
 
-        if (!elementalFunctions.##FUNCTION_NAME##) 
+        if (!list##LIBRARY_NAME##Functions.##FUNCTION_NAME##) 
         {
-            assert(elementalFunctions.##FUNCTION_NAME##);
+            assert(list##LIBRARY_NAME##Functions.##FUNCTION_NAME##);
 
             #ifdef __cplusplus
             ##RETURN_TYPE## result = {};
@@ -197,23 +199,23 @@ public class CLoaderCodeGenerator : ICodeGenerator
             return result;
         }
 
-        return elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
+        return list##LIBRARY_NAME##Functions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
     """;
 
     const string functionTemplateVoid = """
-        if (!LoadFunctionPointers()) 
+        if (!Load##LIBRARY_NAME##FunctionPointers()) 
         {
-            assert(library);
+            assert(library##LIBRARY_NAME##);
             return;
         }
 
-        if (!elementalFunctions.##FUNCTION_NAME##) 
+        if (!list##LIBRARY_NAME##Functions.##FUNCTION_NAME##) 
         {
-            assert(elementalFunctions.##FUNCTION_NAME##);
+            assert(list##LIBRARY_NAME##Functions.##FUNCTION_NAME##);
             return;
         }
 
-        elementalFunctions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
+        list##LIBRARY_NAME##Functions.##FUNCTION_NAME##(##FUNCTION_PARAMETER_VALUES##);
     """;
 
 
@@ -222,12 +224,17 @@ public class CLoaderCodeGenerator : ICodeGenerator
         var builder = new StringBuilder();
         builder.AppendLine(template);
 
+        if (Path.GetFileName(input) == "Elemental.h")
+        {
+            builder.AppendLine(defaultLogsTemplate);
+        }
+
         var functionsDeclarationStringBuilder = new StringBuilder();
         var functionsStringBuilder = new StringBuilder();
 
         foreach (var function in compilation.Functions)
         {
-            if (Path.GetFileName(function.SourceFile) != "Elemental.h" || function.Name == "ElemConsoleLogHandler")
+            if (!(Path.GetFileName(function.SourceFile) == "Elemental.h" || Path.GetFileName(function.SourceFile) == "ElementalTools.h"))
             {
                 continue;
             }
@@ -237,7 +244,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
             var isFirstParameter = true;
             var parameterValuesBuilder = new StringBuilder();
 
-            functionsStringBuilder.Append($"elementalFunctions.{function.Name} = ({function.ReturnType.GetDisplayName()} (*)(");
+            functionsStringBuilder.Append($"list##LIBRARY_NAME##Functions.{function.Name} = ({function.ReturnType.GetDisplayName()} (*)(");
             functionsDeclarationStringBuilder.Append($"{function.ReturnType.GetDisplayName()} (*{function.Name})(");
 
             if (function.Parameters.Count == 0)
@@ -269,7 +276,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
                 }
             }
 
-            functionsStringBuilder.AppendLine($"))GetFunctionPointer(\"{function.Name}\");");
+            functionsStringBuilder.AppendLine($"))Get##LIBRARY_NAME##FunctionPointer(\"{function.Name}\");");
             functionsStringBuilder.Append("    ");
 
             functionsDeclarationStringBuilder.AppendLine($");");
@@ -288,6 +295,12 @@ public class CLoaderCodeGenerator : ICodeGenerator
 
         builder.Replace("##ELEM_FUNCTIONS##", functionsStringBuilder.ToString());
         builder.Replace("##ELEM_FUNCTIONS_DECLARATIONS##", functionsDeclarationStringBuilder.ToString());
+
+        var libraryName = Path.GetFileNameWithoutExtension(input);
+
+        builder.Replace("##SOURCE_HEADER##", Path.GetFileName(input));
+        builder.Replace("##LIBRARY_NAME##", libraryName);
+        builder.Replace("##DLL_NAME##", libraryName == "Elemental" ? "Elemental" : "Elemental.Tools");
 
         File.WriteAllText(output, builder.ToString());
     }

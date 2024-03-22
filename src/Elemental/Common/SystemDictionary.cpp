@@ -1,6 +1,9 @@
 #include "SystemDictionary.h"
 #include "SystemFunctions.h"
+
+#ifdef ElemAPI
 #include "SystemLogging.h"
+#endif
 
 #define SYSTEM_DICTIONARY_HASH_SEED 123456789
 

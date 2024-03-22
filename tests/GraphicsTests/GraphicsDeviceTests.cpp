@@ -64,3 +64,5 @@ UTEST(GraphicsDevice, CreateGraphicsDevice)
     ASSERT_EQ(graphicsDeviceInfo.GraphicsApi, resultDeviceInfo.GraphicsApi); 
     ASSERT_EQ(graphicsDeviceInfo.AvailableMemory, resultDeviceInfo.AvailableMemory); 
 }
+
+// TODO: Test Shader Resource Descriptors 

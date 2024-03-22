@@ -1,4 +1,5 @@
 #include "Elemental.h"
+#include "ElementalTools.h"
 
 static ElemCommandQueue globalCommandQueue;
 static ElemSwapChain globalSwapChain;
@@ -69,6 +70,8 @@ int main(int argc, const char* argv[])
     
     ElemApplication application = ElemCreateApplication("Hello Triangle");
     ElemWindow window = ElemCreateWindow(application, NULL);
+
+    bool canCompileShader = ElemCanCompileShader(ElemShaderLanguage_Hlsl, ElemToolsGraphicsApi_DirectX12);
     
     ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);

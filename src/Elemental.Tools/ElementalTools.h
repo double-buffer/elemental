@@ -1,58 +1,42 @@
-#pragma once
-#include "ElementalCommon.h"
+#ifndef _ELEMENTALTOOLS_H_
+#define _ELEMENTALTOOLS_H_
 
-typedef struct 
-{
-    LogMessageHandlerPtr LogMessageHandler;
-} ShaderCompilerOptions;
+#include <stdint.h>
+#include <stdbool.h>
 
-typedef enum
-{
-    ShaderLanguage_Unknown = 0,
-    ShaderLanguage_Hlsl = 1,
-    ShaderLanguage_Msl = 2,
-    ShaderLanguage_Dxil = 3,
-    ShaderLanguage_Spirv = 4,
-    ShaderLanguage_MetalIR = 5
-} ShaderLanguage;
+#ifndef ElemToolsAPI
+#define ElemToolsAPI static
+#define UseToolsLoader
+#endif
+
+//------------------------------------------------------------------------
+// ##Module_Application##
+//------------------------------------------------------------------------
 
 typedef enum
 {
-    ShaderCompilerLogEntryType_Message = 0,
-    ShaderCompilerLogEntryType_Warning = 1,
-    ShaderCompilerLogEntryType_Error = 2
-} ShaderCompilerLogEntryType;
+    ElemShaderLanguage_Unknown = 0,
+    ElemShaderLanguage_Hlsl = 1,
+    ElemShaderLanguage_Glsl = 2,
+    ElemShaderLanguage_Msl = 3,
+    ElemShaderLanguage_Dxil = 4,
+    ElemShaderLanguage_Spirv = 5,
+    ElemShaderLanguage_MetalIR = 6
+} ElemShaderLanguage;
 
-typedef struct
+typedef enum
 {
-    ShaderCompilerLogEntryType Type;
-    const uint8_t* Message;
-} ShaderCompilerLogEntry;
+    ElemToolsGraphicsApi_DirectX12 = 0,
+    ElemToolsGraphicsApi_Vulkan = 1,
+    ElemToolsGraphicsApi_Metal = 2
+} ElemToolsGraphicsApi;
 
-typedef struct
-{
-    bool DebugMode;
-} ShaderCompilationOptions;
+ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi);
 
-typedef struct
-{
-    uint8_t* ShaderCode;
-    ShaderStage Stage;
-    uint8_t* EntryPoint;
-    ShaderLanguage ShaderLanguage;
-} ShaderCompilerInput;
+#ifdef UseToolsLoader
+#ifndef ElementalToolsLoader
+#include "ElementalToolsLoader.c"
+#endif
+#endif
 
-typedef struct
-{
-    bool IsSuccess;
-    ShaderStage Stage;
-    const uint8_t* EntryPoint;
-    uint8_t* ShaderData;
-    uint32_t ShaderDataCount;
-    ShaderCompilerLogEntry* LogEntries;
-    uint32_t LogEntryCount;
-    ShaderMetaData* MetaData;
-    uint32_t MetaDataCount;
-} ShaderCompilerResult;
-
-
+#endif  // #ifndef _ELEMENTALTOOLS_H_

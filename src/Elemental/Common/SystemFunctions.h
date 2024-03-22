@@ -1,7 +1,10 @@
 #pragma once
 
 #include "SystemMemory.h"
+
+#ifdef ElemAPI
 #include "SystemLogging.h"
+#endif 
 
 #undef assert
 

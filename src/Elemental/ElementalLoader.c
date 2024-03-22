@@ -14,12 +14,12 @@
 #endif
 
 #if defined(_WIN32)
-    static HMODULE library = NULL;
+    static HMODULE libraryElemental = NULL;
 #else
-    static void* library = NULL;
+    static void* libraryElemental = NULL;
 #endif
 
-static int functionPointersLoaded = 0;
+static int functionPointersLoadedElemental = 0;
 
 typedef struct ElementalFunctions 
 {
@@ -55,21 +55,21 @@ typedef struct ElementalFunctions
     
 } ElementalFunctions;
 
-static ElementalFunctions elementalFunctions;
+static ElementalFunctions listElementalFunctions;
 
 static bool LoadElementalLibrary(void) 
 {
-    if (!library) 
+    if (!libraryElemental) 
     {
         #if defined(_WIN32)
-            library = LoadLibrary(L"Elemental.dll");
+            libraryElemental = LoadLibrary(L"Elemental.dll");
         #elif __APPLE__
-            library = dlopen("libElemental.dylib", RTLD_LAZY);
+            libraryElemental = dlopen("libElemental.dylib", RTLD_LAZY);
         #else
-            library = dlopen("libElemental.so", RTLD_LAZY);
+            libraryElemental = dlopen("libElemental.so", RTLD_LAZY);
         #endif
 
-        if (!library) 
+        if (!libraryElemental) 
         {
             return false;
         }
@@ -78,62 +78,61 @@ static bool LoadElementalLibrary(void)
     return true;
 }
 
-void* GetFunctionPointer(const char* functionName) 
+void* GetElementalFunctionPointer(const char* functionName) 
 {
-    if (!library) 
+    if (!libraryElemental) 
     {
         return NULL;
     }
 
     #if defined(_WIN32)
-        return (void*)GetProcAddress(library, functionName);
+        return (void*)GetProcAddress(libraryElemental, functionName);
     #else
-        return dlsym(library, functionName);
+        return dlsym(libraryElemental, functionName);
     #endif
 }
 
-static bool LoadFunctionPointers(void) 
+static bool LoadElementalFunctionPointers(void) 
 {
-    if (!LoadElementalLibrary() || functionPointersLoaded)
+    if (!LoadElementalLibrary() || functionPointersLoadedElemental)
     {
-        return functionPointersLoaded;
+        return functionPointersLoadedElemental;
     }
 
-    elementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetFunctionPointer("ElemConfigureLogHandler");
-    elementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetFunctionPointer("ElemCreateApplication");
-    elementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetFunctionPointer("ElemFreeApplication");
-    elementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetFunctionPointer("ElemRunApplication");
-    elementalFunctions.ElemCreateWindow = (ElemWindow (*)(ElemApplication, const ElemWindowOptions*))GetFunctionPointer("ElemCreateWindow");
-    elementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetFunctionPointer("ElemFreeWindow");
-    elementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetFunctionPointer("ElemGetWindowRenderSize");
-    elementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetFunctionPointer("ElemSetWindowTitle");
-    elementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetFunctionPointer("ElemSetWindowState");
-    elementalFunctions.ElemSetGraphicsOptions = (void (*)(const ElemGraphicsOptions*))GetFunctionPointer("ElemSetGraphicsOptions");
-    elementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoSpan (*)(void))GetFunctionPointer("ElemGetAvailableGraphicsDevices");
-    elementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(const ElemGraphicsDeviceOptions*))GetFunctionPointer("ElemCreateGraphicsDevice");
-    elementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetFunctionPointer("ElemFreeGraphicsDevice");
-    elementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetFunctionPointer("ElemGetGraphicsDeviceInfo");
-    elementalFunctions.ElemCreateCommandQueue = (ElemCommandQueue (*)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*))GetFunctionPointer("ElemCreateCommandQueue");
-    elementalFunctions.ElemFreeCommandQueue = (void (*)(ElemCommandQueue))GetFunctionPointer("ElemFreeCommandQueue");
-    elementalFunctions.ElemCreateCommandList = (ElemCommandList (*)(ElemCommandQueue, const ElemCommandListOptions*))GetFunctionPointer("ElemCreateCommandList");
-    elementalFunctions.ElemCommitCommandList = (void (*)(ElemCommandList))GetFunctionPointer("ElemCommitCommandList");
-    elementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandList");
-    elementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetFunctionPointer("ElemExecuteCommandLists");
-    elementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetFunctionPointer("ElemWaitForFenceOnCpu");
-    elementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*))GetFunctionPointer("ElemCreateSwapChain");
-    elementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetFunctionPointer("ElemFreeSwapChain");
-    elementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetFunctionPointer("ElemResizeSwapChain");
-    elementalFunctions.ElemGetSwapChainBackBufferTexture = (ElemTexture (*)(ElemSwapChain))GetFunctionPointer("ElemGetSwapChainBackBufferTexture");
-    elementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetFunctionPointer("ElemPresentSwapChain");
-    elementalFunctions.ElemWaitForSwapChainOnCpu = (void (*)(ElemSwapChain))GetFunctionPointer("ElemWaitForSwapChainOnCpu");
-    elementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassOptions*))GetFunctionPointer("ElemBeginRenderPass");
-    elementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetFunctionPointer("ElemEndRenderPass");
+    listElementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetElementalFunctionPointer("ElemConfigureLogHandler");
+    listElementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetElementalFunctionPointer("ElemCreateApplication");
+    listElementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetElementalFunctionPointer("ElemFreeApplication");
+    listElementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetElementalFunctionPointer("ElemRunApplication");
+    listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(ElemApplication, const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
+    listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
+    listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
+    listElementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetElementalFunctionPointer("ElemSetWindowTitle");
+    listElementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetElementalFunctionPointer("ElemSetWindowState");
+    listElementalFunctions.ElemSetGraphicsOptions = (void (*)(const ElemGraphicsOptions*))GetElementalFunctionPointer("ElemSetGraphicsOptions");
+    listElementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoSpan (*)(void))GetElementalFunctionPointer("ElemGetAvailableGraphicsDevices");
+    listElementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(const ElemGraphicsDeviceOptions*))GetElementalFunctionPointer("ElemCreateGraphicsDevice");
+    listElementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemFreeGraphicsDevice");
+    listElementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemGetGraphicsDeviceInfo");
+    listElementalFunctions.ElemCreateCommandQueue = (ElemCommandQueue (*)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*))GetElementalFunctionPointer("ElemCreateCommandQueue");
+    listElementalFunctions.ElemFreeCommandQueue = (void (*)(ElemCommandQueue))GetElementalFunctionPointer("ElemFreeCommandQueue");
+    listElementalFunctions.ElemCreateCommandList = (ElemCommandList (*)(ElemCommandQueue, const ElemCommandListOptions*))GetElementalFunctionPointer("ElemCreateCommandList");
+    listElementalFunctions.ElemCommitCommandList = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemCommitCommandList");
+    listElementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandList");
+    listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandLists");
+    listElementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetElementalFunctionPointer("ElemWaitForFenceOnCpu");
+    listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
+    listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
+    listElementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemResizeSwapChain");
+    listElementalFunctions.ElemGetSwapChainBackBufferTexture = (ElemTexture (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainBackBufferTexture");
+    listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
+    listElementalFunctions.ElemWaitForSwapChainOnCpu = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemWaitForSwapChainOnCpu");
+    listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassOptions*))GetElementalFunctionPointer("ElemBeginRenderPass");
+    listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
     
 
-    functionPointersLoaded = 1;
+    functionPointersLoadedElemental = 1;
     return true;
 }
-
 static inline void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
 {
     printf("[");
@@ -224,26 +223,26 @@ static inline void ElemConsoleErrorLogHandler(ElemLogMessageType messageType, El
 
 static inline void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemConfigureLogHandler) 
+    if (!listElementalFunctions.ElemConfigureLogHandler) 
     {
-        assert(elementalFunctions.ElemConfigureLogHandler);
+        assert(listElementalFunctions.ElemConfigureLogHandler);
         return;
     }
 
-    elementalFunctions.ElemConfigureLogHandler(logHandler);
+    listElementalFunctions.ElemConfigureLogHandler(logHandler);
 }
 
 static inline ElemApplication ElemCreateApplication(const char* applicationName)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemApplication result = {};
@@ -254,9 +253,9 @@ static inline ElemApplication ElemCreateApplication(const char* applicationName)
         return result;
     }
 
-    if (!elementalFunctions.ElemCreateApplication) 
+    if (!listElementalFunctions.ElemCreateApplication) 
     {
-        assert(elementalFunctions.ElemCreateApplication);
+        assert(listElementalFunctions.ElemCreateApplication);
 
         #ifdef __cplusplus
         ElemApplication result = {};
@@ -267,48 +266,48 @@ static inline ElemApplication ElemCreateApplication(const char* applicationName)
         return result;
     }
 
-    return elementalFunctions.ElemCreateApplication(applicationName);
+    return listElementalFunctions.ElemCreateApplication(applicationName);
 }
 
 static inline void ElemFreeApplication(ElemApplication application)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemFreeApplication) 
+    if (!listElementalFunctions.ElemFreeApplication) 
     {
-        assert(elementalFunctions.ElemFreeApplication);
+        assert(listElementalFunctions.ElemFreeApplication);
         return;
     }
 
-    elementalFunctions.ElemFreeApplication(application);
+    listElementalFunctions.ElemFreeApplication(application);
 }
 
 static inline void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemRunApplication) 
+    if (!listElementalFunctions.ElemRunApplication) 
     {
-        assert(elementalFunctions.ElemRunApplication);
+        assert(listElementalFunctions.ElemRunApplication);
         return;
     }
 
-    elementalFunctions.ElemRunApplication(application, runHandler);
+    listElementalFunctions.ElemRunApplication(application, runHandler);
 }
 
 static inline ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemWindow result = {};
@@ -319,9 +318,9 @@ static inline ElemWindow ElemCreateWindow(ElemApplication application, const Ele
         return result;
     }
 
-    if (!elementalFunctions.ElemCreateWindow) 
+    if (!listElementalFunctions.ElemCreateWindow) 
     {
-        assert(elementalFunctions.ElemCreateWindow);
+        assert(listElementalFunctions.ElemCreateWindow);
 
         #ifdef __cplusplus
         ElemWindow result = {};
@@ -332,31 +331,31 @@ static inline ElemWindow ElemCreateWindow(ElemApplication application, const Ele
         return result;
     }
 
-    return elementalFunctions.ElemCreateWindow(application, options);
+    return listElementalFunctions.ElemCreateWindow(application, options);
 }
 
 static inline void ElemFreeWindow(ElemWindow window)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemFreeWindow) 
+    if (!listElementalFunctions.ElemFreeWindow) 
     {
-        assert(elementalFunctions.ElemFreeWindow);
+        assert(listElementalFunctions.ElemFreeWindow);
         return;
     }
 
-    elementalFunctions.ElemFreeWindow(window);
+    listElementalFunctions.ElemFreeWindow(window);
 }
 
 static inline ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemWindowSize result = {};
@@ -367,9 +366,9 @@ static inline ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
         return result;
     }
 
-    if (!elementalFunctions.ElemGetWindowRenderSize) 
+    if (!listElementalFunctions.ElemGetWindowRenderSize) 
     {
-        assert(elementalFunctions.ElemGetWindowRenderSize);
+        assert(listElementalFunctions.ElemGetWindowRenderSize);
 
         #ifdef __cplusplus
         ElemWindowSize result = {};
@@ -380,65 +379,65 @@ static inline ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
         return result;
     }
 
-    return elementalFunctions.ElemGetWindowRenderSize(window);
+    return listElementalFunctions.ElemGetWindowRenderSize(window);
 }
 
 static inline void ElemSetWindowTitle(ElemWindow window, const char* title)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemSetWindowTitle) 
+    if (!listElementalFunctions.ElemSetWindowTitle) 
     {
-        assert(elementalFunctions.ElemSetWindowTitle);
+        assert(listElementalFunctions.ElemSetWindowTitle);
         return;
     }
 
-    elementalFunctions.ElemSetWindowTitle(window, title);
+    listElementalFunctions.ElemSetWindowTitle(window, title);
 }
 
 static inline void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemSetWindowState) 
+    if (!listElementalFunctions.ElemSetWindowState) 
     {
-        assert(elementalFunctions.ElemSetWindowState);
+        assert(listElementalFunctions.ElemSetWindowState);
         return;
     }
 
-    elementalFunctions.ElemSetWindowState(window, windowState);
+    listElementalFunctions.ElemSetWindowState(window, windowState);
 }
 
 static inline void ElemSetGraphicsOptions(const ElemGraphicsOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemSetGraphicsOptions) 
+    if (!listElementalFunctions.ElemSetGraphicsOptions) 
     {
-        assert(elementalFunctions.ElemSetGraphicsOptions);
+        assert(listElementalFunctions.ElemSetGraphicsOptions);
         return;
     }
 
-    elementalFunctions.ElemSetGraphicsOptions(options);
+    listElementalFunctions.ElemSetGraphicsOptions(options);
 }
 
 static inline ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemGraphicsDeviceInfoSpan result = {};
@@ -449,9 +448,9 @@ static inline ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void)
         return result;
     }
 
-    if (!elementalFunctions.ElemGetAvailableGraphicsDevices) 
+    if (!listElementalFunctions.ElemGetAvailableGraphicsDevices) 
     {
-        assert(elementalFunctions.ElemGetAvailableGraphicsDevices);
+        assert(listElementalFunctions.ElemGetAvailableGraphicsDevices);
 
         #ifdef __cplusplus
         ElemGraphicsDeviceInfoSpan result = {};
@@ -462,14 +461,14 @@ static inline ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void)
         return result;
     }
 
-    return elementalFunctions.ElemGetAvailableGraphicsDevices();
+    return listElementalFunctions.ElemGetAvailableGraphicsDevices();
 }
 
 static inline ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemGraphicsDevice result = {};
@@ -480,9 +479,9 @@ static inline ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDevi
         return result;
     }
 
-    if (!elementalFunctions.ElemCreateGraphicsDevice) 
+    if (!listElementalFunctions.ElemCreateGraphicsDevice) 
     {
-        assert(elementalFunctions.ElemCreateGraphicsDevice);
+        assert(listElementalFunctions.ElemCreateGraphicsDevice);
 
         #ifdef __cplusplus
         ElemGraphicsDevice result = {};
@@ -493,31 +492,31 @@ static inline ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDevi
         return result;
     }
 
-    return elementalFunctions.ElemCreateGraphicsDevice(options);
+    return listElementalFunctions.ElemCreateGraphicsDevice(options);
 }
 
 static inline void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemFreeGraphicsDevice) 
+    if (!listElementalFunctions.ElemFreeGraphicsDevice) 
     {
-        assert(elementalFunctions.ElemFreeGraphicsDevice);
+        assert(listElementalFunctions.ElemFreeGraphicsDevice);
         return;
     }
 
-    elementalFunctions.ElemFreeGraphicsDevice(graphicsDevice);
+    listElementalFunctions.ElemFreeGraphicsDevice(graphicsDevice);
 }
 
 static inline ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemGraphicsDeviceInfo result = {};
@@ -528,9 +527,9 @@ static inline ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevic
         return result;
     }
 
-    if (!elementalFunctions.ElemGetGraphicsDeviceInfo) 
+    if (!listElementalFunctions.ElemGetGraphicsDeviceInfo) 
     {
-        assert(elementalFunctions.ElemGetGraphicsDeviceInfo);
+        assert(listElementalFunctions.ElemGetGraphicsDeviceInfo);
 
         #ifdef __cplusplus
         ElemGraphicsDeviceInfo result = {};
@@ -541,14 +540,14 @@ static inline ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevic
         return result;
     }
 
-    return elementalFunctions.ElemGetGraphicsDeviceInfo(graphicsDevice);
+    return listElementalFunctions.ElemGetGraphicsDeviceInfo(graphicsDevice);
 }
 
 static inline ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemCommandQueue result = {};
@@ -559,9 +558,9 @@ static inline ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphic
         return result;
     }
 
-    if (!elementalFunctions.ElemCreateCommandQueue) 
+    if (!listElementalFunctions.ElemCreateCommandQueue) 
     {
-        assert(elementalFunctions.ElemCreateCommandQueue);
+        assert(listElementalFunctions.ElemCreateCommandQueue);
 
         #ifdef __cplusplus
         ElemCommandQueue result = {};
@@ -572,31 +571,31 @@ static inline ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphic
         return result;
     }
 
-    return elementalFunctions.ElemCreateCommandQueue(graphicsDevice, type, options);
+    return listElementalFunctions.ElemCreateCommandQueue(graphicsDevice, type, options);
 }
 
 static inline void ElemFreeCommandQueue(ElemCommandQueue commandQueue)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemFreeCommandQueue) 
+    if (!listElementalFunctions.ElemFreeCommandQueue) 
     {
-        assert(elementalFunctions.ElemFreeCommandQueue);
+        assert(listElementalFunctions.ElemFreeCommandQueue);
         return;
     }
 
-    elementalFunctions.ElemFreeCommandQueue(commandQueue);
+    listElementalFunctions.ElemFreeCommandQueue(commandQueue);
 }
 
 static inline ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemCommandList result = {};
@@ -607,9 +606,9 @@ static inline ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueu
         return result;
     }
 
-    if (!elementalFunctions.ElemCreateCommandList) 
+    if (!listElementalFunctions.ElemCreateCommandList) 
     {
-        assert(elementalFunctions.ElemCreateCommandList);
+        assert(listElementalFunctions.ElemCreateCommandList);
 
         #ifdef __cplusplus
         ElemCommandList result = {};
@@ -620,31 +619,31 @@ static inline ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueu
         return result;
     }
 
-    return elementalFunctions.ElemCreateCommandList(commandQueue, options);
+    return listElementalFunctions.ElemCreateCommandList(commandQueue, options);
 }
 
 static inline void ElemCommitCommandList(ElemCommandList commandList)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemCommitCommandList) 
+    if (!listElementalFunctions.ElemCommitCommandList) 
     {
-        assert(elementalFunctions.ElemCommitCommandList);
+        assert(listElementalFunctions.ElemCommitCommandList);
         return;
     }
 
-    elementalFunctions.ElemCommitCommandList(commandList);
+    listElementalFunctions.ElemCommitCommandList(commandList);
 }
 
 static inline ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemFence result = {};
@@ -655,9 +654,9 @@ static inline ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, El
         return result;
     }
 
-    if (!elementalFunctions.ElemExecuteCommandList) 
+    if (!listElementalFunctions.ElemExecuteCommandList) 
     {
-        assert(elementalFunctions.ElemExecuteCommandList);
+        assert(listElementalFunctions.ElemExecuteCommandList);
 
         #ifdef __cplusplus
         ElemFence result = {};
@@ -668,14 +667,14 @@ static inline ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, El
         return result;
     }
 
-    return elementalFunctions.ElemExecuteCommandList(commandQueue, commandList, options);
+    return listElementalFunctions.ElemExecuteCommandList(commandQueue, commandList, options);
 }
 
 static inline ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemFence result = {};
@@ -686,9 +685,9 @@ static inline ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, E
         return result;
     }
 
-    if (!elementalFunctions.ElemExecuteCommandLists) 
+    if (!listElementalFunctions.ElemExecuteCommandLists) 
     {
-        assert(elementalFunctions.ElemExecuteCommandLists);
+        assert(listElementalFunctions.ElemExecuteCommandLists);
 
         #ifdef __cplusplus
         ElemFence result = {};
@@ -699,31 +698,31 @@ static inline ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, E
         return result;
     }
 
-    return elementalFunctions.ElemExecuteCommandLists(commandQueue, commandLists, options);
+    return listElementalFunctions.ElemExecuteCommandLists(commandQueue, commandLists, options);
 }
 
 static inline void ElemWaitForFenceOnCpu(ElemFence fence)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemWaitForFenceOnCpu) 
+    if (!listElementalFunctions.ElemWaitForFenceOnCpu) 
     {
-        assert(elementalFunctions.ElemWaitForFenceOnCpu);
+        assert(listElementalFunctions.ElemWaitForFenceOnCpu);
         return;
     }
 
-    elementalFunctions.ElemWaitForFenceOnCpu(fence);
+    listElementalFunctions.ElemWaitForFenceOnCpu(fence);
 }
 
 static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemSwapChain result = {};
@@ -734,9 +733,9 @@ static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, E
         return result;
     }
 
-    if (!elementalFunctions.ElemCreateSwapChain) 
+    if (!listElementalFunctions.ElemCreateSwapChain) 
     {
-        assert(elementalFunctions.ElemCreateSwapChain);
+        assert(listElementalFunctions.ElemCreateSwapChain);
 
         #ifdef __cplusplus
         ElemSwapChain result = {};
@@ -747,48 +746,48 @@ static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, E
         return result;
     }
 
-    return elementalFunctions.ElemCreateSwapChain(commandQueue, window, options);
+    return listElementalFunctions.ElemCreateSwapChain(commandQueue, window, options);
 }
 
 static inline void ElemFreeSwapChain(ElemSwapChain swapChain)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemFreeSwapChain) 
+    if (!listElementalFunctions.ElemFreeSwapChain) 
     {
-        assert(elementalFunctions.ElemFreeSwapChain);
+        assert(listElementalFunctions.ElemFreeSwapChain);
         return;
     }
 
-    elementalFunctions.ElemFreeSwapChain(swapChain);
+    listElementalFunctions.ElemFreeSwapChain(swapChain);
 }
 
 static inline void ElemResizeSwapChain(ElemSwapChain swapChain, unsigned int width, unsigned int height)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemResizeSwapChain) 
+    if (!listElementalFunctions.ElemResizeSwapChain) 
     {
-        assert(elementalFunctions.ElemResizeSwapChain);
+        assert(listElementalFunctions.ElemResizeSwapChain);
         return;
     }
 
-    elementalFunctions.ElemResizeSwapChain(swapChain, width, height);
+    listElementalFunctions.ElemResizeSwapChain(swapChain, width, height);
 }
 
 static inline ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
 
         #ifdef __cplusplus
         ElemTexture result = {};
@@ -799,9 +798,9 @@ static inline ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapCh
         return result;
     }
 
-    if (!elementalFunctions.ElemGetSwapChainBackBufferTexture) 
+    if (!listElementalFunctions.ElemGetSwapChainBackBufferTexture) 
     {
-        assert(elementalFunctions.ElemGetSwapChainBackBufferTexture);
+        assert(listElementalFunctions.ElemGetSwapChainBackBufferTexture);
 
         #ifdef __cplusplus
         ElemTexture result = {};
@@ -812,73 +811,73 @@ static inline ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapCh
         return result;
     }
 
-    return elementalFunctions.ElemGetSwapChainBackBufferTexture(swapChain);
+    return listElementalFunctions.ElemGetSwapChainBackBufferTexture(swapChain);
 }
 
 static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemPresentSwapChain) 
+    if (!listElementalFunctions.ElemPresentSwapChain) 
     {
-        assert(elementalFunctions.ElemPresentSwapChain);
+        assert(listElementalFunctions.ElemPresentSwapChain);
         return;
     }
 
-    elementalFunctions.ElemPresentSwapChain(swapChain);
+    listElementalFunctions.ElemPresentSwapChain(swapChain);
 }
 
 static inline void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemWaitForSwapChainOnCpu) 
+    if (!listElementalFunctions.ElemWaitForSwapChainOnCpu) 
     {
-        assert(elementalFunctions.ElemWaitForSwapChainOnCpu);
+        assert(listElementalFunctions.ElemWaitForSwapChainOnCpu);
         return;
     }
 
-    elementalFunctions.ElemWaitForSwapChainOnCpu(swapChain);
+    listElementalFunctions.ElemWaitForSwapChainOnCpu(swapChain);
 }
 
 static inline void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemBeginRenderPass) 
+    if (!listElementalFunctions.ElemBeginRenderPass) 
     {
-        assert(elementalFunctions.ElemBeginRenderPass);
+        assert(listElementalFunctions.ElemBeginRenderPass);
         return;
     }
 
-    elementalFunctions.ElemBeginRenderPass(commandList, options);
+    listElementalFunctions.ElemBeginRenderPass(commandList, options);
 }
 
 static inline void ElemEndRenderPass(ElemCommandList commandList)
 {
-    if (!LoadFunctionPointers()) 
+    if (!LoadElementalFunctionPointers()) 
     {
-        assert(library);
+        assert(libraryElemental);
         return;
     }
 
-    if (!elementalFunctions.ElemEndRenderPass) 
+    if (!listElementalFunctions.ElemEndRenderPass) 
     {
-        assert(elementalFunctions.ElemEndRenderPass);
+        assert(listElementalFunctions.ElemEndRenderPass);
         return;
     }
 
-    elementalFunctions.ElemEndRenderPass(commandList);
+    listElementalFunctions.ElemEndRenderPass(commandList);
 }
