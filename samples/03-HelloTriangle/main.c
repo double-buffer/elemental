@@ -72,7 +72,8 @@ int main(int argc, const char* argv[])
     ElemWindow window = ElemCreateWindow(application, NULL);
 
     bool canCompileShader = ElemCanCompileShader(ElemShaderLanguage_Hlsl, ElemToolsGraphicsApi_DirectX12);
-    
+    printf("Can Compile shader: %d\n", canCompileShader);    
+
     ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
