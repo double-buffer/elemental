@@ -4,10 +4,17 @@
 
 struct MetalSwapChainData
 {
+    NS::SharedPtr<CA::MetalLayer> DeviceObject;
+    NS::SharedPtr<CA::MetalDrawable> BackBufferDrawable;
+    ElemTexture BackBufferTexture;
+    dispatch_semaphore_t WaitSemaphore;
+    ElemCommandQueue CommandQueue;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct MetalSwapChainDataFull
 {
+    uint32_t reserved;
 };
 
 MetalSwapChainData* GetMetalSwapChainData(ElemSwapChain swapChain);

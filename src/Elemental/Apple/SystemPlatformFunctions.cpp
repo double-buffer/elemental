@@ -1,5 +1,10 @@
 #include "SystemPlatformFunctions.h"
+
+#ifdef ElemAPI
 #include "SystemLogging.h"
+#else
+#define SystemLogErrorMessage(category, format, ...)
+#endif 
 
 #include <time.h> // TODO: To review
 #define MAX_PATH 255

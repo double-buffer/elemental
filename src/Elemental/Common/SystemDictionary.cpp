@@ -143,7 +143,9 @@ void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictiona
 
         if (entryIndex == (int32_t)storage->Entries.Length)
         {
+            #ifdef ElemAPI
             SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
+            #endif
             return;
         }
                 
@@ -208,14 +210,18 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
         {
             if (retryCount < 5)
             {
+                #ifdef ElemAPI
                 SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Retrying to find the item to delete");
+                #endif
                 SystemYieldThread();
                 retryCount++;
                 entry = nullptr;
                 continue;
             }
 
+            #ifdef ElemAPI
             SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "No entry found to delete.");
+            #endif
             return;
         }
 
@@ -424,7 +430,9 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
     {
         if (storage->Buckets[i] == SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
+            #ifdef ElemAPI
             SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Bucket %u => (EMPTY)", i);
+            #endif
         }
         else 
         {
@@ -447,7 +455,9 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
                 entryIndex = entry.Next;
             }
 
+            #ifdef ElemAPI
             SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
+            #endif
         }
     }
 
@@ -461,5 +471,7 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
         currentFreeListIndex = storage->Partitions[indexFull.PartitionIndex]->Entries[indexFull.Index].Next;
     }
 
+    #ifdef ElemAPI
     SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
+    #endif
 }

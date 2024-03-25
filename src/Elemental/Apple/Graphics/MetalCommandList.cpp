@@ -19,19 +19,6 @@ void InitMetalCommandListMemory()
     }
 }
 
-void MetalResetCommandEncoder(ElemCommandList commandList)
-{
-    auto commandListData = GetMetalCommandListData(commandList);
-    SystemAssert(commandListData);
-
-    if (commandListData->CommandEncoder)
-    {
-        commandListData->CommandEncoder->endEncoding();
-        commandListData->CommandEncoder.reset();
-        commandListData->CommandEncoderType = MetalCommandEncoderType_None;
-    }
-}
-
 MetalCommandQueueData* GetMetalCommandQueueData(ElemCommandQueue commandQueue)
 {
     return SystemGetDataPoolItem(metalCommandQueuePool, commandQueue);
@@ -50,6 +37,19 @@ MetalCommandListData* GetMetalCommandListData(ElemCommandList commandList)
 MetalCommandListDataFull* GetMetalCommandListDataFull(ElemCommandList commandList)
 {
     return SystemGetDataPoolItemFull(metalCommandListPool, commandList);
+}
+
+void ResetMetalCommandEncoder(ElemCommandList commandList)
+{
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    if (commandListData->CommandEncoder)
+    {
+        commandListData->CommandEncoder->endEncoding();
+        commandListData->CommandEncoder.reset();
+        commandListData->CommandEncoderType = MetalCommandEncoderType_None;
+    }
 }
 
 ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
@@ -73,6 +73,7 @@ ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Elem
     }); 
 
     SystemAddDataPoolItemFull(metalCommandQueuePool, handle, {
+        .GraphicsDevice = graphicsDevice
     });
 
     return handle;
@@ -97,7 +98,10 @@ ElemCommandList MetalCreateCommandList(ElemCommandQueue commandQueue, const Elem
     auto commandQueueData = GetMetalCommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
     
-    auto metalCommandBuffer = NS::TransferPtr(commandQueueData->DeviceObject->commandBufferWithUnretainedReferences());
+    // TODO: We use retain ptr because the command buffer cannot be destroyed while it is executed.
+    // Normally it will be released by the auto pool. Confirm that! Normally there is no new in the function name
+    // So we don't own it
+    auto metalCommandBuffer = NS::RetainPtr(commandQueueData->DeviceObject->commandBufferWithUnretainedReferences());
     SystemAssertReturnNullHandle(metalCommandBuffer);
 
     if (MetalDebugLayerEnabled && options && options->DebugName)
@@ -106,12 +110,12 @@ ElemCommandList MetalCreateCommandList(ElemCommandQueue commandQueue, const Elem
     }
     
     auto handle = SystemAddDataPoolItem(metalCommandListPool, {
-        .CommandEncoderType = MetalCommandEncoderType_None
+        .DeviceObject = metalCommandBuffer,
+        .CommandEncoderType = MetalCommandEncoderType_None,
+        .IsCommitted = false
     }); 
 
     SystemAddDataPoolItemFull(metalCommandListPool, handle, {
-        .IsCommitted = false,
-        .DeviceObject = metalCommandBuffer
     });
 
     return handle;
@@ -119,16 +123,27 @@ ElemCommandList MetalCreateCommandList(ElemCommandQueue commandQueue, const Elem
 
 void MetalCommitCommandList(ElemCommandList commandList)
 {
-    MetalResetCommandEncoder(commandList);
+    ResetMetalCommandEncoder(commandList);
 
-    auto commandListDataFull = GetMetalCommandListDataFull(commandList);
-    SystemAssert(commandListDataFull);
-    commandListDataFull->IsCommitted = true;
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+    commandListData->IsCommitted = true;
 }
 
 ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
-    return ELEM_HANDLE_NULL;
+    // TODO: This is really bad because we should reuse the command lists objects
+    for (uint32_t i = 0; i < commandLists.Length; i++)
+    {
+        auto commandListData = GetMetalCommandListData(commandLists.Items[i]);
+        SystemAssert(commandListData);
+
+        commandListData->DeviceObject->commit();
+        commandListData->DeviceObject.reset();
+
+        SystemRemoveDataPoolItem(metalCommandListPool, commandLists.Items[i]);
+    }
+    return {};
 }
 
 void MetalWaitForFenceOnCpu(ElemFence fence)

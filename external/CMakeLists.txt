@@ -26,6 +26,18 @@ elseif(APPLE)
     get_github_release("double-buffer/shader-compilers-bin" ${DXC_VERSION_CUSTOM} "macos_dxc_*_arm64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/")
     target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/include/dxc/)
     target_include_directories(dxc INTERFACE ./DirectX-Headers/include/directx/)
+
+    function(copy_dxc_to_target target)
+        file(GLOB DXC_DLLS 
+             "${CMAKE_BINARY_DIR}/external/shader-compilers/dxc/lib/*.dylib")
+        foreach(DLL ${DXC_DLLS})
+            get_filename_component(DLL_NAME "${DLL}" NAME)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL}"
+                    "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
+        endforeach()
+    endfunction()
 endif()
 
 #=======================================================================

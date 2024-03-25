@@ -16,19 +16,20 @@ struct MetalCommandQueueData
 
 struct MetalCommandQueueDataFull
 {
-    uint32_t reverved;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct MetalCommandListData
 {
+    NS::SharedPtr<MTL::CommandBuffer> DeviceObject;
     NS::SharedPtr<MTL::CommandEncoder> CommandEncoder;
     MetalCommandEncoderType CommandEncoderType;
+    bool IsCommitted;
 };
 
 struct MetalCommandListDataFull
 {
-    bool IsCommitted;
-    NS::SharedPtr<MTL::CommandBuffer> DeviceObject;
+    uint32_t reserved;
 };
 
 
@@ -36,6 +37,8 @@ MetalCommandQueueData* GetMetalCommandQueueData(ElemCommandQueue commandQueue);
 MetalCommandQueueDataFull* GetMetalCommandQueueDataFull(ElemCommandQueue commandQueue);
 MetalCommandListData* GetMetalCommandListData(ElemCommandList commandList);
 MetalCommandListDataFull* GetMetalCommandListDataFull(ElemCommandList commandList);
+
+void ResetMetalCommandEncoder(ElemCommandList commandList);
 
 ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 void MetalFreeCommandQueue(ElemCommandQueue commandQueue);

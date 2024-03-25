@@ -1,8 +1,15 @@
 #pragma once
 
-#include <xxh3.h>
+#ifdef _DEBUG
+#undef _DEBUG
+#define _WASDEBUG
+#endif
 
-// Include mach.h?
+#define ElemToolsAPI extern "C" __attribute__((visibility("default"))) 
+#define AssertIfFailed(expression) SystemAssert(SUCCEEDED((expression)))
+#define AssertIfFailedReturnNullHandle(expression) SystemAssertReturnNullHandle(SUCCEEDED((expression)))
+#define ComPtr CComPtr
+#undef _WIN32
 #include <Carbon/Carbon.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -10,14 +17,28 @@
 #include <pthread.h>
 
 #define NS_PRIVATE_IMPLEMENTATION
-#define MTL_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
-#include <Metal/Metal.hpp>
 #include "AppKit/AppKit.hpp"
-#include <IOKit/hid/IOHIDManager.h>
 
-#define ElemAPI extern "C" __attribute__((visibility("default")))
-#define PackedStruct struct __attribute__((__packed__))
-#define AssertIfFailed(expression) SystemAssert(SUCCEEDED((expression)))
-#define AssertIfFailedReturnNullHandle(expression) SystemAssertReturnNullHandle(SUCCEEDED((expression)))
-#define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
+// TODO: Cleanup includes
+#include <ctype.h>
+#include <assert.h>
+#include <stdint.h>
+
+#include <locale>
+#include <codecvt>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <iostream>
+#include <cstdlib>
+
+#include "dxcapi.h"
+#include "d3d12shader.h"
+
+#include "spirv_msl.hpp"
+
+#ifdef _WASDEBUG
+#define _DEBUG
+#endif
+

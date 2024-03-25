@@ -14,6 +14,7 @@
 #include "Graphics/MetalCommandList.cpp"
 #include "Graphics/MetalSwapChain.cpp"
 #include "Graphics/MetalRendering.cpp"
+#include "Graphics/MetalTexture.cpp"
 
 #include "Graphics/Vulkan/VulkanGraphicsDevice.cpp"
 #include "Graphics/Vulkan/VulkanCommandList.cpp"
