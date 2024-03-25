@@ -537,6 +537,14 @@ void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source)
 }
 
 template<typename T>
+Span<T> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<T> source)
+{
+    auto result = SystemPushArray<T>(memoryArena, source.Length);
+    SystemCopyBuffer(result, source);
+    return result;
+}
+
+template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2)
 {
     auto result = SystemPushArray<T>(memoryArena, buffer1.Length + buffer2.Length);

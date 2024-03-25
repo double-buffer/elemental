@@ -50,7 +50,9 @@ typedef struct ElementalFunctions
     ElemTexture (*ElemGetSwapChainBackBufferTexture)(ElemSwapChain);
     void (*ElemPresentSwapChain)(ElemSwapChain);
     void (*ElemWaitForSwapChainOnCpu)(ElemSwapChain);
-    void (*ElemBeginRenderPass)(ElemCommandList, const ElemBeginRenderPassOptions*);
+    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemDataContainer);
+    ElemPipelineState (*ElemCreateGraphicsPipelineState)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*);
+    void (*ElemBeginRenderPass)(ElemCommandList, const ElemBeginRenderPassParameters*);
     void (*ElemEndRenderPass)(ElemCommandList);
     
 } ElementalFunctions;
@@ -126,7 +128,9 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetSwapChainBackBufferTexture = (ElemTexture (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainBackBufferTexture");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
     listElementalFunctions.ElemWaitForSwapChainOnCpu = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemWaitForSwapChainOnCpu");
-    listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassOptions*))GetElementalFunctionPointer("ElemBeginRenderPass");
+    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemDataContainer))GetElementalFunctionPointer("ElemCreateShaderLibrary");
+    listElementalFunctions.ElemCreateGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*))GetElementalFunctionPointer("ElemCreateGraphicsPipelineState");
+    listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassParameters*))GetElementalFunctionPointer("ElemBeginRenderPass");
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
     
 
@@ -848,7 +852,69 @@ static inline void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain)
     listElementalFunctions.ElemWaitForSwapChainOnCpu(swapChain);
 }
 
-static inline void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options)
+static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemDataContainer shaderLibraryData)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemShaderLibrary result = {};
+        #else
+        ElemShaderLibrary result = (ElemShaderLibrary){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateShaderLibrary) 
+    {
+        assert(listElementalFunctions.ElemCreateShaderLibrary);
+
+        #ifdef __cplusplus
+        ElemShaderLibrary result = {};
+        #else
+        ElemShaderLibrary result = (ElemShaderLibrary){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateShaderLibrary(shaderLibraryData);
+}
+
+static inline ElemPipelineState ElemCreateGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemPipelineState result = {};
+        #else
+        ElemPipelineState result = (ElemPipelineState){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateGraphicsPipelineState) 
+    {
+        assert(listElementalFunctions.ElemCreateGraphicsPipelineState);
+
+        #ifdef __cplusplus
+        ElemPipelineState result = {};
+        #else
+        ElemPipelineState result = (ElemPipelineState){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateGraphicsPipelineState(graphicsDevice, parameters);
+}
+
+static inline void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -862,7 +928,7 @@ static inline void ElemBeginRenderPass(ElemCommandList commandList, const ElemBe
         return;
     }
 
-    listElementalFunctions.ElemBeginRenderPass(commandList, options);
+    listElementalFunctions.ElemBeginRenderPass(commandList, parameters);
 }
 
 static inline void ElemEndRenderPass(ElemCommandList commandList)

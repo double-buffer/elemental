@@ -44,6 +44,7 @@ add_subdirectory(src/Elemental.Tools)
 add_subdirectory(tests/SystemFunctionsTests)
 add_subdirectory(tests/ApplicationTests)
 add_subdirectory(tests/GraphicsTests)
+add_subdirectory(tests/ToolsTests)
 
 # TODO: Use a sub cmakefile?
 add_subdirectory(samples/01-HelloWorld)

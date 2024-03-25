@@ -1,5 +1,7 @@
 #pragma once
 
+#include <initializer_list>
+
 /**
  * Represents a span of elements in memory.
  *
@@ -110,6 +112,18 @@ struct ReadOnlySpan
     {
         Pointer = pointer;
         Length = length;
+    }
+
+    /**
+     * Constructs a read-only span from an std::initializer_list.
+     * This allows for the {{ ... }} initialization syntax.
+     *
+     * @param initList An initializer list containing elements of type T.
+     */
+    ReadOnlySpan(std::initializer_list<T> initList)
+    {
+        Pointer = initList.begin();
+        Length = initList.size();
     }
 
     /**

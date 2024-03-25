@@ -2,7 +2,7 @@
 #include "MetalCommandList.h"
 #include "SystemLogging.h"
 
-void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options)
+void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Begin render");
 }

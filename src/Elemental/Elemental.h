@@ -10,7 +10,7 @@
 #endif
 
 typedef uint64_t ElemHandle;
-#define ELEM_HANDLE_NULL 0u // TODO: Modify this so that 0 is the new null value
+#define ELEM_HANDLE_NULL 0u
 
 // TODO: Add Functions to get native handlers for app and window so that client code can use interop for other things
 
@@ -82,6 +82,12 @@ typedef enum
     // Window is in full screen mode.
     ElemWindowState_FullScreen = 3
 } ElemWindowState;
+
+typedef struct
+{
+    const char* Data;
+    uint32_t Length;
+} ElemDataContainer;
 
 /**
  * Specifies options for window creation.
@@ -178,7 +184,7 @@ ElemAPI void ElemFreeWindow(ElemWindow window);
 
 /**
  * Gets the render size of a window, accounting for DPI scaling.
- *
+ *AddToStateObject 
  * @param window The window instance.
  * @return Render size of the window.
  */
@@ -213,6 +219,8 @@ typedef ElemHandle ElemCommandQueue;
 typedef ElemHandle ElemCommandList;
 typedef ElemHandle ElemSwapChain;
 typedef ElemHandle ElemTexture;
+typedef ElemHandle ElemShaderLibrary;
+typedef ElemHandle ElemPipelineState;
 
 typedef enum
 {
@@ -316,6 +324,10 @@ typedef struct
 
 typedef struct
 {
+} ElemGraphicsPipelineStateParameters;
+
+typedef struct
+{
     float Red;
     float Green;
     float Blue;
@@ -339,7 +351,7 @@ typedef struct
 typedef struct
 {
     ElemRenderPassRenderTargetSpan RenderTargets;
-} ElemBeginRenderPassOptions;
+} ElemBeginRenderPassParameters;
 
 ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options);
 
@@ -365,7 +377,22 @@ ElemAPI ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain);
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain);
 
-ElemAPI void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options);
+ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemDataContainer shaderLibraryData);
+//ElemAPI ElemShaderLibrary ElemCreateShaderLibraryFromShader(ElemShaderType shaderType, ElemDataContainer shaderData);
+// ElemAPI ElemShaderInfo ElemGetShaderInfo(ElemShaderLibrary shaderLibrary, const char* shaderName);
+// ElemAPI ElemShaderInfoList ElemGetShaderLibraryShaders(ElemShaderLibrary shaderLibrary);
+// TODO: Add shader metadata
+
+// TODO: We don't do compilation async. The client/engine code will be responsible for this. We just do it sync and they will manage the async process
+ElemAPI ElemPipelineState ElemCreateGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
+// TODO: Get Pipeline State Info (for compiled status etc)
+//ElemAPI ElemPipelineState ElemCreateComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters);
+// TODO: Enumerate pipeline infos?
+//ElemAPI void ElemBindPipelineState(ElemPipelineState pipelineState);
+//ElemAPI void ElemPushPipelineStateConstants(...) 
+// TODO: Cache functions
+
+ElemAPI void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters);
 ElemAPI void ElemEndRenderPass(ElemCommandList commandList);
 
 #ifdef UseLoader

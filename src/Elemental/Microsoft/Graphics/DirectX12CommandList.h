@@ -27,7 +27,7 @@ struct DirectX12CommandListData
 
 struct DirectX12CommandListDataFull
 {
-    ElemBeginRenderPassOptions CurrentRenderPassOptions;
+    ElemBeginRenderPassParameters CurrentRenderPassParameters;
 };
 
 ElemFence Direct3D12CreateCommandQueueFence(ElemCommandQueue commandQueue);

@@ -4,33 +4,33 @@
 #include "SystemLogging.h"
 #include "SystemFunctions.h"
 
-void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options)
+void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandList != ELEM_HANDLE_NULL);
-    SystemAssert(options);
+    SystemAssert(parameters);
 
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
 
     auto commandListDataFull = GetDirectX12CommandListDataFull(commandList);
     SystemAssert(commandListDataFull);
-    commandListDataFull->CurrentRenderPassOptions = *options;
+    commandListDataFull->CurrentRenderPassParameters = *parameters;
 
-    auto renderTargetDescList = SystemPushArray<D3D12_RENDER_PASS_RENDER_TARGET_DESC>(stackMemoryArena, options->RenderTargets.Length);
+    auto renderTargetDescList = SystemPushArray<D3D12_RENDER_PASS_RENDER_TARGET_DESC>(stackMemoryArena, parameters->RenderTargets.Length);
 
-    for (uint32_t i = 0; i < options->RenderTargets.Length; i++)
+    for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
-        auto renderTargetOptions = options->RenderTargets.Items[i];
-        SystemAssert(renderTargetOptions.RenderTarget != ELEM_HANDLE_NULL);
+        auto renderTargetParameters = parameters->RenderTargets.Items[i];
+        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetDirectX12TextureData(renderTargetOptions.RenderTarget); 
+        auto textureData = GetDirectX12TextureData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE beginAccessType;
 
-        switch (renderTargetOptions.LoadAction)
+        switch (renderTargetParameters.LoadAction)
         {
             case ElemRenderPassLoadAction_Load:
                 beginAccessType = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
@@ -52,17 +52,17 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
                 .Format = textureData->ResourceDescription.Format, 
                 .Color = 
                 { 
-                    renderTargetOptions.ClearColor.Red, 
-                    renderTargetOptions.ClearColor.Green, 
-                    renderTargetOptions.ClearColor.Blue, 
-                    renderTargetOptions.ClearColor.Alpha
+                    renderTargetParameters.ClearColor.Red, 
+                    renderTargetParameters.ClearColor.Green, 
+                    renderTargetParameters.ClearColor.Blue, 
+                    renderTargetParameters.ClearColor.Alpha
                 }
             }
         };
 
         D3D12_RENDER_PASS_ENDING_ACCESS_TYPE endAccessType;
 
-        switch (renderTargetOptions.StoreAction)
+        switch (renderTargetParameters.StoreAction)
         {
             case ElemRenderPassStoreAction_Store:
                 endAccessType = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
@@ -130,16 +130,16 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
 
     auto commandListDataFull = GetDirectX12CommandListDataFull(commandList);
     SystemAssert(commandListDataFull);
-    auto options = &commandListDataFull->CurrentRenderPassOptions;
+    auto parameters = &commandListDataFull->CurrentRenderPassParameters;
 
     commandListData->DeviceObject->EndRenderPass();
 
-    for (uint32_t i = 0; i < options->RenderTargets.Length; i++)
+    for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
-        auto renderTargetOptions = options->RenderTargets.Items[i];
-        SystemAssert(renderTargetOptions.RenderTarget != ELEM_HANDLE_NULL);
+        auto renderTargetParameters = parameters->RenderTargets.Items[i];
+        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetDirectX12TextureData(renderTargetOptions.RenderTarget); 
+        auto textureData = GetDirectX12TextureData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!

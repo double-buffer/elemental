@@ -2,7 +2,7 @@
 #include "VulkanCommandList.h"
 #include "SystemLogging.h"
 
-void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassOptions* options)
+void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Begin render");
 }

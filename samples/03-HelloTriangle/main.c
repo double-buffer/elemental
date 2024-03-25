@@ -3,6 +3,7 @@
 
 static ElemCommandQueue globalCommandQueue;
 static ElemSwapChain globalSwapChain;
+static ElemPipelineState globalGraphicsPipeline;
 
 const char* GetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
 {
@@ -32,7 +33,7 @@ bool RunHandler(ElemApplicationStatus status)
 
     ElemCommandList commandList = ElemCreateCommandList(globalCommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
 
-    ElemBeginRenderPass(commandList, &(ElemBeginRenderPassOptions) {
+    ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
         {
             .Items = (ElemRenderPassRenderTarget[]){ 
@@ -87,6 +88,10 @@ int main(int argc, const char* argv[])
 
     globalCommandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
     globalSwapChain = ElemCreateSwapChain(globalCommandQueue, window, &(ElemSwapChainOptions) { });
+
+    //ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary((ElemDataContainer) { .Data = NULL, .Length = 1 });
+    //globalGraphicsPipeline = ElemCreateGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    //});
 
     ElemRunApplication(application, RunHandler);
 
