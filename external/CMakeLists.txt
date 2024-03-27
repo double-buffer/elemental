@@ -43,6 +43,46 @@ endif()
 #=======================================================================
 # SPIRV-Cross Compiler
 #=======================================================================
+set(METAL_SHADER_CONVERTER_VERSION "v2024-03-12")
+
+add_library(metal-shader-converter INTERFACE)
+# TODO: Fix path
+target_include_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/MetalShaderConverter/include/)
+target_link_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/MetalShaderConverter/lib/)
+
+if(WIN32)
+    get_github_release("double-buffer/shader-compilers-bin" ${METAL_SHADER_CONVERTER_VERSION} "windows_MetalShaderConverter_*_x64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/")
+    
+    function(copy_MetalShaderConverter_to_target target)
+        file(GLOB DXC_DLLS 
+             "${CMAKE_BINARY_DIR}/external/shader-compilers/MetalShaderConverter/lib/*.dll")
+        foreach(DLL ${DXC_DLLS})
+            get_filename_component(DLL_NAME "${DLL}" NAME)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL}"
+                    "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
+        endforeach()
+    endfunction()
+elseif(APPLE)
+    get_github_release("double-buffer/shader-compilers-bin" ${METAL_SHADER_CONVERTER_VERSION} "macos_MetalShaderConverter_*_arm64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/")
+    
+    function(copy_MetalShaderConverter_to_target target)
+        file(GLOB DXC_DLLS 
+             "${CMAKE_BINARY_DIR}/external/shader-compilers/MetalShaderConverter/MetalShaderConverter/lib/*.dylib")
+        foreach(DLL ${DXC_DLLS})
+            get_filename_component(DLL_NAME "${DLL}" NAME)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL}"
+                    "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
+        endforeach()
+    endfunction()
+endif()
+
+#=======================================================================
+# SPIRV-Cross Compiler
+#=======================================================================
 set(SPIRV_CROSS_VERSION "v2024-03-12")
 
 add_library(spirv-cross INTERFACE)
@@ -92,7 +132,7 @@ endif()
 # Shader Compilers
 #=======================================================================
 add_library(tools_shader_compilers INTERFACE)
-target_link_libraries(tools_shader_compilers INTERFACE spirv-cross dxc)
+target_link_libraries(tools_shader_compilers INTERFACE spirv-cross dxc metal-shader-converter)
 
 #=======================================================================
 # Tools External Dependencies

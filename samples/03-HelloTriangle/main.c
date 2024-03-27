@@ -50,9 +50,18 @@ int main(int argc, const char* argv[])
         useVulkan = true;
     }
 
+    ElemConfigureLogHandler(ElemConsoleLogHandler);
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = useVulkan });
+    
+    ElemApplication application = ElemCreateApplication("Hello Triangle");
+    ElemWindow window = ElemCreateWindow(application, NULL);
+
+    ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
+    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
+
     char* shaderSource = ReadFileToString(argv[0], "Data/Triangle.hlsl");
     ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
-    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(ElemToolsGraphicsApi_DirectX12, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
+    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
 
     if (compilationResult.HasErrors)
     {
@@ -63,15 +72,6 @@ int main(int argc, const char* argv[])
     {
         printf("Compil msg (%d): %s\n", compilationResult.Messages.Items[i].Type, compilationResult.Messages.Items[i].Message);
     }
-
-    ElemConfigureLogHandler(ElemConsoleLogHandler);
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = useVulkan });
-    
-    ElemApplication application = ElemCreateApplication("Hello Triangle");
-    ElemWindow window = ElemCreateWindow(application, NULL);
-
-    ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
-    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
     char temp[255];
     sprintf(temp, "Hello Triangle! (GraphicsDevice: DeviceName=%s, GraphicsApi=%s, DeviceId=%llu, AvailableMemory=%llu)", 

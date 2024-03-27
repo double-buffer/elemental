@@ -1,5 +1,6 @@
 #include "ShaderCompiler.cpp"
 #include "DirectXShaderCompiler.cpp"
+#include "MetalShaderConverter.cpp"
 
 #include "SystemFunctions.cpp"
 #include "SystemDictionary.cpp"

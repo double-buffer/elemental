@@ -1,7 +1,12 @@
 #pragma once
 
 #include <string.h>
+#include <stdlib.h>
 #include "Elemental.h"
+
+#ifndef _WIN32
+#define MAX_PATH 255
+#endif 
 
 void GetFullPath(char* destination, const char* programPath, const char* path)
 {

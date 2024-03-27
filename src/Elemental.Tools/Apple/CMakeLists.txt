@@ -9,4 +9,5 @@ target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework
 
 function(copy_platform_dependencies target)
     copy_dxc_to_target(${target})
+    copy_MetalShaderConverter_to_target(${target})
 endfunction()

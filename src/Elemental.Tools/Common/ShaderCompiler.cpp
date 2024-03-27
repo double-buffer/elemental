@@ -1,5 +1,6 @@
 #include "ElementalTools.h"
 #include "DirectXShaderCompiler.h"
+#include "MetalShaderConverter.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
@@ -57,8 +58,8 @@ void InitShaderCompiler()
         compilerArray[shaderCompilerIndex++] = {
             .InputLanguage = ElemShaderLanguage_Dxil, 
             .OutputLanguages = InitShaderLanguages({ ElemShaderLanguage_MetalIR }),
-            .CheckCompilerFunction = DirectXShaderCompilerIsInstalled, // TODO: Replace
-            .CompileShaderFunction = DirectXShaderCompilerCompileShader
+            .CheckCompilerFunction = MetalShaderConverterIsInstalled,
+            .CompileShaderFunction = MetalShaderConverterCompileShader
         };
 
         shaderCompilers = compilerArray.Slice(0, shaderCompilerIndex);
@@ -134,7 +135,13 @@ bool FindShaderCompilerChain(ElemShaderLanguage sourceLanguage, ElemShaderLangua
             if (localLevel == 1)
             {
                 ReverseCompilerChainArray(compilerSteps, *level);
+
+                if (compilerSteps[0].InputLanguage != sourceLanguage)
+                {
+                    return false;
+                }
             }
+
             return true;
         }
     }
@@ -151,8 +158,7 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
     auto targetLanguage = GetApiTargetLanguage(graphicsApi);
     auto level = 0u;
 
-    FindShaderCompilerChain(shaderLanguage, targetLanguage, compilerSteps, &level);
-    return level > 0;
+    return FindShaderCompilerChain(shaderLanguage, targetLanguage, compilerSteps, &level);
 }
 
 ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
@@ -168,7 +174,23 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
     auto compilationMessages = Span<ElemToolsMessage>();
     auto compilationData = ReadOnlySpan<uint8_t>();
 
-    FindShaderCompilerChain(sourceData->ShaderLanguage, targetLanguage, compilerSteps, &level);
+    if (!FindShaderCompilerChain(sourceData->ShaderLanguage, targetLanguage, compilerSteps, &level))
+    {
+        auto messageItem = SystemPushStruct<ElemToolsMessage>(stackMemoryArena);
+        messageItem->Type = ElemToolsMessageType_Error;
+        messageItem->Message = "Cannot find a compatible shader compilers chain.";
+
+        return
+        {
+            .Messages = 
+            {
+                .Items = messageItem,
+                .Length = 1
+            },
+            .HasErrors = true
+        };
+    }
+
     auto hasErrors = false;
 
     auto stepSourceData = ReadOnlySpan<uint8_t>((uint8_t*)sourceData->Data.Items, sourceData->Data.Length);
