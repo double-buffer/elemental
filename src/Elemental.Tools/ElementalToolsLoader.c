@@ -24,6 +24,7 @@ static int functionPointersLoadedElementalTools = 0;
 typedef struct ElementalToolsFunctions 
 {
     bool (*ElemCanCompileShader)(ElemShaderLanguage, ElemToolsGraphicsApi);
+    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, const ElemShaderSourceData*, const ElemCompileShaderOptions*);
     
 } ElementalToolsFunctions;
 
@@ -72,6 +73,7 @@ static bool LoadElementalToolsFunctionPointers(void)
     }
 
     listElementalToolsFunctions.ElemCanCompileShader = (bool (*)(ElemShaderLanguage, ElemToolsGraphicsApi))GetElementalToolsFunctionPointer("ElemCanCompileShader");
+    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, const ElemShaderSourceData*, const ElemCompileShaderOptions*))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
     
 
     functionPointersLoadedElementalTools = 1;
@@ -107,4 +109,35 @@ static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemT
     }
 
     return listElementalToolsFunctions.ElemCanCompileShader(shaderLanguage, graphicsApi);
+}
+
+static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemShaderCompilationResult result = {};
+        #else
+        ElemShaderCompilationResult result = (ElemShaderCompilationResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemCompileShaderLibrary) 
+    {
+        assert(listElementalToolsFunctions.ElemCompileShaderLibrary);
+
+        #ifdef __cplusplus
+        ElemShaderCompilationResult result = {};
+        #else
+        ElemShaderCompilationResult result = (ElemShaderCompilationResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, sourceData, options);
 }

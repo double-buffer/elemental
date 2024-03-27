@@ -66,6 +66,30 @@ UTEST(StringFunctions, SystemLastIndexOf)
     ASSERT_EQ(11, result);
 }
 
+UTEST(StringFunctions, SystemFindSubString_Found) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    
+    // Act
+    auto result = SystemFindSubString("Test/String/", "String");
+
+    // Assert
+    ASSERT_EQ(5, result);
+}
+
+UTEST(StringFunctions, SystemFindSubString_NotFound) 
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    
+    // Act
+    auto result = SystemFindSubString("Test/String/", "Sutoringu");
+
+    // Assert
+    ASSERT_EQ(-1, result);
+}
+
 UTEST(StringFunctions, SystemConvertUtf8ToWideChar) 
 {
     // Arrange

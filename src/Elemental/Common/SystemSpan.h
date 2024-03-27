@@ -209,7 +209,7 @@ struct ReadOnlySpan
      * @param index The index of the element to access.
      * @return A const reference to the element at the specified index.
      */
-    const T& operator[](int index)
+    const T& operator[](int index) const
     {
         // TODO: Check bounds
         return Pointer[index];

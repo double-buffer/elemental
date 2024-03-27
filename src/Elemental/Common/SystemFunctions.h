@@ -2,11 +2,10 @@
 
 #include "SystemMemory.h"
 
+#undef assert
+
 #ifdef ElemAPI
 #include "SystemLogging.h"
-#endif 
-
-#undef assert
 
 #ifdef _DEBUG
     #define SystemAssert(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); int* ptr = 0; *ptr = 0; }
@@ -15,6 +14,14 @@
     #define SystemAssert(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); exit(1); }
     #define SystemAssertReturnNullHandle(expression) if (!(expression)) { SystemLogErrorMessage(ElemLogMessageCategory_Assert, #expression); return ELEM_HANDLE_NULL; }
 #endif
+#else
+#ifdef _DEBUG
+    #define SystemAssert(expression) if (!(expression)) { printf("Assert failed: %s", #expression); int* ptr = 0; *ptr = 0; }
+#else
+    #define SystemAssert(expression) if (!(expression)) { printf("Assert failed: %s", #expression); exit(1); }
+#endif
+
+#endif 
 
 //---------------------------------------------------------------------------------------------------------------
 // Math functions
@@ -164,6 +171,15 @@ ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena memoryArena, Read
  * @return The last index of the specified character, or -1 if not found.
  */
 int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator);
+
+/**
+ * Finds the first index of the specified substring in the given string.
+ *
+ * @param source The source string to search.
+ * @param subString The substring to search for.
+ * @return The last index of the specified substring, or -1 if not found.
+ */
+int64_t SystemFindSubString(ReadOnlySpan<char> source, ReadOnlySpan<char> subString);
 
 /**
  * Converts a UTF-8 encoded string to a wide character (UTF-16) string.

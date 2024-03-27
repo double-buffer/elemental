@@ -1,26 +1,10 @@
 #include "Elemental.h"
 #include "ElementalTools.h"
+#include "../Common/SampleUtils.h"
 
 static ElemCommandQueue globalCommandQueue;
 static ElemSwapChain globalSwapChain;
 static ElemPipelineState globalGraphicsPipeline;
-
-const char* GetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
-{
-    switch (graphicsApi)
-    {
-        case ElemGraphicsApi_DirectX12:
-            return "DirectX12";
-
-        case ElemGraphicsApi_Vulkan:
-            return "Vulkan";
-
-        case ElemGraphicsApi_Metal:
-            return "Metal";
-    }
-
-    return "Unknown";
-}
 
 bool RunHandler(ElemApplicationStatus status)
 {
@@ -66,14 +50,25 @@ int main(int argc, const char* argv[])
         useVulkan = true;
     }
 
+    char* shaderSource = ReadFileToString(argv[0], "Data/Triangle.hlsl");
+    ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
+    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(ElemToolsGraphicsApi_DirectX12, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
+
+    if (compilationResult.HasErrors)
+    {
+        printf("Errrrooooor!!!\n");
+    }
+
+    for (uint32_t i = 0; i < compilationResult.Messages.Length; i++)
+    {
+        printf("Compil msg (%d): %s\n", compilationResult.Messages.Items[i].Type, compilationResult.Messages.Items[i].Message);
+    }
+
     ElemConfigureLogHandler(ElemConsoleLogHandler);
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = useVulkan });
     
     ElemApplication application = ElemCreateApplication("Hello Triangle");
     ElemWindow window = ElemCreateWindow(application, NULL);
-
-    bool canCompileShader = ElemCanCompileShader(ElemShaderLanguage_Hlsl, ElemToolsGraphicsApi_DirectX12);
-    printf("Can Compile shader: %d\n", canCompileShader);    
 
     ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);

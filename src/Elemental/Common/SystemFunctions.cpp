@@ -265,6 +265,32 @@ int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator)
     return -1;
 }
 
+int64_t SystemFindSubString(ReadOnlySpan<char> source, ReadOnlySpan<char> subString)
+{
+    int64_t result = -1;
+    uint32_t foundCurrentIndex = 0;
+
+    for (size_t i = 0; i < source.Length; i++)
+    {
+        if (foundCurrentIndex >= subString.Length)
+        {
+            return result;
+        }
+
+        if (source[i] == subString[foundCurrentIndex])
+        {
+            foundCurrentIndex++;
+
+            if (result == -1)
+            {
+                result = i;
+            }
+        }
+    }
+
+    return -1;
+}
+
 ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena memoryArena, ReadOnlySpan<char> source)
 {
     size_t size = 0;

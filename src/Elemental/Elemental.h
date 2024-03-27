@@ -378,10 +378,9 @@ ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain);
 
 ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemDataContainer shaderLibraryData);
-//ElemAPI ElemShaderLibrary ElemCreateShaderLibraryFromShader(ElemShaderType shaderType, ElemDataContainer shaderData);
+//ElemAPI ElemShaderLibrary ElemCreateShaderLibraryFromShader(ElemShaderType shaderType, ElemDataContainer shaderData, shaderMetadata);
 // ElemAPI ElemShaderInfo ElemGetShaderInfo(ElemShaderLibrary shaderLibrary, const char* shaderName);
 // ElemAPI ElemShaderInfoList ElemGetShaderLibraryShaders(ElemShaderLibrary shaderLibrary);
-// TODO: Add shader metadata
 
 // TODO: We don't do compilation async. The client/engine code will be responsible for this. We just do it sync and they will manage the async process
 ElemAPI ElemPipelineState ElemCreateGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
