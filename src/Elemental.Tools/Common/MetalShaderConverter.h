@@ -4,4 +4,4 @@
 #include "SystemMemory.h"
 
 bool MetalShaderConverterIsInstalled();
-ElemShaderCompilationResult MetalShaderConverterCompileShader(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, const ElemCompileShaderOptions* options);
+ElemShaderCompilationResult MetalShaderConverterCompileShader(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options);

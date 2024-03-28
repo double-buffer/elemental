@@ -54,8 +54,54 @@ bool MetalShaderConverterIsInstalled()
     return compiler != nullptr;
 }
 
-ElemShaderCompilationResult MetalShaderConverterCompileShader(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, const ElemCompileShaderOptions* options)
+ElemShaderCompilationResult MetalShaderConverterCompileShader(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options)
 {
+    uint32_t sizeFirstBlock = *(uint32_t*)shaderCode.Pointer;
+    auto firstBlock = shaderCode.Slice(sizeof(uint32_t), sizeFirstBlock);
+    auto secondBlock = shaderCode.Slice(sizeof(uint32_t) + sizeFirstBlock, shaderCode.Length - (sizeof(uint32_t) + sizeFirstBlock));
+
+    IRCompiler* pCompiler = IRCompilerCreate();
+
+    IRObject* pDXIL = IRObjectCreateFromDXIL(firstBlock.Pointer, firstBlock.Length, IRBytecodeOwnershipNone);
+
+    // Compile DXIL to Metal IR:
+    IRError* pError = nullptr;
+    IRObject* pOutIR = IRCompilerAllocCompileAndLink(pCompiler, NULL,  pDXIL, &pError);
+
+    if (!pOutIR)
+    {
+            printf("Errror metal :(\n");
+      // Inspect pError to determine cause.
+      IRErrorDestroy( pError );
+    }
+
+    if (secondBlock.Length > 0)
+    {
+        // TODO: Is it needed?
+        IRObject* pDXIL2 = IRObjectCreateFromDXIL(secondBlock.Pointer, secondBlock.Length, IRBytecodeOwnershipNone);
+
+        // Compile DXIL to Metal IR:
+        IRError* pError2 = nullptr;
+        IRObject* pOutIR2 = IRCompilerAllocCompileAndLink(pCompiler, NULL,  pDXIL2, &pError2);
+
+        if (!pOutIR2)
+        {
+                printf("Errror metal2 :(\n");
+          // Inspect pError to determine cause.
+          IRErrorDestroy( pError2 );
+        }
+    
+        auto test = IRObjectGetMetalIRShaderStage(pOutIR2);
+    }
+
+    IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
+
+    // If we pass an invalid stage, it seems it process the whole DXIL lib
+    IRObjectGetMetalLibBinary(pOutIR, IRShaderStageInvalid, pMetallib);
+    size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
+    uint8_t* metallib = new uint8_t[metallibSize];
+    IRMetalLibGetBytecode(pMetallib, metallib);
+
     /*SystemAssert(metalShaderConverterCreateInstanceFunction != nullptr);
 
     auto stackMemoryArena = SystemGetStackMemoryArena();

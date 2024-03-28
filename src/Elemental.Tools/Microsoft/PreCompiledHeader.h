@@ -33,7 +33,7 @@ using namespace Microsoft::WRL;
 #include "dxcapi.h"
 #include "d3d12shader.h"
 
-#include "spirv_msl.hpp"
+#include "metal_irconverter/metal_irconverter.h"
 
 #ifdef _WASDEBUG
 #define _DEBUG

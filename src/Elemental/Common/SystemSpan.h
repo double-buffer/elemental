@@ -237,7 +237,7 @@ struct ReadOnlySpan
     ReadOnlySpan<T> Slice(size_t start, size_t length)
     {
         // TODO: Add checks
-        return ReadOnlySpan<T>(Pointer + start, length);
+        return ReadOnlySpan<T>((T*)Pointer + start, length);
     }
 };
 

@@ -7,7 +7,7 @@
 // TODO: Put magic numbers into define
 
 typedef bool (*CheckCompilerPtr)();
-typedef ElemShaderCompilationResult (*CompileShaderPtr)(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, const ElemCompileShaderOptions* options);
+typedef ElemShaderCompilationResult (*CompileShaderPtr)(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options);
 
 struct ShaderCompiler
 {
@@ -199,7 +199,7 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
     {
         auto compilerStep = compilerSteps[i];
 
-        auto compilationResults = compilerStep.ShaderCompiler->CompileShaderFunction(stepSourceData, compilerStep.OutputLanguage, options);
+        auto compilationResults = compilerStep.ShaderCompiler->CompileShaderFunction(stepSourceData, compilerStep.OutputLanguage, graphicsApi, options);
 
         auto resultMessages = SystemPushArray<ElemToolsMessage>(stackMemoryArena, compilationResults.Messages.Length);
 

@@ -64,6 +64,11 @@ bool ProcessDirectXShaderCompilerLogOutput(MemoryArena memoryArena, ComPtr<IDxcR
     return hasErrors;
 }
 
+DxilShaderKind GetVersionShaderType(uint32_t programVersion) 
+{
+    return (DxilShaderKind)((programVersion & 0xffff0000) >> 16);
+}
+
 bool DirectXShaderCompilerIsInstalled()
 {
     InitDirectXShaderCompiler();
@@ -71,7 +76,7 @@ bool DirectXShaderCompilerIsInstalled()
     return directXShaderCompilerCreateInstanceFunction != nullptr;
 }
 
-ElemShaderCompilationResult DirectXShaderCompilerCompileShader(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, const ElemCompileShaderOptions* options)
+ElemShaderCompilationResult DirectXShaderCompilerCompileShader(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options)
 {
     InitDirectXShaderCompiler();
     SystemAssert(directXShaderCompilerCreateInstanceFunction != nullptr);
@@ -147,7 +152,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(ReadOnlySpan<uint
     parameters = parameters.Slice(0, parameterIndex);
 
     ComPtr<IDxcResult> dxilCompileResult;
-    AssertIfFailed(compiler->Compile(&sourceBuffer, parameters.Pointer, (uint32_t)parameters.Length, nullptr, IID_PPV_ARGS(&dxilCompileResult)));
+    AssertIfFailed(compiler->Compile(&sourceBuffer, parameters.Pointer, parameterIndex, nullptr, IID_PPV_ARGS(&dxilCompileResult)));
 
     auto hasErrors = ProcessDirectXShaderCompilerLogOutput(stackMemoryArena, dxilCompileResult, compilationMessages, &compilationMessageIndex);
     Span<uint8_t> outputShaderData; 
@@ -159,6 +164,34 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(ReadOnlySpan<uint
 
         auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
         outputShaderData = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode);
+
+        // Reflection
+        ComPtr<IDxcUtils> dxcUtils;
+        AssertIfFailed(directXShaderCompilerCreateInstanceFunction(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
+        
+        ComPtr<IDxcBlob> shaderReflectionBlob;
+        AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
+
+        DxcBuffer reflectionBuffer;
+        reflectionBuffer.Ptr = shaderReflectionBlob->GetBufferPointer();
+        reflectionBuffer.Size = shaderReflectionBlob->GetBufferSize();
+        reflectionBuffer.Encoding = 0;
+
+        ComPtr<ID3D12LibraryReflection> shaderReflection;
+        AssertIfFailed(dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
+
+        D3D12_LIBRARY_DESC libraryDescription;
+        AssertIfFailed(shaderReflection->GetDesc(&libraryDescription));
+
+        for (uint32_t i = 0; i < libraryDescription.FunctionCount; i++)
+        {
+            auto functionReflection = shaderReflection->GetFunctionByIndex(i);
+
+            D3D12_FUNCTION_DESC functionDescription;
+            functionReflection->GetDesc(&functionDescription);
+
+            printf("Function %s (%u)\n", functionDescription.Name, GetVersionShaderType(functionDescription.Version));
+        }
     } 
 
     return 

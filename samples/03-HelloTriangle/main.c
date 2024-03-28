@@ -61,6 +61,7 @@ int main(int argc, const char* argv[])
 
     char* shaderSource = ReadFileToString(argv[0], "Data/Triangle.hlsl");
     ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
+    //ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(ElemToolsGraphicsApi_Metal, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
     ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
 
     if (compilationResult.HasErrors)

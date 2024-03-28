@@ -6,4 +6,5 @@ target_compile_definitions(Elemental.Tools PRIVATE UNICODE _UNICODE _WINDOWS _WI
 
 function(copy_platform_dependencies target)
     copy_dxc_to_target(${target})
+    copy_MetalShaderConverter_to_target(${target})
 endfunction()

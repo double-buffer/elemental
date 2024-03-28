@@ -35,6 +35,13 @@ float3 Transform(float3 position, float rotationY)
     return float3(position.x * cosY - position.z * sinY, position.y, position.x * sinY + position.z * cosY + 0.5);
 }
 
+// Test
+[shader("compute")]
+[NumThreads(32, 1, 1)]
+void CSMain()
+{
+}
+
 [shader("mesh")]
 [OutputTopology("triangle")]
 [NumThreads(32, 1, 1)]
@@ -56,6 +63,7 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
     }
 }
 
+[shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
     return input.Color; 
