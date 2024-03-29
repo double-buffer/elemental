@@ -155,14 +155,19 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<IDXGIAdapter4> graphicsAda
         D3D12_FEATURE_DATA_D3D12_OPTIONS7 deviceOptions7 = {};
         AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &deviceOptions7, sizeof(deviceOptions7)));
 
+        D3D12_FEATURE_DATA_D3D12_OPTIONS16 deviceOptions16 = {};
+        AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &deviceOptions16, sizeof(deviceOptions16)));
+
         D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = {};
         shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_8;
         AssertIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
 
+        // TODO: Update checks
         if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
             deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
             deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
-            shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8)
+            shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8 && 
+            deviceOptions16.GPUUploadHeapSupported)
         {
             return true;
         }
@@ -235,7 +240,7 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     rootSignatureDesc.Desc_1_1.pParameters = rootParameters;
     rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
     rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
-    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
     ComPtr<ID3DBlob> serializedRootSignature;
     AssertIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, serializedRootSignature.GetAddressOf(), nullptr));
@@ -323,15 +328,15 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     auto rootSignature = CreateDirectX12RootSignature(device);
 
     auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
-        .Device = device
+        .Device = device,
+        .RootSignature = rootSignature
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
         .AdapterDescription = adapterDescription,
         .DebugInfoQueue = debugInfoQueue,
         .DebugCallBackCookie = debugCallBackCookie,
-        .RTVDescriptorHeap = rtvDescriptorHeap,
-        .RootSignature = rootSignature
+        .RTVDescriptorHeap = rtvDescriptorHeap
     });
 
     return handle;
@@ -349,8 +354,7 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     FreeDirectX12DescriptorHeap(graphicsDeviceDataFull->RTVDescriptorHeap);
     graphicsDeviceData->Device.Reset();
-
-    graphicsDeviceDataFull->RootSignature.Reset();
+    graphicsDeviceData->RootSignature.Reset();
 
     SystemRemoveDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
 

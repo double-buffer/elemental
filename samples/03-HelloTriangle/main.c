@@ -6,6 +6,8 @@ static ElemCommandQueue globalCommandQueue;
 static ElemSwapChain globalSwapChain;
 static ElemPipelineState globalGraphicsPipeline;
 
+static float globalCurrentRotationY = 0.0f;
+
 bool RunHandler(ElemApplicationStatus status)
 {
     if (status == ElemApplicationStatus_Closing)
@@ -31,12 +33,18 @@ bool RunHandler(ElemApplicationStatus status)
         }
     });
 
+    ElemBindPipelineState(commandList, globalGraphicsPipeline);
+    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&globalCurrentRotationY, .Length = sizeof(float) });
+    ElemDispatchMesh(commandList, 1, 1, 1);
+
     ElemEndRenderPass(commandList);
 
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(globalCommandQueue, commandList, NULL);
 
     ElemPresentSwapChain(globalSwapChain);
+
+    globalCurrentRotationY += 0.01f;
 
     return true;
 }

@@ -3,7 +3,7 @@ struct ShaderParameters
     float RotationY;
 };
 
-//[[vk::push_constant]]
+[[vk::push_constant]]
 ShaderParameters parameters : register(b0);
 
 struct Vertex

@@ -13,6 +13,7 @@ struct DirectX12DescriptorHeap
 struct DirectX12GraphicsDeviceData
 {
     ComPtr<ID3D12Device10> Device;
+    ComPtr<ID3D12RootSignature> RootSignature;
 };
 
 struct DirectX12GraphicsDeviceDataFull
@@ -21,7 +22,6 @@ struct DirectX12GraphicsDeviceDataFull
     ComPtr<ID3D12InfoQueue1> DebugInfoQueue;
     DWORD DebugCallBackCookie;
     DirectX12DescriptorHeap RTVDescriptorHeap;
-    ComPtr<ID3D12RootSignature> RootSignature;
 };
 
 extern MemoryArena DirectX12MemoryArena;

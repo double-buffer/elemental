@@ -1,7 +1,6 @@
-#include "DirectX12GraphicsDevice.h"
+#include "DirectX12Rendering.h"
 #include "DirectX12CommandList.h"
 #include "DirectX12Texture.h"
-#include "SystemLogging.h"
 #include "SystemFunctions.h"
 
 void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
@@ -101,6 +100,11 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
 
             commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
         }
+        
+        // TODO: To remove
+        commandListData->DeviceObject->OMSetRenderTargets(1, &textureData->RtvDescriptor, FALSE, nullptr);
+        const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+        commandListData->DeviceObject->ClearRenderTargetView(textureData->RtvDescriptor, clearColor, 0, nullptr);
 
         if (i == 0)
         {
@@ -117,8 +121,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
             commandListData->DeviceObject->RSSetScissorRects(1, &scissorRect);
         }
     }  
-    
-    commandListData->DeviceObject->BeginRenderPass(renderTargetDescList.Length, renderTargetDescList.Pointer, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
+    //commandListData->DeviceObject->BeginRenderPass(renderTargetDescList.Length, renderTargetDescList.Pointer, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
 }
 
 void DirectX12EndRenderPass(ElemCommandList commandList)
@@ -132,7 +135,7 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
     SystemAssert(commandListDataFull);
     auto parameters = &commandListDataFull->CurrentRenderPassParameters;
 
-    commandListData->DeviceObject->EndRenderPass();
+    //commandListData->DeviceObject->EndRenderPass();
 
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
@@ -163,4 +166,23 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
             commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
         }
     }
+}
+
+void DirectX12DispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+    SystemAssert(threadGroupCountX > 0);
+    SystemAssert(threadGroupCountY > 0);
+    SystemAssert(threadGroupCountZ > 0);
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    // TODO: Check if the current shader on the command list is already compiled 
+    /*if (!commandList->IsRenderPassActive)
+    {
+        return;
+    }*/
+        
+    commandListData->DeviceObject->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

@@ -56,3 +56,11 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
 void VulkanFreePipelineState(ElemPipelineState pipelineState)
 {
 }
+
+void VulkanBindPipelineState(ElemCommandList commandList, ElemPipelineState pipelineState)
+{
+}
+
+void VulkanPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data)
+{
+}

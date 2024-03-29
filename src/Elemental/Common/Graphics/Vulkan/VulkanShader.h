@@ -28,3 +28,5 @@ ElemShaderLibrary VulkanCreateShaderLibrary(ElemDataSpan shaderLibraryData);
 void VulkanFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
 void VulkanFreePipelineState(ElemPipelineState pipelineState);
+void VulkanBindPipelineState(ElemCommandList commandList, ElemPipelineState pipelineState);
+void VulkanPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data); 

@@ -379,24 +379,28 @@ ElemAPI ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain);
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain);
 
+// TODO: Texture info: it is needed now to build able to get the format
+
 ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemDataSpan shaderLibraryData);
 ElemAPI void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 //ElemAPI ElemShaderLibrary ElemCreateShaderLibraryFromShader(ElemShaderType shaderType, ElemDataContainer shaderData, shaderMetadata);
 // ElemAPI ElemShaderInfo ElemGetShaderInfo(ElemShaderLibrary shaderLibrary, const char* shaderName);
 // ElemAPI ElemShaderInfoList ElemGetShaderLibraryShaders(ElemShaderLibrary shaderLibrary);
 
-// TODO: We don't do compilation async. The client/engine code will be responsible for this. We just do it sync and they will manage the async process
+// TODO: Provide Async compile methods
+// TODO: Provide only one generic pipeline creation method?
 ElemAPI ElemPipelineState ElemCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
 ElemAPI void ElemFreePipelineState(ElemPipelineState pipelineState);
 // TODO: Get Pipeline State Info (for compiled status etc)
 //ElemAPI ElemPipelineState ElemCreateComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters);
 // TODO: Enumerate pipeline infos?
-//ElemAPI void ElemBindPipelineState(ElemPipelineState pipelineState);
-//ElemAPI void ElemPushPipelineStateConstants(...) 
+ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineState pipelineState);
+ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data); 
 // TODO: Cache functions
 
 ElemAPI void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters);
 ElemAPI void ElemEndRenderPass(ElemCommandList commandList);
+ElemAPI void ElemDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
 
 // TODO: Debugging functions (interop with PIX, XCode, etc.)
 

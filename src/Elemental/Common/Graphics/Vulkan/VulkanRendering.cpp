@@ -1,5 +1,4 @@
-#include "VulkanGraphicsDevice.h"
-#include "VulkanCommandList.h"
+#include "VulkanRendering.h"
 #include "SystemLogging.h"
 
 void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
@@ -8,5 +7,9 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
 }
 
 void VulkanEndRenderPass(ElemCommandList commandList)
+{
+}
+
+void VulkanDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
 }

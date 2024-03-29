@@ -169,6 +169,10 @@ ElemCommandList DirectX12CreateCommandList(ElemCommandQueue commandQueue, const 
     AssertIfFailedReturnNullHandle(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
     AssertIfFailedReturnNullHandle(commandList->Reset(commandAllocator.Get(), nullptr));
 
+    // TODO: Can we set the root signature for all types all the time?
+    commandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
+    //commandList->SetComputeRootSignature(graphicsDeviceData->RootSignature.Get());
+
     auto handle = SystemAddDataPoolItem(directX12CommandListPool, {
         .DeviceObject = commandList,
     }); 

@@ -54,8 +54,11 @@ typedef struct ElementalFunctions
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*);
     void (*ElemFreePipelineState)(ElemPipelineState);
+    void (*ElemBindPipelineState)(ElemCommandList, ElemPipelineState);
+    void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, ElemDataSpan);
     void (*ElemBeginRenderPass)(ElemCommandList, const ElemBeginRenderPassParameters*);
     void (*ElemEndRenderPass)(ElemCommandList);
+    void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
     
 } ElementalFunctions;
 
@@ -134,8 +137,11 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
     listElementalFunctions.ElemFreePipelineState = (void (*)(ElemPipelineState))GetElementalFunctionPointer("ElemFreePipelineState");
+    listElementalFunctions.ElemBindPipelineState = (void (*)(ElemCommandList, ElemPipelineState))GetElementalFunctionPointer("ElemBindPipelineState");
+    listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
     listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassParameters*))GetElementalFunctionPointer("ElemBeginRenderPass");
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
+    listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
     
 
     functionPointersLoadedElemental = 1;
@@ -952,6 +958,40 @@ static inline void ElemFreePipelineState(ElemPipelineState pipelineState)
     listElementalFunctions.ElemFreePipelineState(pipelineState);
 }
 
+static inline void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineState pipelineState)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemBindPipelineState) 
+    {
+        assert(listElementalFunctions.ElemBindPipelineState);
+        return;
+    }
+
+    listElementalFunctions.ElemBindPipelineState(commandList, pipelineState);
+}
+
+static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, unsigned int offsetInBytes, ElemDataSpan data)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemPushPipelineStateConstants) 
+    {
+        assert(listElementalFunctions.ElemPushPipelineStateConstants);
+        return;
+    }
+
+    listElementalFunctions.ElemPushPipelineStateConstants(commandList, offsetInBytes, data);
+}
+
 static inline void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
     if (!LoadElementalFunctionPointers()) 
@@ -984,4 +1024,21 @@ static inline void ElemEndRenderPass(ElemCommandList commandList)
     }
 
     listElementalFunctions.ElemEndRenderPass(commandList);
+}
+
+static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int threadGroupCountX, unsigned int threadGroupCountY, unsigned int threadGroupCountZ)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemDispatchMesh) 
+    {
+        assert(listElementalFunctions.ElemDispatchMesh);
+        return;
+    }
+
+    listElementalFunctions.ElemDispatchMesh(commandList, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
