@@ -107,4 +107,6 @@ void DirectX12FreeTexture(ElemTexture texture)
     {
         textureData->DeviceObject.Reset();
     }
+
+    SystemRemoveDataPoolItem(directX12TexturePool, texture);
 }

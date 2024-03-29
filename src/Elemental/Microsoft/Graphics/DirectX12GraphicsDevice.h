@@ -21,6 +21,7 @@ struct DirectX12GraphicsDeviceDataFull
     ComPtr<ID3D12InfoQueue1> DebugInfoQueue;
     DWORD DebugCallBackCookie;
     DirectX12DescriptorHeap RTVDescriptorHeap;
+    ComPtr<ID3D12RootSignature> RootSignature;
 };
 
 extern MemoryArena DirectX12MemoryArena;

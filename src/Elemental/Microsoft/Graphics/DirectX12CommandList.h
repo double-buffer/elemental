@@ -22,7 +22,7 @@ struct DirectX12CommandQueueDataFull
 
 struct DirectX12CommandListData
 {
-    ComPtr<ID3D12GraphicsCommandList7> DeviceObject;
+    ComPtr<ID3D12GraphicsCommandList10> DeviceObject;
 };
 
 struct DirectX12CommandListDataFull

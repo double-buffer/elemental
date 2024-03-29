@@ -220,6 +220,32 @@ void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12
     // TODO: Free List
 }
 
+ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> graphicsDevice)
+{
+    D3D12_ROOT_PARAMETER1 rootParameters[1];
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    rootParameters[0].Constants.ShaderRegister = 0;
+    rootParameters[0].Constants.RegisterSpace = 0;
+    rootParameters[0].Constants.Num32BitValues = 16;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+    rootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    rootSignatureDesc.Desc_1_1.NumParameters = 1;
+    rootSignatureDesc.Desc_1_1.pParameters = rootParameters;
+    rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
+    rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
+    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    ComPtr<ID3DBlob> serializedRootSignature;
+    AssertIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, serializedRootSignature.GetAddressOf(), nullptr));
+
+    ComPtr<ID3D12RootSignature> rootSignature;
+    AssertIfFailed(graphicsDevice->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(), IID_PPV_ARGS(rootSignature.GetAddressOf())));
+
+    return rootSignature;
+}
+
 void DirectX12EnableGraphicsDebugLayer()
 {
     DirectX12DebugLayerEnabled = true;
@@ -294,6 +320,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     }
 
     auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, DIRECTX12_MAX_RTVS);
+    auto rootSignature = CreateDirectX12RootSignature(device);
 
     auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
         .Device = device
@@ -303,7 +330,8 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
         .AdapterDescription = adapterDescription,
         .DebugInfoQueue = debugInfoQueue,
         .DebugCallBackCookie = debugCallBackCookie,
-        .RTVDescriptorHeap = rtvDescriptorHeap
+        .RTVDescriptorHeap = rtvDescriptorHeap,
+        .RootSignature = rootSignature
     });
 
     return handle;
@@ -321,6 +349,8 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     FreeDirectX12DescriptorHeap(graphicsDeviceDataFull->RTVDescriptorHeap);
     graphicsDeviceData->Device.Reset();
+
+    graphicsDeviceDataFull->RootSignature.Reset();
 
     SystemRemoveDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
 

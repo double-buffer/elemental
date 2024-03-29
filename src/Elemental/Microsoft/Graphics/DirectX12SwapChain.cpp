@@ -172,6 +172,8 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     {
         swapChainData->DeviceObject.Reset();
     }
+
+    SystemRemoveDataPoolItem(directX12SwapChainPool, swapChain);
 }
 
 void DirectX12ResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)

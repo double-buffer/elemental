@@ -85,12 +85,17 @@ int main(int argc, const char* argv[])
     globalCommandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
     globalSwapChain = ElemCreateSwapChain(globalCommandQueue, window, &(ElemSwapChainOptions) { });
 
-    //ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary((ElemDataContainer) { .Data = NULL, .Length = 1 });
-    //globalGraphicsPipeline = ElemCreateGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
-    //});
+    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary((ElemDataSpan) { .Items = compilationResult.Data.Items, .Length = compilationResult.Data.Length });
+    globalGraphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+        .DebugName = "Test PSO",
+        .ShaderLibrary = shaderLibrary
+    });
+
+    ElemFreeShaderLibrary(shaderLibrary);
 
     ElemRunApplication(application, RunHandler);
 
+    ElemFreePipelineState(globalGraphicsPipeline);
     ElemFreeSwapChain(globalSwapChain);
     ElemFreeCommandQueue(globalCommandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);

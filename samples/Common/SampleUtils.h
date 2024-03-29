@@ -17,19 +17,32 @@ void GetFullPath(char* destination, const char* programPath, const char* path)
         pointer = strrchr(programPath, '/');
     }
 
+    #ifdef _WIN32 
+    strncpy_s(destination, MAX_PATH, programPath, pointer + 1 - programPath);
+    #else
     strncpy(destination, programPath, pointer + 1 - programPath);
+    #endif
     
     pointer = destination + (pointer + 1 - programPath);
+
+    #ifdef _WIN32
+    strcpy_s(pointer, MAX_PATH - (pointer - destination), path);
+    #else
     strcpy(pointer, path);
+    #endif
 }
 
-// TODO: Extract not relevant files to a common sample header to we can focus on the purpose of the sample
 char* ReadFileToString(const char* executablePath, const char* filename) 
 {
     char absolutePath[MAX_PATH];
     GetFullPath(absolutePath, executablePath, filename);
 
+    #ifdef _WIN32
+    FILE* file;
+    fopen_s(&file, absolutePath, "rb");
+    #else
     FILE* file = fopen(absolutePath, "rb");
+    #endif
 
     if (file == NULL) 
     {

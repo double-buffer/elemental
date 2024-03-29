@@ -1,14 +1,11 @@
-#define RootSignatureDef "RootFlags(0), RootConstants(num32BitConstants=1, b0)"
-
 struct ShaderParameters
 {
     float RotationY;
 };
 
-[[vk::push_constant]]
+//[[vk::push_constant]]
 ShaderParameters parameters : register(b0);
 
-// Teeeest
 struct Vertex
 {
     float3 Position;
@@ -33,6 +30,12 @@ float3 Transform(float3 position, float rotationY)
     float cosY = cos(rotationY);
     float sinY = sin(rotationY);
     return float3(position.x * cosY - position.z * sinY, position.y, position.x * sinY + position.z * cosY + 0.5);
+}
+
+// Test
+[shader("intersection")]
+void InterTest()
+{
 }
 
 // Test

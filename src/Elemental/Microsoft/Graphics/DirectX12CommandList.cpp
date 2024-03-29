@@ -139,6 +139,8 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
 
     commandQueueDataFull->Fence.Reset();
     commandQueueData->DeviceObject.Reset();
+
+    SystemRemoveDataPoolItem(directX12CommandQueuePool, commandQueue);
 }
 
 ElemCommandList DirectX12CreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
@@ -163,7 +165,7 @@ ElemCommandList DirectX12CreateCommandList(ElemCommandQueue commandQueue, const 
     auto commandAllocator = commandQueueDataFull->CommandAllocators[currentAllocatorIndex % 2];
     commandAllocator->Reset();
 
-    ComPtr<ID3D12GraphicsCommandList7> commandList;
+    ComPtr<ID3D12GraphicsCommandList10> commandList;
     AssertIfFailedReturnNullHandle(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
     AssertIfFailedReturnNullHandle(commandList->Reset(commandAllocator.Get(), nullptr));
 
