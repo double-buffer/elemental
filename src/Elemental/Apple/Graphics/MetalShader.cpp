@@ -39,7 +39,7 @@ MetalPipelineStateDataFull* GetMetalPipelineStateDataFull(ElemPipelineState pipe
     return SystemGetDataPoolItemFull(metalPipelineStatePool, pipelineState);
 }
 
-ElemShaderLibrary MetalCreateShaderLibrary(ElemDataSpan shaderLibraryData)
+ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     return ELEM_HANDLE_NULL;
 }

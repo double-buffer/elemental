@@ -1,5 +1,6 @@
 #include "DirectX12Shader.h"
 #include "DirectX12GraphicsDevice.h"
+#include "DirectX12Texture.h"
 #include "DirectX12CommandList.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
@@ -48,7 +49,7 @@ bool CheckDirectX12ShaderDataHeader(ElemDataSpan data, const char* headerValue)
     return true;
 }
 
-ElemShaderLibrary DirectX12CreateShaderLibrary(ElemDataSpan shaderLibraryData)
+ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitDirectX12ShaderMemory();
 
@@ -121,7 +122,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     D3D12_RT_FORMAT_ARRAY renderTargets = {};
 
     renderTargets.NumRenderTargets = 1;
-    renderTargets.RTFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // TODO: Fill Correct Back Buffer Format
+    renderTargets.RTFormats[0] = ConvertToDirectX12TextureFormat(parameters->TextureFormats.Items[0]); // TODO: Fill Correct Back Buffer Format
    
     DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
 
@@ -305,7 +306,7 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
 
     D3D12_RT_FORMAT_ARRAY renderTargetsDesc = 
     {
-        .RTFormats = { DXGI_FORMAT_B8G8R8A8_UNORM }, // TODO: Temporary
+        .RTFormats = { DXGI_FORMAT_B8G8R8A8_UNORM_SRGB }, // TODO: Temporary
         .NumRenderTargets = 1
     };
     stateSubObjects[stateSubObjectsIndex++] = { D3D12_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS, &renderTargetsDesc };

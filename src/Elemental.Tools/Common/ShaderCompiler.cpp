@@ -214,14 +214,15 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
             }
         }
 
-        compilationData = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, ReadOnlySpan<uint8_t>(compilationResults.Data.Items, compilationResults.Data.Length));
-        stepSourceData = compilationData;
         compilationMessages = SystemConcatBuffers(stackMemoryArena, ReadOnlySpan<ElemToolsMessage>(compilationMessages), ReadOnlySpan<ElemToolsMessage>(resultMessages)); 
 
         if (hasErrors)
         {
             break;
         }
+
+        compilationData = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, ReadOnlySpan<uint8_t>(compilationResults.Data.Items, compilationResults.Data.Length));
+        stepSourceData = compilationData;
     }
 
     return 

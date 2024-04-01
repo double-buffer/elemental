@@ -39,7 +39,7 @@ VulkanPipelineStateDataFull* GetVulkanPipelineStateDataFull(ElemPipelineState pi
     return SystemGetDataPoolItemFull(vulkanPipelineStatePool, pipelineState);
 }
 
-ElemShaderLibrary VulkanCreateShaderLibrary(ElemDataSpan shaderLibraryData)
+ElemShaderLibrary VulkanCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     return ELEM_HANDLE_NULL;
 }

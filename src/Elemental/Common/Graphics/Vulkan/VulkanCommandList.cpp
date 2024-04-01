@@ -46,7 +46,7 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
 {
 }
 
-ElemCommandList VulkanCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
     return ELEM_HANDLE_NULL;
 }

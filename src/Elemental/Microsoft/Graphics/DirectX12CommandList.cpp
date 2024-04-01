@@ -143,7 +143,7 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
     SystemRemoveDataPoolItem(directX12CommandQueuePool, commandQueue);
 }
 
-ElemCommandList DirectX12CreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
 

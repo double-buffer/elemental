@@ -2,7 +2,7 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
-UTEST(CommandList, CreateCommandList) 
+UTEST(CommandList, GetCommandList) 
 {
     // Arrange
     InitLog();
@@ -10,7 +10,7 @@ UTEST(CommandList, CreateCommandList)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
     // Act
-    auto commandList = ElemCreateCommandList(commandQueue, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
     // Assert
     ElemCommitCommandList(commandList);
@@ -21,16 +21,16 @@ UTEST(CommandList, CreateCommandList)
     ASSERT_FALSE(testHasLogErrors);
 }
 
-UTEST(CommandList, CreateCommandListWithoutPreviousCommittedOnSameThread) 
+UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread) 
 {
     // Arrange
     InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    ElemCreateCommandList(commandQueue, nullptr);
+    ElemGetCommandList(commandQueue, nullptr);
 
     // Act
-    ElemCreateCommandList(commandQueue, nullptr);
+    ElemGetCommandList(commandQueue, nullptr);
 
     // Assert
     ElemFreeCommandQueue(commandQueue);
@@ -44,7 +44,7 @@ UTEST(CommandList, ExecuteCommandListWithoutCommit)
     InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemCreateCommandList(commandQueue, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
     // Act
     ElemExecuteCommandList(commandQueue, commandList, nullptr);
@@ -61,7 +61,7 @@ UTEST(CommandList, ExecuteCommandListWithoutInsertFence)
     InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemCreateCommandList(commandQueue, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
     ElemCommitCommandList(commandList);
 
     // Act
@@ -80,7 +80,7 @@ UTEST(CommandList, ExecuteCommandListWithInsertFence)
     InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemCreateCommandList(commandQueue, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
     ElemCommitCommandList(commandList);
 
     // Act

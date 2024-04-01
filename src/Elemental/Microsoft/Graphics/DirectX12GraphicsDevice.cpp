@@ -96,6 +96,8 @@ void InitDirectX12GraphicsDeviceMemory()
 
 void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void* context)
 {
+    // TODO: Maybe we should remove this because it displays the creation/destroy of resources
+    // for now we hide that because we don't have a pool of commandlists
     if (severity == D3D12_MESSAGE_SEVERITY_INFO)
     {
         return;
@@ -222,6 +224,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE CreateDirectX12DescriptorHandle(DirectX12DescriptorH
 
 void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle)
 {
+    SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "DirectX12 Free descriptor handle not implemented");
     // TODO: Free List
 }
 

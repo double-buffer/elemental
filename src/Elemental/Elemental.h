@@ -184,7 +184,6 @@ ElemAPI void ElemFreeWindow(ElemWindow window);
 
 /**
  * Gets the render size of a window, accounting for DPI scaling.
- *AddToStateObject 
  * @param window The window instance.
  * @return Render size of the window.
  */
@@ -240,6 +239,11 @@ typedef enum
     ElemSwapChainFormat_Default = 0,
     ElemSwapChainFormat_HighDynamicRange = 1
 } ElemSwapChainFormat;
+
+typedef enum
+{
+    ElemTextureFormat_B8G8R8A8_SRGB
+} ElemTextureFormat;
 
 typedef enum
 {
@@ -324,8 +328,25 @@ typedef struct
 
 typedef struct
 {
+    uint32_t Width;
+    uint32_t Height;
+    ElemTextureFormat Format;
+} ElemSwapChainInfo;
+
+typedef struct
+{
+    ElemTextureFormat* Items;
+    uint32_t Length;
+} ElemTextureFormatSpan;
+
+// TODO: Implement additional parameters
+typedef struct
+{
     const char* DebugName;
     ElemShaderLibrary ShaderLibrary;
+    const char* MeshShaderFunction;
+    const char* PixelShaderFunction;
+    ElemTextureFormatSpan TextureFormats;
 } ElemGraphicsPipelineStateParameters;
 
 typedef struct
@@ -365,7 +386,7 @@ ElemAPI ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice grap
 
 ElemAPI ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 ElemAPI void ElemFreeCommandQueue(ElemCommandQueue commandQueue);
-ElemAPI ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
+ElemAPI ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
 ElemAPI void ElemCommitCommandList(ElemCommandList commandList);
 ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
@@ -374,14 +395,13 @@ ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 
 ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
+ElemAPI ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain);
 ElemAPI void ElemResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
 ElemAPI ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain);
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain);
 
-// TODO: Texture info: it is needed now to build able to get the format
-
-ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemDataSpan shaderLibraryData);
+ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 ElemAPI void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 //ElemAPI ElemShaderLibrary ElemCreateShaderLibraryFromShader(ElemShaderType shaderType, ElemDataContainer shaderData, shaderMetadata);
 // ElemAPI ElemShaderInfo ElemGetShaderInfo(ElemShaderLibrary shaderLibrary, const char* shaderName);

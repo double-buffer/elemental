@@ -39,18 +39,19 @@ typedef struct ElementalFunctions
     ElemGraphicsDeviceInfo (*ElemGetGraphicsDeviceInfo)(ElemGraphicsDevice);
     ElemCommandQueue (*ElemCreateCommandQueue)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*);
     void (*ElemFreeCommandQueue)(ElemCommandQueue);
-    ElemCommandList (*ElemCreateCommandList)(ElemCommandQueue, const ElemCommandListOptions*);
+    ElemCommandList (*ElemGetCommandList)(ElemCommandQueue, const ElemCommandListOptions*);
     void (*ElemCommitCommandList)(ElemCommandList);
     ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*);
     ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*);
     void (*ElemWaitForFenceOnCpu)(ElemFence);
     ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*);
     void (*ElemFreeSwapChain)(ElemSwapChain);
+    ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemResizeSwapChain)(ElemSwapChain, unsigned int, unsigned int);
     ElemTexture (*ElemGetSwapChainBackBufferTexture)(ElemSwapChain);
     void (*ElemPresentSwapChain)(ElemSwapChain);
     void (*ElemWaitForSwapChainOnCpu)(ElemSwapChain);
-    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemDataSpan);
+    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*);
     void (*ElemFreePipelineState)(ElemPipelineState);
@@ -122,18 +123,19 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemGetGraphicsDeviceInfo");
     listElementalFunctions.ElemCreateCommandQueue = (ElemCommandQueue (*)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*))GetElementalFunctionPointer("ElemCreateCommandQueue");
     listElementalFunctions.ElemFreeCommandQueue = (void (*)(ElemCommandQueue))GetElementalFunctionPointer("ElemFreeCommandQueue");
-    listElementalFunctions.ElemCreateCommandList = (ElemCommandList (*)(ElemCommandQueue, const ElemCommandListOptions*))GetElementalFunctionPointer("ElemCreateCommandList");
+    listElementalFunctions.ElemGetCommandList = (ElemCommandList (*)(ElemCommandQueue, const ElemCommandListOptions*))GetElementalFunctionPointer("ElemGetCommandList");
     listElementalFunctions.ElemCommitCommandList = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemCommitCommandList");
     listElementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandList");
     listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandLists");
     listElementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetElementalFunctionPointer("ElemWaitForFenceOnCpu");
     listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
+    listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemResizeSwapChain");
     listElementalFunctions.ElemGetSwapChainBackBufferTexture = (ElemTexture (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainBackBufferTexture");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
     listElementalFunctions.ElemWaitForSwapChainOnCpu = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemWaitForSwapChainOnCpu");
-    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
+    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
     listElementalFunctions.ElemFreePipelineState = (void (*)(ElemPipelineState))GetElementalFunctionPointer("ElemFreePipelineState");
@@ -605,7 +607,7 @@ static inline void ElemFreeCommandQueue(ElemCommandQueue commandQueue)
     listElementalFunctions.ElemFreeCommandQueue(commandQueue);
 }
 
-static inline ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+static inline ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -620,9 +622,9 @@ static inline ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueu
         return result;
     }
 
-    if (!listElementalFunctions.ElemCreateCommandList) 
+    if (!listElementalFunctions.ElemGetCommandList) 
     {
-        assert(listElementalFunctions.ElemCreateCommandList);
+        assert(listElementalFunctions.ElemGetCommandList);
 
         #ifdef __cplusplus
         ElemCommandList result = {};
@@ -633,7 +635,7 @@ static inline ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueu
         return result;
     }
 
-    return listElementalFunctions.ElemCreateCommandList(commandQueue, options);
+    return listElementalFunctions.ElemGetCommandList(commandQueue, options);
 }
 
 static inline void ElemCommitCommandList(ElemCommandList commandList)
@@ -780,6 +782,37 @@ static inline void ElemFreeSwapChain(ElemSwapChain swapChain)
     listElementalFunctions.ElemFreeSwapChain(swapChain);
 }
 
+static inline ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemSwapChainInfo result = {};
+        #else
+        ElemSwapChainInfo result = (ElemSwapChainInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetSwapChainInfo) 
+    {
+        assert(listElementalFunctions.ElemGetSwapChainInfo);
+
+        #ifdef __cplusplus
+        ElemSwapChainInfo result = {};
+        #else
+        ElemSwapChainInfo result = (ElemSwapChainInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetSwapChainInfo(swapChain);
+}
+
 static inline void ElemResizeSwapChain(ElemSwapChain swapChain, unsigned int width, unsigned int height)
 {
     if (!LoadElementalFunctionPointers()) 
@@ -862,7 +895,7 @@ static inline void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain)
     listElementalFunctions.ElemWaitForSwapChainOnCpu(swapChain);
 }
 
-static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemDataSpan shaderLibraryData)
+static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -890,7 +923,7 @@ static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemDataSpan shaderLibra
         return result;
     }
 
-    return listElementalFunctions.ElemCreateShaderLibrary(shaderLibraryData);
+    return listElementalFunctions.ElemCreateShaderLibrary(graphicsDevice, shaderLibraryData);
 }
 
 static inline void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary)

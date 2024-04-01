@@ -42,7 +42,7 @@ void ResetMetalCommandEncoder(ElemCommandList commandList);
 
 ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 void MetalFreeCommandQueue(ElemCommandQueue commandQueue);
-ElemCommandList MetalCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
+ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
 void MetalCommitCommandList(ElemCommandList commandList);
 
 ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);

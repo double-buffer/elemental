@@ -26,5 +26,6 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     ASSERT_FALSE(testHasLogErrors);
 }
 
+// TODO: Check command list type when dispatch mesh
 // TODO: Multiple config for rendering
 // TODO: Dispatch mesh with shader that ouput at specific locations

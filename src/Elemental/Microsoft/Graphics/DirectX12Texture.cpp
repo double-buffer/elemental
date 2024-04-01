@@ -80,6 +80,15 @@ ElemTexture CreateDirectX12TextureFromResource(ElemGraphicsDevice graphicsDevice
     return handle;
 }
 
+DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemTextureFormat format)
+{
+    switch (format) 
+    {
+        case ElemTextureFormat_B8G8R8A8_SRGB:
+            return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+    }
+}
+
 // TODO: Functions to create additional optional Descriptors
 
 void DirectX12FreeTexture(ElemTexture texture)

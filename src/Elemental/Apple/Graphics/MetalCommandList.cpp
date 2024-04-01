@@ -91,7 +91,7 @@ void MetalFreeCommandQueue(ElemCommandQueue commandQueue)
     commandQueueData->DeviceObject.reset();
 }
 
-ElemCommandList MetalCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
 

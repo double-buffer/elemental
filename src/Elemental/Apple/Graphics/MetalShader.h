@@ -24,7 +24,7 @@ MetalShaderLibraryDataFull* GetMetalShaderLibraryDataFull(ElemTexture shaderLibr
 MetalPipelineStateData* GetMetalPipelineStateData(ElemPipelineState pipelineState);
 MetalPipelineStateDataFull* GetMetalPipelineStateDataFull(ElemPipelineState pipelineState);
 
-ElemShaderLibrary MetalCreateShaderLibrary(ElemDataSpan shaderLibraryData);
+ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 void MetalFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
 void MetalFreePipelineState(ElemPipelineState pipelineState);

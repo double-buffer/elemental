@@ -25,7 +25,7 @@ DirectX12ShaderLibraryData* GetDirectX12ShaderLibraryData(ElemShaderLibrary shad
 DirectX12PipelineStateData* GetDirectX12PipelineStateData(ElemPipelineState pipelineState);
 DirectX12PipelineStateDataFull* GetDirectX12PipelineStateDataFull(ElemPipelineState pipelineState);
 
-ElemShaderLibrary DirectX12CreateShaderLibrary(ElemDataSpan shaderLibraryData);
+ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 void DirectX12FreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
 void DirectX12FreePipelineState(ElemPipelineState pipelineState);

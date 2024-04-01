@@ -116,6 +116,11 @@ void MetalFreeSwapChain(ElemSwapChain swapChain)
     }
 }
 
+ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
+{
+    return {};
+}
+
 void MetalResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
 {    
     auto swapChainData = GetMetalSwapChainData(swapChain);

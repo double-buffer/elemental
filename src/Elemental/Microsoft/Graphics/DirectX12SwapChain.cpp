@@ -136,7 +136,9 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
 
     SystemAddDataPoolItemFull(directX12SwapChainPool, handle, {
         .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
-        .CommandQueue = commandQueue
+        .CommandQueue = commandQueue,
+        .Width = width,
+        .Height = height
     });
 
     CreateDirectX12SwapChainRenderTargetViews(handle);
@@ -176,8 +178,44 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     SystemRemoveDataPoolItem(directX12SwapChainPool, swapChain);
 }
 
+ElemSwapChainInfo DirectX12GetSwapChainInfo(ElemSwapChain swapChain)
+{
+    return {};
+}
+
 void DirectX12ResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
 {
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d...", width, height);
+
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
+    
+    SystemAssert(swapChain != ELEM_HANDLE_NULL);
+
+    auto swapChainData = GetDirectX12SwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    auto swapChainDataFull = GetDirectX12SwapChainDataFull(swapChain);
+    SystemAssert(swapChainDataFull);
+
+    swapChainDataFull->Width = width;
+    swapChainDataFull->Height = height;
+ 
+    auto fence = Direct3D12CreateCommandQueueFence(swapChainDataFull->CommandQueue);
+    ElemWaitForFenceOnCpu(fence);
+    
+    for (uint32_t i = 0; i < DIRECTX12_MAX_SWAPCHAIN_BUFFERS; i++)
+    {
+        if (swapChainData->BackBufferTextures[i] != ELEM_HANDLE_NULL)
+        {
+            DirectX12FreeTexture(swapChainData->BackBufferTextures[i]);
+        }
+    } 
+
+    AssertIfFailed(swapChainData->DeviceObject->ResizeBuffers(DIRECTX12_MAX_SWAPCHAIN_BUFFERS, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
+    CreateDirectX12SwapChainRenderTargetViews(swapChain);
 }
 
 ElemTexture DirectX12GetSwapChainBackBufferTexture(ElemSwapChain swapChain)

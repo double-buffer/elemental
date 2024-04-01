@@ -37,6 +37,11 @@ void VulkanFreeSwapChain(ElemSwapChain swapChain)
 {
 }
 
+ElemSwapChainInfo VulkanGetSwapChainInfo(ElemSwapChain swapChain)
+{
+    return {};
+}
+
 void VulkanResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
 {
 }

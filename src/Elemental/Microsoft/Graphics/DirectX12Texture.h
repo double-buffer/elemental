@@ -19,5 +19,6 @@ DirectX12TextureData* GetDirectX12TextureData(ElemTexture texture);
 DirectX12TextureDataFull* GetDirectX12TextureDataFull(ElemTexture texture);
 
 ElemTexture CreateDirectX12TextureFromResource(ElemGraphicsDevice graphicsDevice, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
+DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemTextureFormat format);
             
 void DirectX12FreeTexture(ElemTexture texture);

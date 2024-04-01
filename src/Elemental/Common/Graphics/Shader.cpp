@@ -1,9 +1,9 @@
 #include "Elemental.h"
 #include "GraphicsCommon.h"
 
-ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemDataSpan shaderLibraryData)
+ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
-    DispatchReturnGraphicsFunction(CreateShaderLibrary, shaderLibraryData);
+    DispatchReturnGraphicsFunction(CreateShaderLibrary, graphicsDevice, shaderLibraryData);
 }
 
 ElemAPI void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary)

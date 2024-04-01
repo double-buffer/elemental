@@ -11,9 +11,9 @@ ElemAPI void ElemFreeCommandQueue(ElemCommandQueue commandQueue)
     DispatchGraphicsFunction(FreeCommandQueue, commandQueue);
 }
 
-ElemAPI ElemCommandList ElemCreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+ElemAPI ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
-    DispatchReturnGraphicsFunction(CreateCommandList, commandQueue, options);
+    DispatchReturnGraphicsFunction(GetCommandList, commandQueue, options);
 }
 
 ElemAPI void ElemCommitCommandList(ElemCommandList commandList)

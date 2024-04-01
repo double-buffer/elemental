@@ -38,7 +38,7 @@ DirectX12CommandListDataFull* GetDirectX12CommandListDataFull(ElemCommandList co
 
 ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue);
-ElemCommandList DirectX12CreateCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
+ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
 void DirectX12CommitCommandList(ElemCommandList commandList);
 
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);

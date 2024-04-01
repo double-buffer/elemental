@@ -24,7 +24,7 @@ VulkanShaderLibraryDataFull* GetVulkanShaderLibraryDataFull(ElemTexture shaderLi
 VulkanPipelineStateData* GetVulkanPipelineStateData(ElemPipelineState pipelineState);
 VulkanPipelineStateDataFull* GetVulkanPipelineStateDataFull(ElemPipelineState pipelineState);
 
-ElemShaderLibrary VulkanCreateShaderLibrary(ElemDataSpan shaderLibraryData);
+ElemShaderLibrary VulkanCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 void VulkanFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
 void VulkanFreePipelineState(ElemPipelineState pipelineState);
