@@ -1,4 +1,5 @@
 #include "ShaderCompiler.cpp"
+#include "ShaderCompilerUtils.cpp"
 #include "DirectXShaderCompiler.cpp"
 #include "MetalShaderConverter.cpp"
 

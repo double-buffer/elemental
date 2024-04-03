@@ -6,6 +6,7 @@
 
 #ifndef _WIN32
 #define MAX_PATH 255
+#include <sys/time.h>
 #else
 #include <windows.h>
 #endif
@@ -139,19 +140,32 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
 uint64_t globalSampleTimerFrequency;
 uint64_t globalSampleTimerBaseCounter;
 
-// TODO: Multiplatform
 void SampleInitTimer(void)
 {
+    #ifdef _WIN32
     QueryPerformanceFrequency((LARGE_INTEGER*) &globalSampleTimerFrequency);
     QueryPerformanceCounter((LARGE_INTEGER*) &globalSampleTimerBaseCounter);
+    #else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    globalSampleTimerBaseCounter = (uint64_t)ts.tv_sec * 1000000000 + (uint64_t)ts.tv_nsec;
+    globalSampleTimerFrequency = 1000000;
+    #endif
 }
 
 double SampleGetTimerValueInMS(void)
 {
+    #ifdef _WIN32
     uint64_t value;
     QueryPerformanceCounter((LARGE_INTEGER*) &value);
 
     return ((double)(value - globalSampleTimerBaseCounter) / globalSampleTimerFrequency) * 1000.0;
+    #else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    uint64_t value = (uint64_t)ts.tv_sec * 1000000000 + (uint64_t)ts.tv_nsec;
+    return  (double)(value - globalSampleTimerBaseCounter) / globalSampleTimerFrequency;
+    #endif
 }
 
 typedef struct
@@ -166,7 +180,7 @@ uint32_t globalSampleCurrentFpsCounter = 0;
 uint32_t globalSampleFpsCounter = 0;
 double globalSampleStartTime = 0.0;
 
-void SampleStartFrameMeasurement()
+void SampleStartFrameMeasurement(void)
 {
     if (globalSampleTimerFrequency == 0.0)
     {
@@ -176,7 +190,7 @@ void SampleStartFrameMeasurement()
     globalSampleStartTime = SampleGetTimerValueInMS();
 }
 
-SampleFrameMeasurement SampleEndFrameMeasurement()
+SampleFrameMeasurement SampleEndFrameMeasurement(void)
 {
     globalSampleFpsCounter++;
 

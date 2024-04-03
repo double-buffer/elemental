@@ -1,4 +1,5 @@
 #include "DirectXShaderCompiler.h"
+#include "ShaderCompilerUtils.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
@@ -175,20 +176,20 @@ bool DirectXShaderCompilerIsInstalled()
     return directXShaderCompilerCreateInstanceFunction != nullptr;
 }
 
-ElemShaderCompilationResult DirectXShaderCompilerCompileShader(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options)
+ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     InitDirectXShaderCompiler();
     SystemAssert(directXShaderCompilerCreateInstanceFunction != nullptr);
 
-    auto compilationMessages = SystemPushArray<ElemToolsMessage>(stackMemoryArena, 1024);
+    auto compilationMessages = SystemPushArray<ElemToolsMessage>(memoryArena, 1024);
     auto compilationMessageIndex = 0u;
 
     ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_8", "", options);
-    auto hasErrors = ProcessDirectXShaderCompilerLogOutput(stackMemoryArena, dxilCompileResult, compilationMessages, &compilationMessageIndex);
+    auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, compilationMessages, &compilationMessageIndex);
 
-    auto outputShaderDataList = SystemPushArray<Span<uint8_t>>(stackMemoryArena, 64);
+    auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, 64);
     auto outputShaderDataListIndex = 0u;
 
     if (!hasErrors)
@@ -197,7 +198,11 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(ReadOnlySpan<uint
         AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
 
         auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
-        outputShaderDataList[outputShaderDataListIndex++] = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode);
+        outputShaderDataList[outputShaderDataListIndex++] = 
+        {
+            .ShaderType = ShaderType_Library, 
+            .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode)
+        };
 
         // Reflection
         ComPtr<IDxcUtils> dxcUtils;
@@ -230,45 +235,23 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(ReadOnlySpan<uint
             if (shaderType == DxilShaderKind::Mesh || shaderType == DxilShaderKind::Pixel)
             {
                 ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(shaderType), functionDescription.Name, options);
-                hasErrors = ProcessDirectXShaderCompilerLogOutput(stackMemoryArena, dxilCompileResult, compilationMessages, &compilationMessageIndex);
+                hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, compilationMessages, &compilationMessageIndex);
 
                 ComPtr<IDxcBlob> shaderByteCodeComPtr;
                 AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
 
                 auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
-                outputShaderDataList[outputShaderDataListIndex++] = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode);
+                
+                outputShaderDataList[outputShaderDataListIndex++] = 
+                {
+                    .ShaderType = shaderType == DxilShaderKind::Mesh ? ShaderType_Mesh : ShaderType_Pixel, 
+                    .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode)
+                };
             }
         }
     } 
     
-    Span<uint8_t> outputShaderData = outputShaderDataList[0]; 
-
-    // HACK: This is normally temporary. In the future, DX12 should be able to manage only DXIL libs for programs
-    if (outputShaderDataListIndex > 1)
-    {
-        auto dataSize = 0u;
-
-        for (uint32_t i = 1; i < outputShaderDataListIndex; i++)
-        {
-            dataSize += outputShaderDataList[i].Length;
-        }
-
-        outputShaderData = SystemPushArray<uint8_t>(stackMemoryArena, sizeof(uint32_t) * (outputShaderDataListIndex + 1) + dataSize);
-        *(uint32_t*)outputShaderData.Pointer = outputShaderDataListIndex - 1;
-        
-        uint32_t currentOffset = sizeof(uint32_t);
-
-        for (uint32_t i = 1; i < outputShaderDataListIndex; i++)
-        {
-            *(uint32_t*)outputShaderData.Slice(currentOffset).Pointer = outputShaderDataList[i].Length; 
-            currentOffset += sizeof(uint32_t);
-
-            SystemCopyBuffer((Span<uint8_t>)outputShaderData.Slice(currentOffset), (ReadOnlySpan<uint8_t>)outputShaderDataList[i]);
-            currentOffset += outputShaderDataList[i].Length;
-        }
-
-        printf("GraphicsShader!\n");
-    }
+    auto outputShaderData = CombineShaderParts(memoryArena, outputShaderDataList.Slice(0, outputShaderDataListIndex)); 
 
     return 
     {

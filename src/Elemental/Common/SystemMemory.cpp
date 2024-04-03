@@ -224,20 +224,13 @@ StackMemoryArena SystemGetStackMemoryArena()
     {
         stackMemoryArenaStorage = AllocateMemoryArenaStorage(MEMORYARENA_DEFAULT_SIZE);
     }
-    
-    SystemPlatformClearMemory(stackMemoryArenaStorage->CurrentPointer, stackMemoryArenaStorage->StackBytesToClear);
-    stackMemoryArenaStorage->StackBytesToClear = 0;
-    
+
     stackMemoryArenaStorage->StackLevel++;
     auto extraStorageAllocatedBytes = 0llu;
 
     if (stackMemoryArenaStorage->StackExtraStorage.Storage != nullptr)
     {
         extraStorageAllocatedBytes = GetMemoryArenaAllocatedBytes(stackMemoryArenaStorage->StackExtraStorage);
-
-        auto extraStorage = stackMemoryArenaStorage->StackExtraStorage.Storage;
-        SystemPlatformClearMemory(extraStorage->CurrentPointer, extraStorage->StackBytesToClear);
-        extraStorage->StackBytesToClear = 0;
     }
 
     MemoryArena memoryArena = {};
@@ -435,6 +428,12 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
     {
         pointer = storage->CurrentPointer;
         storage->CurrentPointer += sizeInBytes;
+
+        if (storage->StackBytesToClear > 0)
+        {
+            SystemPlatformClearMemory(pointer, storage->StackBytesToClear);
+            storage->StackBytesToClear = 0;
+        }
     }
     else
     {

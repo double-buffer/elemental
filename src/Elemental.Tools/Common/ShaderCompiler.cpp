@@ -7,7 +7,7 @@
 // TODO: Put magic numbers into define
 
 typedef bool (*CheckCompilerPtr)();
-typedef ElemShaderCompilationResult (*CompileShaderPtr)(ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options);
+typedef ElemShaderCompilationResult (*CompileShaderPtr)(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options);
 
 struct ShaderCompiler
 {
@@ -198,9 +198,9 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
     for (uint32_t i = 0; i < level; i++)
     {
         auto compilerStep = compilerSteps[i];
+        auto compilationResults = compilerStep.ShaderCompiler->CompileShaderFunction(stackMemoryArena, stepSourceData, compilerStep.OutputLanguage, graphicsApi, options);
 
-        auto compilationResults = compilerStep.ShaderCompiler->CompileShaderFunction(stepSourceData, compilerStep.OutputLanguage, graphicsApi, options);
-
+        // TODO: Now we have fixed the stack allocator we have this problem
         auto resultMessages = SystemPushArray<ElemToolsMessage>(stackMemoryArena, compilationResults.Messages.Length);
 
         for (uint32_t j = 0; j < compilationResults.Messages.Length; j++)

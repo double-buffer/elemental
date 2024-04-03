@@ -1,3 +1,4 @@
+#include "MetalRendering.h"
 #include "MetalCommandList.h"
 #include "MetalTexture.h"
 #include "SystemFunctions.h"
@@ -110,4 +111,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
 void MetalEndRenderPass(ElemCommandList commandList)
 {
     ResetMetalCommandEncoder(commandList);
+}
+
+void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
 }
