@@ -1,6 +1,6 @@
 namespace Elemental.Graphics;
 
-public ref struct Fence
+public record struct Fence
 {
     public CommandQueue CommandQueue { get; set; }
 

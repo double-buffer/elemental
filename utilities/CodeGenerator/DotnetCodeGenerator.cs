@@ -114,7 +114,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         foreach (var type in types)
         {
-            if (Path.GetFileName(type.SourceFile) != "Elemental.h" || type.GetDisplayName() == "ElemHandle")
+            if (Path.GetFileName(type.SourceFile) != "Elemental.h" || type.GetDisplayName() == "ElemHandle" || type.GetDisplayName().Contains("Span"))
             {
                 continue;
             }
@@ -165,13 +165,13 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 firstFunction = false;
             }
 
-            var containsStringParameters = GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters: false);
+            var containsStringParameters = GenerateModuleFunctionDefinition(compilation, stringBuilder, function, generateStringParameters: false);
             stringBuilder.AppendLine(";");
 
             if (containsStringParameters)
             {
                 stringBuilder.AppendLine();
-                GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters: true);
+                GenerateModuleFunctionDefinition(compilation, stringBuilder, function, generateStringParameters: true);
                 stringBuilder.AppendLine(";");
             }
         }
@@ -197,11 +197,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         foreach (var function in functions)
         {
-            var containsStringParameters = GenerateServiceFunction(serviceName, stringBuilder, function, generateStringParameters: false);
+            var containsStringParameters = GenerateServiceFunction(compilation, serviceName, stringBuilder, function, generateStringParameters: false);
             
             if (containsStringParameters)
             {
-                GenerateServiceFunction(serviceName, stringBuilder, function, generateStringParameters: true);
+                GenerateServiceFunction(compilation, serviceName, stringBuilder, function, generateStringParameters: true);
             }
         }
 
@@ -210,7 +210,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         File.WriteAllText(Path.Combine(outputPath, $"{serviceName}.cs"), stringBuilder.ToString());
     }
 
-    private bool GenerateServiceFunction(string serviceName, StringBuilder stringBuilder, CppFunction function, bool generateStringParameters)
+    private bool GenerateServiceFunction(CppCompilation compilation, string serviceName, StringBuilder stringBuilder, CppFunction function, bool generateStringParameters)
     {
         var functionName = function.Name.Replace("Elem", string.Empty);
         var firstParameter = true;
@@ -232,16 +232,49 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 
                 if (structType != null)
                 {
-                    if (NeedCustomMarshaller(structType))
+                    if (NeedCustomMarshaller(compilation, structType))
                     {
                         customMarshallerTypes.Add(parameter.Name, structType);
                         continue;
                     }
                 }
             }
+            else if (parameter.Type is CppClass classType)
+            {
+                if (classType.GetDisplayName().Contains("Span"))
+                {
+                    customMarshallerTypes.Add(parameter.Name, classType);
+                }
+            }
         }
 
-        var containsStringParameters = GenerateModuleFunctionDefinition(stringBuilder, function, generateStringParameters, appendPublic: true, appendUnsafe: customMarshallerTypes.Count > 0);
+        var returnNeedsMarshalling = false;
+        CppType? returnTypeMarshalling = null;
+
+        if (function.ReturnType.GetDisplayName() != "void")
+        {
+            if (function.ReturnType.GetDisplayName().Contains("Span"))
+            {
+                var returnName = function.ReturnType.GetDisplayName().Replace("Elem", string.Empty);
+                var returnTypeString = $"{returnName.Substring(0, returnName.IndexOf("Span"))}";
+
+                var foundType = compilation.FindByName<CppType>($"Elem{returnTypeString}");
+
+                if (foundType != null)
+                {
+                    returnTypeMarshalling = foundType;
+                }
+
+                returnNeedsMarshalling = true;
+            }
+            else if (NeedCustomMarshaller(compilation, function.ReturnType))
+            {
+                returnNeedsMarshalling = true;
+                returnTypeMarshalling = function.ReturnType;
+            }
+        }
+
+        var containsStringParameters = GenerateModuleFunctionDefinition(compilation, stringBuilder, function, generateStringParameters, appendPublic: true, appendUnsafe: customMarshallerTypes.Count > 0 || returnNeedsMarshalling);
         stringBuilder.AppendLine();
 
         Indent(stringBuilder);
@@ -253,12 +286,32 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         {
             if (parameterToMarshal.Value is CppClass structType)
             {
+                var structName = structType.GetDisplayName().Replace("Elem", string.Empty);
+
+                if (structName.Contains("Span"))
+                {
+                    var pinnedType = $"{structName.Substring(0, structName.IndexOf("Span"))}*";
+
+                    if (pinnedType == "Data*")
+                    {
+                        pinnedType = "byte*";
+                    }
+
+                    Indent(stringBuilder, currentTabLevel);
+                    stringBuilder.AppendLine($"fixed ({pinnedType} {parameterToMarshal.Key}Pinned = {parameterToMarshal.Key}.Span)");
+
+                    Indent(stringBuilder, currentTabLevel);
+                    stringBuilder.AppendLine("{");
+
+                    currentTabLevel++;
+                }
+
                 foreach (var field in structType.Fields)
                 {
-                    if (NeedCustomMarshaller(field.Type))
+                    if (FieldNeedCustomMarshaller(compilation, field.Type))
                     {
                         Indent(stringBuilder, currentTabLevel);
-                        stringBuilder.AppendLine($"fixed ({MapType(field.Type.GetDisplayName(), isUnsafe: true)} {field.Name}Pinned = {parameterToMarshal.Key}.{field.Name})");
+                        stringBuilder.AppendLine($"fixed ({MapType(compilation, field.Type, isUnsafe: true)} {field.Name}Pinned = {parameterToMarshal.Key}.{field.Name})");
 
                         Indent(stringBuilder, currentTabLevel);
                         stringBuilder.AppendLine("{");
@@ -271,32 +324,56 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         foreach (var parameterToMarshal in customMarshallerTypes)
         {
-            Indent(stringBuilder, currentTabLevel);
-            stringBuilder.AppendLine($"var {parameterToMarshal.Key}Unsafe = new {MapType(parameterToMarshal.Value.GetDisplayName())}Unsafe();");
-
             if (parameterToMarshal.Value is CppClass structType)
             {
+                var structName = structType.GetDisplayName().Replace("Elem", string.Empty);
+                Indent(stringBuilder, currentTabLevel);
+
+                if (structName.Contains("Span"))
+                {
+                    var pinnedType = $"{structName.Substring(0, structName.IndexOf("Span"))}";
+
+                    if (pinnedType == "Data")
+                    {
+                        pinnedType = "byte";
+                    }
+
+                    stringBuilder.AppendLine($"var {parameterToMarshal.Key}Unsafe = new SpanUnsafe<{pinnedType}>();");
+                }
+                else
+                {
+                    stringBuilder.AppendLine($"var {parameterToMarshal.Key}Unsafe = new {MapType(compilation, parameterToMarshal.Value)}Unsafe();");
+                }
+
                 foreach (var field in structType.Fields)
                 {
-                    if (NeedCustomMarshaller(field.Type))
+                    Indent(stringBuilder, currentTabLevel);
+
+                    if (FieldNeedCustomMarshaller(compilation, field.Type))
                     {
-                        Indent(stringBuilder, currentTabLevel);
                         stringBuilder.AppendLine($"{parameterToMarshal.Key}Unsafe.{field.Name} = {field.Name}Pinned;");
+                    }
+                    else if (field.Name == "Items")
+                    {
+                        stringBuilder.AppendLine($"{parameterToMarshal.Key}Unsafe.{field.Name} = (nuint){parameterToMarshal.Key}Pinned;");
                     }
                     else
                     {
-                        Indent(stringBuilder, currentTabLevel);
                         stringBuilder.AppendLine($"{parameterToMarshal.Key}Unsafe.{field.Name} = {parameterToMarshal.Key}.{field.Name};");
                     }
                 }
-            }
 
-            stringBuilder.AppendLine();
+                stringBuilder.AppendLine();
+            }
         }
 
         Indent(stringBuilder, currentTabLevel);
 
-        if (function.ReturnType.GetDisplayName() != "void")
+        if (returnTypeMarshalling != null)
+        {
+            stringBuilder.Append("var resultUnsafe = ");
+        }
+        else if (function.ReturnType.GetDisplayName() != "void")
         {
             stringBuilder.Append("return ");
         }
@@ -332,13 +409,101 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         stringBuilder.AppendLine(");");
 
+        if (returnNeedsMarshalling)
+        {
+            stringBuilder.AppendLine();
+            Indent(stringBuilder, currentTabLevel);
+
+            var structType = function.ReturnType as CppClass;
+            var srcFieldName = "resultUnsafe";
+            var destFieldName = "result";
+
+            if (function.ReturnType.GetDisplayName().Contains("Span"))
+            {
+                structType = returnTypeMarshalling as CppClass;
+                destFieldName = "result[i]";
+                srcFieldName = "((GraphicsDeviceInfoUnsafe*)resultUnsafe.Items)[i]";
+                        
+                stringBuilder.AppendLine($"var result = new {MapType(compilation, returnTypeMarshalling, isReturnValue: true)}[resultUnsafe.Length];");
+
+                Indent(stringBuilder, currentTabLevel);
+                stringBuilder.AppendLine($"for (int i = 0; i < resultUnsafe.Length; i++)");
+
+                Indent(stringBuilder, currentTabLevel);
+                stringBuilder.AppendLine($"{{");
+            }
+            else
+            {
+                stringBuilder.AppendLine($"var result = new {MapType(compilation, function.ReturnType, isReturnValue: true)}();");
+            }
+
+            if (structType != null)
+            {
+                foreach (var field in structType.Fields)
+                {
+                    if (MapType(compilation, field.Type).Contains("Span"))
+                    {
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine();
+                        stringBuilder.AppendLine($$"""
+                                var {{field.Name}}Counter = 0;
+                                var {{field.Name}}Pointer = (byte*){{srcFieldName}}.{{field.Name}};
+
+                                while ({{field.Name}}Pointer[{{field.Name}}Counter] != 0)
+                                {
+                                {{field.Name}}Counter++;
+                                }
+
+                                {{field.Name}}Counter++;
+                                """);
+
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"var {field.Name}Span = new ReadOnlySpan<byte>({field.Name}Pointer, {field.Name}Counter);");
+
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"var {field.Name}Array = new byte[{field.Name}Counter];");
+
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"{field.Name}Span.CopyTo({field.Name}Array);");
+
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"{destFieldName}.{field.Name} = {field.Name}Array;");
+                    }
+
+                    else
+                    {
+                        Indent(stringBuilder, currentTabLevel);
+                        stringBuilder.AppendLine($"{destFieldName}.{field.Name} = {srcFieldName}.{field.Name};");
+                    }
+                }
+            }
+            
+            if (function.ReturnType.GetDisplayName().Contains("Span"))
+            {
+                Indent(stringBuilder, currentTabLevel);
+                stringBuilder.AppendLine("}");
+            }
+            
+            stringBuilder.AppendLine();
+            Indent(stringBuilder, currentTabLevel);
+            stringBuilder.AppendLine($"return result;");
+        }
+        
         foreach (var parameterToMarshal in customMarshallerTypes)
         {
             if (parameterToMarshal.Value is CppClass structType)
             {
+                if (structType.GetDisplayName().Contains("Span"))
+                {
+                    currentTabLevel--;
+
+                    Indent(stringBuilder, currentTabLevel);
+                    stringBuilder.AppendLine("}");
+                }
+
                 foreach (var field in structType.Fields)
                 {
-                    if (NeedCustomMarshaller(field.Type))
+                    if (FieldNeedCustomMarshaller(compilation, field.Type))
                     {
                         currentTabLevel--;
 
@@ -386,8 +551,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             Indent(stringBuilder);
             stringBuilder.AppendLine("[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]");
 
+            var returnNeedsMarshalling = NeedCustomMarshaller(compilation, function.ReturnType);
+
             Indent(stringBuilder);
-            stringBuilder.Append($"internal static partial {MapType(function.ReturnType)} {functionName}(");
+            stringBuilder.Append($"internal static partial {MapType(compilation, function.ReturnType, forInterop: true, isReturnValue: true)}{(returnNeedsMarshalling ? "Unsafe" : "")} {functionName}(");
+          
             var firstParameter = true;
 
             foreach (var parameter in function.Parameters)
@@ -414,15 +582,15 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     
                     if (structType != null)
                     {
-                        if (NeedCustomMarshaller(structType))
+                        if (NeedCustomMarshaller(compilation, structType))
                         {
-                            stringBuilder.Append($"{MapType(parameter.Type)}Unsafe {parameter.Name}");
+                            stringBuilder.Append($"{MapType(compilation, parameter.Type)}Unsafe {parameter.Name}");
                             continue;
                         }
                     }
                 }
 
-                stringBuilder.Append($"{MapType(parameter.Type)} {parameter.Name}");
+                stringBuilder.Append($"{MapType(compilation, parameter.Type, forInterop: true)} {parameter.Name}");
             }
 
             stringBuilder.AppendLine(");");
@@ -437,7 +605,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     private void GenerateType(string moduleName, CppType type, string outputPath, CppCompilation compilation)
     {
         var canonicalType = type.GetCanonicalType();
-        var typeName = MapType(type.GetDisplayName());
+        var typeName = MapType(compilation, type);
         Console.WriteLine($"Generating type {typeName}...");
 
         var stringBuilder = new StringBuilder();
@@ -451,7 +619,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
             if (typeName.Contains("Handler"))
             {
-                GenerateDelegate(canonicalType, typeName, stringBuilder, typeDefType);
+                GenerateDelegate(compilation, canonicalType, typeName, stringBuilder, typeDefType);
             }
             else
             {
@@ -460,30 +628,45 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     GenerateComment(stringBuilder, typeDefType.Comment, 0);
                 }
                 
-                stringBuilder.AppendLine($"public readonly record struct {typeName} : IDisposable");
+                var needToDispose = (compilation.FindByName<CppFunction>($"ElemFree{typeName}") != null);
+                
+                stringBuilder.Append($"public readonly record struct {typeName}");
+
+                if (needToDispose)
+                {
+                    stringBuilder.AppendLine(" : IDisposable");
+                }
+                else
+                {
+                    stringBuilder.AppendLine();
+                }
+
                 stringBuilder.AppendLine("{");
                 
                 Indent(stringBuilder);
-                stringBuilder.AppendLine($"private {MapType(canonicalType)} Value {{ get; }}");
+                stringBuilder.AppendLine($"private {MapType(compilation, canonicalType)} Value {{ get; }}");
 
-                stringBuilder.AppendLine();
-                Indent(stringBuilder);
-                stringBuilder.AppendLine("///<summary>");
-                Indent(stringBuilder);
-                stringBuilder.AppendLine("/// Disposes the handler.");
-                Indent(stringBuilder);
-                stringBuilder.AppendLine("///</summary>");
-                
-                Indent(stringBuilder);
-                stringBuilder.AppendLine("public void Dispose()");
-                Indent(stringBuilder);
-                stringBuilder.AppendLine("{");
+                if (needToDispose)
+                {
+                    stringBuilder.AppendLine();
+                    Indent(stringBuilder);
+                    stringBuilder.AppendLine("///<summary>");
+                    Indent(stringBuilder);
+                    stringBuilder.AppendLine("/// Disposes the handler.");
+                    Indent(stringBuilder);
+                    stringBuilder.AppendLine("///</summary>");
 
-                Indent(stringBuilder, 2);
-                stringBuilder.AppendLine($"{moduleName}ServiceInterop.Free{typeName.Replace("Elemental", string.Empty)}(this);");
+                    Indent(stringBuilder);
+                    stringBuilder.AppendLine("public void Dispose()");
+                    Indent(stringBuilder);
+                    stringBuilder.AppendLine("{");
 
-                Indent(stringBuilder);
-                stringBuilder.AppendLine("}");
+                    Indent(stringBuilder, 2);
+                    stringBuilder.AppendLine($"{moduleName}ServiceInterop.Free{typeName.Replace("Elemental", string.Empty)}(this);");
+
+                    Indent(stringBuilder);
+                    stringBuilder.AppendLine("}");
+                }
 
                 stringBuilder.AppendLine("}");
             }
@@ -494,13 +677,13 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
         else if (type.TypeKind == CppTypeKind.StructOrClass)
         {
-            GenerateStruct(type, typeName, stringBuilder);
+            GenerateStruct(compilation, type, typeName, stringBuilder);
         }
 
         File.WriteAllText(Path.Combine(outputPath, $"{typeName}.cs"), stringBuilder.ToString());
     }
 
-    private void GenerateDelegate(CppType canonicalType, string typeName, StringBuilder stringBuilder, CppTypedef typeDefType)
+    private void GenerateDelegate(CppCompilation compilation, CppType canonicalType, string typeName, StringBuilder stringBuilder, CppTypedef typeDefType)
     {
         if (typeDefType.Comment != null)
         {
@@ -535,7 +718,14 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     firstParameter = false;
                 }
 
-                var parameterType = MapType(parameterResult.Groups[1].Value.Trim());
+                var parameterType = "ReadOnlySpan<byte>";
+                var foundType = compilation.FindByName<CppType>(parameterResult.Groups[1].Value.Trim());
+
+                if (foundType != null)
+                {
+                    parameterType = MapType(compilation, foundType);
+                }
+
                 var parameterName = parameterResult.Groups[2].Value.Trim();
 
                 if (parameterType.Contains("Span"))
@@ -633,11 +823,39 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         stringBuilder.AppendLine("}");
     }
 
-    private bool NeedCustomMarshaller(CppClass structType)
+    private bool NeedCustomMarshaller(CppCompilation compilation, CppType type)
     {
+        CppClass? structType = null; 
+            
+        if (type is CppClass classType)
+        {
+            structType = classType;
+        }
+        else if (type is CppPointerType pointerType)
+        {
+            var qualifiedType = pointerType.ElementType as CppQualifiedType;
+
+            if (qualifiedType == null)
+            {
+                return false;
+            }
+
+            var classTypeTemp = qualifiedType.ElementType as CppClass;
+            
+            if (classTypeTemp != null)
+            {
+                structType = classTypeTemp;
+            }
+        }
+
+        if (structType == null)
+        {
+            return false;
+        }
+
         foreach (var field in structType.Fields)
         {
-            if (NeedCustomMarshaller(field.Type))
+            if (FieldNeedCustomMarshaller(compilation, field.Type))
             {
                 return true;
             }
@@ -646,9 +864,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         return false;
     }
 
-    private bool NeedCustomMarshaller(CppType type)
+    private bool FieldNeedCustomMarshaller(CppCompilation compilation, CppType type)
     {
-        if (MapType(type).Contains("ReadOnlySpan"))
+        var mappedType = MapType(compilation, type);
+
+        if (mappedType.Contains("ReadOnlyMemory") || mappedType.Contains("ReadOnlySpan"))
         {
             return true;
         }
@@ -656,7 +876,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         return false;
     }
 
-    private void GenerateStruct(CppType type, string typeName, StringBuilder stringBuilder)
+    private void GenerateStruct(CppCompilation compilation, CppType type, string typeName, StringBuilder stringBuilder)
     {
         var structType = type as CppClass;
 
@@ -670,9 +890,17 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             GenerateComment(stringBuilder, structType.Comment, 0);
         }
 
-        var needsCustomMarshaller = NeedCustomMarshaller(structType);
+        var needsCustomMarshaller = NeedCustomMarshaller(compilation, structType);
 
-        stringBuilder.AppendLine($"public ref struct {typeName}");
+        if (typeName.Contains("Options") || typeName.Contains("Parameters"))
+        {
+            stringBuilder.AppendLine($"public ref struct {typeName}");
+        }
+        else
+        {
+            stringBuilder.AppendLine($"public record struct {typeName}");
+        }
+
         stringBuilder.AppendLine("{");
 
         var firstField = true;
@@ -694,7 +922,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             }
 
             Indent(stringBuilder);
-            stringBuilder.AppendLine($"public {MapType(field.Type.GetDisplayName())} {field.Name} {{ get; set; }}");
+            stringBuilder.AppendLine($"public {MapType(compilation, field.Type)} {field.Name} {{ get; set; }}");
         }
 
         stringBuilder.AppendLine("}");
@@ -720,7 +948,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 }
 
                 Indent(stringBuilder);
-                stringBuilder.AppendLine($"public {MapType(field.Type.GetDisplayName(), isUnsafe: true)} {field.Name} {{ get; set; }}");
+                stringBuilder.AppendLine($"public {MapType(compilation, field.Type, isUnsafe: true)} {field.Name} {{ get; set; }}");
 
                 if (field.Type.GetDisplayName().Contains("const char*"))
                 {
@@ -729,10 +957,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             }
             
             stringBuilder.AppendLine("}");
+            stringBuilder.AppendLine();
         }
     }
 
-    private bool GenerateModuleFunctionDefinition(StringBuilder stringBuilder, CppFunction function, bool generateStringParameters, bool appendPublic = false, bool appendUnsafe = false)
+    private bool GenerateModuleFunctionDefinition(CppCompilation compilation, StringBuilder stringBuilder, CppFunction function, bool generateStringParameters, bool appendPublic = false, bool appendUnsafe = false)
     {
         var containsStringParameters = false;
         var functionName = function.Name.Replace("Elem", string.Empty);
@@ -754,7 +983,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             stringBuilder.Append("unsafe ");
         }
 
-        stringBuilder.Append($"{MapType(function.ReturnType)} {functionName}(");
+        stringBuilder.Append($"{MapType(compilation, function.ReturnType, isReturnValue: true)} {functionName}(");
         var firstParameter = true;
 
         foreach (var parameter in function.Parameters)
@@ -768,7 +997,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 firstParameter = false;
             }
 
-            var parameterType = MapType(parameter.Type);
+            var parameterType = MapType(compilation, parameter.Type);
 
             if (parameter.Type.GetDisplayName() == "const char*")
             {
@@ -809,7 +1038,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 stringBuilder.AppendLine($"/// <summary>");
 
                 Indent(stringBuilder, indentLevel);
-                stringBuilder.AppendLine($"/// {commentObject.ToString().Trim()}");
+                stringBuilder.AppendLine($"/// {commentObject.ToString().Trim().Replace("\n", "\n///")}");
 
                 Indent(stringBuilder, indentLevel);
                 stringBuilder.AppendLine($"/// </summary>");
@@ -861,14 +1090,22 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         return modulePath;
     }
 
-    private string MapType(CppType type)
+    private string GetSpanUnsafe(CppCompilation compilation, string value)
     {
-        return MapType(type.GetDisplayName());    
+        var needsCustomMarshalling = false;
+        var cppType = (compilation.FindByName<CppType>($"Elem{value}"));
+
+        if (cppType != null)
+        {
+            needsCustomMarshalling = NeedCustomMarshaller(compilation, cppType);
+        }
+
+        return $"SpanUnsafe<{value}{(needsCustomMarshalling ? "Unsafe" : "")}>";
     }
 
-    private string MapType(string typeName, bool isUnsafe = false)
+    private string MapType(CppCompilation compilation, CppType type, bool isUnsafe = false, bool forInterop = false, bool isReturnValue = false)
     {
-        typeName = typeName.Replace("Elem", string.Empty);
+        var typeName = type.GetDisplayName().Replace("Elem", string.Empty);
 
         return typeName switch
         {
@@ -876,6 +1113,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             "const char*" => !isUnsafe ? "ReadOnlySpan<byte>" : "byte*",
             "unsigned long long" => "UInt64",
             "unsigned int" => "uint",
+            "DataSpan" => !forInterop ? "ReadOnlyMemory<byte>" : "SpanUnsafe<byte>", 
+            string value when value.Contains("Span") && isUnsafe => $"{value.Substring(0, value.IndexOf("Span"))}*",
+            string value when value.Contains("Span") && forInterop => GetSpanUnsafe(compilation, value.Substring(0, value.IndexOf("Span"))),
+            string value when value.Contains("Span") && isReturnValue => $"ReadOnlySpan<{value.Substring(0, value.IndexOf("Span"))}>",
+            string value when value.Contains("Span") => $"ReadOnlyMemory<{value.Substring(0, value.IndexOf("Span"))}>",
             string value when ConstStructPointerRegex().IsMatch(value) => "in " + ConstStructPointerRegex().Match(value).Groups[1].Value,
             string value when value.Contains("HandlerPtr") => typeName.Replace("Ptr", string.Empty),
             _ => typeName

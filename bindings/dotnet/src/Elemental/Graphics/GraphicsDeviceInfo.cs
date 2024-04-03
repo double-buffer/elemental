@@ -1,6 +1,6 @@
 namespace Elemental.Graphics;
 
-public ref struct GraphicsDeviceInfo
+public record struct GraphicsDeviceInfo
 {
     public ReadOnlySpan<byte> DeviceName { get; set; }
 
@@ -21,3 +21,4 @@ internal unsafe struct GraphicsDeviceInfoUnsafe
 
     public UInt64 AvailableMemory { get; set; }
 }
+

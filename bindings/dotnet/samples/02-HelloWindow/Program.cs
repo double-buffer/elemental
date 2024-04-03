@@ -15,6 +15,7 @@ applicationService.RunApplication(application, (status) =>
     if (status == ApplicationStatus.Closing)
     {
         Console.WriteLine("Closing Application...");
+        return false;
     }
 
     var renderSize = applicationService.GetWindowRenderSize(window);

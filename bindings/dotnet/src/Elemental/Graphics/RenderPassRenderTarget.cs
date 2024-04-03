@@ -1,6 +1,6 @@
 namespace Elemental.Graphics;
 
-public ref struct RenderPassRenderTarget
+public record struct RenderPassRenderTarget
 {
     public Texture RenderTarget { get; set; }
 

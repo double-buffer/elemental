@@ -9,3 +9,4 @@ internal unsafe struct CommandQueueOptionsUnsafe
 {
     public byte* DebugName { get; set; }
 }
+

@@ -2,5 +2,11 @@ namespace Elemental.Graphics;
 
 public ref struct BeginRenderPassParameters
 {
-    public RenderPassRenderTargetSpan RenderTargets { get; set; }
+    public ReadOnlyMemory<RenderPassRenderTarget> RenderTargets { get; set; }
 }
+
+internal unsafe struct BeginRenderPassParametersUnsafe
+{
+    public RenderPassRenderTarget* RenderTargets { get; set; }
+}
+

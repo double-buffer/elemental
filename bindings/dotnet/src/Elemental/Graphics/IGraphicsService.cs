@@ -7,7 +7,7 @@ public interface IGraphicsService
 {
     void SetGraphicsOptions(in GraphicsOptions options = default);
 
-    GraphicsDeviceInfoSpan GetAvailableGraphicsDevices();
+    ReadOnlySpan<GraphicsDeviceInfo> GetAvailableGraphicsDevices();
 
     GraphicsDevice CreateGraphicsDevice(in GraphicsDeviceOptions options = default);
 
@@ -25,7 +25,7 @@ public interface IGraphicsService
 
     Fence ExecuteCommandList(CommandQueue commandQueue, CommandList commandList, in ExecuteCommandListOptions options = default);
 
-    Fence ExecuteCommandLists(CommandQueue commandQueue, CommandListSpan commandLists, in ExecuteCommandListOptions options = default);
+    Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlyMemory<CommandList> commandLists, in ExecuteCommandListOptions options = default);
 
     void WaitForFenceOnCpu(Fence fence);
 
@@ -46,13 +46,13 @@ public interface IGraphicsService
 
     void WaitForSwapChainOnCpu(SwapChain swapChain);
 
-    ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, DataSpan shaderLibraryData);
+    ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, ReadOnlyMemory<byte> shaderLibraryData);
 
     void FreeShaderLibrary(ShaderLibrary shaderLibrary);
 
     /// <summary>
     /// TODO: Provide Async compile methods
-TODO: Provide only one generic pipeline creation method?
+///TODO: Provide only one generic pipeline creation method?
     /// </summary>
     PipelineState CompileGraphicsPipelineState(GraphicsDevice graphicsDevice, in GraphicsPipelineStateParameters parameters);
 
@@ -60,12 +60,12 @@ TODO: Provide only one generic pipeline creation method?
 
     /// <summary>
     /// TODO: Get Pipeline State Info (for compiled status etc)
-ElemAPI ElemPipelineState ElemCreateComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters);
-TODO: Enumerate pipeline infos?
+///ElemAPI ElemPipelineState ElemCreateComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters);
+///TODO: Enumerate pipeline infos?
     /// </summary>
     void BindPipelineState(CommandList commandList, PipelineState pipelineState);
 
-    void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, DataSpan data);
+    void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, ReadOnlyMemory<byte> data);
 
     /// <summary>
     /// TODO: Cache functions

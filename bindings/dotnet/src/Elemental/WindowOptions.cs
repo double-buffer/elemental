@@ -36,3 +36,4 @@ internal unsafe struct WindowOptionsUnsafe
 
     public WindowState WindowState { get; set; }
 }
+

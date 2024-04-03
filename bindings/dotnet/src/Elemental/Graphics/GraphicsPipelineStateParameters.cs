@@ -13,7 +13,7 @@ public ref struct GraphicsPipelineStateParameters
 
     public ReadOnlySpan<byte> PixelShaderFunction { get; set; }
 
-    public TextureFormatSpan TextureFormats { get; set; }
+    public ReadOnlyMemory<TextureFormat> TextureFormats { get; set; }
 }
 
 internal unsafe struct GraphicsPipelineStateParametersUnsafe
@@ -26,5 +26,6 @@ internal unsafe struct GraphicsPipelineStateParametersUnsafe
 
     public byte* PixelShaderFunction { get; set; }
 
-    public TextureFormatSpan TextureFormats { get; set; }
+    public TextureFormat* TextureFormats { get; set; }
 }
+

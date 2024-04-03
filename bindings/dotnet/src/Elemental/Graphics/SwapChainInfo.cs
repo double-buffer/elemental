@@ -1,6 +1,6 @@
 namespace Elemental.Graphics;
 
-public ref struct SwapChainInfo
+public record struct SwapChainInfo
 {
     public uint Width { get; set; }
 

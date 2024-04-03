@@ -1,6 +1,6 @@
 namespace Elemental.Graphics;
 
-public ref struct Color
+public record struct Color
 {
     public float Red { get; set; }
 
