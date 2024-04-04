@@ -84,7 +84,7 @@ UTEST(Window, LastWindowClosed)
     // Assert
     ElemFreeApplication(application);
 
-    ASSERT_EQ(0, testLastWindowClosedCounter);
+    ASSERT_EQ(1, testLastWindowClosedCounter);
 }
 
 UTEST(Window, LastWindowClosedWithRemainingWindow) 

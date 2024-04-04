@@ -174,11 +174,14 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
         ProcessEvents(application);
         auto applicationDataFull = GetMacOSApplicationDataFull(application);
         SystemAssert(applicationDataFull);
-        canRun = runHandler(applicationDataFull->Status);
 
         if (applicationDataFull->Status == ElemApplicationStatus_Closing)
         {
             canRun = false;
+        }
+        else
+        {
+            canRun = runHandler(applicationDataFull->Status);
         }
     }
 }

@@ -106,6 +106,7 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     }
 
     commandListData->CommandEncoder = renderCommandEncoder;
+    commandListData->CommandEncoderType = MetalCommandEncoderType_Render;
 }
 
 void MetalEndRenderPass(ElemCommandList commandList)
@@ -115,4 +116,14 @@ void MetalEndRenderPass(ElemCommandList commandList)
 
 void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Render);
+    SystemAssert(commandListData->CommandEncoder);
+
+    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+    renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(32, 1, 1), MTL::Size(32, 1, 1));
 }

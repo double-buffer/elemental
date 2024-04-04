@@ -205,6 +205,7 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
         for (uint32_t j = 0; j < compilationResults.Messages.Length; j++)
         {
             auto compilationMessage = compilationResults.Messages.Items[j];
+            resultMessages[j].Type = compilationMessage.Type;
             resultMessages[j].Message = SystemDuplicateBuffer<char>(stackMemoryArena, compilationMessage.Message).Pointer;
 
             if (compilationMessage.Type == ElemToolsMessageType_Error)

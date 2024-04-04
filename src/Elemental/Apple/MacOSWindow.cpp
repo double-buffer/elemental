@@ -99,11 +99,7 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
     auto windowData = GetMacOSWindowData(window);
-
-    if (!windowData)
-    {
-        return;
-    }
+    SystemAssert(windowData);
 
     auto windowDataFull = GetMacOSWindowDataFull(window);
     SystemAssert(windowDataFull);

@@ -69,4 +69,4 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, ElemLogMessage
  * @param format The format string for the log message.
  * @param ... Additional parameters for formatting the log message.
  */
-#define SystemLogErrorMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, ElemLogMessageType_Error, category, format, format __VA_OPT__(,) __VA_ARGS__)
+#define SystemLogErrorMessage(category, format, ...) SystemCallLogMessageHandler(__FUNCTION__, ElemLogMessageType_Error, category, format __VA_OPT__(,) __VA_ARGS__)

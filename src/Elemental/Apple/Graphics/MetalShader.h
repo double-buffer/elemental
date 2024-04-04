@@ -1,25 +1,25 @@
 #pragma once
 
 #include "Elemental.h"
+#include "SystemSpan.h"
 
 struct MetalShaderLibraryData
 {
-};
-
-struct MetalShaderLibraryDataFull
-{
+    NS::SharedPtr<MTL::Library> MetalLibrary;
+    Span<NS::SharedPtr<MTL::Library>> GraphicsShaders;
 };
 
 struct MetalPipelineStateData
 {
+    NS::SharedPtr<MTL::RenderPipelineState> RenderPipelineState;
 };
 
 struct MetalPipelineStateDataFull
 {
+    uint32_t reserved;
 };
 
 MetalShaderLibraryData* GetMetalShaderLibraryData(ElemShaderLibrary shaderLibrary);
-MetalShaderLibraryDataFull* GetMetalShaderLibraryDataFull(ElemTexture shaderLibrary);
 
 MetalPipelineStateData* GetMetalPipelineStateData(ElemPipelineState pipelineState);
 MetalPipelineStateDataFull* GetMetalPipelineStateDataFull(ElemPipelineState pipelineState);

@@ -4,7 +4,6 @@ Span<uint8_t> CombineShaderParts(MemoryArena memoryArena, ReadOnlySpan<ShaderPar
 {
     // TODO: Embed shader type
     // TODO: Copy buffer in case of lib
-    // BUG: Problem on macos, we still have an issue with stack memory arena and data to clear
 
     // HACK: This is normally temporary. In the future, DX12 should be able to manage only DXIL libs for programs
     if (shaderParts.Length > 1)
