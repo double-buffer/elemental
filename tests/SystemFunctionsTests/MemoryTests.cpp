@@ -124,15 +124,30 @@ UTEST(Memory, StackMemoryArena)
             SystemPushMemory(stackMemoryArena3, 50000);
             string5 = SystemConcatBuffers<char>(stackMemoryArena1, "Test4", "Stack1");
             SystemPushMemory(stackMemoryArena2, 10000);
+
+            {
+                auto stackMemoryArena5 = SystemGetStackMemoryArena();
+
+                SystemPushMemory(stackMemoryArena5, 2000);
+
+                {
+                    auto stackMemoryArena6 = SystemGetStackMemoryArena();
+
+                    SystemPushMemory(stackMemoryArena5, 2000);
+                    SystemPushMemory(stackMemoryArena2, 2000);
+                    SystemPushMemory(stackMemoryArena2, 50000);
+                }
+            }
         }
 
-        SystemPushMemory(stackMemoryArena2, 40000);
-        
         {
             auto stackMemoryArena4 = SystemGetStackMemoryArena();
         }
+
+        SystemPushMemory(stackMemoryArena2, 15000);
     }
 
+    SystemPushMemory(stackMemoryArena1, 400);
     auto string4 = SystemConcatBuffers<char>(stackMemoryArena1, "Test3", "Stack1");
 
     // Assert

@@ -200,7 +200,6 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
         auto compilerStep = compilerSteps[i];
         auto compilationResults = compilerStep.ShaderCompiler->CompileShaderFunction(stackMemoryArena, stepSourceData, compilerStep.OutputLanguage, graphicsApi, options);
 
-        // TODO: Now we have fixed the stack allocator we have this problem
         auto resultMessages = SystemPushArray<ElemToolsMessage>(stackMemoryArena, compilationResults.Messages.Length);
 
         for (uint32_t j = 0; j < compilationResults.Messages.Length; j++)

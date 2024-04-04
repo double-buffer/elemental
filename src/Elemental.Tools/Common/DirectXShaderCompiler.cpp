@@ -23,8 +23,6 @@ bool ProcessDirectXShaderCompilerLogOutput(MemoryArena memoryArena, ComPtr<IDxcR
 {
     auto hasErrors = false;
 
-    // TODO: We cannot use the normal string find methods here because we work directly in UTF8
-
     ComPtr<IDxcBlobUtf8> pErrors;
     AssertIfFailed(compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr));
 
