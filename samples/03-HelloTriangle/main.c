@@ -88,11 +88,6 @@ int main(int argc, const char* argv[])
 
 bool RunHandler(ElemApplicationStatus status)
 {
-    if (status == ElemApplicationStatus_Closing)
-    {
-        return false;
-    }
-
     SampleStartFrameMeasurement();
     ElemWaitForSwapChainOnCpu(globalSwapChain);
 

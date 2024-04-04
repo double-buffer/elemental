@@ -51,7 +51,7 @@ ElemWindow testLastWindowClosedWindow = 0;
 bool testLastWindowDestroyed = false;
 int32_t testLastWindowClosedCounter = 0;
 
-bool TestLastWindowCLosedRunHandler(ElemApplicationStatus status)
+bool TestLastWindowClosedRunHandler(ElemApplicationStatus status)
 {
     testLastWindowClosedCounter++;
 
@@ -79,12 +79,12 @@ UTEST(Window, LastWindowClosed)
     testLastWindowClosedWindow = ElemCreateWindow(application, nullptr); 
 
     // Act
-    ElemRunApplication(application, TestLastWindowCLosedRunHandler);
+    ElemRunApplication(application, TestLastWindowClosedRunHandler);
 
     // Assert
     ElemFreeApplication(application);
 
-    ASSERT_EQ(1, testLastWindowClosedCounter);
+    ASSERT_EQ(0, testLastWindowClosedCounter);
 }
 
 UTEST(Window, LastWindowClosedWithRemainingWindow) 
@@ -98,7 +98,7 @@ UTEST(Window, LastWindowClosedWithRemainingWindow)
     auto testWindow = ElemCreateWindow(application, nullptr); 
 
     // Act
-    ElemRunApplication(application, TestLastWindowCLosedRunHandler);
+    ElemRunApplication(application, TestLastWindowClosedRunHandler);
 
     // Assert
     ElemFreeWindow(testWindow);
