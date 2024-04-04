@@ -93,11 +93,13 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
         auto applicationDataFull = GetWin32ApplicationDataFull(application);
         SystemAssert(applicationDataFull);
 
-        canRun = runHandler(applicationDataFull->Status);
-
         if (applicationDataFull->Status == ElemApplicationStatus_Closing)
         {
             canRun = false;
+        }
+        else
+        {
+            canRun = runHandler(applicationDataFull->Status);
         }
     }
 }

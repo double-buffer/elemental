@@ -81,12 +81,13 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         };
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
+        // See: https://github.com/TheRealMJP/MemPoolTest/blob/8d7a5b9af5e6f1fe4ff3a35ba51aeb7924183ae2/SampleFramework12/v1.04/Graphics/GraphicsTypes.h#L461
         if (textureData->IsPresentTexture)
         {
             D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
             renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
             renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
-            renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_COMMON;
+            renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
             renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
             renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
             renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
@@ -151,11 +152,11 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
         {
             D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
             renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_RENDER_TARGET;
-            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_COMMON;
+            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
             renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
             renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_PRESENT;
             renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_RENDER_TARGET;
-            renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
+            renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_NONE;
             renderTargetBarrier.pResource = textureData->DeviceObject.Get();
 
             D3D12_BARRIER_GROUP textureBarriersGroup;

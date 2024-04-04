@@ -223,11 +223,7 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
     auto windowData = GetWin32WindowData(window);
-
-    if (!windowData)
-    {
-        return;
-    }
+    SystemAssert(windowData);
 
     auto windowDataFull = GetWin32WindowDataFull(window);
     SystemAssert(windowDataFull);
