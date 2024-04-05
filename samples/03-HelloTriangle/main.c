@@ -19,13 +19,12 @@ static ShaderParameters globalShaderParameters;
 
 bool RunHandler(ElemApplicationStatus status);
 
-ElemShaderLibrary CompileShader(ElemGraphicsDevice graphicsDevice, const char* programPath, const char* shaderPath)
+ElemShaderLibrary CompileShaderLibrary(ElemGraphicsDevice graphicsDevice, const char* programPath, const char* shaderPath)
 {
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
     char* shaderSource = SampleReadFileToString(programPath, shaderPath);
     ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
-    //ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(ElemToolsGraphicsApi_Metal, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
     ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
 
     for (uint32_t i = 0; i < compilationResult.Messages.Length; i++)
@@ -63,7 +62,7 @@ int main(int argc, const char* argv[])
     globalSwapChain = ElemCreateSwapChain(globalCommandQueue, globalWindow, &(ElemSwapChainOptions) { });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(globalSwapChain);
 
-    ElemShaderLibrary shaderLibrary = CompileShader(globalGraphicsDevice, argv[0], "Data/Triangle.hlsl");
+    ElemShaderLibrary shaderLibrary = CompileShaderLibrary(globalGraphicsDevice, argv[0], "Data/Triangle.hlsl");
 
     globalGraphicsPipeline = ElemCompileGraphicsPipelineState(globalGraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "Test PSO",
@@ -83,6 +82,7 @@ int main(int argc, const char* argv[])
     ElemFreeGraphicsDevice(globalGraphicsDevice);
     ElemFreeApplication(application);
 
+    printf("Exit Sample\n");
     return 0;
 }
 

@@ -123,7 +123,6 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
         auto dataSpan = Span<uint8_t>((uint8_t*)shaderCode.Pointer, shaderCode.Length);
         auto shaderCount = *(uint32_t*)dataSpan.Pointer;
         dataSpan = dataSpan.Slice(sizeof(uint32_t));
-        printf("Graphics LIB %d\n", shaderCount);
 
         // HACK: For dx the first one is the lib, we need to refactor this
         auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, shaderCount + 1);
@@ -176,11 +175,7 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
                 shaderType = ShaderType_Pixel;
             }
 
-            printf("Result: %d\n", result);
-
             size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
-            printf("Bytecodesize = %lu\n", metallibSize);
-
             auto shaderByteCode = SystemPushArray<uint8_t>(stackMemoryArena, metallibSize); 
             IRMetalLibGetBytecode(pMetallib, shaderByteCode.Pointer);
 

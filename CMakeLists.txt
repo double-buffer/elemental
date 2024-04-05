@@ -7,6 +7,12 @@ if(WIN32)
     
     add_compile_options(/W4)
 else()
+    if(BUILD_FOR_IOS)
+        set(CMAKE_SYSTEM_NAME iOS)
+        # set(CMAKE_OSX_SYSROOT iphoneos)
+        set(CMAKE_OSX_SYSROOT iphonesimulator)
+    endif()
+
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
@@ -39,14 +45,24 @@ include(functions)
 add_subdirectory(external)
 add_subdirectory(src/Elemental/Common)
 add_subdirectory(src/Elemental)
+    
+if(NOT BUILD_FOR_IOS)
 add_subdirectory(src/Elemental.Tools)
+endif()
 
 add_subdirectory(tests/SystemFunctionsTests)
 add_subdirectory(tests/ApplicationTests)
 add_subdirectory(tests/GraphicsTests)
+
+if(NOT BUILD_FOR_IOS)
 add_subdirectory(tests/ToolsTests)
+endif()
 
 # TODO: Use a sub cmakefile?
 add_subdirectory(samples/01-HelloWorld)
 add_subdirectory(samples/02-HelloWindow)
+
+# TODO: Temporary
+if(NOT BUILD_FOR_IOS)
 add_subdirectory(samples/03-HelloTriangle)
+endif()

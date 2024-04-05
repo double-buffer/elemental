@@ -6,6 +6,7 @@ auto hlslTestSource = "struct PSInput \
 	float4 color : COLOR; \
 }; \
 \
+[shader(\"pixel\")]\
 float4 PSMain(PSInput input) : SV_TARGET \
 {\
 	return input.color;\
@@ -16,6 +17,7 @@ auto hlslTestSourceError = "struct PSInput \
 	float4 color : COLOR; \
 }; \
 ERRRORRRRCODE\
+[shader(""pixel"")]\
 float4 PSMain(PSInput input) : SV_TARGET \
 {\
 	return input.color;\

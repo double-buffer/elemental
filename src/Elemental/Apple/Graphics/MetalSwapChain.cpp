@@ -2,9 +2,14 @@
 #include "MetalCommandList.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalTexture.h"
-#include "../MacOSWindow.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
+
+#if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+#include "../MacOSWindow.h"
+#else
+#include "../UIKitWindow.h"
+#endif
 
 #define METAL_MAX_SWAPCHAINS 10u
 
@@ -38,12 +43,16 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandQueueDataFull->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
+    #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
-    
-    // TODO: Code dependent on MacOS.
+
     auto metalLayer = NS::TransferPtr(CA::MetalLayer::layer());
     windowData->WindowHandle->contentView()->setLayer(metalLayer.get());
+    #else
+    auto windowData = GetUIKitWindowData(window);
+    SystemAssert(windowData);
+    #endif
 
     auto windowRenderSize = ElemGetWindowRenderSize(window);
     auto width = windowRenderSize.Width;

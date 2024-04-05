@@ -17,5 +17,10 @@ elseif(APPLE)
     target_compile_options(SystemFunctionsTests PRIVATE -fms-extensions -fno-objc-arc)
 
     target_compile_definitions(SystemFunctionsTests PRIVATE __BLOCKS__)
-    target_link_options(SystemFunctionsTests PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
+
+    if(BUILD_FOR_IOS)
+        target_link_options(SystemFunctionsTests PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework UIKit" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
+    else()
+        target_link_options(SystemFunctionsTests PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
+    endif()
 endif()

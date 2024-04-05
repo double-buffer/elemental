@@ -21,12 +21,6 @@ const char* GetWindowStateLabel(ElemWindowState state)
 
 bool RunHandler(ElemApplicationStatus status)
 {
-    if (status == ElemApplicationStatus_Closing)
-    {
-        printf("Closing Application...\n");
-        return false;
-    }
-
     ElemWindowSize renderSize = ElemGetWindowRenderSize(globalWindow);
 
     char temp[255];
@@ -52,5 +46,6 @@ int main(void)
     ElemRunApplication(application, RunHandler);
     ElemFreeApplication(application);
 
+    printf("Application ended\n");
     return 0;
 }

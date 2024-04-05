@@ -29,9 +29,9 @@ Span<uint8_t> CombineShaderParts(MemoryArena memoryArena, ReadOnlySpan<ShaderPar
             currentOffset += shaderParts[i].ShaderCode.Length;
         }
 
-        printf("GraphicsShader!\n");
-
         return outputShaderData;
     }
+
+    printf("Error: Cannot compile a lib for the moment\n");
     return {};
 }

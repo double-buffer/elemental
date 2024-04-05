@@ -19,7 +19,7 @@ void InitDirectXShaderCompiler()
     }
 }
 
-bool ProcessDirectXShaderCompilerLogOutput(MemoryArena memoryArena, ComPtr<IDxcResult> compileResult, Span<ElemToolsMessage> messages, uint32_t* messageIndex)
+bool ProcessDirectXShaderCompilerLogOutput(MemoryArena memoryArena, ComPtr<IDxcResult> compileResult, ElemToolsGraphicsApi targetGraphicsApi, Span<ElemToolsMessage> messages, uint32_t* messageIndex)
 {
     auto hasErrors = false;
 
@@ -35,7 +35,7 @@ bool ProcessDirectXShaderCompilerLogOutput(MemoryArena memoryArena, ComPtr<IDxcR
             auto currentLogType = ElemToolsMessageType_Information;
             auto line = SystemDuplicateBuffer(memoryArena, lines[i]);
 
-            if (line.Length == 0)
+            if (line.Length == 0 || (targetGraphicsApi != ElemToolsGraphicsApi_DirectX12 && SystemFindSubString(line, "DXIL signing library") != -1))
             {
                 continue;
             }
@@ -185,7 +185,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
     auto compilationMessageIndex = 0u;
 
     ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_8", "", options);
-    auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, compilationMessages, &compilationMessageIndex);
+    auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
 
     auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, 64);
     auto outputShaderDataListIndex = 0u;
@@ -228,12 +228,11 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
             functionReflection->GetDesc(&functionDescription);
 
             auto shaderType = GetVersionShaderType(functionDescription.Version);
-            printf("Function %s (%u)\n", functionDescription.Name, shaderType);
 
             if (shaderType == DxilShaderKind::Mesh || shaderType == DxilShaderKind::Pixel)
             {
                 ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(shaderType), functionDescription.Name, options);
-                hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, compilationMessages, &compilationMessageIndex);
+                hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
 
                 ComPtr<IDxcBlob> shaderByteCodeComPtr;
                 AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
@@ -249,7 +248,12 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
         }
     } 
     
-    auto outputShaderData = CombineShaderParts(memoryArena, outputShaderDataList.Slice(0, outputShaderDataListIndex)); 
+    auto outputShaderData = Span<uint8_t>();
+
+    if (!hasErrors)
+    {
+        outputShaderData = CombineShaderParts(memoryArena, outputShaderDataList.Slice(0, outputShaderDataListIndex)); 
+    }
 
     return 
     {

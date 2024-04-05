@@ -67,6 +67,8 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
         NS::BackingStoreBuffered,
         false ));
 
+
+
     windowHandle->setTitle(NS::String::string(title, NS::StringEncoding::UTF8StringEncoding));
     windowHandle->center();
     windowHandle->makeKeyAndOrderFront(nullptr);
