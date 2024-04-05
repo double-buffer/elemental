@@ -7,9 +7,6 @@
 [submodule "external/DirectX-Headers"]
 	path = external/DirectX-Headers
 	url = https://github.com/microsoft/DirectX-Headers.git
-[submodule "external/metal-cpp"]
-	path = external/metal-cpp
-	url = https://github.com/bkaradzic/metal-cpp.git
 [submodule "external/xxHash"]
 	path = external/xxHash
 	url = https://github.com/Cyan4973/xxHash
