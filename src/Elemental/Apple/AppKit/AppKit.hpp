@@ -27,7 +27,6 @@
 
 #include <Foundation/Foundation.hpp>
 #include "AppKitPrivate.hpp"
-#include "RunLoopMode.hpp"
 #include "NSEvent.hpp"
 #include "NSScreen.hpp"
 #include "NSApplication.hpp"

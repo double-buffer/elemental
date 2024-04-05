@@ -13,3 +13,6 @@
 [submodule "external/utest"]
 	path = external/utest
 	url = https://github.com/sheredom/utest.h.git
+[submodule "external/metalcpp"]
+	path = external/metalcpp
+	url = https://github.com/MattGuerrette/metalcpp.git

@@ -43,7 +43,7 @@ void ProcessEvents(ElemApplication application)
         auto applicationDataFull = GetMacOSApplicationDataFull(application);
         SystemAssert(applicationDataFull);
 
-        rawEvent = NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode(), true);
+        rawEvent = NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode, true);
 
         if (rawEvent)
         {

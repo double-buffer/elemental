@@ -163,7 +163,7 @@ target_include_directories(vulkan_headers INTERFACE ./Vulkan-Headers/include/)
 #=======================================================================
 if(APPLE)
     add_library(metal_cpp INTERFACE)
-    target_include_directories(metal_cpp INTERFACE ./metal-cpp/)
+    target_include_directories(metal_cpp INTERFACE ./metalcpp/)
 endif()
 
 #=======================================================================
