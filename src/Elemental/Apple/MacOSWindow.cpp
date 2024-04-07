@@ -67,28 +67,26 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
         NS::BackingStoreBuffered,
         false ));
 
-
-
     windowHandle->setTitle(NS::String::string(title, NS::StringEncoding::UTF8StringEncoding));
-    windowHandle->center();
+    //windowHandle->center();
     windowHandle->makeKeyAndOrderFront(nullptr);
 
-    auto applicationDataFull = GetMacOSApplicationDataFull(application);
-    SystemAssertReturnNullHandle(applicationDataFull);
-    applicationDataFull->WindowCount++;
+    //auto applicationDataFull = GetMacOSApplicationDataFull(application);
+    //SystemAssertReturnNullHandle(applicationDataFull);
+    //applicationDataFull->WindowCount++;
 
     auto handle = SystemAddDataPoolItem(windowDataPool, {
         .WindowHandle = windowHandle
     }); 
     
-    auto windowDelegate = new MacOSWindowDelegate(handle);
-    windowHandle->setDelegate(windowDelegate);
+    //auto windowDelegate = new MacOSWindowDelegate(handle);
+    //windowHandle->setDelegate(windowDelegate);
 
     SystemAddDataPoolItemFull(windowDataPool, handle, {
         .Width = (uint32_t)width,
         .Height = (uint32_t)height,
         .UIScale = 1.0f,
-        .WindowDelegate = windowDelegate,
+        //.WindowDelegate = windowDelegate,
         .Application = application,
         .ClosingCalled = false
     });
@@ -129,7 +127,7 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 {
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
-
+/*
     auto contentView = windowData->WindowHandle->contentView();
     auto screen = windowData->WindowHandle->screen();
 
@@ -153,7 +151,12 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     else if (windowData->WindowHandle->zoomed())
     {
         windowState = ElemWindowState_Maximized;
-    }
+    }*/
+
+    auto width = 400u;
+    auto height = 300u;
+    auto mainScreenScaling = 1.0;
+    auto windowState = ElemWindowState_Normal;
 
     return
     {
@@ -176,7 +179,7 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
-
+/*
     auto contentView = windowData->WindowHandle->contentView();
     SystemAssert(contentView);
 
@@ -204,9 +207,9 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
     else if (windowState == ElemWindowState_Minimized && !windowData->WindowHandle->miniaturized())
     {
         windowData->WindowHandle->miniaturize(nullptr);
-    }
+    }*/
 }
-
+/*
 MacOSWindowDelegate::MacOSWindowDelegate(ElemWindow window)
 {
     _window = window;
@@ -228,4 +231,4 @@ void MacOSWindowDelegate::windowWillClose(NS::Notification* pNotification)
     windowDataFull->ClosingCalled = true;
 
     ElemFreeWindow(_window);
-}
+}*/

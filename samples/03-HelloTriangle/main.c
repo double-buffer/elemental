@@ -88,6 +88,7 @@ int main(int argc, const char* argv[])
 
 bool RunHandler(ElemApplicationStatus status)
 {
+    return true;
     SampleStartFrameMeasurement();
     ElemWaitForSwapChainOnCpu(globalSwapChain);
 

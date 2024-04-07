@@ -48,7 +48,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     SystemAssert(windowData);
 
     auto metalLayer = NS::TransferPtr(CA::MetalLayer::layer());
-    windowData->WindowHandle->contentView()->setLayer(metalLayer.get());
+    //windowData->WindowHandle->setContentViewtLayer(metalLayer.get());
     #else
     auto windowData = GetUIKitWindowData(window);
     SystemAssert(windowData);
@@ -90,7 +90,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     metalLayer->setDrawableSize(CGSizeMake(width, height));
     
     auto waitSemaphore = dispatch_semaphore_create(maximumFrameLatency);
-
+/*
     auto handle = SystemAddDataPoolItem(metalSwapChainPool, {
         .DeviceObject = metalLayer,
         .WaitSemaphore = waitSemaphore,
@@ -101,8 +101,90 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     SystemAddDataPoolItemFull(metalSwapChainPool, handle, {
     });
 
+    return handle;*/
+    return {};
+}
+
+ElemSwapChain MetalCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
+{
+    InitMetalSwapChainMemory();
+
+    auto commandQueueDataFull = GetMetalCommandQueueDataFull(commandQueue);
+    SystemAssert(commandQueueDataFull);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandQueueDataFull->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+    
+    auto windowRenderSize = ElemGetWindowRenderSize(window);
+    auto metalView = NS::TransferPtr(MTK::View::alloc()->init(CGRectMake(0, 0, windowRenderSize.Width, windowRenderSize.Height), graphicsDeviceData->Device.get()));
+
+    #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+    auto windowData = GetMacOSWindowData(window);
+    SystemAssert(windowData);
+
+    windowData->WindowHandle->setContentView(metalView.get());
+
+    //auto metalLayer = NS::TransferPtr(CA::MetalLayer::layer());
+    //windowData->WindowHandle->contentView()->setLayer(metalView.get());
+    #else
+    auto windowData = GetUIKitWindowData(window);
+    SystemAssert(windowData);
+    #endif
+
+    auto metalViewDelegate = new MetalViewDelegate(updateHandler, options->UpdatePayload); // TODO: check options
+    metalView->setDelegate(metalViewDelegate);
+
+    auto width = windowRenderSize.Width;
+    auto height = windowRenderSize.Height;
+    auto format = MTL::PixelFormatBGRA8Unorm_sRGB; // TODO: Enumerate compatible formats first
+    auto maximumFrameLatency = 1u;
+ 
+    if (options)
+    {
+        if (options->Width != 0)
+        {
+            width = options->Width;
+        }
+
+        if (options->Height != 0)
+        {
+            height = options->Height;
+        }
+
+        if (options->Format == ElemSwapChainFormat_HighDynamicRange)
+        {
+            format = MTL::PixelFormatBGR10A2Unorm;
+        }
+
+        // TODO: Check boundaries
+        if (options->MaximumFrameLatency != 0)
+        {
+            maximumFrameLatency = options->MaximumFrameLatency;
+        }
+    }
+
+    metalView->setPreferredFramesPerSecond(120); // TODO: Review that
+    metalView->setColorPixelFormat(format);
+    metalView->setClearColor( MTL::ClearColor::Make( 1.0, 1.0, 0.1, 1.0 ) ); // TODO: Temporary
+    metalView->setFramebufferOnly(true);
+
+    //metalView->setDrawableSize(CGSizeMake(width, height));
+
+    auto waitSemaphore = dispatch_semaphore_create(maximumFrameLatency);
+
+    auto handle = SystemAddDataPoolItem(metalSwapChainPool, {
+        .DeviceObject = metalView,
+        .WaitSemaphore = waitSemaphore,
+        .CommandQueue = commandQueue,
+        .GraphicsDevice = commandQueueDataFull->GraphicsDevice
+    }); 
+
+    SystemAddDataPoolItemFull(metalSwapChainPool, handle, {
+    });
+    
     return handle;
 }
+
 
 void MetalFreeSwapChain(ElemSwapChain swapChain)
 {
@@ -200,26 +282,45 @@ void MetalWaitForSwapChainOnCpu(ElemSwapChain swapChain)
     auto swapChainData = GetMetalSwapChainData(swapChain);
     SystemAssert(swapChainData);
 
-    dispatch_semaphore_wait(swapChainData->WaitSemaphore, DISPATCH_TIME_FOREVER);
+    //dispatch_semaphore_wait(swapChainData->WaitSemaphore, DISPATCH_TIME_FOREVER);
 
-    if (swapChainData->BackBufferDrawable)
+   /* if (swapChainData->BackBufferDrawable)
     {
         swapChainData->BackBufferDrawable.reset();
-    }
+    }*/
 
     if (swapChainData->BackBufferTexture)
     {
         MetalFreeTexture(swapChainData->BackBufferTexture);
     }
 
-    auto nextMetalDrawable = NS::RetainPtr(swapChainData->DeviceObject->nextDrawable());
+    auto nextMetalDrawable = NS::RetainPtr(swapChainData->DeviceObject->currentDrawable()); // TODO: Review retain
         
-    if (!nextMetalDrawable.get())
+    //if (!nextMetalDrawable.get())
+    if (!nextMetalDrawable)
     {
         SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Cannot acquire a back buffer.");
         return;
     }
 
     swapChainData->BackBufferDrawable = nextMetalDrawable;
-    swapChainData->BackBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::TransferPtr(swapChainData->BackBufferDrawable->texture()), true);
+    swapChainData->BackBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::RetainPtr(nextMetalDrawable->texture()), true);
+}
+
+int counter = 0;
+    
+MetalViewDelegate::MetalViewDelegate(ElemSwapChainUpdateHandlerPtr updateHandler, void* updatePayload)
+{
+    _updateHandler = updateHandler;
+    _updatePayload = updatePayload;
+}
+
+void MetalViewDelegate::drawInMTKView(MTK::View* pView)
+{
+    printf("DisplayLink %d!\n", counter++);
+
+    if (_updateHandler)
+    {
+        _updateHandler(_updatePayload);
+    }
 }

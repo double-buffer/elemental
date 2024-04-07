@@ -2,6 +2,7 @@
 
 #include "Elemental.h"
 
+/*
 class MacOSWindowDelegate : public NS::WindowDelegate
 {
     public:
@@ -12,7 +13,7 @@ class MacOSWindowDelegate : public NS::WindowDelegate
 
     private:
         ElemWindow _window;
-};
+};*/
 
 struct MacOSWindowData
 {
@@ -24,7 +25,7 @@ struct MacOSWindowDataFull
     uint32_t Width;
     uint32_t Height;
     float_t UIScale;
-    MacOSWindowDelegate* WindowDelegate;
+    //MacOSWindowDelegate* WindowDelegate;
     ElemApplication Application;
     bool ClosingCalled;
 };

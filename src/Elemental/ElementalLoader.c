@@ -27,6 +27,7 @@ typedef struct ElementalFunctions
     ElemApplication (*ElemCreateApplication)(const char*);
     void (*ElemFreeApplication)(ElemApplication);
     void (*ElemRunApplication)(ElemApplication, ElemRunHandlerPtr);
+    void (*ElemRunApplication2)(const ElemRunApplicationParameters*);
     ElemWindow (*ElemCreateWindow)(ElemApplication, const ElemWindowOptions*);
     void (*ElemFreeWindow)(ElemWindow);
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
@@ -45,6 +46,7 @@ typedef struct ElementalFunctions
     ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*);
     void (*ElemWaitForFenceOnCpu)(ElemFence);
     ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*);
+    ElemSwapChain (*ElemCreateSwapChain2)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemResizeSwapChain)(ElemSwapChain, unsigned int, unsigned int);
@@ -111,6 +113,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetElementalFunctionPointer("ElemCreateApplication");
     listElementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetElementalFunctionPointer("ElemFreeApplication");
     listElementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetElementalFunctionPointer("ElemRunApplication");
+    listElementalFunctions.ElemRunApplication2 = (void (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication2");
     listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(ElemApplication, const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
     listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
     listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
@@ -129,6 +132,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandLists");
     listElementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetElementalFunctionPointer("ElemWaitForFenceOnCpu");
     listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
+    listElementalFunctions.ElemCreateSwapChain2 = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain2");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemResizeSwapChain");
@@ -317,6 +321,23 @@ static inline void ElemRunApplication(ElemApplication application, ElemRunHandle
     }
 
     listElementalFunctions.ElemRunApplication(application, runHandler);
+}
+
+static inline void ElemRunApplication2(const ElemRunApplicationParameters* parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemRunApplication2) 
+    {
+        assert(listElementalFunctions.ElemRunApplication2);
+        return;
+    }
+
+    listElementalFunctions.ElemRunApplication2(parameters);
 }
 
 static inline ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
@@ -763,6 +784,37 @@ static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, E
     }
 
     return listElementalFunctions.ElemCreateSwapChain(commandQueue, window, options);
+}
+
+static inline ElemSwapChain ElemCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemSwapChain result = {};
+        #else
+        ElemSwapChain result = (ElemSwapChain){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateSwapChain2) 
+    {
+        assert(listElementalFunctions.ElemCreateSwapChain2);
+
+        #ifdef __cplusplus
+        ElemSwapChain result = {};
+        #else
+        ElemSwapChain result = (ElemSwapChain){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateSwapChain2(commandQueue, window, updateHandler, options);
 }
 
 static inline void ElemFreeSwapChain(ElemSwapChain swapChain)

@@ -33,6 +33,11 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     return ELEM_HANDLE_NULL;
 }
 
+ElemSwapChain VulkanCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
+{
+    return ELEM_HANDLE_NULL;
+}
+
 void VulkanFreeSwapChain(ElemSwapChain swapChain)
 {
 }

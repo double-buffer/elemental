@@ -6,6 +6,11 @@ ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWin
     DispatchReturnGraphicsFunction(CreateSwapChain, commandQueue, window, options);
 }
 
+ElemAPI ElemSwapChain ElemCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
+{
+    DispatchReturnGraphicsFunction(CreateSwapChain2, commandQueue, window, updateHandler, options);
+}
+
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain)
 {
     DispatchGraphicsFunction(FreeSwapChain, swapChain);

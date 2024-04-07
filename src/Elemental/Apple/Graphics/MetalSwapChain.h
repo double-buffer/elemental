@@ -2,9 +2,24 @@
 
 #include "Elemental.h"
 
+// TODO: Find a way to use CA::MetalDisplayLink in metalcpp
+// in order to make if work, we need to be able to override a view in cpp
+
+class MetalViewDelegate : public MTK::ViewDelegate
+{
+    public:
+        MetalViewDelegate(ElemSwapChainUpdateHandlerPtr updateHandler, void* updatePayload);
+        virtual void drawInMTKView(MTK::View* pView) override;
+
+    private:
+        ElemSwapChainUpdateHandlerPtr _updateHandler;
+        void* _updatePayload;
+};
+
+// TODO: Review members
 struct MetalSwapChainData
 {
-    NS::SharedPtr<CA::MetalLayer> DeviceObject;
+    NS::SharedPtr<MTK::View> DeviceObject;
     NS::SharedPtr<CA::MetalDrawable> BackBufferDrawable;
     ElemTexture BackBufferTexture;
     dispatch_semaphore_t WaitSemaphore;
@@ -14,13 +29,14 @@ struct MetalSwapChainData
 
 struct MetalSwapChainDataFull
 {
-    uint32_t reserved;
+    MetalViewDelegate* MetalViewDelegate;
 };
 
 MetalSwapChainData* GetMetalSwapChainData(ElemSwapChain swapChain);
 MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain swapChain);
 
 ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
+ElemSwapChain MetalCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 void MetalFreeSwapChain(ElemSwapChain swapChain);
 ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain);
 void MetalResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);

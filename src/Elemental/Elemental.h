@@ -89,6 +89,16 @@ typedef struct
     uint32_t Length;
 } ElemDataSpan;
 
+typedef void (*ElemApplicationHandlerPtr)(void* payload);
+
+typedef struct
+{
+    const char* ApplicationName;
+    ElemApplicationHandlerPtr InitHandler;
+    ElemApplicationHandlerPtr FreeHandler;
+    void* Payload;
+} ElemRunApplicationParameters;
+
 /**
  * Specifies options for window creation.
  */
@@ -166,6 +176,10 @@ ElemAPI void ElemFreeApplication(ElemApplication application);
  */
 ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler);
 
+ElemAPI void ElemRunApplication2(const ElemRunApplicationParameters* parameters);
+
+// TODO: ExitApplication();
+
 /**
  * Creates a window for an application with specified options.
  *
@@ -220,6 +234,8 @@ typedef ElemHandle ElemSwapChain;
 typedef ElemHandle ElemTexture;
 typedef ElemHandle ElemShaderLibrary;
 typedef ElemHandle ElemPipelineState;
+
+typedef void (*ElemSwapChainUpdateHandlerPtr)(void* payload);
 
 typedef enum
 {
@@ -320,6 +336,7 @@ typedef struct
 
 typedef struct
 {
+    void* UpdatePayload;
     uint32_t Width;
     uint32_t Height;
     ElemSwapChainFormat Format;
@@ -394,6 +411,7 @@ ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 // TODO: ResetCommandAllocation?
 
 ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
+ElemAPI ElemSwapChain ElemCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain);
 ElemAPI void ElemResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
