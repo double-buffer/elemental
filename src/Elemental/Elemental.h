@@ -176,7 +176,7 @@ ElemAPI void ElemFreeApplication(ElemApplication application);
  */
 ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler);
 
-ElemAPI void ElemRunApplication2(const ElemRunApplicationParameters* parameters);
+ElemAPI int32_t ElemRunApplication2(const ElemRunApplicationParameters* parameters);
 
 // TODO: ExitApplication();
 

@@ -121,12 +121,13 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
     ElemWindowSize renderSize = ElemGetWindowRenderSize(window);
 
     char temp[256];
-    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, AvailableMemory=%llu)", 
+    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u@%.1f, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, AvailableMemory=%llu)", 
                         applicationName,
                         fps,
                         frameTime,
                         renderSize.Width,
                         renderSize.Height,
+                        renderSize.UIScale,
                         graphicsDeviceInfo.DeviceName, 
                         SampleGetGraphicsApiLabel(graphicsDeviceInfo.GraphicsApi),
                         graphicsDeviceInfo.AvailableMemory);

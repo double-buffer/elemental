@@ -14,7 +14,6 @@
 #define MTL_PRIVATE_IMPLEMENTATION
 #define MTK_PRIVATE_IMPLEMENTATION
 #include <Metal/Metal.hpp>
-#include <MetalKit/MetalKit.hpp>
 
 #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
 #include "AppKit/AppKit.hpp"
@@ -23,6 +22,7 @@
 #include "UIKit/UIKit.hpp"
 #endif
 
+#include "MetalKit/MetalKit.hpp"
 
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)

@@ -59,6 +59,10 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
                 break;
         }
 
+        if (textureData->DeviceObject.get() == nullptr)
+        {
+            return;
+        }
         renderTargetDescriptor->setTexture(textureData->DeviceObject.get());
         renderTargetDescriptor->setLoadAction(loadAction);
         renderTargetDescriptor->setStoreAction(storeAction); 

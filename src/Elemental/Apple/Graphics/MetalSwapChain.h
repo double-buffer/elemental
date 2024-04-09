@@ -2,9 +2,6 @@
 
 #include "Elemental.h"
 
-// TODO: Find a way to use CA::MetalDisplayLink in metalcpp
-// in order to make if work, we need to be able to override a view in cpp
-
 class MetalViewDelegate : public MTK::ViewDelegate
 {
     public:

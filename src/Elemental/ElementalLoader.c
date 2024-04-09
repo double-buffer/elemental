@@ -27,7 +27,7 @@ typedef struct ElementalFunctions
     ElemApplication (*ElemCreateApplication)(const char*);
     void (*ElemFreeApplication)(ElemApplication);
     void (*ElemRunApplication)(ElemApplication, ElemRunHandlerPtr);
-    void (*ElemRunApplication2)(const ElemRunApplicationParameters*);
+    int (*ElemRunApplication2)(const ElemRunApplicationParameters*);
     ElemWindow (*ElemCreateWindow)(ElemApplication, const ElemWindowOptions*);
     void (*ElemFreeWindow)(ElemWindow);
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
@@ -74,7 +74,12 @@ static bool LoadElementalLibrary(void)
         #if defined(_WIN32)
             libraryElemental = LoadLibrary(L"Elemental.dll");
         #elif __APPLE__
-            libraryElemental = dlopen("libElemental.dylib", RTLD_LAZY);
+            libraryElemental = dlopen("Elemental.framework/Elemental", RTLD_LAZY);
+
+            if (!libraryElemental)
+            {
+                libraryElemental = dlopen("libElemental.dylib", RTLD_LAZY);
+            }
         #else
             libraryElemental = dlopen("libElemental.so", RTLD_LAZY);
         #endif
@@ -113,7 +118,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetElementalFunctionPointer("ElemCreateApplication");
     listElementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetElementalFunctionPointer("ElemFreeApplication");
     listElementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetElementalFunctionPointer("ElemRunApplication");
-    listElementalFunctions.ElemRunApplication2 = (void (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication2");
+    listElementalFunctions.ElemRunApplication2 = (int (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication2");
     listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(ElemApplication, const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
     listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
     listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
@@ -323,21 +328,35 @@ static inline void ElemRunApplication(ElemApplication application, ElemRunHandle
     listElementalFunctions.ElemRunApplication(application, runHandler);
 }
 
-static inline void ElemRunApplication2(const ElemRunApplicationParameters* parameters)
+static inline int ElemRunApplication2(const ElemRunApplicationParameters* parameters)
 {
     if (!LoadElementalFunctionPointers()) 
     {
         assert(libraryElemental);
-        return;
+
+        #ifdef __cplusplus
+        int result = {};
+        #else
+        int result = (int){0};
+        #endif
+
+        return result;
     }
 
     if (!listElementalFunctions.ElemRunApplication2) 
     {
         assert(listElementalFunctions.ElemRunApplication2);
-        return;
+
+        #ifdef __cplusplus
+        int result = {};
+        #else
+        int result = (int){0};
+        #endif
+
+        return result;
     }
 
-    listElementalFunctions.ElemRunApplication2(parameters);
+    return listElementalFunctions.ElemRunApplication2(parameters);
 }
 
 static inline ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)

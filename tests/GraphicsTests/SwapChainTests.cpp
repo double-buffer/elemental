@@ -25,6 +25,5 @@ UTEST(SwapChain, CreateSwapChain)
 }
 
 // TODO: Resize swapchain
-// TODO: Present
-// TODO: Wait for swapchain
+// TODO: Present (If present is not called during update, call it automatically but output a warning)
 // TODO: GetTexture (check width, height, etc)

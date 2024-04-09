@@ -12,7 +12,7 @@ class MacOSApplicationDelegate : public NS::ApplicationDelegate
 	//	virtual void			applicationWillFinishLaunching( Notification* pNotification ) { }
         void applicationDidFinishLaunching(NS::Notification* pNotification) override;
         bool applicationShouldTerminateAfterLastWindowClosed(NS::Application* pSender ) override;
-        //NS::TerminateReply applicationShouldTerminate(NS::Application* pSender) override;
+        NS::TerminateReply applicationShouldTerminate(NS::Application* pSender) override;
 
     private:
         const ElemRunApplicationParameters* _runParameters;

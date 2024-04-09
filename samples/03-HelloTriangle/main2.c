@@ -1,5 +1,5 @@
 #include "Elemental.h"
-#include "ElementalTools.h"
+//#include "ElementalTools.h"
 #include "../Common/SampleUtils.h"
 
 typedef struct
@@ -21,7 +21,7 @@ typedef struct
 } ApplicationPayload;
 
 static ShaderParameters globalShaderParameters;
-
+/*
 ElemShaderLibrary CompileShaderLibrary(ElemGraphicsDevice graphicsDevice, const char* programPath, const char* shaderPath)
 {
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
@@ -41,11 +41,10 @@ ElemShaderLibrary CompileShaderLibrary(ElemGraphicsDevice graphicsDevice, const 
     }
 
     return ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = compilationResult.Data.Items, .Length = compilationResult.Data.Length });
-}
+}*/
 
 void UpdateSwapChain(void* payload)
 {
-    printf("UpdateSwapChain\n");
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
     SampleStartFrameMeasurement();
@@ -77,15 +76,17 @@ void UpdateSwapChain(void* payload)
         }
     });
 
-    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
-    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&globalShaderParameters, .Length = sizeof(ShaderParameters) });
-    ElemDispatchMesh(commandList, 1, 1, 1);
+    //ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
+    //ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&globalShaderParameters, .Length = sizeof(ShaderParameters) });
+    //ElemDispatchMesh(commandList, 1, 1, 1);
 
     ElemEndRenderPass(commandList);
 
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
 
+    // NOTE: Present needs to be called by the client code because with it you can still do cpu work after present
+    // For work before an available swap chain, just increase latency?
     ElemPresentSwapChain(applicationPayload->SwapChain);
 
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
@@ -111,9 +112,9 @@ void InitApplication(void* payload)
     ElemSwapChain swapChain = ElemCreateSwapChain2(commandQueue, window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(swapChain);
 
-    ElemShaderLibrary shaderLibrary = CompileShaderLibrary(graphicsDevice, "/Users/tdecroyere/Projects/elemental/build/bin/Debug/HelloWindow", "Data/Triangle.hlsl");
+   // ElemShaderLibrary shaderLibrary = CompileShaderLibrary(graphicsDevice, "/Users/tdecroyere/Projects/elemental/build/bin/Debug/HelloWindow", "Data/Triangle.hlsl");
 
-    ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    /*ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "Test PSO",
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
@@ -121,14 +122,14 @@ void InitApplication(void* payload)
         .TextureFormats = { .Items = (ElemTextureFormat[]) { swapChainInfo.Format }, .Length = 1 }
     });
     
-    ElemFreeShaderLibrary(shaderLibrary);
+    ElemFreeShaderLibrary(shaderLibrary);*/
 
     applicationPayload->Window = window;
     applicationPayload->CurrentRenderSize = currentRenderSize;
     applicationPayload->GraphicsDevice = graphicsDevice;
     applicationPayload->CommandQueue = commandQueue;
     applicationPayload->SwapChain = swapChain;
-    applicationPayload->GraphicsPipeline = graphicsPipeline;
+    //applicationPayload->GraphicsPipeline = graphicsPipeline;
 }
 
 void FreeApplication(void* payload)

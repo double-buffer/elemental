@@ -68,7 +68,7 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
         false ));
 
     windowHandle->setTitle(NS::String::string(title, NS::StringEncoding::UTF8StringEncoding));
-    //windowHandle->center();
+    windowHandle->center();
     windowHandle->makeKeyAndOrderFront(nullptr);
 
     //auto applicationDataFull = GetMacOSApplicationDataFull(application);
@@ -127,7 +127,7 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 {
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
-/*
+
     auto contentView = windowData->WindowHandle->contentView();
     auto screen = windowData->WindowHandle->screen();
 
@@ -151,13 +151,8 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     else if (windowData->WindowHandle->zoomed())
     {
         windowState = ElemWindowState_Maximized;
-    }*/
-
-    auto width = 400u;
-    auto height = 300u;
-    auto mainScreenScaling = 1.0;
-    auto windowState = ElemWindowState_Normal;
-
+    }
+    
     return
     {
         .Width = width,

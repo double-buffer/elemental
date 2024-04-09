@@ -1,7 +1,7 @@
 if (APPLE)
     if(BUILD_FOR_IOS)
         add_executable(HelloWindow MACOSX_BUNDLE Main.c)
-        set_target_properties(HelloWindow PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist)
+        set_target_properties(HelloWindow PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/iOS/Info.plist)
     else()
         # add_executable(HelloWindow MACOSX_BUNDLE Main.c)
         add_executable(HelloWindow Main.c)

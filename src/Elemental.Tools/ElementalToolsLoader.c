@@ -37,7 +37,12 @@ static bool LoadElementalToolsLibrary(void)
         #if defined(_WIN32)
             libraryElementalTools = LoadLibrary(L"Elemental.Tools.dll");
         #elif __APPLE__
-            libraryElementalTools = dlopen("libElemental.Tools.dylib", RTLD_LAZY);
+            libraryElementalTools = dlopen("Elemental.Tools.framework/Elemental.Tools", RTLD_LAZY);
+
+            if (!libraryElementalTools)
+            {
+                libraryElementalTools = dlopen("libElemental.Tools.dylib", RTLD_LAZY);
+            }
         #else
             libraryElementalTools = dlopen("libElemental.Tools.so", RTLD_LAZY);
         #endif

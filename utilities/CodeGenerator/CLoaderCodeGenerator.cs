@@ -40,7 +40,12 @@ public class CLoaderCodeGenerator : ICodeGenerator
                 #if defined(_WIN32)
                     library##LIBRARY_NAME## = LoadLibrary(L"##DLL_NAME##.dll");
                 #elif __APPLE__
-                    library##LIBRARY_NAME## = dlopen("lib##DLL_NAME##.dylib", RTLD_LAZY);
+                    library##LIBRARY_NAME## = dlopen("##DLL_NAME##.framework/##DLL_NAME##", RTLD_LAZY);
+
+                    if (!library##LIBRARY_NAME##)
+                    {
+                        library##LIBRARY_NAME## = dlopen("lib##DLL_NAME##.dylib", RTLD_LAZY);
+                    }
                 #else
                     library##LIBRARY_NAME## = dlopen("lib##DLL_NAME##.so", RTLD_LAZY);
                 #endif

@@ -9,8 +9,7 @@ if(WIN32)
 else()
     if(BUILD_FOR_IOS)
         set(CMAKE_SYSTEM_NAME iOS)
-        # set(CMAKE_OSX_SYSROOT iphoneos)
-        set(CMAKE_OSX_SYSROOT iphonesimulator)
+        set(CMAKE_OSX_SYSROOT iphoneos)
     endif()
 
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -30,9 +29,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# TODO: MacOS specific
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_NAME_DIR "@rpath")
-set(CMAKE_INSTALL_RPATH "@executable_path")
+set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../Frameworks;@executable_path/Frameworks")
 
 project(Elemental LANGUAGES C CXX)
 
@@ -61,8 +61,5 @@ endif()
 # TODO: Use a sub cmakefile?
 add_subdirectory(samples/01-HelloWorld)
 add_subdirectory(samples/02-HelloWindow)
-
-# TODO: Temporary
-if(NOT BUILD_FOR_IOS)
 add_subdirectory(samples/03-HelloTriangle)
-endif()
+

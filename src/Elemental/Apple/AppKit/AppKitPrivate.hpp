@@ -142,6 +142,9 @@ _APPKIT_PRIVATE_DEF_SEL( separatorItem,
 _APPKIT_PRIVATE_DEF_SEL( terminate_,
 						"terminate:" );
 
+_APPKIT_PRIVATE_DEF_SEL( stop_,
+						"stop:" );
+
 _APPKIT_PRIVATE_DEF_SEL( orderFrontStandardAboutPanel_,
 						"orderFrontStandardAboutPanel:" );
 

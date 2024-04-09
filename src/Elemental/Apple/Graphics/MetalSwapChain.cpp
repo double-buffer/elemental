@@ -50,6 +50,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     auto metalLayer = NS::TransferPtr(CA::MetalLayer::layer());
     //windowData->WindowHandle->setContentViewtLayer(metalLayer.get());
     #else
+    auto metalLayer = NS::TransferPtr(CA::MetalLayer::layer());
     auto windowData = GetUIKitWindowData(window);
     SystemAssert(windowData);
     #endif
@@ -118,19 +119,24 @@ ElemSwapChain MetalCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow wi
     auto windowRenderSize = ElemGetWindowRenderSize(window);
     auto metalView = NS::TransferPtr(MTK::View::alloc()->init(CGRectMake(0, 0, windowRenderSize.Width, windowRenderSize.Height), graphicsDeviceData->Device.get()));
 
+    // TODO: Rename that to getapplewindowdata so we can have only one path?
     #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
 
     windowData->WindowHandle->setContentView(metalView.get());
-
-    //auto metalLayer = NS::TransferPtr(CA::MetalLayer::layer());
-    //windowData->WindowHandle->contentView()->setLayer(metalView.get());
     #else
     auto windowData = GetUIKitWindowData(window);
     SystemAssert(windowData);
+
+    auto uiView = (UI::View*)metalView.get();
+    uiView->setAutoresizingMask(UI::ViewAutoresizingFlexibleWidth | UI::ViewAutoresizingFlexibleHeight);
+    windowData->ViewController->view()->addSubview(uiView);
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale);
     #endif
 
+    // TODO: Remove new
     auto metalViewDelegate = new MetalViewDelegate(updateHandler, options->UpdatePayload); // TODO: check options
     metalView->setDelegate(metalViewDelegate);
 
@@ -165,10 +171,8 @@ ElemSwapChain MetalCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow wi
 
     metalView->setPreferredFramesPerSecond(120); // TODO: Review that
     metalView->setColorPixelFormat(format);
-    metalView->setClearColor( MTL::ClearColor::Make( 1.0, 1.0, 0.1, 1.0 ) ); // TODO: Temporary
     metalView->setFramebufferOnly(true);
-
-    //metalView->setDrawableSize(CGSizeMake(width, height));
+    metalView->setDrawableSize(CGSizeMake(width, height));
 
     auto waitSemaphore = dispatch_semaphore_create(maximumFrameLatency);
 
@@ -307,8 +311,6 @@ void MetalWaitForSwapChainOnCpu(ElemSwapChain swapChain)
     swapChainData->BackBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::RetainPtr(nextMetalDrawable->texture()), true);
 }
 
-int counter = 0;
-    
 MetalViewDelegate::MetalViewDelegate(ElemSwapChainUpdateHandlerPtr updateHandler, void* updatePayload)
 {
     _updateHandler = updateHandler;
@@ -317,8 +319,6 @@ MetalViewDelegate::MetalViewDelegate(ElemSwapChainUpdateHandlerPtr updateHandler
 
 void MetalViewDelegate::drawInMTKView(MTK::View* pView)
 {
-    printf("DisplayLink %d!\n", counter++);
-
     if (_updateHandler)
     {
         _updateHandler(_updatePayload);

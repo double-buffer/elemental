@@ -113,6 +113,8 @@ namespace NS
 
 			void					run();
 
+			void					stop( const Object* pSender );
+
 			void					terminate( const Object* pSender );
 			
 			void					hide( const Object* pSender );
@@ -124,10 +126,6 @@ namespace NS
 			void					orderFrontStandardAboutPanel( const Object* pSender );
 
 			void					finishLaunching();
-
-			class Event*			nextEventMatchingMask(EventMask mask, const NS::Date* expiration, RunLoopMode mode, bool deqFlag);
-
-			void					sendEvent(const class Event* event);
 	};
 
 }
@@ -226,6 +224,11 @@ _NS_INLINE void NS::Application::run()
 	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( run ) );
 }
 
+_NS_INLINE void NS::Application::stop( const Object* pSender )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( stop_ ), pSender );
+}
+
 _NS_INLINE void NS::Application::terminate( const Object* pSender )
 {
 	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( terminate_ ), pSender );
@@ -256,12 +259,3 @@ _NS_INLINE void NS::Application::finishLaunching()
 	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( finishLaunching ) );
 }
 
-_NS_INLINE class NS::Event* NS::Application::nextEventMatchingMask(EventMask mask, const Date* expiration, RunLoopMode mode, bool deqFlag)
-{
-	return Object::sendMessage<Event*>(this, _APPKIT_PRIVATE_SEL(nextEventMatchingMask_untilDate_inMode_dequeue_), mask, expiration, mode, deqFlag);
-}
-
-_NS_INLINE void NS::Application::sendEvent(const Event* event)
-{
-	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( sendEvent_ ), event);
-}

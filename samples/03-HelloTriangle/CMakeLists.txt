@@ -1,14 +1,33 @@
-add_executable(HelloTriangle Main.c)
+#add_executable(HelloTriangle Main.c)
 
-target_link_libraries(HelloTriangle PRIVATE ElementalInterface)
-target_link_libraries(HelloTriangle PRIVATE ElementalToolsInterface)
+#target_link_libraries(HelloTriangle PRIVATE ElementalInterface)
+#target_link_libraries(HelloTriangle PRIVATE ElementalToolsInterface)
+
+if (APPLE)
+    if(BUILD_FOR_IOS)
+        add_executable(HelloTriangle2 MACOSX_BUNDLE Main2.c)
+        set_target_properties(HelloTriangle2 PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/iOS/Info.plist)
+    else()
+        #add_executable(HelloTriangle2 MACOSX_BUNDLE Main2.c)
+        add_executable(HelloTriangle2 Main2.c)
+        target_link_libraries(HelloTriangle2 PRIVATE ElementalToolsInterface)
+        target_link_libraries(HelloTriangle2 PRIVATE Elemental)
+    endif()
+    
+    ## TODO: Find another way to get the framework path
+    set_target_properties(HelloTriangle2 PROPERTIES
+        XCODE_EMBED_FRAMEWORKS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/Elemental.framework"
+        XCODE_EMBED_FRAMEWORKS_CODE_SIGN_ON_COPY		"YES"
+        XCODE_EMBED_FRAMEWORKS_REMOVE_HEADERS_ON_COPY	"YES"
+    )
 
 
-#add_executable(HelloTriangle2 MACOSX_BUNDLE Main2.c)
-add_executable(HelloTriangle2 Main2.c)
+else()
+    add_executable(HelloTriangle2 Main2.c)
+    target_link_libraries(HelloTriangle2 PRIVATE ElementalToolsInterface)
+endif()
 
 target_link_libraries(HelloTriangle2 PRIVATE ElementalInterface)
-target_link_libraries(HelloTriangle2 PRIVATE ElementalToolsInterface)
 
 # TODO: To rework
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Triangle.hlsl

@@ -181,6 +181,7 @@ void SystemPlatformFileDelete(ReadOnlySpan<char> path)
 
 ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnlySpan<char> command)
 {
+    #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
     // TODO: To review
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
@@ -232,6 +233,9 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
     waitpid(pid, nullptr, 0); // Wait for child process to finish
 
     return result;
+    #else
+    return {};
+    #endif
 }
 
 void* SystemPlatformLoadLibrary(ReadOnlySpan<char> libraryName)

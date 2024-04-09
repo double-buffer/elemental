@@ -62,8 +62,8 @@ ElemGraphicsDeviceInfo MetalConstructGraphicsDeviceInfo(const MTL::Device* devic
 
 bool MetalCheckGraphicsDeviceCompatibility(const MTL::Device* device)
 {
-    // TODO: 
-    return device->supportsRaytracing();
+    // TODO: This crash on ios simulator 
+    return true;//device->supportsRaytracing();
 }
 
 MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsDevice)

@@ -3,17 +3,16 @@
 #include "Elemental.h"
 #include "SystemMemory.h"
 
-struct UIKitApplicationData
+class UIKitApplicationDelegate : public UI::ApplicationDelegate
 {
-};
+    public:
+        UIKitApplicationDelegate(const ElemRunApplicationParameters* runParameters);
 
-struct UIKitApplicationDataFull
-{
-    ElemApplicationStatus Status;
-    int32_t WindowCount;
+        bool applicationDidFinishLaunching(UI::Application *pApp, NS::Value *options) override;
+        void applicationWillTerminate(UI::Application *pApp) override;
+
+    private:
+        const ElemRunApplicationParameters* _runParameters;
 };
 
 extern MemoryArena ApplicationMemoryArena;
-
-UIKitApplicationData* GetUIKitApplicationData(ElemApplication application);
-UIKitApplicationDataFull* GetUIKitApplicationDataFull(ElemApplication application);

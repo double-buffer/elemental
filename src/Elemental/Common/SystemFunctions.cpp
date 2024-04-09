@@ -121,7 +121,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char
     bool insideFormat = true;
     size_t elementCount = 0;
 
-    for (size_t i = 0; i < format.Length; i++)
+    for (uint32_t i = 0; i < (uint32_t)format.Length; i++)
     {
         if (insideFormat)
         {
@@ -151,11 +151,11 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto resultParts = SystemPushArray<ReadOnlySpan<char>>(stackMemoryArena, elementCount);
-    size_t startPartIndex = 0;
-    size_t currentPartIndex = 0;
-    size_t finalCount = 0;
+    uint32_t startPartIndex = 0;
+    uint32_t currentPartIndex = 0;
+    uint32_t finalCount = 0;
 
-    for (size_t i = 0; i < format.Length; i++)
+    for (uint32_t i = 0; i < (uint32_t)format.Length; i++)
     {
         if (format[i] == '%')
         {
@@ -204,7 +204,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char
     auto result = SystemPushArrayZero<char>(memoryArena, finalCount);
     auto resultSpan = result;
     
-    for (size_t i = 0; i < resultParts.Length; i++)
+    for (uint32_t i = 0; i < (uint32_t)resultParts.Length; i++)
     {
         SystemCopyBuffer(resultSpan, resultParts[i]);
         resultSpan = resultSpan.Slice(resultParts[i].Length);
@@ -217,7 +217,7 @@ ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena memoryArena, Read
 {
     auto count = 1;
 
-    for (size_t i = 0; i < source.Length; i++)
+    for (uint32_t i = 0; i < (uint32_t)source.Length; i++)
     {
         if (source[i] == separator)
         {
@@ -228,11 +228,11 @@ ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena memoryArena, Read
     auto result = SystemPushArray<ReadOnlySpan<char>>(memoryArena, count);
     auto currentIndex = 0;
 
-    for (int i = 0; i < count; i++)
+    for (uint32_t i = 0; i < (uint32_t)count; i++)
     {
-        auto separatorIndex = source.Length;
+        auto separatorIndex = (uint32_t)source.Length;
 
-        for (size_t j = currentIndex; j < source.Length; j++)
+        for (uint32_t j = currentIndex; j < (uint32_t)source.Length; j++)
         {
             if (source[j] == separator)
             {
@@ -254,7 +254,7 @@ ReadOnlySpan<ReadOnlySpan<char>> SystemSplitString(MemoryArena memoryArena, Read
 
 int64_t SystemLastIndexOf(ReadOnlySpan<char> source, char separator)
 {
-    for (int64_t i = source.Length - 1; i >= 0; i--)
+    for (int32_t i = (uint32_t)source.Length - 1; i >= 0; i--)
     {
         if (source[i] == separator)
         {
@@ -270,7 +270,7 @@ int64_t SystemFindSubString(ReadOnlySpan<char> source, ReadOnlySpan<char> subStr
     int64_t result = -1;
     uint32_t foundCurrentIndex = 0;
 
-    for (size_t i = 0; i < source.Length; i++)
+    for (uint32_t i = 0; i < (uint32_t)source.Length; i++)
     {
         if (foundCurrentIndex >= subString.Length)
         {

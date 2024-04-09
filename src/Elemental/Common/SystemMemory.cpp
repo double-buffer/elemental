@@ -136,14 +136,14 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
         {
             auto offsets = ComputePageSizeLocalOffsets(storage, i, storage, headerSizeInBytes);
 
-            SetPageCommitted(storage, i);
+            SetPageCommitted(storage, (uint32_t)i);
             storage->CommittedPagesCount++;
             storage->PagesInfos[i].MinCommittedOffset = offsets.StartIndex;
             storage->PagesInfos[i].MaxCommittedOffset = offsets.EndIndex;
         }
         else 
         {
-            ClearPageCommitted(storage, i);
+            ClearPageCommitted(storage, (uint32_t)i);
             storage->PagesInfos[i].MinCommittedOffset = systemPageSizeInBytes - 1;
             storage->PagesInfos[i].MaxCommittedOffset = 0;
         }
@@ -307,7 +307,7 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
             SystemAtomicReplace(pageInfos->MaxCommittedOffset, pageInfos->MaxCommittedOffset, pageSizeOffsets.EndIndex > pageInfos->MaxCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MaxCommittedOffset);
         }
 
-        if (!IsPageCommitted(storage, i))
+        if (!IsPageCommitted(storage, (uint32_t)i))
         {
             needToCommit = true;
         }
@@ -327,7 +327,7 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
 
     for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
     {
-        if (!IsPageCommitted(storage, i))
+        if (!IsPageCommitted(storage, (uint32_t)i))
         {
             SystemPlatformCommitMemory((uint8_t*)storage + i * systemPageSizeInBytes, systemPageSizeInBytes);
             
@@ -336,7 +336,7 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
                 SystemPlatformClearMemory((uint8_t*)storage + i * systemPageSizeInBytes, systemPageSizeInBytes);
             }
 
-            SetPageCommitted(storage, i);
+            SetPageCommitted(storage, (uint32_t)i);
             storage->CommittedPagesCount++;
         }
     }
@@ -376,7 +376,7 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
             SystemAtomicReplace(pageInfos->MaxCommittedOffset, pageInfos->MaxCommittedOffset, pageSizeOffsets.EndIndex == pageInfos->MaxCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MaxCommittedOffset);
         }
 
-        if (IsPageCommitted(storage, i) && (int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
+        if (IsPageCommitted(storage, (uint32_t)i) && (int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
         {
             needToDecommit = true;
         }
@@ -396,10 +396,10 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
     {
         auto pageInfos = &storage->PagesInfos[i];
 
-        if (IsPageCommitted(storage, i) && (int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
+        if (IsPageCommitted(storage, (uint32_t)i) && (int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
         {
             SystemPlatformDecommitMemory((uint8_t*)storage + i * systemPageSizeInBytes, systemPageSizeInBytes);
-            ClearPageCommitted(storage, i);
+            ClearPageCommitted(storage, (uint32_t)i);
             storage->CommittedPagesCount--;
         }
     }

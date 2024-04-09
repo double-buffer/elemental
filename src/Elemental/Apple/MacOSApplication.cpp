@@ -63,28 +63,28 @@ void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
 
     auto aboutSelector = NS::MenuItem::registerActionCallback("about", [](void*, SEL, const NS::Object* pSender)
     {
-        ((NS::ApplicationExtensions*)NS::Application::sharedApplication())->orderFrontStandardAboutPanel(nullptr);
+        NS::Application::sharedApplication()->orderFrontStandardAboutPanel(nullptr);
     });
 
     applicationSubMenu->addItem(NS::String::string("About ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), aboutSelector, MTLSTR(""));
-    //applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
     
     auto serviceMenuItem = applicationSubMenu->addItem(MTLSTR("Service"), nullptr, MTLSTR(""));
     auto serviceMenu = NS::RetainPtr(NS::Menu::alloc()->init(MTLSTR("Service")));
     serviceMenuItem->setSubmenu(serviceMenu.get());
 
-    //applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
     
     auto hideSelector = NS::MenuItem::registerActionCallback("appHide", [](void*,SEL,const NS::Object* pSender)
     {
-        ((NS::ApplicationExtensions*)NS::Application::sharedApplication())->hide(pSender);
+        NS::Application::sharedApplication()->hide(pSender);
     });
 
     applicationSubMenu->addItem(NS::String::string("Hide ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), hideSelector, MTLSTR("h"));
     
     auto hideOthersSelector = NS::MenuItem::registerActionCallback("appHideOthers", [](void*,SEL,const NS::Object* pSender)
     {
-        ((NS::ApplicationExtensions*)NS::Application::sharedApplication())->hideOtherApplications(pSender);
+        NS::Application::sharedApplication()->hideOtherApplications(pSender);
     });
 
     auto hideOthersMenuItem = applicationSubMenu->addItem(NS::String::string("Hide Others", UTF8StringEncoding), hideOthersSelector, MTLSTR("h"));
@@ -92,11 +92,11 @@ void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
     
     auto showAllSelector = NS::MenuItem::registerActionCallback("appShowall", [](void*,SEL,const NS::Object* pSender)
     {
-        ((NS::ApplicationExtensions*)NS::Application::sharedApplication())->unhideAllApplications(pSender);
+        NS::Application::sharedApplication()->unhideAllApplications(pSender);
     });
 
     applicationSubMenu->addItem(NS::String::string("Show All", UTF8StringEncoding), showAllSelector, MTLSTR(""));
-    //applicationSubMenu->addItem(NS::MenuItem::separatorItem());
+    applicationSubMenu->addItem(NS::MenuItem::separatorItem());
 
     auto quitSelector = NS::MenuItem::registerActionCallback("appQuit", [](void*,SEL,const NS::Object* pSender)
     {
@@ -104,7 +104,7 @@ void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
     });
 
     applicationSubMenu->addItem(NS::String::string("Quit ", UTF8StringEncoding)->stringByAppendingString(applicationNameString), quitSelector, MTLSTR("q"));
-/*
+
     auto windowMenuItem = NS::RetainPtr(mainMenu->addItem(MTLSTR("WindowMenu"), nullptr, MTLSTR("")));
     auto windowSubMenu = NS::RetainPtr(NS::Menu::alloc()->init(MTLSTR("Window")));
     windowMenuItem->setSubmenu(windowSubMenu.get());
@@ -123,10 +123,10 @@ void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
     });
 
     windowSubMenu->addItem(NS::String::string("Zoom", UTF8StringEncoding), zoomSelector, MTLSTR(""));
-*/
+
     NS::Application::sharedApplication()->setMainMenu(mainMenu.get());
-    //NS::Application::sharedApplication()->setServicesMenu(serviceMenu.get());
-    //NS::Application::sharedApplication()->setWindowsMenu(windowSubMenu.get());
+    NS::Application::sharedApplication()->setServicesMenu(serviceMenu.get());
+    NS::Application::sharedApplication()->setWindowsMenu(windowSubMenu.get());
 }
 
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
@@ -183,7 +183,7 @@ ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr r
     }
 }
 
-ElemAPI void ElemRunApplication2(const ElemRunApplicationParameters* parameters)
+ElemAPI int32_t ElemRunApplication2(const ElemRunApplicationParameters* parameters)
 {
     InitApplicationMemory();
 
@@ -198,7 +198,7 @@ ElemAPI void ElemRunApplication2(const ElemRunApplicationParameters* parameters)
         parameters->FreeHandler(parameters->Payload);
     }
 
-    return;
+    return 0;
 }
 
 ElemAPI void ElemFreeApplication(ElemApplication application)
@@ -219,10 +219,9 @@ MacOSApplicationDelegate::MacOSApplicationDelegate(const ElemRunApplicationParam
 void MacOSApplicationDelegate::applicationDidFinishLaunching(NS::Notification* pNotification)
 {
     auto sharedApplication = NS::Application::sharedApplication();
-    auto sharedApplicationExtensions = (NS::ApplicationExtensions*)NS::Application::sharedApplication();
     sharedApplication->setActivationPolicy(NS::ActivationPolicy::ActivationPolicyRegular);
     sharedApplication->activateIgnoringOtherApps(true);
-    sharedApplicationExtensions->finishLaunching();
+    sharedApplication->finishLaunching();
 
     auto applicationName = "Elemental Application";
 
@@ -243,9 +242,9 @@ bool MacOSApplicationDelegate::applicationShouldTerminateAfterLastWindowClosed(N
 {
     return true;
 }
-/*
+
 NS::TerminateReply MacOSApplicationDelegate::applicationShouldTerminate(NS::Application* pSender) 
 {
-    ((NS::ApplicationExtensions*)NS::Application::sharedApplication())->stop(pSender);
+    NS::Application::sharedApplication()->stop(pSender);
     return NS::TerminateReplyTerminateCancel;
-}*/
+}
