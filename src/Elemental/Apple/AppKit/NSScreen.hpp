@@ -39,6 +39,7 @@ namespace NS
 			CGRect		frame();
 			CGRect		visibleFrame();
 			CGFloat     backingScaleFactor();
+            NS::Integer maximumFramesPerSecond();
 	};
 
 }
@@ -58,3 +59,7 @@ _NS_INLINE CGFloat NS::Screen::backingScaleFactor()
 	return Object::sendMessage<CGFloat>(this, _APPKIT_PRIVATE_SEL(backingScaleFactor));
 }
 
+_NS_INLINE NS::Integer NS::Screen::maximumFramesPerSecond()
+{
+    return Object::sendMessage< NS::Integer >( this, _APPKIT_PRIVATE_SEL( maximumFramesPerSecond ) );
+}

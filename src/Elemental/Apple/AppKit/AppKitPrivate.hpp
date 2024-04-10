@@ -208,6 +208,9 @@ _APPKIT_PRIVATE_DEF_SEL( backingScaleFactor,
 _APPKIT_PRIVATE_DEF_SEL( frame,
 						"frame" );
 
+_APPKIT_PRIVATE_DEF_SEL( maximumFramesPerSecond,
+						"maximumFramesPerSecond" );
+
 _APPKIT_PRIVATE_DEF_SEL( visibleFrame,
 						"visibleFrame" );
 

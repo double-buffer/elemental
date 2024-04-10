@@ -39,7 +39,7 @@ void SampleGetFullPath(char* destination, const char* programPath, const char* p
     #endif
 }
 
-char* SampleReadFileToString(const char* executablePath, const char* filename) 
+ElemDataSpan SampleReadFile(const char* executablePath, const char* filename) 
 {
     char absolutePath[MAX_PATH];
     SampleGetFullPath(absolutePath, executablePath, filename);
@@ -53,13 +53,22 @@ char* SampleReadFileToString(const char* executablePath, const char* filename)
 
     if (file == NULL) 
     {
-        return NULL;
+        return (ElemDataSpan) 
+        {
+            .Items = NULL,
+            .Length = 0
+        };
     }
 
     if (fseek(file, 0, SEEK_END) != 0) 
     {
         fclose(file);
-        return NULL;
+
+        return (ElemDataSpan) 
+        {
+            .Items = NULL,
+            .Length = 0
+        };
     }
 
     long fileSize = ftell(file);
@@ -67,17 +76,27 @@ char* SampleReadFileToString(const char* executablePath, const char* filename)
     if (fileSize == -1) 
     {
         fclose(file);
-        return NULL;
+
+        return (ElemDataSpan) 
+        {
+            .Items = NULL,
+            .Length = 0
+        };
     }
 
     rewind(file);
 
-    char* buffer = (char*)malloc(fileSize + 1);
+    uint8_t* buffer = (uint8_t*)malloc(fileSize + 1);
 
     if (buffer == NULL)
     {
         fclose(file);
-        return NULL;
+
+        return (ElemDataSpan) 
+        {
+            .Items = NULL,
+            .Length = 0
+        };
     }
     
     size_t bytesRead = fread(buffer, 1, fileSize, file);
@@ -86,13 +105,21 @@ char* SampleReadFileToString(const char* executablePath, const char* filename)
     {
         free(buffer);
         fclose(file);
-        return NULL;
+
+        return (ElemDataSpan) 
+        {
+            .Items = NULL,
+            .Length = 0
+        };
     }
 
-    buffer[fileSize] = '\0';
     fclose(file);
 
-    return buffer;
+    return (ElemDataSpan) 
+    {
+        .Items = buffer,
+        .Length = bytesRead
+    };
 }
 
 // -----------------------------------------------------------------------------

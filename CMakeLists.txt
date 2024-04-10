@@ -61,5 +61,10 @@ endif()
 # TODO: Use a sub cmakefile?
 add_subdirectory(samples/01-HelloWorld)
 add_subdirectory(samples/02-HelloWindow)
-add_subdirectory(samples/03-HelloTriangle)
+
+if(NOT BUILD_FOR_IOS)
+    add_subdirectory(samples/03-ShaderCompiler)
+endif()
+
+add_subdirectory(samples/04-HelloTriangle)
 

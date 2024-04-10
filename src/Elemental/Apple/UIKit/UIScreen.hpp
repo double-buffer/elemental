@@ -23,6 +23,7 @@ namespace UI
             struct CGRect nativeBounds();
             CGFloat scale();
             CGFloat nativeScale();
+            NS::Integer maximumFramesPerSecond();
 	};
 }
 
@@ -49,4 +50,9 @@ _NS_INLINE struct CGRect UI::Screen::nativeBounds()
 _NS_INLINE CGFloat UI::Screen::nativeScale()
 {
     return Object::sendMessage< CGFloat >( this, _UI_PRIVATE_SEL( nativeScale ) );
+}
+
+_NS_INLINE NS::Integer UI::Screen::maximumFramesPerSecond()
+{
+    return Object::sendMessage< NS::Integer >( this, _UI_PRIVATE_SEL( maximumFramesPerSecond ) );
 }

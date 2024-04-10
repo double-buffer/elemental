@@ -79,6 +79,9 @@ _UI_PRIVATE_DEF_SEL( nativeBounds,
 _UI_PRIVATE_DEF_SEL( nativeScale,
                     "nativeScale" );
 
+_UI_PRIVATE_DEF_SEL( maximumFramesPerSecond,
+                    "maximumFramesPerSecond" );
+
 _UI_PRIVATE_DEF_SEL( initWithFrame_,
                     "initWithFrame:" );
 

@@ -117,15 +117,17 @@ ElemSwapChain MetalCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow wi
     SystemAssert(graphicsDeviceData);
     
     auto windowRenderSize = ElemGetWindowRenderSize(window);
-    auto metalView = NS::TransferPtr(MTK::View::alloc()->init(CGRectMake(0, 0, windowRenderSize.Width, windowRenderSize.Height), graphicsDeviceData->Device.get()));
 
     // TODO: Rename that to getapplewindowdata so we can have only one path?
     #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+    auto metalView = NS::TransferPtr(MTK::View::alloc()->init(CGRectMake(0, 0, windowRenderSize.Width, windowRenderSize.Height), graphicsDeviceData->Device.get()));
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
-
+    
+    auto refreshRate = windowData->WindowHandle->screen()->maximumFramesPerSecond();
     windowData->WindowHandle->setContentView(metalView.get());
     #else
+    auto metalView = NS::TransferPtr(MTK::View::alloc()->init(CGRectMake(0, 0, windowRenderSize.Width / windowRenderSize.UIScale, windowRenderSize.Height / windowRenderSize.UIScale), graphicsDeviceData->Device.get()));
     auto windowData = GetUIKitWindowData(window);
     SystemAssert(windowData);
 
@@ -133,8 +135,9 @@ ElemSwapChain MetalCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow wi
     uiView->setAutoresizingMask(UI::ViewAutoresizingFlexibleWidth | UI::ViewAutoresizingFlexibleHeight);
     windowData->ViewController->view()->addSubview(uiView);
     
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale);
+    auto refreshRate = UI::Screen::mainScreen()->maximumFramesPerSecond();
     #endif
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f (%dHz)", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale, refreshRate);
 
     // TODO: Remove new
     auto metalViewDelegate = new MetalViewDelegate(updateHandler, options->UpdatePayload); // TODO: check options
@@ -169,7 +172,7 @@ ElemSwapChain MetalCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow wi
         }
     }
 
-    metalView->setPreferredFramesPerSecond(120); // TODO: Review that
+    metalView->setPreferredFramesPerSecond(refreshRate);
     metalView->setColorPixelFormat(format);
     metalView->setFramebufferOnly(true);
     metalView->setDrawableSize(CGSizeMake(width, height));
@@ -218,10 +221,13 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 
 void MetalResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
 {    
-    auto swapChainData = GetMetalSwapChainData(swapChain);
-    SystemAssert(swapChainData);
+    if (width > 0 && height > 0)
+    {
+        auto swapChainData = GetMetalSwapChainData(swapChain);
+        SystemAssert(swapChainData);
 
-    swapChainData->DeviceObject->setDrawableSize(CGSizeMake(width, height));
+        swapChainData->DeviceObject->setDrawableSize(CGSizeMake(width, height));
+    }
 }
 
 ElemTexture MetalGetSwapChainBackBufferTexture(ElemSwapChain swapChain)

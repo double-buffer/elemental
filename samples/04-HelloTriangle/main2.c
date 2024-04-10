@@ -1,5 +1,4 @@
 #include "Elemental.h"
-//#include "ElementalTools.h"
 #include "../Common/SampleUtils.h"
 
 typedef struct
@@ -10,7 +9,8 @@ typedef struct
 
 typedef struct
 {
-    bool UseVulkan;
+    const char* ProgramPath;
+    bool PreferVulkan;
     ElemWindow Window;
     ElemWindowSize CurrentRenderSize;
     ElemGraphicsDevice GraphicsDevice;
@@ -21,27 +21,6 @@ typedef struct
 } ApplicationPayload;
 
 static ShaderParameters globalShaderParameters;
-/*
-ElemShaderLibrary CompileShaderLibrary(ElemGraphicsDevice graphicsDevice, const char* programPath, const char* shaderPath)
-{
-    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
-
-    char* shaderSource = SampleReadFileToString(programPath, shaderPath);
-    ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
-    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
-
-    for (uint32_t i = 0; i < compilationResult.Messages.Length; i++)
-    {
-        printf("Compil msg (%d): %s\n", compilationResult.Messages.Items[i].Type, compilationResult.Messages.Items[i].Message);
-    }
-
-    if (compilationResult.HasErrors)
-    {
-        exit(1);
-    }
-
-    return ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = compilationResult.Data.Items, .Length = compilationResult.Data.Length });
-}*/
 
 void UpdateSwapChain(void* payload)
 {
@@ -49,7 +28,7 @@ void UpdateSwapChain(void* payload)
 
     SampleStartFrameMeasurement();
 
-    // TODO: Remove that
+    // TODO: Remove that? Not sure because maybe we want to have 2 phases, one for inputs and one for rendering
     ElemWaitForSwapChainOnCpu(applicationPayload->SwapChain);
 
     ElemWindowSize renderSize = ElemGetWindowRenderSize(applicationPayload->Window);
@@ -76,9 +55,9 @@ void UpdateSwapChain(void* payload)
         }
     });
 
-    //ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
-    //ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&globalShaderParameters, .Length = sizeof(ShaderParameters) });
-    //ElemDispatchMesh(commandList, 1, 1, 1);
+    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
+    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&globalShaderParameters, .Length = sizeof(ShaderParameters) });
+    ElemDispatchMesh(commandList, 1, 1, 1);
 
     ElemEndRenderPass(commandList);
 
@@ -105,16 +84,18 @@ void InitApplication(void* payload)
     ElemWindow window = ElemCreateWindow(0, NULL);
     ElemWindowSize currentRenderSize = ElemGetWindowRenderSize(window);
 
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->UseVulkan });
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
     ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
 
     ElemCommandQueue commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
     ElemSwapChain swapChain = ElemCreateSwapChain2(commandQueue, window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(swapChain);
 
-   // ElemShaderLibrary shaderLibrary = CompileShaderLibrary(graphicsDevice, "/Users/tdecroyere/Projects/elemental/build/bin/Debug/HelloWindow", "Data/Triangle.hlsl");
+    ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, "Data/Triangle.bin");
+    //ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, "Triangle.bin");
+    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = shaderData.Items, .Length = shaderData.Length });
 
-    /*ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "Test PSO",
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
@@ -122,14 +103,14 @@ void InitApplication(void* payload)
         .TextureFormats = { .Items = (ElemTextureFormat[]) { swapChainInfo.Format }, .Length = 1 }
     });
     
-    ElemFreeShaderLibrary(shaderLibrary);*/
+    ElemFreeShaderLibrary(shaderLibrary);
 
     applicationPayload->Window = window;
     applicationPayload->CurrentRenderSize = currentRenderSize;
     applicationPayload->GraphicsDevice = graphicsDevice;
     applicationPayload->CommandQueue = commandQueue;
     applicationPayload->SwapChain = swapChain;
-    //applicationPayload->GraphicsPipeline = graphicsPipeline;
+    applicationPayload->GraphicsPipeline = graphicsPipeline;
 }
 
 void FreeApplication(void* payload)
@@ -146,19 +127,19 @@ void FreeApplication(void* payload)
 
 int main(int argc, const char* argv[]) 
 {
-    // TODO: Pass app parameters
-    bool useVulkan = false;
+    bool preferVulkan = false;
 
     if (argc > 1 && strcmp(argv[1], "--vulkan") == 0)
     {
-        useVulkan = true;
+        preferVulkan = true;
     }
 
     ElemConfigureLogHandler(ElemConsoleLogHandler);
 
     ApplicationPayload payload =
     {
-        .UseVulkan = useVulkan
+        .ProgramPath = argv[0],
+        .PreferVulkan = preferVulkan
     };
 
     ElemRunApplication2(&(ElemRunApplicationParameters)
@@ -169,5 +150,4 @@ int main(int argc, const char* argv[])
         .Payload = &payload
     });
 }
-
 

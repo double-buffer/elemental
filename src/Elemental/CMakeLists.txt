@@ -18,3 +18,4 @@ copy_platform_dependencies(Elemental)
 
 add_library(ElementalInterface INTERFACE)
 target_include_directories(ElementalInterface INTERFACE .)
+add_dependencies(ElementalInterface Elemental)

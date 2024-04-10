@@ -107,7 +107,7 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
                 }
 
                 SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot create shader library. Error Code: %d => %s", libraryError->code(), errorMessage);
-                return ELEM_HANDLE_NULL;
+                //return ELEM_HANDLE_NULL;
             }
 
             dataSpan = dataSpan.Slice(size);

@@ -75,6 +75,7 @@ typedef struct
     // TODO: Metadata?
 } ElemShaderCompilationResult;
 
+// TODO: Add Target system parameter
 ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi);
 ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
 

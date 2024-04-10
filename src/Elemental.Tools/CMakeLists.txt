@@ -20,3 +20,4 @@ copy_platform_dependencies(Elemental.Tools)
 
 add_library(ElementalToolsInterface INTERFACE)
 target_include_directories(ElementalToolsInterface INTERFACE .)
+add_dependencies(ElementalToolsInterface Elemental.Tools)

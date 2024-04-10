@@ -1,0 +1,2 @@
+add_executable(ShaderCompiler Main.c)
+target_link_libraries(ShaderCompiler PRIVATE ElementalToolsInterface)
