@@ -26,4 +26,4 @@ enum DxilShaderKind
 };
 
 bool DirectXShaderCompilerIsInstalled();
-ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options);
+ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, ElemToolsPlatform targetPlatform,const ElemCompileShaderOptions* options);

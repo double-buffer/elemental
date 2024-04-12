@@ -33,6 +33,13 @@ typedef enum
 
 typedef enum
 {
+    ElemToolsPlatform_Windows = 0,
+    ElemToolsPlatform_MacOS = 1,
+    ElemToolsPlatform_iOS = 2
+} ElemToolsPlatform;
+
+typedef enum
+{
     ElemToolsMessageType_Information = 0,
     ElemToolsMessageType_Warning = 1,
     ElemToolsMessageType_Error = 2,
@@ -76,8 +83,8 @@ typedef struct
 } ElemShaderCompilationResult;
 
 // TODO: Add Target system parameter
-ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi);
-ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
+ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform);
+ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
 
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader

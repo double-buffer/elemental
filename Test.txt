@@ -1,6 +1,0 @@
-cmake -G "Ninja Multi-Config" -B build -S .
-
-cmake -G "Ninja Multi-Config" -B build-ios -S . -DBUILD_FOR_IOS=ON
-
-cmake -G Xcode -B build-ios-xcode -S . -DBUILD_FOR_IOS=ON
-

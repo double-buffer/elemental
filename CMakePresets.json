@@ -1,0 +1,50 @@
+{
+    "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 29,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default Config",
+            "description": "Build for the current platform using ninja",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            },
+            "binaryDir": "${sourceDir}/build"
+        },
+        {
+            "name": "ios",
+            "inherits": "default",
+            "displayName": "iOS Build",
+            "description": "Build iOS with Xcode",
+            "generator": "Xcode",
+            "binaryDir": "${sourceDir}/build-ios",
+            "cacheVariables": {
+                "BUILD_FOR_IOS": "ON",
+                "CMAKE_BUILD_TYPE": null
+            }
+        },
+        {
+            "name": "xcode",
+            "inherits": "default",
+            "displayName": "MacOS XCode Build",
+            "description": "Build MacOS with Xcode",
+            "generator": "Xcode",
+            "binaryDir": "${sourceDir}/build-xcode"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default"
+        },
+        {
+            "name": "ios",
+            "configurePreset": "ios"
+        }
+    ]
+}

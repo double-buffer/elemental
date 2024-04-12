@@ -103,6 +103,7 @@ int main(int argc, const char* argv[])
         printf("\n");
         printf("OPTIONS:\n");
         printf("   --target-api\tTarget API to use: DirectX12, Vulkan, Metal. Default: to the default system target API.\n");
+        printf("   --target-platform\tTarget Platform to use: Windows, MacOS, iOS. Default: to the default system target API.\n");
         printf("\n");
         return 0;
     }
@@ -115,15 +116,39 @@ int main(int argc, const char* argv[])
 
     // TODO: Get extension by default and provide an option
 
-    // TODO: 
+
+    #ifdef _WIN32
+    ElemToolsGraphicsApi targetApi = ElemToolsGraphicsApi_DirectX12;
+    ElemToolsPlatform targetPlatform = ElemToolsPlatform_Windows;
+    #else
     ElemToolsGraphicsApi targetApi = ElemToolsGraphicsApi_Metal;
+    ElemToolsPlatform targetPlatform = ElemToolsPlatform_MacOS;
+    #endif
+
     bool debugMode = false;
+
+    // TODO: Add more checks
+    for (uint32_t i = 1; i < (uint32_t)(argc - 2); i++)
+    {
+        printf("Options: %s\n", argv[i]);
+
+        if (strcmp(argv[i], "--target-platform") == 0)
+        {
+            const char* targetPlatformString = argv[i + 1];
+
+            if (strcmp(targetPlatformString, "iOS") == 0)
+            {
+                targetPlatform = ElemToolsPlatform_iOS;
+                printf("iOS platform\n");
+            }
+        }
+    }
 
     printf("Compiling shader: %s\n", inputPath);
 
     char* shaderSource = ReadFileToString(inputPath);
     ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
-    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(targetApi, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = debugMode });
+    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(targetApi, targetPlatform, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = debugMode });
 
     for (uint32_t i = 0; i < compilationResult.Messages.Length; i++)
     {

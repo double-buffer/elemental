@@ -23,8 +23,8 @@ static int functionPointersLoadedElementalTools = 0;
 
 typedef struct ElementalToolsFunctions 
 {
-    bool (*ElemCanCompileShader)(ElemShaderLanguage, ElemToolsGraphicsApi);
-    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, const ElemShaderSourceData*, const ElemCompileShaderOptions*);
+    bool (*ElemCanCompileShader)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform);
+    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, const ElemShaderSourceData*, const ElemCompileShaderOptions*);
     
 } ElementalToolsFunctions;
 
@@ -77,15 +77,15 @@ static bool LoadElementalToolsFunctionPointers(void)
         return functionPointersLoadedElementalTools;
     }
 
-    listElementalToolsFunctions.ElemCanCompileShader = (bool (*)(ElemShaderLanguage, ElemToolsGraphicsApi))GetElementalToolsFunctionPointer("ElemCanCompileShader");
-    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, const ElemShaderSourceData*, const ElemCompileShaderOptions*))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
+    listElementalToolsFunctions.ElemCanCompileShader = (bool (*)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform))GetElementalToolsFunctionPointer("ElemCanCompileShader");
+    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, const ElemShaderSourceData*, const ElemCompileShaderOptions*))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
     
 
     functionPointersLoadedElementalTools = 1;
     return true;
 }
 
-static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi)
+static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform)
 {
     if (!LoadElementalToolsFunctionPointers()) 
     {
@@ -113,10 +113,10 @@ static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemT
         return result;
     }
 
-    return listElementalToolsFunctions.ElemCanCompileShader(shaderLanguage, graphicsApi);
+    return listElementalToolsFunctions.ElemCanCompileShader(shaderLanguage, graphicsApi, platform);
 }
 
-static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
+static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
 {
     if (!LoadElementalToolsFunctionPointers()) 
     {
@@ -144,5 +144,5 @@ static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGrap
         return result;
     }
 
-    return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, sourceData, options);
+    return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, platform, sourceData, options);
 }

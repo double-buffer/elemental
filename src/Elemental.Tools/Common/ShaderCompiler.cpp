@@ -7,7 +7,7 @@
 // TODO: Put magic numbers into define
 
 typedef bool (*CheckCompilerPtr)();
-typedef ElemShaderCompilationResult (*CompileShaderPtr)(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options);
+typedef ElemShaderCompilationResult (*CompileShaderPtr)(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, ElemToolsPlatform targetPlatform, const ElemCompileShaderOptions* options);
 
 struct ShaderCompiler
 {
@@ -150,7 +150,7 @@ bool FindShaderCompilerChain(ElemShaderLanguage sourceLanguage, ElemShaderLangua
     return false;
 }
 
-ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi)
+ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform)
 {
     InitShaderCompiler();
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -161,7 +161,7 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
     return FindShaderCompilerChain(shaderLanguage, targetLanguage, compilerSteps, &level);
 }
 
-ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
+ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
 {
     SystemAssert(sourceData);
 
@@ -198,7 +198,7 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
     for (uint32_t i = 0; i < level; i++)
     {
         auto compilerStep = compilerSteps[i];
-        auto compilationResults = compilerStep.ShaderCompiler->CompileShaderFunction(stackMemoryArena, stepSourceData, compilerStep.OutputLanguage, graphicsApi, options);
+        auto compilationResults = compilerStep.ShaderCompiler->CompileShaderFunction(stackMemoryArena, stepSourceData, compilerStep.OutputLanguage, graphicsApi, platform, options);
 
         auto resultMessages = SystemPushArray<ElemToolsMessage>(stackMemoryArena, compilationResults.Messages.Length);
 

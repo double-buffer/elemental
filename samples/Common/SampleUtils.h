@@ -11,12 +11,26 @@
 #include <windows.h>
 #endif
 
+#ifdef __APPLE__
+    #include "TargetConditionals.h"
+#endif
+
 // -----------------------------------------------------------------------------
 // I/O Functions
 // -----------------------------------------------------------------------------
+void CopyString(char* destination, uint32_t destinationLength, const char* source, uint32_t sourceLength)
+{
+    #ifdef _WIN32 
+    strncpy_s(destination, destinationLength, source, sourceLength);
+    #else
+    strncpy(destination, source, sourceLength);
+    #endif
+}
 
 void SampleGetFullPath(char* destination, const char* programPath, const char* path)
 {
+    memset(destination, 0, MAX_PATH);
+
     char* pointer = strrchr(programPath, '\\');
 
     if (!pointer)
@@ -24,25 +38,30 @@ void SampleGetFullPath(char* destination, const char* programPath, const char* p
         pointer = strrchr(programPath, '/');
     }
 
-    #ifdef _WIN32 
-    strncpy_s(destination, MAX_PATH, programPath, pointer + 1 - programPath);
+    uint32_t programPathLength = pointer + 1 - programPath;
+    CopyString(destination, MAX_PATH, programPath, programPathLength);
+    pointer = destination + programPathLength;
+
+    #if TARGET_OS_IOS
+    const char* folderPrefix = "./";
+    #elif TARGET_OS_MAC
+    const char* folderPrefix = "../Resources/";
     #else
-    strncpy(destination, programPath, pointer + 1 - programPath);
+    const char* folderPrefix = "Data/";
     #endif
     
-    pointer = destination + (pointer + 1 - programPath);
+    CopyString(pointer, MAX_PATH, folderPrefix, strlen(folderPrefix));
+    pointer = pointer + strlen(folderPrefix);
 
-    #ifdef _WIN32
-    strcpy_s(pointer, MAX_PATH - (pointer - destination), path);
-    #else
-    strcpy(pointer, path);
-    #endif
+    CopyString(pointer, MAX_PATH, path, strlen(path));
 }
 
 ElemDataSpan SampleReadFile(const char* executablePath, const char* filename) 
 {
     char absolutePath[MAX_PATH];
     SampleGetFullPath(absolutePath, executablePath, filename);
+
+    printf("Read path: %s\n", absolutePath);
 
     #ifdef _WIN32
     FILE* file;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.29)
 
 if(WIN32)
     set(CMAKE_SYSTEM_PROCESSOR "x64")

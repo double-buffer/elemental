@@ -56,6 +56,8 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
     
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
+
+    SystemAssert(shaderLibraryData.Length > 0);
     
     NS::SharedPtr<MTL::Library> metalLibrary = {};
     Span<NS::SharedPtr<MTL::Library>> graphicsShaderData = {};
@@ -107,7 +109,7 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
                 }
 
                 SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot create shader library. Error Code: %d => %s", libraryError->code(), errorMessage);
-                //return ELEM_HANDLE_NULL;
+                return ELEM_HANDLE_NULL;
             }
 
             dataSpan = dataSpan.Slice(size);

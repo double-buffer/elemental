@@ -68,16 +68,23 @@ bool MetalShaderConverterIsInstalled()
     return compiler != nullptr;
 }
 
-ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, const ElemCompileShaderOptions* options)
+ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, ElemToolsPlatform targetPlatform, const ElemCompileShaderOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     IRCompiler* pCompiler = IRCompilerCreate();
     IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
 
     IRCompilerSetMinimumGPUFamily(pCompiler, IRGPUFamilyMetal3);
-    //IRCompilerSetMinimumDeploymentTarget(pCompiler, IROperatingSystem_iOS, "17.0.0");
-    IRCompilerSetMinimumDeploymentTarget(pCompiler, IROperatingSystem_macOS, "14.0.0");
-    
+
+    if (targetPlatform == ElemToolsPlatform_iOS)
+    {
+        IRCompilerSetMinimumDeploymentTarget(pCompiler, IROperatingSystem_iOS, "17.0.0");
+    }
+    else
+    {
+        IRCompilerSetMinimumDeploymentTarget(pCompiler, IROperatingSystem_macOS, "14.0.0");
+    }    
+
     auto compilationMessages = SystemPushArray<ElemToolsMessage>(memoryArena, 1024);
     auto compilationMessageIndex = 0u;
     auto hasErrors = false;

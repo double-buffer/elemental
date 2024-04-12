@@ -16,6 +16,11 @@ add_subdirectory(${ELEM_PLATFORM_DIR})
 
 copy_platform_dependencies(Elemental)
 
+add_custom_command(TARGET Elemental POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/file.txt
+    COMMENT "Touching file.txt after building ProjectA"
+
+)
 add_library(ElementalInterface INTERFACE)
 target_include_directories(ElementalInterface INTERFACE .)
 add_dependencies(ElementalInterface Elemental)

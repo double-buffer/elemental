@@ -91,8 +91,7 @@ void InitApplication(void* payload)
     ElemSwapChain swapChain = ElemCreateSwapChain2(commandQueue, window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(swapChain);
 
-    ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, "Data/Triangle.bin");
-    //ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, "Triangle.bin");
+    ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, "Triangle.bin");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = shaderData.Items, .Length = shaderData.Length });
 
     ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {

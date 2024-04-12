@@ -28,7 +28,7 @@ float4 PSMain(PSInput input) : SV_TARGET \
 UTEST(ShaderCompiler, CanCompileShaderTest_HlslToDirectX12) 
 {
     // Act
-    auto result = ElemCanCompileShader(ElemShaderLanguage_Hlsl, ElemToolsGraphicsApi_DirectX12);
+    auto result = ElemCanCompileShader(ElemShaderLanguage_Hlsl, ElemToolsGraphicsApi_DirectX12, ElemToolsPlatform_Windows);
 
     // Assert
     ASSERT_TRUE(result);
@@ -37,7 +37,7 @@ UTEST(ShaderCompiler, CanCompileShaderTest_HlslToDirectX12)
 UTEST(ShaderCompiler, CanCompileShaderTest_HlslToMetal) 
 {
     // Act
-    auto result = ElemCanCompileShader(ElemShaderLanguage_Hlsl, ElemToolsGraphicsApi_Metal);
+    auto result = ElemCanCompileShader(ElemShaderLanguage_Hlsl, ElemToolsGraphicsApi_Metal, ElemToolsPlatform_MacOS);
 
     // Assert
     ASSERT_TRUE(result);
@@ -46,7 +46,7 @@ UTEST(ShaderCompiler, CanCompileShaderTest_HlslToMetal)
 UTEST(ShaderCompiler, CanCompileShaderTest_ImpossibleConfigReturnsFalse) 
 {
     // Act
-    auto result = ElemCanCompileShader(ElemShaderLanguage_Msl, ElemToolsGraphicsApi_DirectX12);
+    auto result = ElemCanCompileShader(ElemShaderLanguage_Msl, ElemToolsGraphicsApi_DirectX12, ElemToolsPlatform_Windows);
 
     // Assert
     ASSERT_FALSE(result);
@@ -56,6 +56,7 @@ struct ShaderCompiler_CompileShader
 {
     ElemShaderLanguage SourceLanguage;
     ElemToolsGraphicsApi TargetGraphicsApi;
+    ElemToolsPlatform TargetPlatform;
     bool WithError;
 };
 
@@ -79,7 +80,7 @@ UTEST_F_TEARDOWN(ShaderCompiler_CompileShader)
         }
     };
 
-    auto compilationResult = ElemCompileShaderLibrary(utest_fixture->TargetGraphicsApi, &sourceData, nullptr);
+    auto compilationResult = ElemCompileShaderLibrary(utest_fixture->TargetGraphicsApi, utest_fixture->TargetPlatform, &sourceData, nullptr);
     auto errorCount = 0u;
 
     for (uint32_t i = 0; i < compilationResult.Messages.Length; i++)
@@ -104,31 +105,51 @@ UTEST_F_TEARDOWN(ShaderCompiler_CompileShader)
     }
 }
 
-UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12) 
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Windows) 
 {
     utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_DirectX12;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
     utest_fixture->WithError = false;
 }
 
-UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Error) 
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Windows_Error) 
 {
     utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_DirectX12;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
     utest_fixture->WithError = true;
 }
 
-UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal) 
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS) 
 {
     utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_MacOS;
     utest_fixture->WithError = false;
 }
 
-UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_Error) 
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS_Error) 
 {
     utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_MacOS;
+    utest_fixture->WithError = true;
+}
+
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_iOS) 
+{
+    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_iOS;
+    utest_fixture->WithError = false;
+}
+
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_iOS_Error) 
+{
+    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_iOS;
     utest_fixture->WithError = true;
 }
 
