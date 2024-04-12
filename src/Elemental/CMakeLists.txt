@@ -6,6 +6,7 @@ endif()
 
 add_library(Elemental SHARED ${ELEM_PLATFORM_DIR}/UnityBuild.cpp)
 target_include_directories(Elemental PUBLIC .)
+set_source_files_properties(ElementalLoader.c PROPERTIES HEADER_FILE_ONLY TRUE)
 
 target_precompile_headers(Elemental PRIVATE ${ELEM_PLATFORM_DIR}/PreCompiledHeader.h)
 

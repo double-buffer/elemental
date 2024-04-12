@@ -83,6 +83,8 @@ function(configure_apple_project target_name resource_list)
             add_custom_command(TARGET CopyFrameworkFolder POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${framework_destination}"
                 COMMAND ${CMAKE_COMMAND} -E copy_directory "${ELEMENTAL_PATH}" "${framework_destination}"
+                COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Headers"
+                COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Versions"
                 COMMENT "Copying framework folder to destination"
             )
 

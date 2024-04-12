@@ -21,6 +21,7 @@ jobs:
       with:
         submodules: recursive
 
+          #TODO: Support macOS xc framework!
     # Conditional setup for MSVC on Windows
     - name: Setup MSVC
       if: inputs.platform == 'win'
