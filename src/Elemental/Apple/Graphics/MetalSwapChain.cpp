@@ -131,7 +131,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
 
     metalLayer->setDevice(graphicsDeviceData->Device.get());
     metalLayer->setPixelFormat(format);
-    metalLayer->setDrawableSize(CGSizeMake(windowRenderSize.Width, windowRenderSize.Height));
+    metalLayer->setDrawableSize(CGSizeMake(width, height));
     metalLayer->setFramebufferOnly(true);
 
     auto handle = SystemAddDataPoolItem(metalSwapChainPool, {
