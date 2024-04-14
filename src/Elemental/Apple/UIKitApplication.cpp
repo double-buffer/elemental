@@ -26,16 +26,12 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     } 
 }
 
-ElemAPI int32_t ElemRunApplication2(const ElemRunApplicationParameters* parameters)
+ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters)
 {
     InitApplicationMemory();
 
     auto applicationDelegate = UIKitApplicationDelegate(parameters);
     return UI::ApplicationMain(0, nullptr, &applicationDelegate);
-}
-
-ElemAPI void ElemFreeApplication(ElemApplication application)
-{
 }
 
 UIKitApplicationDelegate::UIKitApplicationDelegate(const ElemRunApplicationParameters* parameters)

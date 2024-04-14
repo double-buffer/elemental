@@ -8,16 +8,14 @@ UTEST(SwapChain, CreateSwapChain)
     InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto application = ElemCreateApplication("TestSwapChain");
-    auto window = ElemCreateWindow(application, nullptr);
+    auto window = ElemCreateWindow(nullptr);
 
     // Act
-    auto swapChain = ElemCreateSwapChain(commandQueue, window, nullptr);
+    auto swapChain = ElemCreateSwapChain(commandQueue, window, nullptr, nullptr);
 
     // Assert
     ElemFreeSwapChain(swapChain);
     ElemFreeWindow(window);
-    ElemFreeApplication(application);
     ElemFreeCommandQueue(commandQueue);
 
     ASSERT_NE(ELEM_HANDLE_NULL, swapChain);

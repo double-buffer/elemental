@@ -10,19 +10,20 @@
 #include <sys/mman.h>
 
 #define NS_PRIVATE_IMPLEMENTATION
-#define CA_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION
 #define MTK_PRIVATE_IMPLEMENTATION
+#define CA_PRIVATE_IMPLEMENTATION
 #include <Metal/Metal.hpp>
 
 #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
-#include "AppKit/AppKit.hpp"
+#include "Frameworks/AppKit/AppKit.hpp"
 #else
 #define UI_PRIVATE_IMPLEMENTATION
-#include "UIKit/UIKit.hpp"
+#include "Frameworks/UIKit/UIKit.hpp"
 #endif
 
-#include "MetalKit/MetalKit.hpp"
+#include "Frameworks/Foundation/Foundation.hpp"
+#include "Frameworks/QuartzCore/QuartzCore.hpp"
 
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)

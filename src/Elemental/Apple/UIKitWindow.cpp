@@ -18,7 +18,7 @@ UIKitWindowData* GetUIKitWindowData(ElemWindow window)
     return SystemGetDataPoolItem(windowDataPool, window);
 }
 
-ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
+ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 {
     InitWindowMemory();
 
@@ -48,16 +48,19 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 {
     auto screen = UI::Screen::mainScreen();
-    auto contentViewSize = screen->bounds().size;
 
-    auto width = (uint32_t)(contentViewSize.width * screen->scale());
-    auto height = (uint32_t)(contentViewSize.height * screen->scale());
+    auto contentViewSizeNative = screen->nativeBounds().size;
+    auto contentViewSize = screen->bounds().size;
+    auto scaleNative = screen->nativeScale();
+
+    auto width = (contentViewSize.width < contentViewSize.height) ? contentViewSizeNative.width : contentViewSizeNative.height;
+    auto height = (contentViewSize.width < contentViewSize.height) ? contentViewSizeNative.height : contentViewSizeNative.width;
 
     return
     {
-        .Width = width,
-        .Height = height,
-        .UIScale = (float)screen->scale(),
+        .Width = (uint32_t)width,
+        .Height = (uint32_t)height,
+        .UIScale = (float)scaleNative,
         .WindowState = ElemWindowState_FullScreen
     };
 }

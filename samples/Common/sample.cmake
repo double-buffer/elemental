@@ -39,7 +39,7 @@ function(configure_resource_compilation target_name resource_list)
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/${relative_dir}")
         file(MAKE_DIRECTORY ${output_dir})
 
-        set(compiled_shader "${output_dir}/${file_name}.bin")
+        set(compiled_shader "${output_dir}/${file_name}.shader")
 
         add_custom_command(OUTPUT ${compiled_shader}
             COMMAND ${SHADER_COMPILER_BIN} ${SHADER_COMPILER_OPTIONS} ${hlsl_file} ${compiled_shader}
@@ -78,22 +78,25 @@ function(configure_apple_project target_name resource_list)
             get_filename_component(FRAMEWORK_NAME "${ELEMENTAL_PATH}" NAME)
             set(framework_destination "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.app/Contents/Frameworks/${FRAMEWORK_NAME}")
 
-            add_custom_target(CopyFrameworkFolder ALL)
+            add_custom_target(CopyFrameworkFolder${target_name} ALL)
 
-            add_custom_command(TARGET CopyFrameworkFolder POST_BUILD
+            # TODO: Remove also headers in the version directory
+            add_custom_command(TARGET CopyFrameworkFolder${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${framework_destination}"
                 COMMAND ${CMAKE_COMMAND} -E copy_directory "${ELEMENTAL_PATH}" "${framework_destination}"
                 COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Headers"
-                COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Versions"
+                #COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Versions"
                 COMMENT "Copying framework folder to destination"
             )
 
-            add_dependencies(CopyFrameworkFolder Elemental)
-            add_dependencies(${target_name} CopyFrameworkFolder)
+            add_dependencies(CopyFrameworkFolder${target_name} Elemental)
+            add_dependencies(${target_name} CopyFrameworkFolder${target_name})
         endif()
         
         if(BUILD_FOR_IOS)
             set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/iOS/Info.plist)
+        else()
+            #set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/MacOS/Info.plist)
         endif()
     endif()
 endfunction()

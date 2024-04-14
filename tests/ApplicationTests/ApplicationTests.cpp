@@ -13,6 +13,9 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
     }
 }
 
+// TODO: Test Init and Free
+
+/*
 bool TestRunHandler(ElemApplicationStatus status)
 {
     if (TestCounter >= 10 || status != ElemApplicationStatus_Active)
@@ -49,4 +52,4 @@ UTEST(Application, RunApplication)
     // Assert
     ElemFreeApplication(application);
     ASSERT_EQ(10, TestCounter);
-}
+}*/

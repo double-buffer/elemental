@@ -17,10 +17,6 @@ typedef uint64_t ElemHandle;
 //------------------------------------------------------------------------
 // ##Module_Application##
 //------------------------------------------------------------------------
-/**
- * Handle that represents an elemental application. 
- */
-typedef ElemHandle ElemApplication;
 
 /**
  * Handle that represents an elemental window. 
@@ -56,17 +52,6 @@ typedef enum
     // Input system messages.
     ElemLogMessageCategory_Inputs = 4
 } ElemLogMessageCategory;
-
-/**
- * Represents the status of an application.
- */
-typedef enum
-{
-    // Active status.
-    ElemApplicationStatus_Active = 0,
-    // Closing status.
-    ElemApplicationStatus_Closing = 1
-} ElemApplicationStatus;
 
 /**
  * Enumerates the possible window states.
@@ -140,54 +125,23 @@ typedef struct
 typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message);
 
 /**
- * Defines a function pointer type for application run handling.
- *
- * @param status The current application status.
- * @return Returns true to continue running, false to exit.
- */
-typedef bool (*ElemRunHandlerPtr)(ElemApplicationStatus status);
-
-/**
  * Configures a custom log handler for the application.
  *
  * @param logHandler The log handler function to be used.
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
-/**
- * Creates a new application instance.
- *
- * @param applicationName The name of the application.
- * @return Returns an application handle.
- */
-ElemAPI ElemApplication ElemCreateApplication(const char* applicationName);
-
-/**
- * Frees resources associated with the given application.
- * @param application The application to free.
- */
-ElemAPI void ElemFreeApplication(ElemApplication application);
-
-/**
- * Runs the specified application with the provided run handler.
- *
- * @param application The application to run.
- * @param runHandler The function to call on each run iteration.
- */
-ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler);
-
-ElemAPI int32_t ElemRunApplication2(const ElemRunApplicationParameters* parameters);
+ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters);
 
 // TODO: ExitApplication();
 
 /**
  * Creates a window for an application with specified options.
  *
- * @param application The associated application instance.
  * @param options Window creation options; uses defaults if NULL.
  * @return A handle to the created window.
  */
-ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options);
+ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options);
 
 /**
  * Frees resources for a specified window. Call when the window is no longer needed.
@@ -227,15 +181,12 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
  * Handle that represents a graphics device. 
  */
 typedef ElemHandle ElemGraphicsDevice;
-
 typedef ElemHandle ElemCommandQueue;
 typedef ElemHandle ElemCommandList;
 typedef ElemHandle ElemSwapChain;
 typedef ElemHandle ElemTexture;
 typedef ElemHandle ElemShaderLibrary;
 typedef ElemHandle ElemPipelineState;
-
-typedef void (*ElemSwapChainUpdateHandlerPtr)(void* payload);
 
 typedef enum
 {
@@ -334,14 +285,22 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
 
+// TODO: Do we need a refresh rate parameter? On variable rate screen that is useful otherwise no
+// For the moment we target the max refresh rate
 typedef struct
 {
     void* UpdatePayload;
     uint32_t Width;
     uint32_t Height;
     ElemSwapChainFormat Format;
-    uint32_t MaximumFrameLatency;
+    uint32_t FrameLatency;
 } ElemSwapChainOptions;
+
+typedef struct
+{
+    ElemTexture BackBufferTexture;
+    float DeltaTimeInSeconds; 
+} ElemSwapChainUpdateParameters;
 
 typedef struct
 {
@@ -393,6 +352,8 @@ typedef struct
     ElemRenderPassRenderTargetSpan RenderTargets;
 } ElemBeginRenderPassParameters;
 
+typedef void (*ElemSwapChainUpdateHandlerPtr)(const ElemSwapChainUpdateParameters* updateParameters,  void* payload);
+
 ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options);
 
 ElemAPI ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void);
@@ -410,14 +371,11 @@ ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCom
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 // TODO: ResetCommandAllocation?
 
-ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options);
-ElemAPI ElemSwapChain ElemCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
+ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain);
 ElemAPI void ElemResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
-ElemAPI ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain);
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
-ElemAPI void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain);
 
 ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 ElemAPI void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary);

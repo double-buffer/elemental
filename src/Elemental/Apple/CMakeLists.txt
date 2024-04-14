@@ -1,10 +1,13 @@
-target_compile_options(Elemental PRIVATE -fno-objc-arc)
-target_compile_definitions(Elemental PRIVATE __BLOCKS__)
+target_compile_options(Elemental PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-objc-arc>)
+target_compile_definitions(Elemental PRIVATE $<$<COMPILE_LANGUAGE:CXX>:__BLOCKS__>)
+
+target_compile_options(Elemental PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-nullability-extension>)
+target_compile_options(Elemental PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-c11-extensions>)
 
 if(BUILD_FOR_IOS)
-    target_link_options(Elemental PRIVATE "SHELL:-framework MetalKit" "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework UIKit" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
+    target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework UIKit" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
 else()
-    target_link_options(Elemental PRIVATE "SHELL:-framework MetalKit" "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
+    target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
 endif()
         
 set(HEADERS "../Elemental.h" "../ElementalLoader.c")
@@ -23,3 +26,12 @@ set_target_properties(Elemental PROPERTIES
 function(copy_platform_dependencies target)
 endfunction()
 
+
+set(CMAKE_Swift_LANGUAGE_VERSION 5)
+add_library(ElementalSwiftLib STATIC Graphics/MetalView.swift)
+ 
+target_compile_options(ElementalSwiftLib PRIVATE -cxx-interoperability-mode=default)
+target_compile_options(ElementalSwiftLib PRIVATE -emit-clang-header-path "${CMAKE_BINARY_DIR}/swift/include/ElementalSwiftLib.h")
+target_include_directories(ElementalSwiftLib INTERFACE "${CMAKE_BINARY_DIR}/swift/include")
+
+target_link_libraries(Elemental PRIVATE ElementalSwiftLib)

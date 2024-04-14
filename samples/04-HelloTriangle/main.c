@@ -1,5 +1,4 @@
 #include "Elemental.h"
-#include "ElementalTools.h"
 #include "../Common/SampleUtils.h"
 
 typedef struct
@@ -8,131 +7,142 @@ typedef struct
     float RotationY;
 } ShaderParameters;
 
-static ElemWindow globalWindow;
-static ElemWindowSize globalCurrentRenderSize;
-static ElemGraphicsDevice globalGraphicsDevice;
-static ElemCommandQueue globalCommandQueue;
-static ElemSwapChain globalSwapChain;
-static ElemPipelineState globalGraphicsPipeline;
-
-static ShaderParameters globalShaderParameters;
-
-bool RunHandler(ElemApplicationStatus status);
-
-ElemShaderLibrary CompileShaderLibrary(ElemGraphicsDevice graphicsDevice, const char* programPath, const char* shaderPath)
+typedef struct
 {
-    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
+    const char* ProgramPath;
+    bool PreferVulkan;
+    ElemWindow Window;
+    ElemWindowSize CurrentRenderSize;
+    ElemGraphicsDevice GraphicsDevice;
+    ElemCommandQueue CommandQueue;
+    ElemSwapChain SwapChain;
+    ElemPipelineState GraphicsPipeline;
+    ShaderParameters ShaderParameters;
+} ApplicationPayload;
 
-    char* shaderSource = SampleReadFileToString(programPath, shaderPath);
-    ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
-    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = false });
+void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
 
-    for (uint32_t i = 0; i < compilationResult.Messages.Length; i++)
-    {
-        printf("Compil msg (%d): %s\n", compilationResult.Messages.Items[i].Type, compilationResult.Messages.Items[i].Message);
-    }
-
-    if (compilationResult.HasErrors)
-    {
-        exit(1);
-    }
-
-    return ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = compilationResult.Data.Items, .Length = compilationResult.Data.Length });
-}
-
-int main(int argc, const char* argv[]) 
+void InitSample(void* payload)
 {
-    bool useVulkan = false;
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    if (argc > 1 && strcmp(argv[1], "--vulkan") == 0)
-    {
-        useVulkan = true;
-    }
+    ElemWindow window = ElemCreateWindow(NULL);
+    ElemWindowSize currentRenderSize = ElemGetWindowRenderSize(window);
 
-    ElemConfigureLogHandler(ElemConsoleLogHandler);
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = useVulkan });
-    
-    ElemApplication application = ElemCreateApplication("Hello Triangle");
-    globalWindow = ElemCreateWindow(application, NULL);
-    globalCurrentRenderSize = ElemGetWindowRenderSize(globalWindow);
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
+    ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
 
-    globalGraphicsDevice = ElemCreateGraphicsDevice(NULL);
+    ElemCommandQueue commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
+    ElemSwapChain swapChain = ElemCreateSwapChain(commandQueue, window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
+    ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(swapChain);
 
-    globalCommandQueue = ElemCreateCommandQueue(globalGraphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
-    globalSwapChain = ElemCreateSwapChain(globalCommandQueue, globalWindow, &(ElemSwapChainOptions) { });
-    ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(globalSwapChain);
+    ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, "Triangle.shader");
+    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = shaderData.Items, .Length = shaderData.Length });
 
-    ElemShaderLibrary shaderLibrary = CompileShaderLibrary(globalGraphicsDevice, argv[0], "Data/Triangle.hlsl");
-
-    globalGraphicsPipeline = ElemCompileGraphicsPipelineState(globalGraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "Test PSO",
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         .TextureFormats = { .Items = (ElemTextureFormat[]) { swapChainInfo.Format }, .Length = 1 }
     });
-
+    
     ElemFreeShaderLibrary(shaderLibrary);
 
-    ElemRunApplication(application, RunHandler);
-
-    ElemFreePipelineState(globalGraphicsPipeline);
-    ElemFreeSwapChain(globalSwapChain);
-    ElemFreeCommandQueue(globalCommandQueue);
-    ElemFreeGraphicsDevice(globalGraphicsDevice);
-    ElemFreeApplication(application);
-
-    printf("Exit Sample\n");
-    return 0;
+    applicationPayload->Window = window;
+    applicationPayload->CurrentRenderSize = currentRenderSize;
+    applicationPayload->GraphicsDevice = graphicsDevice;
+    applicationPayload->CommandQueue = commandQueue;
+    applicationPayload->SwapChain = swapChain;
+    applicationPayload->GraphicsPipeline = graphicsPipeline;
+    
+    SampleStartFrameMeasurement();
 }
 
-bool RunHandler(ElemApplicationStatus status)
+void FreeSample(void* payload)
 {
-    return true;
-    SampleStartFrameMeasurement();
-    ElemWaitForSwapChainOnCpu(globalSwapChain);
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    ElemWindowSize renderSize = ElemGetWindowRenderSize(globalWindow);
+    ElemFreePipelineState(applicationPayload->GraphicsPipeline);
+    ElemFreeSwapChain(applicationPayload->SwapChain);
+    ElemFreeCommandQueue(applicationPayload->CommandQueue);
+    ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 
-    if (renderSize.Width != globalCurrentRenderSize.Width || renderSize.Height != globalCurrentRenderSize.Height)
+    printf("Exit Sample\n");
+}
+
+void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
+{
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+
+    ElemWindowSize renderSize = ElemGetWindowRenderSize(applicationPayload->Window);
+
+    if (renderSize.Width != applicationPayload->CurrentRenderSize.Width || renderSize.Height != applicationPayload->CurrentRenderSize.Height)
     {
-        ElemResizeSwapChain(globalSwapChain, renderSize.Width, renderSize.Height);
-        globalCurrentRenderSize = renderSize;
+        ElemResizeSwapChain(applicationPayload->SwapChain, renderSize.Width, renderSize.Height);
+        applicationPayload->CurrentRenderSize = renderSize;
     }
 
-    ElemCommandList commandList = ElemGetCommandList(globalCommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
+    ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
         {
             .Items = (ElemRenderPassRenderTarget[]){ 
-                {
-                    ElemGetSwapChainBackBufferTexture(globalSwapChain),
-                    .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
-                    .LoadAction = ElemRenderPassLoadAction_Clear
-                }
-            },
+            {
+                .RenderTarget = updateParameters->BackBufferTexture, 
+                .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
+                .LoadAction = ElemRenderPassLoadAction_Clear
+            }},
             .Length = 1
         }
     });
 
-    ElemBindPipelineState(commandList, globalGraphicsPipeline);
-    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&globalShaderParameters, .Length = sizeof(ShaderParameters) });
+    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
+    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
     ElemDispatchMesh(commandList, 1, 1, 1);
 
     ElemEndRenderPass(commandList);
 
     ElemCommitCommandList(commandList);
-    ElemExecuteCommandList(globalCommandQueue, commandList, NULL);
+    ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
 
-    ElemPresentSwapChain(globalSwapChain);
+    ElemPresentSwapChain(applicationPayload->SwapChain);
+
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
-    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(globalGraphicsDevice);
-    SampleSetWindowTitle(globalWindow, "HelloTriangle", graphicsDeviceInfo, frameMeasurement.FrameTime, frameMeasurement.Fps);
+    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);
+    SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", graphicsDeviceInfo, frameMeasurement.FrameTime, frameMeasurement.Fps);
 
-    globalShaderParameters.AspectRatio = (float)renderSize.Width / renderSize.Height;
-    globalShaderParameters.RotationY += 1.5f * frameMeasurement.FrameTime / 1000.0;
-
-    return true;
+    applicationPayload->ShaderParameters.AspectRatio = (float)renderSize.Width / renderSize.Height;
+    applicationPayload->ShaderParameters.RotationY += 1.5f * updateParameters->DeltaTimeInSeconds;
+    
+    SampleStartFrameMeasurement();
 }
+
+int main(int argc, const char* argv[]) 
+{
+    bool preferVulkan = false;
+
+    if (argc > 1 && strcmp(argv[1], "--vulkan") == 0)
+    {
+        preferVulkan = true;
+    }
+
+    ElemConfigureLogHandler(ElemConsoleLogHandler);
+
+    ApplicationPayload payload =
+    {
+        .ProgramPath = argv[0],
+        .PreferVulkan = preferVulkan
+    };
+
+    ElemRunApplication(&(ElemRunApplicationParameters)
+    {
+        .ApplicationName = "Hello Triangle",
+        .InitHandler = InitSample,
+        .FreeHandler = FreeSample,
+        .Payload = &payload
+    });
+}
+

@@ -2,24 +2,20 @@
 
 int32_t counter = 0;
 
-bool RunHandler(ElemApplicationStatus status)
+void InitSample(void* payload)
 {
-    if (counter > 10 || status != ElemApplicationStatus_Active)
-    {
-        return false;
-    }
-
-    printf("Hello World %d!\n", counter++);
-    return true;
+    printf("Hello World!\n");
 }
 
 int main(void)
 {
     ElemConfigureLogHandler(ElemConsoleLogHandler);
     
-    ElemApplication application = ElemCreateApplication("Hello World");
-    ElemRunApplication(application, RunHandler);
-    ElemFreeApplication(application);
+    ElemRunApplication(&(ElemRunApplicationParameters)
+    {
+        .ApplicationName = "Hello World",
+        .InitHandler = InitSample,
+    });
 
     return 0;
 }

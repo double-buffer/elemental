@@ -1,6 +1,9 @@
 #include "Elemental.h"
 
-static ElemWindow globalWindow;
+typedef struct
+{
+    ElemWindow Window;
+} ApplicationPayload;
 
 const char* GetWindowStateLabel(ElemWindowState state)
 {
@@ -19,33 +22,32 @@ const char* GetWindowStateLabel(ElemWindowState state)
     return "Unknown";
 }
 
-bool RunHandler(ElemApplicationStatus status)
+void InitSample(void* payload)
 {
-    ElemWindowSize renderSize = ElemGetWindowRenderSize(globalWindow);
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    char temp[255];
-    sprintf(temp, "Hello Window! (Current RenderSize: Width=%d, Height=%d, UIScale=%.2f, State=%s)", renderSize.Width, renderSize.Height, renderSize.UIScale, GetWindowStateLabel(renderSize.WindowState));
-    ElemSetWindowTitle(globalWindow, temp);
+    ElemWindow window = ElemCreateWindow(NULL);
+    applicationPayload->Window = window;
+}
 
-    #ifdef WIN32
-        Sleep(5);
-    #else
-        usleep(5000);
-    #endif
-
-    return true;
+void FreeSample(void* payload)
+{
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+    ElemFreeWindow( applicationPayload->Window);
+    printf("Exit Sample\n");
 }
 
 int main(void)
 {
     ElemConfigureLogHandler(ElemConsoleLogHandler);
-    
-    ElemApplication application = ElemCreateApplication("Hello World");
-    globalWindow = ElemCreateWindow(application, &(ElemWindowOptions) { .Title = "Hello Window!" });
 
-    ElemRunApplication(application, RunHandler);
-    ElemFreeApplication(application);
+    ApplicationPayload payload = {0};
 
-    printf("Application ended\n");
-    return 0;
+    ElemRunApplication(&(ElemRunApplicationParameters)
+    {
+        .ApplicationName = "Hello Window",
+        .InitHandler = InitSample,
+        .FreeHandler = FreeSample,
+        .Payload = &payload
+    });
 }

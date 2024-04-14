@@ -11,12 +11,19 @@ else()
         set(CMAKE_SYSTEM_NAME iOS)
         set(CMAKE_OSX_SYSROOT iphoneos)
     endif()
-
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    set(CLANG_COMPILE_OPTIONS -Wall -Wextra -Wpedantic)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall>)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wextra>)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wpedantic>)
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wall>)
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wextra>)
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wpedantic>)
 endif()
 
-add_compile_options(-Wno-unused-parameter)
-add_compile_options(-Wno-missing-field-initializers)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-missing-field-initializers>)
+add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-unused-parameter>)
+add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-missing-field-initializers>)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
@@ -34,7 +41,11 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_NAME_DIR "@rpath")
 set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../Frameworks;@executable_path/Frameworks;@loader_path")
 
-project(Elemental LANGUAGES C CXX)
+if(APPLE)
+    project(Elemental LANGUAGES C CXX Swift)
+else()
+    project(Elemental LANGUAGES C CXX)
+endif()
 
 # TODO: Use CMAKE INSTALL ?
 

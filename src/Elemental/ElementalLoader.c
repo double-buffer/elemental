@@ -24,11 +24,8 @@ static int functionPointersLoadedElemental = 0;
 typedef struct ElementalFunctions 
 {
     void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
-    ElemApplication (*ElemCreateApplication)(const char*);
-    void (*ElemFreeApplication)(ElemApplication);
-    void (*ElemRunApplication)(ElemApplication, ElemRunHandlerPtr);
-    int (*ElemRunApplication2)(const ElemRunApplicationParameters*);
-    ElemWindow (*ElemCreateWindow)(ElemApplication, const ElemWindowOptions*);
+    int (*ElemRunApplication)(const ElemRunApplicationParameters*);
+    ElemWindow (*ElemCreateWindow)(const ElemWindowOptions*);
     void (*ElemFreeWindow)(ElemWindow);
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
     void (*ElemSetWindowTitle)(ElemWindow, const char*);
@@ -45,14 +42,11 @@ typedef struct ElementalFunctions
     ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*);
     ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*);
     void (*ElemWaitForFenceOnCpu)(ElemFence);
-    ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*);
-    ElemSwapChain (*ElemCreateSwapChain2)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*);
+    ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemResizeSwapChain)(ElemSwapChain, unsigned int, unsigned int);
-    ElemTexture (*ElemGetSwapChainBackBufferTexture)(ElemSwapChain);
     void (*ElemPresentSwapChain)(ElemSwapChain);
-    void (*ElemWaitForSwapChainOnCpu)(ElemSwapChain);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*);
@@ -115,11 +109,8 @@ static bool LoadElementalFunctionPointers(void)
     }
 
     listElementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetElementalFunctionPointer("ElemConfigureLogHandler");
-    listElementalFunctions.ElemCreateApplication = (ElemApplication (*)(const char*))GetElementalFunctionPointer("ElemCreateApplication");
-    listElementalFunctions.ElemFreeApplication = (void (*)(ElemApplication))GetElementalFunctionPointer("ElemFreeApplication");
-    listElementalFunctions.ElemRunApplication = (void (*)(ElemApplication, ElemRunHandlerPtr))GetElementalFunctionPointer("ElemRunApplication");
-    listElementalFunctions.ElemRunApplication2 = (int (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication2");
-    listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(ElemApplication, const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
+    listElementalFunctions.ElemRunApplication = (int (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication");
+    listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
     listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
     listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
     listElementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetElementalFunctionPointer("ElemSetWindowTitle");
@@ -136,14 +127,11 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandList");
     listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandLists");
     listElementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetElementalFunctionPointer("ElemWaitForFenceOnCpu");
-    listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
-    listElementalFunctions.ElemCreateSwapChain2 = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain2");
+    listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemResizeSwapChain");
-    listElementalFunctions.ElemGetSwapChainBackBufferTexture = (ElemTexture (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainBackBufferTexture");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
-    listElementalFunctions.ElemWaitForSwapChainOnCpu = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemWaitForSwapChainOnCpu");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
@@ -263,76 +251,24 @@ static inline void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     listElementalFunctions.ElemConfigureLogHandler(logHandler);
 }
 
-static inline ElemApplication ElemCreateApplication(const char* applicationName)
+static inline int ElemRunApplication(const ElemRunApplicationParameters* parameters)
 {
     if (!LoadElementalFunctionPointers()) 
     {
         assert(libraryElemental);
 
         #ifdef __cplusplus
-        ElemApplication result = {};
+        int result = {};
         #else
-        ElemApplication result = (ElemApplication){0};
+        int result = (int){0};
         #endif
 
         return result;
-    }
-
-    if (!listElementalFunctions.ElemCreateApplication) 
-    {
-        assert(listElementalFunctions.ElemCreateApplication);
-
-        #ifdef __cplusplus
-        ElemApplication result = {};
-        #else
-        ElemApplication result = (ElemApplication){0};
-        #endif
-
-        return result;
-    }
-
-    return listElementalFunctions.ElemCreateApplication(applicationName);
-}
-
-static inline void ElemFreeApplication(ElemApplication application)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-        return;
-    }
-
-    if (!listElementalFunctions.ElemFreeApplication) 
-    {
-        assert(listElementalFunctions.ElemFreeApplication);
-        return;
-    }
-
-    listElementalFunctions.ElemFreeApplication(application);
-}
-
-static inline void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-        return;
     }
 
     if (!listElementalFunctions.ElemRunApplication) 
     {
         assert(listElementalFunctions.ElemRunApplication);
-        return;
-    }
-
-    listElementalFunctions.ElemRunApplication(application, runHandler);
-}
-
-static inline int ElemRunApplication2(const ElemRunApplicationParameters* parameters)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
 
         #ifdef __cplusplus
         int result = {};
@@ -343,23 +279,10 @@ static inline int ElemRunApplication2(const ElemRunApplicationParameters* parame
         return result;
     }
 
-    if (!listElementalFunctions.ElemRunApplication2) 
-    {
-        assert(listElementalFunctions.ElemRunApplication2);
-
-        #ifdef __cplusplus
-        int result = {};
-        #else
-        int result = (int){0};
-        #endif
-
-        return result;
-    }
-
-    return listElementalFunctions.ElemRunApplication2(parameters);
+    return listElementalFunctions.ElemRunApplication(parameters);
 }
 
-static inline ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
+static inline ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -387,7 +310,7 @@ static inline ElemWindow ElemCreateWindow(ElemApplication application, const Ele
         return result;
     }
 
-    return listElementalFunctions.ElemCreateWindow(application, options);
+    return listElementalFunctions.ElemCreateWindow(options);
 }
 
 static inline void ElemFreeWindow(ElemWindow window)
@@ -774,7 +697,7 @@ static inline void ElemWaitForFenceOnCpu(ElemFence fence)
     listElementalFunctions.ElemWaitForFenceOnCpu(fence);
 }
 
-static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options)
+static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -802,38 +725,7 @@ static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, E
         return result;
     }
 
-    return listElementalFunctions.ElemCreateSwapChain(commandQueue, window, options);
-}
-
-static inline ElemSwapChain ElemCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-
-        #ifdef __cplusplus
-        ElemSwapChain result = {};
-        #else
-        ElemSwapChain result = (ElemSwapChain){0};
-        #endif
-
-        return result;
-    }
-
-    if (!listElementalFunctions.ElemCreateSwapChain2) 
-    {
-        assert(listElementalFunctions.ElemCreateSwapChain2);
-
-        #ifdef __cplusplus
-        ElemSwapChain result = {};
-        #else
-        ElemSwapChain result = (ElemSwapChain){0};
-        #endif
-
-        return result;
-    }
-
-    return listElementalFunctions.ElemCreateSwapChain2(commandQueue, window, updateHandler, options);
+    return listElementalFunctions.ElemCreateSwapChain(commandQueue, window, updateHandler, options);
 }
 
 static inline void ElemFreeSwapChain(ElemSwapChain swapChain)
@@ -901,37 +793,6 @@ static inline void ElemResizeSwapChain(ElemSwapChain swapChain, unsigned int wid
     listElementalFunctions.ElemResizeSwapChain(swapChain, width, height);
 }
 
-static inline ElemTexture ElemGetSwapChainBackBufferTexture(ElemSwapChain swapChain)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-
-        #ifdef __cplusplus
-        ElemTexture result = {};
-        #else
-        ElemTexture result = (ElemTexture){0};
-        #endif
-
-        return result;
-    }
-
-    if (!listElementalFunctions.ElemGetSwapChainBackBufferTexture) 
-    {
-        assert(listElementalFunctions.ElemGetSwapChainBackBufferTexture);
-
-        #ifdef __cplusplus
-        ElemTexture result = {};
-        #else
-        ElemTexture result = (ElemTexture){0};
-        #endif
-
-        return result;
-    }
-
-    return listElementalFunctions.ElemGetSwapChainBackBufferTexture(swapChain);
-}
-
 static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
 {
     if (!LoadElementalFunctionPointers()) 
@@ -947,23 +808,6 @@ static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
     }
 
     listElementalFunctions.ElemPresentSwapChain(swapChain);
-}
-
-static inline void ElemWaitForSwapChainOnCpu(ElemSwapChain swapChain)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-        return;
-    }
-
-    if (!listElementalFunctions.ElemWaitForSwapChainOnCpu) 
-    {
-        assert(listElementalFunctions.ElemWaitForSwapChainOnCpu);
-        return;
-    }
-
-    listElementalFunctions.ElemWaitForSwapChainOnCpu(swapChain);
 }
 
 static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)

@@ -23,7 +23,7 @@ MacOSWindowDataFull* GetMacOSWindowDataFull(ElemWindow window)
     return SystemGetDataPoolItemFull(windowDataPool, window);
 }
 
-ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
+ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 {
     InitWindowMemory();
 
@@ -71,24 +71,14 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     windowHandle->center();
     windowHandle->makeKeyAndOrderFront(nullptr);
 
-    //auto applicationDataFull = GetMacOSApplicationDataFull(application);
-    //SystemAssertReturnNullHandle(applicationDataFull);
-    //applicationDataFull->WindowCount++;
-
     auto handle = SystemAddDataPoolItem(windowDataPool, {
         .WindowHandle = windowHandle
     }); 
     
-    //auto windowDelegate = new MacOSWindowDelegate(handle);
-    //windowHandle->setDelegate(windowDelegate);
-
     SystemAddDataPoolItemFull(windowDataPool, handle, {
         .Width = (uint32_t)width,
         .Height = (uint32_t)height,
-        .UIScale = 1.0f,
-        //.WindowDelegate = windowDelegate,
-        .Application = application,
-        .ClosingCalled = false
+        .UIScale = 1.0f
     });
 
     ElemSetWindowState(handle, windowState);
@@ -101,25 +91,7 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
 
-    auto windowDataFull = GetMacOSWindowDataFull(window);
-    SystemAssert(windowDataFull);
-
     SystemRemoveDataPoolItem(windowDataPool, window);
-
-    if (!windowDataFull->ClosingCalled)
-    {
-        windowData->WindowHandle->close();
-    }
-
-    auto applicationDataFull = GetMacOSApplicationDataFull(windowDataFull->Application);
-    SystemAssert(applicationDataFull);
-    applicationDataFull->WindowCount--;
-
-    if (applicationDataFull->WindowCount == 0)
-    {
-        applicationDataFull->Status = ElemApplicationStatus_Closing;
-    }
-
     windowData->WindowHandle.reset();
 }
 
@@ -204,26 +176,4 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
         windowData->WindowHandle->miniaturize(nullptr);
     }*/
 }
-/*
-MacOSWindowDelegate::MacOSWindowDelegate(ElemWindow window)
-{
-    _window = window;
-}
 
-MacOSWindowDelegate::~MacOSWindowDelegate()
-{
-}
-
-void MacOSWindowDelegate::windowWillClose(NS::Notification* pNotification)
-{            
-    auto windowDataFull = GetMacOSWindowDataFull(_window);
-
-    if (!windowDataFull)
-    {
-        return;
-    }
-
-    windowDataFull->ClosingCalled = true;
-
-    ElemFreeWindow(_window);
-}*/

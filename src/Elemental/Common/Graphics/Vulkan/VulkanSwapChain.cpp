@@ -26,14 +26,7 @@ VulkanSwapChainDataFull* GetVulkanSwapChainDataFull(ElemSwapChain swapChain)
     return SystemGetDataPoolItemFull(vulkanSwapChainPool, swapChain);
 }
 
-ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options)
-{
-    InitVulkanSwapChainMemory();
-
-    return ELEM_HANDLE_NULL;
-}
-
-ElemSwapChain VulkanCreateSwapChain2(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
+ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
 {
     return ELEM_HANDLE_NULL;
 }

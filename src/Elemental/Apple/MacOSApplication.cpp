@@ -5,14 +5,12 @@
 #include "SystemMemory.h"
 
 MemoryArena ApplicationMemoryArena;
-SystemDataPool<MacOSApplicationData, MacOSApplicationDataFull> applicationPool;
 
 void InitApplicationMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
     {
         ApplicationMemoryArena = SystemAllocateMemoryArena();
-        applicationPool = SystemCreateDataPool<MacOSApplicationData, MacOSApplicationDataFull>(ApplicationMemoryArena, 10);
 
         SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
 
@@ -21,33 +19,6 @@ void InitApplicationMemory()
         #endif
     }
 }
-
-MacOSApplicationData* GetMacOSApplicationData(ElemApplication application)
-{
-    return SystemGetDataPoolItem(applicationPool, application);
-}
-
-MacOSApplicationDataFull* GetMacOSApplicationDataFull(ElemApplication application)
-{
-    return SystemGetDataPoolItemFull(applicationPool, application);
-}
-/*
-void ProcessEvents() 
-{
-    NS::Event* rawEvent = nullptr; 
-
-    // BUG: It seems we have a memory leak when we move the mouse inside the window 😟
-
-    do 
-    {
-        rawEvent = NS::Application::sharedApplication()->nextEventMatchingMask(NS::EventMaskAny, 0, NS::DefaultRunLoopMode, true);
-
-        if (rawEvent)
-        {
-            NS::Application::sharedApplication()->sendEvent(rawEvent);
-        }
-    } while (rawEvent != nullptr);
-}*/
 
 void CreateApplicationMenu(ReadOnlySpan<char> applicationName)
 {
@@ -137,53 +108,7 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     } 
 }
 
-ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
-{
-    InitApplicationMemory();
-
-    MacOSApplicationData applicationData = {};
-    auto handle = SystemAddDataPoolItem(applicationPool, applicationData); 
-
-    MacOSApplicationDataFull applicationDataFull = {};
-    //applicationDataFull.ApplicationDelegate = new MacOSApplicationDelegate(handle);
-    applicationDataFull.Status = ElemApplicationStatus_Active;
-    SystemAddDataPoolItemFull(applicationPool, handle, applicationDataFull);
-    
-    NS::Application* pSharedApplication = NS::Application::sharedApplication();
-    //pSharedApplication->setDelegate(applicationDataFull.ApplicationDelegate);
-    pSharedApplication->setActivationPolicy(NS::ActivationPolicy::ActivationPolicyRegular);
-    pSharedApplication->activateIgnoringOtherApps(true);
-    //pSharedApplication->finishLaunching();
-
-    //CreateApplicationMenu(applicationName);
-
-    return handle;
-}
-
-ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
-{
-    auto canRun = true;
-
-    while (canRun) 
-    {
-        auto autoreleasePool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-
-        //ProcessEvents(application);
-        auto applicationDataFull = GetMacOSApplicationDataFull(application);
-        SystemAssert(applicationDataFull);
-
-        if (applicationDataFull->Status == ElemApplicationStatus_Closing)
-        {
-            canRun = false;
-        }
-        else
-        {
-            canRun = runHandler(applicationDataFull->Status);
-        }
-    }
-}
-
-ElemAPI int32_t ElemRunApplication2(const ElemRunApplicationParameters* parameters)
+ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters)
 {
     InitApplicationMemory();
 
@@ -199,16 +124,6 @@ ElemAPI int32_t ElemRunApplication2(const ElemRunApplicationParameters* paramete
     }
 
     return 0;
-}
-
-ElemAPI void ElemFreeApplication(ElemApplication application)
-{
-    auto applicationDataFull = GetMacOSApplicationDataFull(application);
-    SystemAssert(applicationDataFull);
-
-    delete applicationDataFull->ApplicationDelegate;
-    
-    SystemRemoveDataPoolItem(applicationPool, application);
 }
 
 MacOSApplicationDelegate::MacOSApplicationDelegate(const ElemRunApplicationParameters* parameters)

@@ -30,8 +30,6 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
     <string></string>
-    <key>UILaunchStoryboardName</key>
-    <string>ElementalSample</string>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
 </dict>

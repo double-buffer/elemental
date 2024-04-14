@@ -18,7 +18,7 @@
 
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
-#include "AppKit/AppKit.hpp"
+#include "Frameworks/AppKit/AppKit.hpp"
 
 // TODO: Cleanup includes
 #include <ctype.h>

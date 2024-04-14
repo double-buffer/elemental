@@ -1,13 +1,11 @@
-if (APPLE)
-    if(BUILD_FOR_IOS)
-        add_executable(HelloWindow MACOSX_BUNDLE Main.c)
-        set_target_properties(HelloWindow PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/iOS/Info.plist)
-    else()
-        # add_executable(HelloWindow MACOSX_BUNDLE Main.c)
-        add_executable(HelloWindow Main.c)
-    endif()
-else()
-    add_executable(HelloWindow Main.c)
-endif()
+include("../common/sample.cmake")
 
-target_link_libraries(HelloWindow PRIVATE ElementalInterface)
+set(SAMPLE_NAME HelloWindow)
+
+add_executable(${SAMPLE_NAME} main.c)
+target_link_libraries(${SAMPLE_NAME} PRIVATE ElementalInterface)
+add_dependencies(${SAMPLE_NAME} Elemental)
+
+if(APPLE)
+    configure_apple_project(${SAMPLE_NAME} NULL)
+endif()

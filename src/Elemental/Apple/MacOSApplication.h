@@ -18,18 +18,4 @@ class MacOSApplicationDelegate : public NS::ApplicationDelegate
         const ElemRunApplicationParameters* _runParameters;
 };
 
-struct MacOSApplicationData
-{
-};
-
-struct MacOSApplicationDataFull
-{
-    MacOSApplicationDelegate* ApplicationDelegate;
-    ElemApplicationStatus Status;
-    int32_t WindowCount;
-};
-
 extern MemoryArena ApplicationMemoryArena;
-
-MacOSApplicationData* GetMacOSApplicationData(ElemApplication application);
-MacOSApplicationDataFull* GetMacOSApplicationDataFull(ElemApplication application);

@@ -48,7 +48,7 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
     }
 }
 
-ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, const ElemSwapChainOptions* options)
+ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
