@@ -21,6 +21,7 @@ struct MetalSwapChainData
     ElemCommandQueue CommandQueue;
     ElemGraphicsDevice GraphicsDevice;
     bool PresentCalled;
+    CFTimeInterval PreviousTargetPresentationTimestamp;
 };
 
 struct MetalSwapChainDataFull

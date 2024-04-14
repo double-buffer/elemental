@@ -32,6 +32,8 @@
 
 namespace CA
 {
+    CFTimeInterval CurrentMediaTime();
+
     class MetalDisplayLinkDelegate
     {
     public:
@@ -146,3 +148,16 @@ _CA_INLINE CFTimeInterval CA::MetalDisplayLinkUpdate::targetTimestamp() const
 {
     return Object::sendMessage<CFTimeInterval>(this, _CA_PRIVATE_SEL(targetTimestamp));
 }
+
+
+#if defined(CA_PRIVATE_IMPLEMENTATION)
+
+extern "C" CFTimeInterval CACurrentMediaTime();
+
+_CA_EXPORT CFTimeInterval CA::CurrentMediaTime()
+{
+    return ::CACurrentMediaTime();
+}
+
+
+#endif

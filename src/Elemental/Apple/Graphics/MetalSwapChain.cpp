@@ -137,7 +137,8 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     auto handle = SystemAddDataPoolItem(metalSwapChainPool, {
         .DeviceObject = metalLayer,
         .CommandQueue = commandQueue,
-        .GraphicsDevice = commandQueueDataFull->GraphicsDevice
+        .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
+        .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime()
     }); 
 
     SystemAddDataPoolItemFull(metalSwapChainPool, handle, {
@@ -166,6 +167,7 @@ void MetalFreeSwapChain(ElemSwapChain swapChain)
 
 ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 {
+    // TODO: Implement this
     return {};
 }
 
@@ -205,13 +207,12 @@ void MetalPresentSwapChain(ElemSwapChain swapChain)
         return;
     }
 
-    commandBuffer->presentDrawable(swapChainData->BackBufferDrawable.get());
-
     if (MetalDebugLayerEnabled)
     {
         commandBuffer->setLabel(MTLSTR("PresentSwapChainCommandBuffer"));
     }
 
+    commandBuffer->presentDrawable(swapChainData->BackBufferDrawable.get());
     commandBuffer->commit();
 }
 
@@ -224,12 +225,13 @@ MetalDisplayLinkHandler::MetalDisplayLinkHandler(ElemSwapChain swapChain, ElemSw
 
 void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* displayLink, CA::MetalDisplayLinkUpdate* update)
 {
-    // TODO: Check minimized????
-    // TODO: Compute appropriate timing info. See sample !!!
     if (_updateHandler)
     {
         auto swapChainData = GetMetalSwapChainData(_swapChain);
         SystemAssert(swapChainData);
+
+        auto deltaTime = (float)(swapChainData->PreviousTargetPresentationTimestamp - update->targetPresentationTimestamp());
+        swapChainData->PreviousTargetPresentationTimestamp = update->targetPresentationTimestamp();
 
         swapChainData->PresentCalled = false;
         swapChainData->BackBufferDrawable = NS::RetainPtr(update->drawable());
@@ -245,7 +247,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         ElemSwapChainUpdateParameters updateParameters = 
         {
             .BackBufferTexture = backBufferTexture,
-            .DeltaTimeInSeconds = 1.0f / 120.0f // TODO: Compute delta time
+            .DeltaTimeInSeconds = deltaTime
         };
 
         _updateHandler(&updateParameters, _updatePayload);

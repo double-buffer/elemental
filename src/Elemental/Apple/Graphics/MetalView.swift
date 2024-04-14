@@ -31,12 +31,6 @@ class CustomView: UIView {
     override func didMoveToWindow() {
         super.didMoveToWindow()
       
-        if self.window != nil {
-            print("This view has been added to a window.")
-        } else {
-            print("This view has been removed from the window.")
-        }
-
         self.metalDisplayLink.add(to: RunLoop.current, forMode: RunLoop.Mode.commonModes)
     }
 }
@@ -55,7 +49,6 @@ class CustomView: NSView {
         self.metalDisplayLink.preferredFrameLatency = Float(frameLatency)
         
         let refreshRate = NSScreen.main!.maximumFramesPerSecond;
-        print(refreshRate)
         self.metalDisplayLink.preferredFrameRateRange = CAFrameRateRange(minimum: Float(refreshRate), maximum: Float(refreshRate), __preferred: Float(refreshRate))
     }
 
