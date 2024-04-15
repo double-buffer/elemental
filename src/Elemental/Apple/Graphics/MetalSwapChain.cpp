@@ -230,7 +230,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         auto swapChainData = GetMetalSwapChainData(_swapChain);
         SystemAssert(swapChainData);
 
-        auto deltaTime = (float)(swapChainData->PreviousTargetPresentationTimestamp - update->targetPresentationTimestamp());
+        auto deltaTime = (float)(update->targetPresentationTimestamp() - swapChainData->PreviousTargetPresentationTimestamp);
         swapChainData->PreviousTargetPresentationTimestamp = update->targetPresentationTimestamp();
 
         swapChainData->PresentCalled = false;
