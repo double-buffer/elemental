@@ -162,7 +162,7 @@ const char* SampleGetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
     return "Unknown";
 }
 
-void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGraphicsDeviceInfo graphicsDeviceInfo, double frameTime, uint32_t fps)
+void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGraphicsDeviceInfo graphicsDeviceInfo, double frameTimeInSeconds, uint32_t fps)
 {
     ElemWindowSize renderSize = ElemGetWindowRenderSize(window);
 
@@ -170,7 +170,7 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
     sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u@%.1f, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, AvailableMemory=%llu)", 
                         applicationName,
                         fps,
-                        frameTime,
+                        frameTimeInSeconds * 1000.0,
                         renderSize.Width,
                         renderSize.Height,
                         renderSize.UIScale,
@@ -217,7 +217,7 @@ double SampleGetTimerValueInMS(void)
 
 typedef struct
 {
-    double FrameTime;
+    double FrameTimeInSeconds;
     uint32_t Fps;
 } SampleFrameMeasurement;
 
@@ -253,7 +253,7 @@ SampleFrameMeasurement SampleEndFrameMeasurement(void)
 
     return (SampleFrameMeasurement)
     {
-        .FrameTime = globalSampleFrameCpuAverage,
+        .FrameTimeInSeconds = globalSampleFrameCpuAverage / 1000.0,
         .Fps = globalSampleCurrentFpsCounter
     };
 }
