@@ -9,7 +9,6 @@ struct Win32WindowData
 
 struct Win32WindowDataFull
 {
-    ElemApplication Application;
     WINDOWPLACEMENT WindowPlacement;
     DWORD WindowStyle;
     DWORD WindowExStyle;

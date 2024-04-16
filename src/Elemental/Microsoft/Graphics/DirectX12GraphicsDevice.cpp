@@ -27,6 +27,7 @@ ComPtr<IDXGIDebug1> dxgiDebugInterface;
 ComPtr<ID3D12Debug6> directX12DebugInterface;
 ComPtr<ID3D12DeviceFactory> directX12DeviceFactory;
 
+// TODO: Do something for TDR. Log a file maybe?
 void InitDirectX12()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();

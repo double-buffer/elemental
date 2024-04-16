@@ -50,10 +50,10 @@ void SampleGetFullPath(char* destination, const char* programPath, const char* p
     const char* folderPrefix = "Data/";
     #endif
     
-    CopyString(pointer, MAX_PATH, folderPrefix, strlen(folderPrefix));
+    CopyString(pointer, pointer - destination, folderPrefix, strlen(folderPrefix));
     pointer = pointer + strlen(folderPrefix);
 
-    CopyString(pointer, MAX_PATH, path, strlen(path));
+    CopyString(pointer, pointer - destination, path, strlen(path));
 }
 
 ElemDataSpan SampleReadFile(const char* executablePath, const char* filename) 

@@ -12,7 +12,6 @@ typedef struct
     const char* ProgramPath;
     bool PreferVulkan;
     ElemWindow Window;
-    ElemWindowSize CurrentRenderSize;
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
     ElemSwapChain SwapChain;
@@ -27,7 +26,6 @@ void InitSample(void* payload)
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
     ElemWindow window = ElemCreateWindow(NULL);
-    ElemWindowSize currentRenderSize = ElemGetWindowRenderSize(window);
 
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
     ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
@@ -50,7 +48,6 @@ void InitSample(void* payload)
     ElemFreeShaderLibrary(shaderLibrary);
 
     applicationPayload->Window = window;
-    applicationPayload->CurrentRenderSize = currentRenderSize;
     applicationPayload->GraphicsDevice = graphicsDevice;
     applicationPayload->CommandQueue = commandQueue;
     applicationPayload->SwapChain = swapChain;
@@ -73,15 +70,10 @@ void FreeSample(void* payload)
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
+    //printf("Next Present Timestamp in seconds: %f\n", updateParameters->NextPresentTimeStampInSeconds);
+    //printf("DeltaTime in seconds: %f\n", updateParameters->DeltaTimeInSeconds);
+    //Sleep(7);
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-
-    ElemWindowSize renderSize = ElemGetWindowRenderSize(applicationPayload->Window);
-
-    if (renderSize.Width != applicationPayload->CurrentRenderSize.Width || renderSize.Height != applicationPayload->CurrentRenderSize.Height)
-    {
-        ElemResizeSwapChain(applicationPayload->SwapChain, renderSize.Width, renderSize.Height);
-        applicationPayload->CurrentRenderSize = renderSize;
-    }
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
 
@@ -114,7 +106,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);
     SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", graphicsDeviceInfo, frameMeasurement.FrameTime, frameMeasurement.Fps);
 
-    applicationPayload->ShaderParameters.AspectRatio = (float)renderSize.Width / renderSize.Height;
+    applicationPayload->ShaderParameters.AspectRatio = (float)updateParameters->SwapChainInfo.Width / updateParameters->SwapChainInfo.Height;
     applicationPayload->ShaderParameters.RotationY += 1.5f * updateParameters->DeltaTimeInSeconds;
     
     SampleStartFrameMeasurement();

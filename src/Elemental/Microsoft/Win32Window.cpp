@@ -57,6 +57,7 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
 
             auto windowHandle = windowDictionary[window];
             ElemFreeWindow(windowHandle);
+            PostQuitMessage(0);
             break;
         }
 	}
@@ -83,20 +84,17 @@ bool ShouldAppUseDarkMode()
 	return shouldAppsUseDarkModeFunction();
 }
 
-void InitWin32WindowMemory(ElemApplication application)
+void InitWin32WindowMemory()
 {
     if (!windowDataPool.Storage)
     {
         windowDataPool = SystemCreateDataPool<Win32WindowData, Win32WindowDataFull>(ApplicationMemoryArena, 10);
         windowDictionary = SystemCreateDictionary<HWND, ElemWindow>(ApplicationMemoryArena, 10);
 
-        auto applicationData = GetWin32ApplicationData(application);
-        SystemAssert(applicationData);
-
         WNDCLASS windowClass {};
         windowClass.style = CS_HREDRAW | CS_VREDRAW;
         windowClass.lpfnWndProc = WindowCallBack;
-        windowClass.hInstance = applicationData->ApplicationInstance;
+        windowClass.hInstance = GetModuleHandle(nullptr);
         windowClass.lpszClassName = L"ElementalWindowClass";
         windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
         windowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
@@ -115,9 +113,9 @@ Win32WindowDataFull* GetWin32WindowDataFull(ElemWindow window)
     return SystemGetDataPoolItemFull(windowDataPool, window);
 }
 
-ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindowOptions* options)
+ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 {
-    InitWin32WindowMemory(application);
+    InitWin32WindowMemory();
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto width = 1280;
@@ -148,10 +146,6 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
         }
     }
 
-    auto applicationData = GetWin32ApplicationData(application);
-    auto applicationDataFull = GetWin32ApplicationDataFull(application);
-    applicationDataFull->WindowCount++;
-
     auto window = CreateWindowEx(
         WS_EX_DLGMODALFRAME,
         L"ElementalWindowClass",
@@ -163,7 +157,7 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
         height,
         nullptr,
         nullptr,
-        applicationData->ApplicationInstance,
+        GetModuleHandle(nullptr),
         nullptr);
    
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -208,7 +202,6 @@ ElemAPI ElemWindow ElemCreateWindow(ElemApplication application, const ElemWindo
     }); 
 
     SystemAddDataPoolItemFull(windowDataPool, handle, {
-        .Application = application,
         .WindowPlacement = windowPlacement,
         .WindowStyle = windowStyle,
         .WindowExStyle = windowExStyle
@@ -228,14 +221,7 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
     auto windowDataFull = GetWin32WindowDataFull(window);
     SystemAssert(windowDataFull);
 
-    auto applicationDataFull = GetWin32ApplicationDataFull(windowDataFull->Application);
-    SystemAssert(applicationDataFull);
-    applicationDataFull->WindowCount--;
-
-    if (applicationDataFull->WindowCount == 0)
-    {
-        PostQuitMessage(0);
-    }
+    // TODO: Close application if last window
 
     DestroyWindow(windowData->WindowHandle);
 

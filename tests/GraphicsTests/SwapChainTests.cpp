@@ -22,6 +22,9 @@ UTEST(SwapChain, CreateSwapChain)
     ASSERT_FALSE(testHasLogErrors);
 }
 
+// TODO: Important! Tests for update delta. Try to simulate a frame that pass the next present time to see if the delta
+// is ajusting correctly !
+
 // TODO: Resize swapchain
 // TODO: Present (If present is not called during update, call it automatically but output a warning)
 // TODO: GetTexture (check width, height, etc)
