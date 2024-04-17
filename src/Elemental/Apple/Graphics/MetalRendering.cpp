@@ -129,5 +129,7 @@ void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, 
     SystemAssert(commandListData->CommandEncoder);
 
     auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+
+    // TODO: Get the correct threads config
     renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(32, 1, 1), MTL::Size(32, 1, 1));
 }
