@@ -6,6 +6,4 @@ add_executable(${SAMPLE_NAME} main.c)
 target_link_libraries(${SAMPLE_NAME} PRIVATE ElementalInterface)
 add_dependencies(${SAMPLE_NAME} Elemental)
 
-if(APPLE)
-    configure_apple_project(${SAMPLE_NAME} NULL)
-endif()
+configure_project_package(${SAMPLE_NAME} NULL)

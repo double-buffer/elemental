@@ -54,13 +54,12 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
 
 void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d...", width, height);
-
     if (width == 0 || height == 0)
     {
         return;
     }
     
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d...", width, height);
     SystemAssert(swapChain != ELEM_HANDLE_NULL);
 
     auto swapChainData = GetDirectX12SwapChainData(swapChain);
@@ -134,6 +133,8 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         auto deltaTime = (nextVSyncQPCTime.QuadPart - swapChainData->PreviousTargetPresentationTimestamp.QuadPart) / ticksPerSecond;
         swapChainData->PreviousTargetPresentationTimestamp = nextVSyncQPCTime;
         // END TIMING CALCULATION
+
+        // TODO: Check if present was called like in metal implementation
     
         ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 

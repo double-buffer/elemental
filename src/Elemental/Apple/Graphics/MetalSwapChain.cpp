@@ -46,6 +46,23 @@ MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain swapChain)
     return SystemGetDataPoolItemFull(metalSwapChainPool, swapChain);
 }
 
+void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+{    
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d...", width, height);
+
+    auto swapChainData = GetMetalSwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    swapChainData->Width = width;
+    swapChainData->Height = height;
+    swapChainData->DeviceObject->setDrawableSize(CGSizeMake(width, height));
+}
+
 ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
 {
     InitMetalSwapChainMemory();
@@ -65,16 +82,6 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
  
     if (options)
     {
-        if (options->Width != 0)
-        {
-            width = options->Width;
-        }
-
-        if (options->Height != 0)
-        {
-            height = options->Height;
-        }
-
         if (options->Format == ElemSwapChainFormat_HighDynamicRange)
         {
             format = MTL::PixelFormatBGR10A2Unorm;
@@ -136,10 +143,14 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
 
     auto handle = SystemAddDataPoolItem(metalSwapChainPool, {
         .DeviceObject = metalLayer,
+        .Window = window,
         .CommandQueue = commandQueue,
         .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
-        // TODO: Create an initial timestamp so all timestamp are related to the creation of the swapchain accross all platforms
-        .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime() // TODO: Maybe we should set that to 0 and init it in the first update?
+        .CreationTimestamp = CA::CurrentMediaTime(),
+        .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime(),
+        .Width = width,
+        .Height = height,
+        .Format = ElemTextureFormat_B8G8R8A8_SRGB // TODO: Temporary
     }); 
 
     SystemAddDataPoolItemFull(metalSwapChainPool, handle, {
@@ -168,19 +179,15 @@ void MetalFreeSwapChain(ElemSwapChain swapChain)
 
 ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 {
-    // TODO: Implement this
-    return {};
-}
+    auto swapChainData = GetMetalSwapChainData(swapChain);
+    SystemAssert(swapChainData);
 
-void MetalResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
-{    
-    if (width > 0 && height > 0)
+    return 
     {
-        auto swapChainData = GetMetalSwapChainData(swapChain);
-        SystemAssert(swapChainData);
-
-        swapChainData->DeviceObject->setDrawableSize(CGSizeMake(width, height));
-    }
+        .Width = swapChainData->Width,
+        .Height = swapChainData->Height,
+        .Format = swapChainData->Format
+    };
 }
 
 void MetalPresentSwapChain(ElemSwapChain swapChain)
@@ -231,8 +238,17 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         auto swapChainData = GetMetalSwapChainData(_swapChain);
         SystemAssert(swapChainData);
 
-        auto deltaTime = (float)(update->targetPresentationTimestamp() - swapChainData->PreviousTargetPresentationTimestamp);
+        auto deltaTime = update->targetPresentationTimestamp() - swapChainData->PreviousTargetPresentationTimestamp;
         swapChainData->PreviousTargetPresentationTimestamp = update->targetPresentationTimestamp();
+
+        auto nextPresentTimeStampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
+
+        auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
+
+        if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
+        {
+            ResizeMetalSwapChain(_swapChain, windowSize.Width, windowSize.Height);
+        }
 
         swapChainData->PresentCalled = false;
         swapChainData->BackBufferDrawable = NS::RetainPtr(update->drawable());
@@ -247,8 +263,10 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
 
         ElemSwapChainUpdateParameters updateParameters = 
         {
+            .SwapChainInfo = MetalGetSwapChainInfo(_swapChain),
             .BackBufferTexture = backBufferTexture,
-            .DeltaTimeInSeconds = deltaTime
+            .DeltaTimeInSeconds = deltaTime,
+            .NextPresentTimeStampInSeconds = nextPresentTimeStampInSeconds
         };
 
         _updateHandler(&updateParameters, _updatePayload);

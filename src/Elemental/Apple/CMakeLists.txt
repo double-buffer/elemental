@@ -10,8 +10,9 @@ else()
     target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework QuartzCore" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
 endif()
         
-set(HEADERS "../Elemental.h" "../ElementalLoader.c")
-target_sources(Elemental PUBLIC ${HEADERS})
+#et(HEADERS "../Elemental.h" "../ElementalLoader.c")
+#set_source_files_properties(ElementalLoader.c PROPERTIES HEADER_FILE_ONLY TRUE)
+#target_sources(Elemental PUBLIC ${HEADERS})
 
 set_target_properties(Elemental PROPERTIES
   FRAMEWORK TRUE
@@ -33,5 +34,6 @@ add_library(ElementalSwiftLib STATIC Graphics/MetalView.swift)
 target_compile_options(ElementalSwiftLib PRIVATE -cxx-interoperability-mode=default)
 target_compile_options(ElementalSwiftLib PRIVATE -emit-clang-header-path "${CMAKE_BINARY_DIR}/swift/include/ElementalSwiftLib.h")
 target_include_directories(ElementalSwiftLib INTERFACE "${CMAKE_BINARY_DIR}/swift/include")
+set_target_properties(ElementalSwiftLib PROPERTIES XCODE_ATTRIBUTE_SWIFT_OBJC_INTERFACE_HEADER_NAME "")
 
 target_link_libraries(Elemental PRIVATE ElementalSwiftLib)

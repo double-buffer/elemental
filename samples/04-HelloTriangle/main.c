@@ -107,7 +107,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", graphicsDeviceInfo, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
 
     applicationPayload->ShaderParameters.AspectRatio = (float)updateParameters->SwapChainInfo.Width / updateParameters->SwapChainInfo.Height;
-    applicationPayload->ShaderParameters.RotationY += 1.5f * updateParameters->DeltaTimeInSeconds;
+    applicationPayload->ShaderParameters.RotationY += 1.5f * (float)updateParameters->DeltaTimeInSeconds;
     
     SampleStartFrameMeasurement();
 }

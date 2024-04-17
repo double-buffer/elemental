@@ -14,14 +14,20 @@ class MetalDisplayLinkHandler : public CA::MetalDisplayLinkDelegate
         void* _updatePayload;
 };
 
+// TODO: Review data
 struct MetalSwapChainData
 {
     NS::SharedPtr<CA::MetalLayer> DeviceObject;
     NS::SharedPtr<CA::MetalDrawable> BackBufferDrawable;
+    ElemWindow Window;
     ElemCommandQueue CommandQueue;
     ElemGraphicsDevice GraphicsDevice;
     bool PresentCalled;
+    CFTimeInterval CreationTimestamp;
     CFTimeInterval PreviousTargetPresentationTimestamp;
+    uint32_t Width;
+    uint32_t Height;
+    ElemTextureFormat Format;
 };
 
 struct MetalSwapChainDataFull
@@ -36,6 +42,4 @@ MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain swapChain);
 ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 void MetalFreeSwapChain(ElemSwapChain swapChain);
 ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain);
-void MetalResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
 void MetalPresentSwapChain(ElemSwapChain swapChain);
-void MetalWaitForSwapChainOnCpu(ElemSwapChain swapChain);
