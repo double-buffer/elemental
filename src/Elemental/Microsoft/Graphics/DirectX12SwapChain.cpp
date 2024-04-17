@@ -313,6 +313,7 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     SystemAssert(swapChainData);
 
     // TODO: Review params
+    // TODO: Control the next vsync for frame pacing (eg: running at 30fps on a 120hz screen)
     AssertIfFailed(swapChainData->DeviceObject->Present(1, 0));
     
     // TODO: Reset command allocation

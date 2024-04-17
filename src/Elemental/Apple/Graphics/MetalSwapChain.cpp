@@ -220,6 +220,7 @@ void MetalPresentSwapChain(ElemSwapChain swapChain)
         commandBuffer->setLabel(MTLSTR("PresentSwapChainCommandBuffer"));
     }
 
+    // TODO: Use present at time ? to control frame pacing?
     commandBuffer->presentDrawable(swapChainData->BackBufferDrawable.get());
     commandBuffer->commit();
 }

@@ -101,6 +101,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemPresentSwapChain(applicationPayload->SwapChain);
 
+    // NOTE: This is the update part of the loop. If render fast this will create a gap and add latency because we need to wait for the next available
+    // Backbuffer
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);

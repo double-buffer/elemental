@@ -79,6 +79,7 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
 
     while (canRun) 
     {
+        // TODO: Check this because it could potentially add latency?
         canRun = ProcessWin32Messages();
 
         if (canRun)

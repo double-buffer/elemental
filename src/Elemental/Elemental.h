@@ -294,6 +294,7 @@ typedef struct
     void* UpdatePayload;
     ElemSwapChainFormat Format;
     uint32_t FrameLatency;
+    uint32_t TargetFPS;
 } ElemSwapChainOptions;
 
 typedef struct
@@ -376,6 +377,8 @@ ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain);
+// TODO: ElemSetSwapChainLatencyAndTiming ? (or another name :))
+// we need to specify apart from frame latency the desired target FPS. APIs have different mechanism to control present at specific vsync points.
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 
 ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
