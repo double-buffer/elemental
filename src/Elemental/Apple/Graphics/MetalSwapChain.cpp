@@ -138,7 +138,8 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         .DeviceObject = metalLayer,
         .CommandQueue = commandQueue,
         .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
-        .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime()
+        // TODO: Create an initial timestamp so all timestamp are related to the creation of the swapchain accross all platforms
+        .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime() // TODO: Maybe we should set that to 0 and init it in the first update?
     }); 
 
     SystemAddDataPoolItemFull(metalSwapChainPool, handle, {

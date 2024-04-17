@@ -57,7 +57,7 @@ function(configure_resource_compilation target_name resource_list)
     set(${resource_list} "${compiled_shaders}" PARENT_SCOPE)
 endfunction()
 
-function(configure_apple_project target_name resource_list)
+function(configure_project_package target_name resource_list)
     if(APPLE)
         set_target_properties(${target_name} PROPERTIES 
             MACOSX_BUNDLE "TRUE"
@@ -98,6 +98,42 @@ function(configure_apple_project target_name resource_list)
         else()
             #set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/MacOS/Info.plist)
         endif()
+    else()
+        # TODO: Linux platform
+        set(output_folder "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}")
+
+        add_custom_target(CopyApplicationFolder${target_name} ALL)
+
+        # TODO: Change output folder of target instead
+        add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
+            #COMMAND ${CMAKE_COMMAND} -E rename "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.exe" "${output_folder}/${target_name}.exe"
+            COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:Elemental>" "${output_folder}"
+            COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE_DIR:Elemental>/D3D12Core.dll" "${output_folder}"
+            COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE_DIR:Elemental>/d3d12SDKLayers.dll" "${output_folder}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}/Data"
+            COMMENT "Creating package folder and copying files"
+        )
+
+        foreach(file IN LISTS resource_list)
+            get_filename_component(file_name "${file}" NAME)
+            get_filename_component(full_path "${file}" ABSOLUTE)
+            set(output_file "${output_folder}/Data/${file_name}")
+            
+            add_custom_command(
+                OUTPUT "${output_file}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}/Data"
+                COMMAND ${CMAKE_COMMAND} -E copy "${full_path}" "${output_file}"
+                DEPENDS "${full_path}"
+                COMMENT "Copying and checking resource file ${file_name}"
+            )
+            
+            list(APPEND output_files "${output_file}")
+        endforeach()
+        
+        add_custom_target(CopyResources${target_name} ALL DEPENDS ${output_files})
+        add_dependencies(${target_name} CopyResources${target_name})
+        add_dependencies(${target_name} CopyApplicationFolder${target_name})
     endif()
 endfunction()
 

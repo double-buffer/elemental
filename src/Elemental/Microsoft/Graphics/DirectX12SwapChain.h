@@ -4,19 +4,26 @@
 
 #define DIRECTX12_MAX_SWAPCHAIN_BUFFERS 3
 
+// TODO: Review structure
 struct DirectX12SwapChainData
 {
     ComPtr<IDXGISwapChain4> DeviceObject;
+    ElemCommandQueue CommandQueue;
+    ElemWindow Window;
     HANDLE WaitHandle;
     ElemTexture BackBufferTextures[DIRECTX12_MAX_SWAPCHAIN_BUFFERS];
+    ElemSwapChainUpdateHandlerPtr UpdateHandler;
+    void* UpdatePayload;
+    LARGE_INTEGER CreationTimestamp;
+    LARGE_INTEGER PreviousTargetPresentationTimestamp;
+    uint32_t Width;
+    uint32_t Height;
+    ElemTextureFormat Format;
 };
 
 struct DirectX12SwapChainDataFull
 {
     ElemGraphicsDevice GraphicsDevice;
-    ElemCommandQueue CommandQueue;
-    uint32_t Width;
-    uint32_t Height;
 };
 
 DirectX12SwapChainData* GetDirectX12SwapChainData(ElemSwapChain swapChain);

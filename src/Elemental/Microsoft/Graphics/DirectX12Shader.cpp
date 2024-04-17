@@ -262,7 +262,7 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
         }
     }
 
-    D3D12_GLOBAL_ROOT_SIGNATURE rootSignatureDesc = { .pGlobalRootSignature = graphicsDeviceData->RootSignature.Get() };
+ /*   D3D12_GLOBAL_ROOT_SIGNATURE rootSignatureDesc = { .pGlobalRootSignature = graphicsDeviceData->RootSignature.Get() };
     
     D3D12_RASTERIZER_DESC2 rasterizerDesc = 
     {
@@ -343,18 +343,18 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
 
     ComPtr<ID3D12StateObjectProperties1> pSOProperties;
     AssertIfFailed(stateObject->QueryInterface(IID_PPV_ARGS(&pSOProperties)));
-    auto programIdentifier = pSOProperties->GetProgramIdentifier(L"GraphicsProgram");
+    auto programIdentifier = pSOProperties->GetProgramIdentifier(L"GraphicsProgram");*/
 
     // TODO: Temporary
     auto oldPso = CreateDirectX12OldPSO(graphicsDevice, parameters);
 
     auto handle = SystemAddDataPoolItem(directX12PipelineStatePool, {
         .PipelineState = oldPso,
-        .ProgramIdentifier = programIdentifier
+        //.ProgramIdentifier = programIdentifier
     }); 
 
     SystemAddDataPoolItemFull(directX12PipelineStatePool, handle, {
-        .StateObject = stateObject,
+        //.StateObject = stateObject,
     });
 
     return handle;

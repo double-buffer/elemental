@@ -131,6 +131,8 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
+// TODO: ElemGetSystemInfo
+
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters);
 
 // TODO: ExitApplication();
@@ -290,17 +292,9 @@ typedef struct
 typedef struct
 {
     void* UpdatePayload;
-    uint32_t Width;
-    uint32_t Height;
     ElemSwapChainFormat Format;
     uint32_t FrameLatency;
 } ElemSwapChainOptions;
-
-typedef struct
-{
-    ElemTexture BackBufferTexture;
-    float DeltaTimeInSeconds; 
-} ElemSwapChainUpdateParameters;
 
 typedef struct
 {
@@ -308,6 +302,14 @@ typedef struct
     uint32_t Height;
     ElemTextureFormat Format;
 } ElemSwapChainInfo;
+
+typedef struct
+{
+    ElemSwapChainInfo SwapChainInfo;
+    ElemTexture BackBufferTexture;
+    double DeltaTimeInSeconds; 
+    double NextPresentTimeStampInSeconds;
+} ElemSwapChainUpdateParameters;
 
 typedef struct
 {
@@ -374,7 +376,6 @@ ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain);
-ElemAPI void ElemResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 
 ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);

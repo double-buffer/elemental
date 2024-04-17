@@ -1,19 +1,20 @@
 #include "Win32Application.h"
-
-#include "SystemDataPool.h"
-#include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-MemoryArena ApplicationMemoryArena;
-SystemDataPool<Win32ApplicationData, Win32ApplicationDataFull> applicationPool;
+#define WIN32_MAX_RUNLOOP 10u
 
+MemoryArena ApplicationMemoryArena;
+Span<Win32RunLoopHandler> Win32RunLoopHandlers;
+uint32_t Win32CurrentRunLoopIndex;
+
+// TODO: Use Xaml Islands?
 void InitWin32ApplicationMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
     {
         ApplicationMemoryArena = SystemAllocateMemoryArena();
-        applicationPool = SystemCreateDataPool<Win32ApplicationData, Win32ApplicationDataFull>(ApplicationMemoryArena, 10);
+        Win32RunLoopHandlers = SystemPushArray<Win32RunLoopHandler>(ApplicationMemoryArena, WIN32_MAX_RUNLOOP);
 
         SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
 
@@ -23,17 +24,23 @@ void InitWin32ApplicationMemory()
     }
 }
 
-Win32ApplicationData* GetWin32ApplicationData(ElemApplication application)
+void AddWin32RunLoopHandler(Win32RunLoopHandlerPtr handler, ElemHandle handle)
 {
-    return SystemGetDataPoolItem(applicationPool, application);
+    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Add Runloop handler");
+    Win32RunLoopHandlers[Win32CurrentRunLoopIndex++] = 
+    {
+        .Function = handler,
+        .Handle = handle,
+        .NextIndex = 0
+    };
 }
 
-Win32ApplicationDataFull* GetWin32ApplicationDataFull(ElemApplication application)
+void RemoveWin32RunLoopHandler(Win32RunLoopHandlerPtr handler)
 {
-    return SystemGetDataPoolItemFull(applicationPool, application);
+    // TODO:
 }
 
-void ProcessMessages(ElemApplication application)
+bool ProcessWin32Messages()
 {
     MSG message;
 
@@ -41,14 +48,14 @@ void ProcessMessages(ElemApplication application)
 	{
         if (message.message == WM_QUIT)
         {
-            auto applicationDataFull = GetWin32ApplicationDataFull(application);
-            SystemAssert(applicationDataFull);
-            applicationDataFull->Status = ElemApplicationStatus_Closing;
+            return false;
         }
 
         TranslateMessage(&message);
         DispatchMessage(&message);
     }
+
+    return true;
 }
 
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
@@ -59,47 +66,35 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     } 
 }
 
-ElemAPI ElemApplication ElemCreateApplication(const char* applicationName)
+ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters)
 {
     InitWin32ApplicationMemory();
-
-    auto instance = (HINSTANCE)GetModuleHandle(nullptr);
-
-    auto handle = SystemAddDataPoolItem(applicationPool, {
-        .ApplicationInstance = instance
-    }); 
-
-    SystemAddDataPoolItemFull(applicationPool, handle, {
-        .Status = ElemApplicationStatus_Active,
-        .WindowCount = 0
-    });
-
-    return handle;
-}
-
-ElemAPI void ElemFreeApplication(ElemApplication application)
-{
-    SystemRemoveDataPoolItem(applicationPool, application);
-}
-
-ElemAPI void ElemRunApplication(ElemApplication application, ElemRunHandlerPtr runHandler)
-{
+    
+    if (parameters->InitHandler)
+    {
+        parameters->InitHandler(parameters->Payload);
+    }
+    
     auto canRun = true;
 
     while (canRun) 
     {
-        ProcessMessages(application);
+        canRun = ProcessWin32Messages();
 
-        auto applicationDataFull = GetWin32ApplicationDataFull(application);
-        SystemAssert(applicationDataFull);
-
-        if (applicationDataFull->Status == ElemApplicationStatus_Closing)
+        if (canRun)
         {
-            canRun = false;
-        }
-        else
-        {
-            canRun = runHandler(applicationDataFull->Status);
+            for (uint32_t i = 0; i < Win32CurrentRunLoopIndex; i++)
+            {
+                auto handler = Win32RunLoopHandlers[i];
+                handler.Function(handler.Handle);
+            }
         }
     }
+
+    if (parameters->FreeHandler)
+    {
+        parameters->FreeHandler(parameters->Payload);
+    }
+
+    return 0;
 }
