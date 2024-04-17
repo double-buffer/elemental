@@ -7,7 +7,4 @@ target_link_libraries(${SAMPLE_NAME} PRIVATE ElementalInterface)
 add_dependencies(${SAMPLE_NAME} Elemental)
 
 configure_resource_compilation(${SAMPLE_NAME} resource_list)
-
-if(APPLE)
-    configure_apple_project(${SAMPLE_NAME} ${resource_list})
-endif()
+configure_project_package(${SAMPLE_NAME} ${resource_list})

@@ -103,8 +103,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
-    // NOTE: DeltaTime from swapchain is stable because it is the targetiPresentationTimeStamp - the previous one
-    // Sample frame time is not stable because the swapchain update handler maybe called at not stable time and the processing of commands can different times
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);
     SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", graphicsDeviceInfo, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
 
