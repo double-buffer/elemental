@@ -287,8 +287,6 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
 
-// TODO: Do we need a refresh rate parameter? On variable rate screen that is useful otherwise no
-// For the moment we target the max refresh rate
 typedef struct
 {
     void* UpdatePayload;
@@ -338,6 +336,22 @@ typedef struct
 
 typedef struct
 {
+    float X;
+    float Y;
+    float Width;
+    float Height;
+    float MinDepth;
+    float MaxDepth;
+} ElemViewport;
+
+typedef struct
+{
+    ElemViewport* Items;
+    uint32_t Length;
+} ElemViewportSpan;
+
+typedef struct
+{
     ElemTexture RenderTarget;
     ElemColor ClearColor;
     ElemRenderPassLoadAction LoadAction;
@@ -353,6 +367,7 @@ typedef struct
 typedef struct
 {
     ElemRenderPassRenderTargetSpan RenderTargets;
+    ElemViewportSpan Viewports;
 } ElemBeginRenderPassParameters;
 
 typedef void (*ElemSwapChainUpdateHandlerPtr)(const ElemSwapChainUpdateParameters* updateParameters,  void* payload);
@@ -402,6 +417,8 @@ ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_
 
 ElemAPI void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters);
 ElemAPI void ElemEndRenderPass(ElemCommandList commandList);
+ElemAPI void ElemSetViewport(ElemCommandList commandList, const ElemViewport* viewport);
+ElemAPI void ElemSetViewports(ElemCommandList commandList, ElemViewportSpan viewports);
 ElemAPI void ElemDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
 
 // TODO: TDR Logging!

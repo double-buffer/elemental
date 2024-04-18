@@ -80,18 +80,43 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
         {
-            .Items = (ElemRenderPassRenderTarget[]){ 
+            .Items = (ElemRenderPassRenderTarget[]) { 
             {
                 .RenderTarget = updateParameters->BackBufferTexture, 
                 .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
                 .LoadAction = ElemRenderPassLoadAction_Clear
             }},
             .Length = 1
-        }
+        },
+        /*.Viewports = 
+        {
+            .Items = (ElemViewport[]) {
+            {
+                .X = 200, 
+                .Y = 200,
+                .Width = 800, 
+                .Height = 600, 
+                .MinDepth = 0, 
+                .MaxDepth = 1
+            }},
+            .Length = 1
+        }*/
     });
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
+
+    /*
+    ElemSetViewport(commandList, &(ElemViewport)
+    {
+        .X = 200, 
+        .Y = 200,
+        .Width = 800, 
+        .Height = 600, 
+        .MinDepth = 0, 
+        .MaxDepth = 1
+    });*/
+
     ElemDispatchMesh(commandList, 1, 1, 1);
 
     ElemEndRenderPass(commandList);

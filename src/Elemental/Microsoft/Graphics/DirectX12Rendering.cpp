@@ -107,21 +107,26 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         //const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
         //commandListData->DeviceObject->ClearRenderTargetView(textureData->RtvDescriptor, clearColor, 0, nullptr);
 
-        if (i == 0)
+        if (i == 0 && parameters->Viewports.Length == 0)
         {
-            D3D12_VIEWPORT viewport = {};
-            viewport.Width = (float)textureData->ResourceDescription.Width;
-            viewport.Height = (float)textureData->ResourceDescription.Height;
-            viewport.MinDepth = 0.0f;
-            viewport.MaxDepth = 1.0f;
-            commandListData->DeviceObject->RSSetViewports(1, &viewport);
+            ElemViewport viewport =
+            {
+                .X = 0, 
+                .Y = 0, 
+                .Width = (float)textureData->ResourceDescription.Width, 
+                .Height = (float)textureData->ResourceDescription.Height, 
+                .MinDepth = 0.0f, 
+                .MaxDepth = 1.0f
+            };
 
-            D3D12_RECT scissorRect = {};
-            scissorRect.right = (long)textureData->ResourceDescription.Width;
-            scissorRect.bottom = (long)textureData->ResourceDescription.Height;
-            commandListData->DeviceObject->RSSetScissorRects(1, &scissorRect);
+            ElemSetViewport(commandList, &viewport); 
         }
-    }  
+    } 
+
+    if (parameters->Viewports.Length > 0)
+    {
+        ElemSetViewports(commandList, parameters->Viewports);
+    }
 
     commandListData->DeviceObject->BeginRenderPass(renderTargetDescList.Length, renderTargetDescList.Pointer, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
 }
@@ -168,6 +173,42 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
             commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
         }
     }
+}
+
+void DirectX12SetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
+{
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto directX12Viewports = SystemPushArray<D3D12_VIEWPORT>(stackMemoryArena, viewports.Length);
+    auto directX12ScissorRects = SystemPushArray<D3D12_RECT>(stackMemoryArena, viewports.Length);
+
+    for (uint32_t i = 0; i < viewports.Length; i++)
+    {
+        directX12Viewports[i] = 
+        {
+            .TopLeftX = viewports.Items[i].X,
+            .TopLeftY = viewports.Items[i].Y,
+            .Width = viewports.Items[i].Width,
+            .Height = viewports.Items[i].Height,
+            .MinDepth = viewports.Items[i].MinDepth,
+            .MaxDepth = viewports.Items[i].MaxDepth
+        };
+
+        directX12ScissorRects[i] = 
+        {
+            .left = (int32_t)viewports.Items[i].X,
+            .top = (int32_t)viewports.Items[i].Y,
+            .right = (int32_t)viewports.Items[i].X + (int32_t)viewports.Items[i].Width,
+            .bottom = (int32_t)viewports.Items[i].Y + (int32_t)viewports.Items[i].Height
+        };
+    }
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    commandListData->DeviceObject->RSSetViewports(directX12Viewports.Length, directX12Viewports.Pointer);
+    commandListData->DeviceObject->RSSetScissorRects(directX12ScissorRects.Length, directX12ScissorRects.Pointer);
 }
 
 void DirectX12DispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)

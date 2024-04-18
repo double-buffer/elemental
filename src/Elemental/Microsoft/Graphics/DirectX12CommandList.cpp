@@ -194,7 +194,7 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
     // TODO: Wait for fences if any
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto commandListsToExecute = SystemPushArray<ID3D12CommandList*>(stackMemoryArena, DIRECTX12_MAX_COMMANDLISTS);
+    auto commandListsToExecute = SystemPushArray<ID3D12CommandList*>(stackMemoryArena, commandLists.Length);
 
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {

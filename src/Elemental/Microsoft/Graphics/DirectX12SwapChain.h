@@ -19,6 +19,7 @@ struct DirectX12SwapChainData
     uint32_t Width;
     uint32_t Height;
     ElemTextureFormat Format;
+    bool PresentCalled;
 };
 
 struct DirectX12SwapChainDataFull

@@ -143,6 +143,7 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
             ResizeDirectX12SwapChain(handle, windowSize.Width, windowSize.Height);
         }
 
+        swapChainData->PresentCalled = false;
         auto backBufferTexture = swapChainData->BackBufferTextures[swapChainData->DeviceObject->GetCurrentBackBufferIndex()];
 
         ElemSwapChainUpdateParameters updateParameters
@@ -154,6 +155,12 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         };
         
         swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
+
+        if (!swapChainData->PresentCalled)
+        {
+            SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Present was not called during update.");
+            DirectX12PresentSwapChain(handle);
+        }
     }
 }
 
@@ -311,6 +318,8 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
 
     auto swapChainData = GetDirectX12SwapChainData(swapChain);
     SystemAssert(swapChainData);
+    
+    swapChainData->PresentCalled = true;
 
     // TODO: Review params
     // TODO: Control the next vsync for frame pacing (eg: running at 30fps on a 120hz screen)

@@ -45,7 +45,6 @@ typedef struct ElementalFunctions
     ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
-    void (*ElemResizeSwapChain)(ElemSwapChain, unsigned int, unsigned int);
     void (*ElemPresentSwapChain)(ElemSwapChain);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
@@ -55,6 +54,8 @@ typedef struct ElementalFunctions
     void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, ElemDataSpan);
     void (*ElemBeginRenderPass)(ElemCommandList, const ElemBeginRenderPassParameters*);
     void (*ElemEndRenderPass)(ElemCommandList);
+    void (*ElemSetViewport)(ElemCommandList, const ElemViewport*);
+    void (*ElemSetViewports)(ElemCommandList, ElemViewportSpan);
     void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
     
 } ElementalFunctions;
@@ -130,7 +131,6 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
-    listElementalFunctions.ElemResizeSwapChain = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemResizeSwapChain");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
@@ -140,6 +140,8 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
     listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassParameters*))GetElementalFunctionPointer("ElemBeginRenderPass");
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
+    listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, const ElemViewport*))GetElementalFunctionPointer("ElemSetViewport");
+    listElementalFunctions.ElemSetViewports = (void (*)(ElemCommandList, ElemViewportSpan))GetElementalFunctionPointer("ElemSetViewports");
     listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
     
 
@@ -776,23 +778,6 @@ static inline ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain)
     return listElementalFunctions.ElemGetSwapChainInfo(swapChain);
 }
 
-static inline void ElemResizeSwapChain(ElemSwapChain swapChain, unsigned int width, unsigned int height)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-        return;
-    }
-
-    if (!listElementalFunctions.ElemResizeSwapChain) 
-    {
-        assert(listElementalFunctions.ElemResizeSwapChain);
-        return;
-    }
-
-    listElementalFunctions.ElemResizeSwapChain(swapChain, width, height);
-}
-
 static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
 {
     if (!LoadElementalFunctionPointers()) 
@@ -972,6 +957,40 @@ static inline void ElemEndRenderPass(ElemCommandList commandList)
     }
 
     listElementalFunctions.ElemEndRenderPass(commandList);
+}
+
+static inline void ElemSetViewport(ElemCommandList commandList, const ElemViewport* viewport)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemSetViewport) 
+    {
+        assert(listElementalFunctions.ElemSetViewport);
+        return;
+    }
+
+    listElementalFunctions.ElemSetViewport(commandList, viewport);
+}
+
+static inline void ElemSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemSetViewports) 
+    {
+        assert(listElementalFunctions.ElemSetViewports);
+        return;
+    }
+
+    listElementalFunctions.ElemSetViewports(commandList, viewports);
 }
 
 static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int threadGroupCountX, unsigned int threadGroupCountY, unsigned int threadGroupCountZ)

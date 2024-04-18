@@ -106,6 +106,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
             .height = textureData->Height
         };
 
+        // TODO: Take into account viewports if specified
+
         renderCommandEncoder->setScissorRect(scissorRect);
     }
 
@@ -116,6 +118,10 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
 void MetalEndRenderPass(ElemCommandList commandList)
 {
     ResetMetalCommandEncoder(commandList);
+}
+
+void MetalSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
+{
 }
 
 void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
