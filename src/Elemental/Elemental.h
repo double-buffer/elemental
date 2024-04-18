@@ -398,10 +398,13 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
 ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data); 
 // TODO: Cache functions
 
+// TODO: SetViewport function
+
 ElemAPI void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters);
 ElemAPI void ElemEndRenderPass(ElemCommandList commandList);
 ElemAPI void ElemDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
 
+// TODO: TDR Logging!
 // TODO: Debugging functions (interop with PIX, XCode, etc.)
 
 #ifdef UseLoader
