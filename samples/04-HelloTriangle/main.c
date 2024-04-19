@@ -68,12 +68,21 @@ void FreeSample(void* payload)
     printf("Exit Sample\n");
 }
 
+bool isLatencyUpdated = false;
+
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+    
+    if (updateParameters->NextPresentTimeStampInSeconds > 4 && !isLatencyUpdated)
+    {
+        ElemSetSwapChainTiming(applicationPayload->SwapChain, 1, 30);
+        isLatencyUpdated = true;
+    }
+
     //printf("Next Present Timestamp in seconds: %f\n", updateParameters->NextPresentTimeStampInSeconds);
     //printf("DeltaTime in seconds: %f\n", updateParameters->DeltaTimeInSeconds);
     //Sleep(7);
-    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
 

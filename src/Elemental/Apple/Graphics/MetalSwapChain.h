@@ -42,4 +42,5 @@ MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain swapChain);
 ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 void MetalFreeSwapChain(ElemSwapChain swapChain);
 ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain);
+void MetalSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS);
 void MetalPresentSwapChain(ElemSwapChain swapChain);

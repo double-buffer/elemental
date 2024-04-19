@@ -45,6 +45,7 @@ typedef struct ElementalFunctions
     ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
+    void (*ElemSetSwapChainTiming)(ElemSwapChain, unsigned int, unsigned int);
     void (*ElemPresentSwapChain)(ElemSwapChain);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
@@ -131,6 +132,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
+    listElementalFunctions.ElemSetSwapChainTiming = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemSetSwapChainTiming");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
@@ -776,6 +778,23 @@ static inline ElemSwapChainInfo ElemGetSwapChainInfo(ElemSwapChain swapChain)
     }
 
     return listElementalFunctions.ElemGetSwapChainInfo(swapChain);
+}
+
+static inline void ElemSetSwapChainTiming(ElemSwapChain swapChain, unsigned int frameLatency, unsigned int targetFPS)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemSetSwapChainTiming) 
+    {
+        assert(listElementalFunctions.ElemSetSwapChainTiming);
+        return;
+    }
+
+    listElementalFunctions.ElemSetSwapChainTiming(swapChain, frameLatency, targetFPS);
 }
 
 static inline void ElemPresentSwapChain(ElemSwapChain swapChain)

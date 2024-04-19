@@ -20,6 +20,8 @@ struct DirectX12SwapChainData
     uint32_t Height;
     ElemTextureFormat Format;
     bool PresentCalled;
+    uint32_t FrameLatency;
+    uint32_t TargetFPS;
 };
 
 struct DirectX12SwapChainDataFull
@@ -33,6 +35,5 @@ DirectX12SwapChainDataFull* GetDirectX12SwapChainDataFull(ElemSwapChain swapChai
 ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 void DirectX12FreeSwapChain(ElemSwapChain swapChain);
 ElemSwapChainInfo DirectX12GetSwapChainInfo(ElemSwapChain swapChain);
-void DirectX12ResizeSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height);
+void DirectX12SetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS);
 void DirectX12PresentSwapChain(ElemSwapChain swapChain);
-void DirectX12WaitForSwapChainOnCpu(ElemSwapChain swapChain);

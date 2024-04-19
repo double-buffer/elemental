@@ -59,7 +59,7 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
         return;
     }
     
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d...", width, height);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d.", width, height);
     SystemAssert(swapChain != ELEM_HANDLE_NULL);
 
     auto swapChainData = GetDirectX12SwapChainData(swapChain);
@@ -90,8 +90,13 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
     auto swapChainData = GetDirectX12SwapChainData(handle);
     SystemAssert(swapChainData);
 
+    auto windowData = GetWin32WindowData(swapChainData->Window);
+    SystemAssert(windowData);
+
     if (WaitForSingleObjectEx(swapChainData->WaitHandle, 0, true) == WAIT_OBJECT_0)
     {
+        // TODO: First calculation of firt delta time. For the moment it is done again the creation of swap chain time.
+
         // START TIMING CALCULATION
         DXGI_FRAME_STATISTICS stats;
 
@@ -121,8 +126,7 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
             syncQPCTime.QuadPart = currentTimeStamp.QuadPart - swapChainData->CreationTimestamp.QuadPart;
         }
 
-        // TODO: Get proper refresh interval
-        double refreshInterval = 1.0 / 120.0;
+        double refreshInterval = 1.0 / windowData->MonitorRefreshRate;
         double intervalTicks = refreshInterval * ticksPerSecond;
 
         LARGE_INTEGER nextVSyncQPCTime;
@@ -134,8 +138,6 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         swapChainData->PreviousTargetPresentationTimestamp = nextVSyncQPCTime;
         // END TIMING CALCULATION
 
-        // TODO: Check if present was called like in metal implementation
-    
         ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
@@ -185,6 +187,8 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     auto height = windowRenderSize.Height;
     auto format = DXGI_FORMAT_B8G8R8A8_UNORM; // TODO: Enumerate compatible formats first
     auto frameLatency = 1u;
+
+    auto targetFPS = windowData->MonitorRefreshRate;
     void* updatePayload = nullptr;
  
     if (options)
@@ -198,6 +202,11 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         if (options->FrameLatency != 0)
         {
             frameLatency = options->FrameLatency;
+        }
+
+        if (options->TargetFPS != 0)
+        {
+            targetFPS = options->TargetFPS;
         }
 
         if (options->UpdatePayload)
@@ -221,7 +230,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT
     };
 
-    // TODO: Support Fullscreen exclusive in the future
+    // TODO: Support Fullscreen exclusive in the future?
     DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapChainFullScreenDesc =
     {
         .Windowed = true
@@ -255,7 +264,9 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .PreviousTargetPresentationTimestamp = {},
         .Width = width,
         .Height = height,
-        .Format = ElemTextureFormat_B8G8R8A8_SRGB // TODO: change that
+        .Format = ElemTextureFormat_B8G8R8A8_SRGB, // TODO: change that
+        .FrameLatency = frameLatency,
+        .TargetFPS = targetFPS
     }); 
 
     SystemAddDataPoolItemFull(directX12SwapChainPool, handle, {
@@ -276,9 +287,6 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     SystemAssert(swapChainData);
 
     auto fence = Direct3D12CreateCommandQueueFence(swapChainData->CommandQueue);
-
-    // BUG: If wait for swapchain is not called on the client code each frame this line block inf
-    // Note that in the test an empty command list was used, that may be the problem
     ElemWaitForFenceOnCpu(fence);
 
     for (uint32_t i = 0; i < DIRECTX12_MAX_SWAPCHAIN_BUFFERS; i++)
@@ -312,6 +320,24 @@ ElemSwapChainInfo DirectX12GetSwapChainInfo(ElemSwapChain swapChain)
     };
 }
 
+void DirectX12SetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
+{
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Set Swapchain timing: FrameLatency: %d, TargetFPS: %d", frameLatency, targetFPS);
+
+    SystemAssert(swapChain != ELEM_HANDLE_NULL);
+
+    auto swapChainData = GetDirectX12SwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    if (swapChainData->FrameLatency != frameLatency)
+    {
+        swapChainData->FrameLatency = frameLatency;
+        swapChainData->DeviceObject->SetMaximumFrameLatency(frameLatency);
+    }
+    
+    swapChainData->TargetFPS = targetFPS;
+}
+
 void DirectX12PresentSwapChain(ElemSwapChain swapChain)
 {
     SystemAssert(swapChain != ELEM_HANDLE_NULL);
@@ -319,11 +345,18 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     auto swapChainData = GetDirectX12SwapChainData(swapChain);
     SystemAssert(swapChainData);
     
+    auto windowData = GetWin32WindowData(swapChainData->Window);
+    SystemAssert(windowData);
+    
     swapChainData->PresentCalled = true;
 
-    // TODO: Review params
+    // TODO: Compute vsync interval based on target fps (rework that, it only works for multiples for now!)
+    // TODO: We need to take into account the current present time with the nextPresentTime computed from update function
+    // For example, if we present and we missed a vsync, the calculation should take that into account
+    auto vsyncInteval = windowData->MonitorRefreshRate / swapChainData->TargetFPS;
+
     // TODO: Control the next vsync for frame pacing (eg: running at 30fps on a 120hz screen)
-    AssertIfFailed(swapChainData->DeviceObject->Present(1, 0));
+    AssertIfFailed(swapChainData->DeviceObject->Present(vsyncInteval, 0));
     
     // TODO: Reset command allocation
     //Direct3D12ResetCommandAllocation(swapChain->GraphicsDevice);

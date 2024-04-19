@@ -190,6 +190,10 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
     };
 }
 
+void MetalSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
+{
+}
+
 void MetalPresentSwapChain(ElemSwapChain swapChain)
 {
     auto swapChainData = GetMetalSwapChainData(swapChain);

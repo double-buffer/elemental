@@ -6,6 +6,8 @@
 
 void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
+    // TODO: Check command list type != COMPUTE
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandList != ELEM_HANDLE_NULL);
@@ -117,15 +119,21 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
 
 void MetalEndRenderPass(ElemCommandList commandList)
 {
+    // TODO: Check command list type != COMPUTE
+
     ResetMetalCommandEncoder(commandList);
 }
 
 void MetalSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
 {
+    // TODO: Check command list type != COMPUTE
 }
 
 void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
+    // TODO: Check command list type != COMPUTE
+    // TODO: Check if render pass active
+
     SystemAssert(commandList != ELEM_HANDLE_NULL);
 
     auto commandListData = GetMetalCommandListData(commandList);

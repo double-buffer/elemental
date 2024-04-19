@@ -5,6 +5,8 @@
 
 void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
+    // TODO: Check command list type != COMPUTE
+    
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandList != ELEM_HANDLE_NULL);
@@ -133,6 +135,8 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
 
 void DirectX12EndRenderPass(ElemCommandList commandList)
 {
+    // TODO: Check command list type != COMPUTE
+
     SystemAssert(commandList != ELEM_HANDLE_NULL);
 
     auto commandListData = GetDirectX12CommandListData(commandList);
@@ -177,6 +181,8 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
 
 void DirectX12SetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
 {
+    // TODO: Check command list type != COMPUTE
+
     SystemAssert(commandList != ELEM_HANDLE_NULL);
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -213,6 +219,9 @@ void DirectX12SetViewports(ElemCommandList commandList, ElemViewportSpan viewpor
 
 void DirectX12DispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
+    // TODO: Check command list type != COMPUTE
+    // TODO: Check if render pass active
+
     SystemAssert(commandList != ELEM_HANDLE_NULL);
     SystemAssert(threadGroupCountX > 0);
     SystemAssert(threadGroupCountY > 0);
@@ -221,11 +230,5 @@ void DirectX12DispatchMesh(ElemCommandList commandList, uint32_t threadGroupCoun
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
 
-    // TODO: Check if the current shader on the command list is already compiled 
-    /*if (!commandList->IsRenderPassActive)
-    {
-        return;
-    }*/
-        
     commandListData->DeviceObject->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

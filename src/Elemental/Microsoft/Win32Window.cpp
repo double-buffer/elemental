@@ -7,6 +7,54 @@
 SystemDataPool<Win32WindowData, Win32WindowDataFull> windowDataPool;
 SystemDictionary<HWND, ElemWindow> windowDictionary;
 
+void RefreshWin32MonitorInfos(ElemWindow window)
+{
+    auto windowData = GetWin32WindowData(window);
+    SystemAssert(windowData);
+
+    auto windowDataFull = GetWin32WindowDataFull(window);
+    SystemAssert(windowDataFull);
+
+    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Refresh monitor infos");
+
+    IDXGIOutput* pOutput = nullptr;
+    ComPtr<IDXGIFactory2> pFactory = nullptr;
+    
+    AssertIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(pFactory.GetAddressOf())));
+
+    // Use while loops for enumerating adapters and outputs
+    IDXGIAdapter* pAdapter = nullptr;
+    UINT adapterIndex = 0;
+    bool adapterFound = false;
+
+    while (pFactory->EnumAdapters(adapterIndex++, &pAdapter) != DXGI_ERROR_NOT_FOUND) 
+    {
+        UINT outputIndex = 0;
+
+        while (pAdapter->EnumOutputs(outputIndex++, &pOutput) != DXGI_ERROR_NOT_FOUND) 
+        {
+            DXGI_OUTPUT_DESC desc;
+            pOutput->GetDesc(&desc);
+            if (desc.Monitor == windowDataFull->Monitor) {
+                adapterFound = true;
+                DXGI_MODE_DESC currentMode;
+                ZeroMemory(&currentMode, sizeof(DXGI_MODE_DESC));
+                currentMode.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+                if (SUCCEEDED(pOutput->FindClosestMatchingMode(&currentMode, &currentMode, nullptr))) {
+                    uint32_t refreshRate = SystemRoundUp(static_cast<float>(currentMode.RefreshRate.Numerator) / currentMode.RefreshRate.Denominator);
+                    //std::cout << "Current refresh rate: " << refreshRate << "Hz" << std::endl;
+                    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Test %d", refreshRate);
+                    windowData->MonitorRefreshRate = refreshRate;
+                }
+                pOutput->Release();
+                break;
+            }
+            pOutput->Release();
+        }
+    }
+}
+
 LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -48,6 +96,31 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
             break;
         }
 
+        case WM_DISPLAYCHANGE:
+        case WM_WINDOWPOSCHANGED:
+        {
+            if (!SystemDictionaryContainsKey(windowDictionary, window))
+            {
+                break;
+            }
+
+            auto windowHandle = windowDictionary[window];
+
+            auto windowData = GetWin32WindowData(windowHandle);
+            SystemAssert(windowData);
+
+            auto windowDataFull = GetWin32WindowDataFull(windowHandle);
+            SystemAssert(windowDataFull);
+
+            auto currentMonitor = MonitorFromWindow(windowData->WindowHandle, MONITOR_DEFAULTTONEAREST);
+
+            if (currentMonitor != windowDataFull->Monitor)
+            {
+                windowDataFull->Monitor = currentMonitor;
+                RefreshWin32MonitorInfos(windowHandle);
+            }
+            break;
+        }
         case WM_CLOSE:
         {
             if (!SystemDictionaryContainsKey(windowDictionary, window))
@@ -197,6 +270,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     DWORD windowStyle = GetWindowLong(window, GWL_STYLE);
     DWORD windowExStyle = GetWindowLong(window, GWL_EXSTYLE);
 
+    auto currentMonitor = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
+
     auto handle = SystemAddDataPoolItem(windowDataPool, {
         .WindowHandle = window
     }); 
@@ -204,12 +279,15 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     SystemAddDataPoolItemFull(windowDataPool, handle, {
         .WindowPlacement = windowPlacement,
         .WindowStyle = windowStyle,
-        .WindowExStyle = windowExStyle
+        .WindowExStyle = windowExStyle,
+        .Monitor = currentMonitor
     });
 
     SystemAddDictionaryEntry(windowDictionary, window, handle);
 
     ElemSetWindowState(handle, windowState);
+    RefreshWin32MonitorInfos(handle);
+
     return handle;
 }
 

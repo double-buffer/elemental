@@ -40,6 +40,10 @@ ElemSwapChainInfo VulkanGetSwapChainInfo(ElemSwapChain swapChain)
     return {};
 }
 
+void VulkanSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
+{
+}
+
 void VulkanPresentSwapChain(ElemSwapChain swapChain)
 {
 }
