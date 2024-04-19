@@ -192,6 +192,8 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 
 void MetalSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
 {
+    // TODO: Not implemented yet
+    SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "This feature is not yet implelmented");
 }
 
 void MetalPresentSwapChain(ElemSwapChain swapChain)

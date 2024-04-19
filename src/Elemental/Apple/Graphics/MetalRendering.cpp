@@ -83,8 +83,15 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
         SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Render command encoder creation failed.");
         return;
     }
+    
+    commandListData->CommandEncoder = renderCommandEncoder;
+    commandListData->CommandEncoderType = MetalCommandEncoderType_Render;
 
-    if (parameters->RenderTargets.Length > 0)
+    if (parameters->Viewports.Length > 0)
+    {
+        ElemSetViewports(commandList, parameters->Viewports);
+    }
+    else if (parameters->RenderTargets.Length > 0)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[0];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
@@ -92,29 +99,18 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
         auto textureData = GetMetalTextureData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
-        MTL::Viewport viewport = 
+        ElemViewport viewport = 
         {
-            .width = (float)textureData->Width, 
-            .height = (float)textureData->Height, 
-            .znear = 0.0f,
-            .zfar = 1.0f
-        };
-        
-        renderCommandEncoder->setViewport(viewport);
-
-        MTL::ScissorRect scissorRect = 
-        {
-            .width = textureData->Width,
-            .height = textureData->Height
+            .X = 0,
+            .Y = 0,
+            .Width = (float)textureData->Width, 
+            .Height = (float)textureData->Height, 
+            .MinDepth = 0.0f,
+            .MaxDepth = 1.0f
         };
 
-        // TODO: Take into account viewports if specified
-
-        renderCommandEncoder->setScissorRect(scissorRect);
+        ElemSetViewport(commandList, &viewport);
     }
-
-    commandListData->CommandEncoder = renderCommandEncoder;
-    commandListData->CommandEncoderType = MetalCommandEncoderType_Render;
 }
 
 void MetalEndRenderPass(ElemCommandList commandList)
@@ -127,6 +123,44 @@ void MetalEndRenderPass(ElemCommandList commandList)
 void MetalSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
 {
     // TODO: Check command list type != COMPUTE
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Render);
+    SystemAssert(commandListData->CommandEncoder);
+
+    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto metalViewports = SystemPushArray<MTL::Viewport>(stackMemoryArena, viewports.Length);
+    auto metalScissorRects = SystemPushArray<MTL::ScissorRect>(stackMemoryArena, viewports.Length);
+
+    for (uint32_t i = 0; i < viewports.Length; i++)
+    {
+        metalViewports[i] = 
+        {
+            .originX = viewports.Items[i].X,
+            .originY = viewports.Items[i].Y,
+            .width = viewports.Items[i].Width,
+            .height = viewports.Items[i].Height,
+            .znear = viewports.Items[i].MinDepth,
+            .zfar = viewports.Items[i].MaxDepth
+        };
+
+        metalScissorRects[i] =
+        {
+            .x = (uint32_t)viewports.Items[i].X,
+            .y = (uint32_t)viewports.Items[i].Y,
+            .width = (uint32_t)viewports.Items[i].Width,
+            .height = (uint32_t)viewports.Items[i].Height,
+        };
+    } 
+
+    renderCommandEncoder->setViewports(metalViewports.Pointer, viewports.Length);
+    renderCommandEncoder->setScissorRects(metalScissorRects.Pointer, viewports.Length);
 }
 
 void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)

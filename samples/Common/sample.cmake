@@ -59,11 +59,18 @@ message("ok")
 endfunction()
 
 function(configure_project_package target_name resource_list)
+    list(LENGTH resource_list resource_list_length)
+
     if(APPLE)
         set_target_properties(${target_name} PROPERTIES 
             MACOSX_BUNDLE "TRUE"
-            RESOURCE ${resource_list}    
         )
+
+        if(NOT resource_list_length EQUAL 0)
+            set_target_properties(${target_name} PROPERTIES 
+                RESOURCE ${resource_list}    
+            )
+        endif()
 
         if(CMAKE_GENERATOR STREQUAL "Xcode")
             set(ELEMENTAL_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/Elemental.framework")
@@ -112,8 +119,6 @@ function(configure_project_package target_name resource_list)
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental" "${output_folder}"
             COMMENT "Creating package folder and copying files"
         )
-
-        list(LENGTH resource_list resource_list_length)
 
         if(NOT resource_list_length EQUAL 0)
             foreach(file IN LISTS resource_list)
