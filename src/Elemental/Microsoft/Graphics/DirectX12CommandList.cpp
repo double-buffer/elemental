@@ -10,7 +10,7 @@
 SystemDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull> directX12CommandQueuePool;
 SystemDataPool<DirectX12CommandListData, DirectX12CommandListDataFull> directX12CommandListPool;
 
-thread_local CommandAllocatorDevicePool<ComPtr<ID3D12CommandAllocator>, ComPtr<ID3D12GraphicsCommandList10>> threadDirectX12DeviceCommandPools[DIRECTX12_MAX_DEVICES];
+thread_local CommandAllocatorDevicePool<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*> threadDirectX12DeviceCommandPools[DIRECTX12_MAX_DEVICES];
 
 HANDLE directX12GlobalFenceEvent;
 
@@ -97,6 +97,9 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
         commandQueue->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
     }    
 
+    auto commandAllocators = SystemPushArray<ComPtr<ID3D12CommandAllocator>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
+    auto commandLists = SystemPushArray<ComPtr<ID3D12GraphicsCommandList10>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
+
     auto handle = SystemAddDataPoolItem(directX12CommandQueuePool, {
         .DeviceObject = commandQueue,
         .Type = commandQueueDesc.Type,
@@ -108,6 +111,8 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
         .Fence = fence,
         .FenceValue = 0,
         .LastCompletedFenceValue = 0,
+        .CommandAllocators = commandAllocators,
+        .CommandLists = commandLists
     });
 
     return handle;
@@ -128,6 +133,12 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
 
     commandQueueDataFull->Fence.Reset();
     commandQueueData->DeviceObject.Reset();
+
+    for (uint32_t i = 0; i < commandQueueDataFull->CurrentCommandAllocatorIndex; i++)
+    {
+        commandQueueDataFull->CommandAllocators[i].Reset();
+        commandQueueDataFull->CommandLists[i].Reset();
+    }
 
     SystemRemoveDataPoolItem(directX12CommandQueuePool, commandQueue);
 }
@@ -164,18 +175,33 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
             }
 
             AssertIfFailed(commandAllocatorPoolItem->CommandAllocator->Reset());
+            ComPtr<ID3D12CommandAllocator> commandAllocator;
         }
         else 
         {
-            // TODO: register resource centrally so we can free it event if it was not created in this thread?
-            AssertIfFailed(graphicsDeviceData->Device->CreateCommandAllocator(commandQueueData->Type, IID_PPV_ARGS(commandAllocatorPoolItem->CommandAllocator.GetAddressOf())));
-            AssertIfFailed(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandAllocatorPoolItem->CommandList.GetAddressOf())));
+            auto commandQueueDataFull = GetDirectX12CommandQueueDataFull(commandQueue);
+            SystemAssert(commandQueueDataFull);
+
+            ComPtr<ID3D12CommandAllocator> commandAllocator;
+            ComPtr<ID3D12GraphicsCommandList10> commandList;
+
+            AssertIfFailed(graphicsDeviceData->Device->CreateCommandAllocator(commandQueueData->Type, IID_PPV_ARGS(commandAllocator.GetAddressOf())));
+            AssertIfFailed(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
+        
+            commandAllocatorPoolItem->CommandAllocator = commandAllocator.Get();
+            commandAllocatorPoolItem->CommandList = commandList.Get();
+
+            auto commandAllocatorIndex = SystemAtomicAdd(commandQueueDataFull->CurrentCommandAllocatorIndex, 1);
+            commandQueueDataFull->CommandAllocators[commandAllocatorIndex] = commandAllocator;
+
+            auto commandListIndex = SystemAtomicAdd(commandQueueDataFull->CurrentCommandListIndex, 1);
+            commandQueueDataFull->CommandLists[commandListIndex] = commandList;
         }
 
         commandAllocatorPoolItem->IsResetNeeded = false;
     }
             
-    AssertIfFailedReturnNullHandle(commandAllocatorPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator.Get(), nullptr));
+    AssertIfFailedReturnNullHandle(commandAllocatorPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
 
     // TODO: Can we set the root signature for all types all the time?
     commandAllocatorPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
@@ -223,6 +249,8 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
         auto commandListData = GetDirectX12CommandListData(commandLists.Items[i]);
 
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
+
+        commandListData->DeviceObject.Reset();
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include "SystemSpan.h"
 #include "Graphics/CommandAllocatorPool.h"
 
 struct DirectX12CommandQueueData
@@ -16,12 +17,16 @@ struct DirectX12CommandQueueDataFull
     ComPtr<ID3D12Fence1> Fence;
     uint64_t FenceValue = 0;
     uint64_t LastCompletedFenceValue = 0;
+    Span<ComPtr<ID3D12CommandAllocator>> CommandAllocators;
+    uint32_t CurrentCommandAllocatorIndex;
+    Span<ComPtr<ID3D12GraphicsCommandList10>> CommandLists;
+    uint32_t CurrentCommandListIndex;
 };
 
 struct DirectX12CommandListData
 {
     ComPtr<ID3D12GraphicsCommandList10> DeviceObject;
-    CommandAllocatorPoolItem<ComPtr<ID3D12CommandAllocator>, ComPtr<ID3D12GraphicsCommandList10>>* CommandAllocatorPoolItem;
+    CommandAllocatorPoolItem<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*>* CommandAllocatorPoolItem;
 };
 
 struct DirectX12CommandListDataFull
