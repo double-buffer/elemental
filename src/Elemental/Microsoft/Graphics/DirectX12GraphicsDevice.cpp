@@ -6,7 +6,6 @@
 
 #define D3D12SDK_VERSION 613
 #define D3D12SDK_PATH ".\\"
-#define DIRECTX12_MAX_DEVICES 10u
 #define DIRECTX12_MAX_RTVS 1024u
 
 struct DirectX12DescriptorHeapStorage
@@ -97,11 +96,9 @@ void InitDirectX12GraphicsDeviceMemory()
 
 void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void* context)
 {
-    // TODO: Maybe we should remove this because it displays the creation/destroy of resources
-    // for now we hide that because we don't have a pool of commandlists
     if (severity == D3D12_MESSAGE_SEVERITY_INFO)
     {
-        //return;
+        return;
     }
 
     auto messageType = ElemLogMessageType_Debug;

@@ -176,9 +176,6 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
 
-    auto commandQueueDataFull = GetDirectX12CommandQueueDataFull(commandQueue);
-    SystemAssert(commandQueueDataFull);
-
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
@@ -270,7 +267,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     }); 
 
     SystemAddDataPoolItemFull(directX12SwapChainPool, handle, {
-        .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
+        .GraphicsDevice = commandQueueData->GraphicsDevice,
     });
 
     CreateDirectX12SwapChainRenderTargetViews(handle);
@@ -345,6 +342,9 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     auto swapChainData = GetDirectX12SwapChainData(swapChain);
     SystemAssert(swapChainData);
     
+    auto swapChainDataFull = GetDirectX12SwapChainDataFull(swapChain);
+    SystemAssert(swapChainDataFull);
+
     auto windowData = GetWin32WindowData(swapChainData->Window);
     SystemAssert(windowData);
     
@@ -358,6 +358,5 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     // TODO: Control the next vsync for frame pacing (eg: running at 30fps on a 120hz screen)
     AssertIfFailed(swapChainData->DeviceObject->Present(vsyncInteval, 0));
     
-    // TODO: Reset command allocation
-    //Direct3D12ResetCommandAllocation(swapChain->GraphicsDevice);
+    DirectX12ResetCommandAllocation(swapChainDataFull->GraphicsDevice);
 }

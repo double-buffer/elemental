@@ -11,6 +11,11 @@ ElemAPI void ElemFreeCommandQueue(ElemCommandQueue commandQueue)
     DispatchGraphicsFunction(FreeCommandQueue, commandQueue);
 }
 
+ElemAPI void ElemResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
+{
+    DispatchGraphicsFunction(ResetCommandAllocation, graphicsDevice);
+}
+
 ElemAPI ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
     DispatchReturnGraphicsFunction(GetCommandList, commandQueue, options);

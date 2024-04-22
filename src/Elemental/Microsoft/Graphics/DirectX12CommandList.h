@@ -1,28 +1,27 @@
 #pragma once
 
 #include "Elemental.h"
+#include "Graphics/CommandAllocatorPool.h"
 
 struct DirectX12CommandQueueData
 {
     ComPtr<ID3D12CommandQueue> DeviceObject;
     D3D12_COMMAND_LIST_TYPE Type;
+    CommandAllocatorQueueType CommandAllocatorQueueType;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct DirectX12CommandQueueDataFull
 {
-    ElemGraphicsDevice GraphicsDevice;
     ComPtr<ID3D12Fence1> Fence;
     uint64_t FenceValue = 0;
     uint64_t LastCompletedFenceValue = 0;
-
-    // TODO: We use 2 command allocators for the moment. 
-    // We will handle proper multi threading later
-    ComPtr<ID3D12CommandAllocator> CommandAllocators[2];
 };
 
 struct DirectX12CommandListData
 {
     ComPtr<ID3D12GraphicsCommandList10> DeviceObject;
+    CommandAllocatorPoolItem<ComPtr<ID3D12CommandAllocator>, ComPtr<ID3D12GraphicsCommandList10>>* CommandAllocatorPoolItem;
 };
 
 struct DirectX12CommandListDataFull
@@ -38,6 +37,7 @@ DirectX12CommandListDataFull* GetDirectX12CommandListDataFull(ElemCommandList co
 
 ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue);
+void DirectX12ResetCommandAllocation(ElemGraphicsDevice graphicsDevice);
 ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
 void DirectX12CommitCommandList(ElemCommandList commandList);
 

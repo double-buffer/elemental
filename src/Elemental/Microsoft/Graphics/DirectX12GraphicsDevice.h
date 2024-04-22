@@ -3,6 +3,8 @@
 #include "Elemental.h"
 #include "SystemMemory.h"
 
+#define DIRECTX12_MAX_DEVICES 10u
+
 struct DirectX12DescriptorHeapStorage;
 
 struct DirectX12DescriptorHeap
@@ -14,6 +16,7 @@ struct DirectX12GraphicsDeviceData
 {
     ComPtr<ID3D12Device10> Device;
     ComPtr<ID3D12RootSignature> RootSignature;
+    uint64_t CommandAllocationGeneration;
 };
 
 struct DirectX12GraphicsDeviceDataFull

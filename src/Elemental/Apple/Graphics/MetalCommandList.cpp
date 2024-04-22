@@ -91,6 +91,10 @@ void MetalFreeCommandQueue(ElemCommandQueue commandQueue)
     commandQueueData->DeviceObject.reset();
 }
 
+void MetalResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
+{
+}
+
 ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);

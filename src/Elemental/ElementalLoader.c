@@ -37,6 +37,7 @@ typedef struct ElementalFunctions
     ElemGraphicsDeviceInfo (*ElemGetGraphicsDeviceInfo)(ElemGraphicsDevice);
     ElemCommandQueue (*ElemCreateCommandQueue)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*);
     void (*ElemFreeCommandQueue)(ElemCommandQueue);
+    void (*ElemResetCommandAllocation)(ElemGraphicsDevice);
     ElemCommandList (*ElemGetCommandList)(ElemCommandQueue, const ElemCommandListOptions*);
     void (*ElemCommitCommandList)(ElemCommandList);
     ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*);
@@ -124,6 +125,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemGetGraphicsDeviceInfo");
     listElementalFunctions.ElemCreateCommandQueue = (ElemCommandQueue (*)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*))GetElementalFunctionPointer("ElemCreateCommandQueue");
     listElementalFunctions.ElemFreeCommandQueue = (void (*)(ElemCommandQueue))GetElementalFunctionPointer("ElemFreeCommandQueue");
+    listElementalFunctions.ElemResetCommandAllocation = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemResetCommandAllocation");
     listElementalFunctions.ElemGetCommandList = (ElemCommandList (*)(ElemCommandQueue, const ElemCommandListOptions*))GetElementalFunctionPointer("ElemGetCommandList");
     listElementalFunctions.ElemCommitCommandList = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemCommitCommandList");
     listElementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandList");
@@ -572,6 +574,23 @@ static inline void ElemFreeCommandQueue(ElemCommandQueue commandQueue)
     }
 
     listElementalFunctions.ElemFreeCommandQueue(commandQueue);
+}
+
+static inline void ElemResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemResetCommandAllocation) 
+    {
+        assert(listElementalFunctions.ElemResetCommandAllocation);
+        return;
+    }
+
+    listElementalFunctions.ElemResetCommandAllocation(graphicsDevice);
 }
 
 static inline ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)

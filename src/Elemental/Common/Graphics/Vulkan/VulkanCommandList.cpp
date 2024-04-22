@@ -10,6 +10,8 @@
 SystemDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull> vulkanCommandQueuePool;
 SystemDataPool<VulkanCommandListData, VulkanCommandListDataFull> vulkanCommandListPool;
 
+thread_local CommandAllocatorDevicePool<VkCommandPool, VkCommandBuffer> threadVulkanDeviceCommandPools[VULKAN_MAX_DEVICES];
+
 void InitVulkanCommandListMemory()
 {
     if (!vulkanCommandQueuePool.Storage)
@@ -71,56 +73,6 @@ ElemFence CreateVulkanCommandQueueFence(ElemCommandQueue commandQueue)
         .CommandQueue = commandQueue,
         .FenceValue = fenceValue
     };
-}
-
-
-// TODO: For the moment we set it to the max frames because it is per thread.
-// Review that
-#define MAX_COMMANDALLOCATOR 3u
-
-template<typename TCommandAllocator, typename TCommandList>
-struct CommandAllocatorPoolItem
-{
-    TCommandAllocator CommandAllocator;
-    TCommandList CommandList;
-    ElemFence Fence;
-    bool IsResetNeeded;
-};
-
-template<typename TCommandAllocator, typename TCommandList>
-struct CommandAllocatorDevicePool
-{
-    CommandAllocatorPoolItem<TCommandAllocator, TCommandList> CommandAllocators[MAX_COMMANDALLOCATOR]; 
-    uint32_t CurrentCommandAllocatorIndex;
-    CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* Items[CommandAllocatorQueueType_Max];
-    uint64_t Generation;
-};
-
-thread_local CommandAllocatorDevicePool<VkCommandPool, VkCommandBuffer> threadVulkanDeviceCommandPools[VULKAN_MAX_DEVICES];
-
-template<typename TCommandAllocator, typename TCommandList>
-CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* GetCommandAllocatorPoolItem(CommandAllocatorDevicePool<TCommandAllocator, TCommandList>* threadAllocatorDevicePool, ElemGraphicsDevice graphicsDevice, uint64_t generation, CommandAllocatorQueueType commandQueueType)
-{
-    auto commandPoolsCache = &threadAllocatorDevicePool[graphicsDevice];
-
-    if (commandPoolsCache->Generation != generation)
-    {
-        for (uint32_t i = 0; i < CommandAllocatorQueueType_Max; i++)
-        {
-            commandPoolsCache->Items[i] = nullptr;
-        }
-
-        commandPoolsCache->Generation = generation;
-    }
-
-    if (commandPoolsCache->Items[commandQueueType] == nullptr)
-    {
-        commandPoolsCache->Items[commandQueueType] = &commandPoolsCache->CommandAllocators[commandPoolsCache->CurrentCommandAllocatorIndex];
-        commandPoolsCache->Items[commandQueueType]->IsResetNeeded = true;
-        commandPoolsCache->CurrentCommandAllocatorIndex = (commandPoolsCache->CurrentCommandAllocatorIndex + 1) % MAX_COMMANDALLOCATOR;
-    }
-
-    return commandPoolsCache->Items[commandQueueType];
 }
 
 ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
@@ -210,6 +162,10 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
     SystemRemoveDataPoolItem(vulkanCommandQueuePool, commandQueue);
 }
 
+void VulkanResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
+{
+}
+
 ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
@@ -223,7 +179,9 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(threadVulkanDeviceCommandPools, commandQueueData->GraphicsDevice, graphicsDeviceData->CommandAllocationGeneration, commandQueueData->CommandAllocatorQueueType);
+    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadVulkanDeviceCommandPools[commandQueueData->GraphicsDevice], 
+                                                                graphicsDeviceData->CommandAllocationGeneration, 
+                                                                commandQueueData->CommandAllocatorQueueType);
 
     if (commandAllocatorPoolItem->IsResetNeeded)
     {

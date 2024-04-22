@@ -22,6 +22,7 @@
 #include "Graphics/Vulkan/VulkanShader.cpp"
 #include "Graphics/Vulkan/VulkanRendering.cpp"
 
+#include "Graphics/CommandAllocatorPool.cpp"
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
 #include "Graphics/SwapChain.cpp"

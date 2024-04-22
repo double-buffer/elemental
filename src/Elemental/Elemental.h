@@ -280,6 +280,7 @@ typedef struct
     uint32_t Length;
 } ElemFenceSpan;
 
+// TODO: Always insert a fence but awaitable on cpu is an option
 typedef struct
 {
     bool InsertFence;
@@ -382,6 +383,7 @@ ElemAPI ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice grap
 
 ElemAPI ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 ElemAPI void ElemFreeCommandQueue(ElemCommandQueue commandQueue);
+ElemAPI void ElemResetCommandAllocation(ElemGraphicsDevice graphicsDevice);
 ElemAPI ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
 ElemAPI void ElemCommitCommandList(ElemCommandList commandList);
 ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);

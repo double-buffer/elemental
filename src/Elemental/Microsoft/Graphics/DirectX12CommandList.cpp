@@ -10,8 +10,9 @@
 SystemDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull> directX12CommandQueuePool;
 SystemDataPool<DirectX12CommandListData, DirectX12CommandListDataFull> directX12CommandListPool;
 
+thread_local CommandAllocatorDevicePool<ComPtr<ID3D12CommandAllocator>, ComPtr<ID3D12GraphicsCommandList10>> threadDirectX12DeviceCommandPools[DIRECTX12_MAX_DEVICES];
+
 HANDLE directX12GlobalFenceEvent;
-uint32_t currentAllocatorIndex = 0; // TODO: To remove
 
 // TODO: Review usage of full structures
 
@@ -77,22 +78,16 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc = {};
     commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    auto commandAllocatorQueueType = CommandAllocatorQueueType_Graphics;
 
     if (type == ElemCommandQueueType_Compute)
     {
         commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        commandAllocatorQueueType = CommandAllocatorQueueType_Compute;
     }
 
     ComPtr<ID3D12CommandQueue> commandQueue;
     AssertIfFailedReturnNullHandle(graphicsDeviceData->Device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(commandQueue.GetAddressOf())));
-
-
-    // TODO: To remove, temporary code!
-    ComPtr<ID3D12CommandAllocator> commandAllocators[2];
-    for (uint32_t i = 0; i < 2; i++)
-    {
-        AssertIfFailedReturnNullHandle(graphicsDeviceData->Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(commandAllocators[i].GetAddressOf())));
-    }
 
     ComPtr<ID3D12Fence1> fence;
     AssertIfFailedReturnNullHandle(graphicsDeviceData->Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
@@ -104,15 +99,15 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
 
     auto handle = SystemAddDataPoolItem(directX12CommandQueuePool, {
         .DeviceObject = commandQueue,
-        .Type = commandQueueDesc.Type
+        .Type = commandQueueDesc.Type,
+        .CommandAllocatorQueueType = commandAllocatorQueueType,
+        .GraphicsDevice = graphicsDevice,
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandQueuePool, handle, {
-        .GraphicsDevice = graphicsDevice,
         .Fence = fence,
         .FenceValue = 0,
         .LastCompletedFenceValue = 0,
-        .CommandAllocators = {commandAllocators[0], commandAllocators[1]}
     });
 
     return handle;
@@ -131,16 +126,18 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
     auto fence = CreateDirectX12CommandQueueFence(commandQueue);
     ElemWaitForFenceOnCpu(fence);
 
-    // TODO: Temporary
-    for (uint32_t i = 0; i < 2; i++)
-    {
-        commandQueueDataFull->CommandAllocators[i].Reset();
-    }
-
     commandQueueDataFull->Fence.Reset();
     commandQueueData->DeviceObject.Reset();
 
     SystemRemoveDataPoolItem(directX12CommandQueuePool, commandQueue);
+}
+
+void DirectX12ResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
+{
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    graphicsDeviceData->CommandAllocationGeneration++;
 }
 
 ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
@@ -150,31 +147,43 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
 
-    auto commandQueueDataFull = GetDirectX12CommandQueueDataFull(commandQueue);
-    SystemAssert(commandQueueDataFull);
-
-    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandQueueDataFull->GraphicsDevice);
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    // TODO: We don't handle multi thread allocators yet.
-    // TODO: For the moment, 2 in flights allocator for Direct queue only.
+    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadDirectX12DeviceCommandPools[commandQueueData->GraphicsDevice], 
+                                                                graphicsDeviceData->CommandAllocationGeneration, 
+                                                                commandQueueData->CommandAllocatorQueueType);
 
-    // TODO: For the moment we reset the command allocator here but we need to do that in a separate function
+    if (commandAllocatorPoolItem->IsResetNeeded)
+    {
+        if (commandAllocatorPoolItem->CommandAllocator)
+        {
+            if (commandAllocatorPoolItem->Fence.FenceValue > 0)
+            {
+                DirectX12WaitForFenceOnCpu(commandAllocatorPoolItem->Fence);
+            }
 
-    // TODO: This is really bad because we should reuse the command lists objects
-    auto commandAllocator = commandQueueDataFull->CommandAllocators[currentAllocatorIndex % 2];
-    commandAllocator->Reset();
+            AssertIfFailed(commandAllocatorPoolItem->CommandAllocator->Reset());
+        }
+        else 
+        {
+            // TODO: register resource centrally so we can free it event if it was not created in this thread?
+            AssertIfFailed(graphicsDeviceData->Device->CreateCommandAllocator(commandQueueData->Type, IID_PPV_ARGS(commandAllocatorPoolItem->CommandAllocator.GetAddressOf())));
+            AssertIfFailed(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandAllocatorPoolItem->CommandList.GetAddressOf())));
+        }
 
-    ComPtr<ID3D12GraphicsCommandList10> commandList;
-    AssertIfFailedReturnNullHandle(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
-    AssertIfFailedReturnNullHandle(commandList->Reset(commandAllocator.Get(), nullptr));
+        commandAllocatorPoolItem->IsResetNeeded = false;
+    }
+            
+    AssertIfFailedReturnNullHandle(commandAllocatorPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator.Get(), nullptr));
 
     // TODO: Can we set the root signature for all types all the time?
-    commandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
+    commandAllocatorPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
     //commandList->SetComputeRootSignature(graphicsDeviceData->RootSignature.Get());
 
     auto handle = SystemAddDataPoolItem(directX12CommandListPool, {
-        .DeviceObject = commandList,
+        .DeviceObject = commandAllocatorPoolItem->CommandList,
+        .CommandAllocatorPoolItem = commandAllocatorPoolItem
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
@@ -207,22 +216,13 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
 
     commandQueueData->DeviceObject->ExecuteCommandLists(commandLists.Length, commandListsToExecute.Pointer);
 
-    // TODO: Signal fence
-    ElemFence fence = 
-    {
-        .CommandQueue = ELEM_HANDLE_NULL,
-        .FenceValue = 0
-    };
-
-    // TODO: Temporary
-    currentAllocatorIndex++;
-
-    // TODO: This is really bad because we should reuse the command lists objects
+    auto fence = CreateDirectX12CommandQueueFence(commandQueue);
+    
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetDirectX12CommandListData(commandLists.Items[i]);
-        commandListData->DeviceObject.Reset();
 
+        UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);
     }
 
@@ -245,6 +245,8 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
     {
         SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
         commandQueueToWaitDataFull->Fence->SetEventOnCompletion(fence.FenceValue, directX12GlobalFenceEvent);
+
+        // TODO: It is a little bit extreme to block at infinity. We should set a timeout and break the program.
         WaitForSingleObject(directX12GlobalFenceEvent, INFINITE);
     }
 }

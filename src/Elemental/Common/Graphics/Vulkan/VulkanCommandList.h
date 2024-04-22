@@ -1,16 +1,8 @@
 #pragma once
 
 #include "Elemental.h"
+#include "Graphics/CommandAllocatorPool.h"
 #include "volk.h"
-
-// TODO: To move
-enum CommandAllocatorQueueType
-{
-    CommandAllocatorQueueType_Graphics = 0,
-    CommandAllocatorQueueType_Compute = 1,
-    CommandAllocatorQueueType_Copy = 2,
-    CommandAllocatorQueueType_Max = 3
-};
 
 // TODO: Review data
 struct VulkanCommandQueueData
@@ -46,6 +38,7 @@ VulkanCommandListDataFull* GetVulkanCommandListDataFull(ElemCommandList commandL
 
 ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 void VulkanFreeCommandQueue(ElemCommandQueue commandQueue);
+void VulkanResetCommandAllocation(ElemGraphicsDevice graphicsDevice);
 ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options);
 void VulkanCommitCommandList(ElemCommandList commandList);
 
