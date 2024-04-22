@@ -1,21 +1,42 @@
 #pragma once
 
 #include "Elemental.h"
+#include "volk.h"
 
+// TODO: To move
+enum CommandAllocatorQueueType
+{
+    CommandAllocatorQueueType_Graphics = 0,
+    CommandAllocatorQueueType_Compute = 1,
+    CommandAllocatorQueueType_Copy = 2,
+    CommandAllocatorQueueType_Max = 3
+};
+
+// TODO: Review data
 struct VulkanCommandQueueData
 {
+    VkQueue DeviceObject;
+    uint32_t QueueFamilyIndex;
+    CommandAllocatorQueueType CommandAllocatorQueueType;
+    ElemGraphicsDevice GraphicsDevice;
+    VkSemaphore Fence;
+    uint64_t FenceValue;
+    uint64_t LastCompletedFenceValue;
 };
 
 struct VulkanCommandQueueDataFull
 {
+    uint32_t reserved;
 };
 
 struct VulkanCommandListData
 {
+    VkCommandBuffer DeviceObject;
 };
 
 struct VulkanCommandListDataFull
 {
+    ElemBeginRenderPassParameters CurrentRenderPassParameters;
 };
 
 VulkanCommandQueueData* GetVulkanCommandQueueData(ElemCommandQueue commandQueue);

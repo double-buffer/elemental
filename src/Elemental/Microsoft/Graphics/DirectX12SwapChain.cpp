@@ -68,7 +68,7 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
     swapChainData->Width = width;
     swapChainData->Height = height;
  
-    auto fence = Direct3D12CreateCommandQueueFence(swapChainData->CommandQueue);
+    auto fence = CreateDirectX12CommandQueueFence(swapChainData->CommandQueue);
     ElemWaitForFenceOnCpu(fence);
     
     for (uint32_t i = 0; i < DIRECTX12_MAX_SWAPCHAIN_BUFFERS; i++)
@@ -286,7 +286,7 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     auto swapChainData = GetDirectX12SwapChainData(swapChain);
     SystemAssert(swapChainData);
 
-    auto fence = Direct3D12CreateCommandQueueFence(swapChainData->CommandQueue);
+    auto fence = CreateDirectX12CommandQueueFence(swapChainData->CommandQueue);
     ElemWaitForFenceOnCpu(fence);
 
     for (uint32_t i = 0; i < DIRECTX12_MAX_SWAPCHAIN_BUFFERS; i++)
@@ -322,7 +322,7 @@ ElemSwapChainInfo DirectX12GetSwapChainInfo(ElemSwapChain swapChain)
 
 void DirectX12SetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Set Swapchain timing: FrameLatency: %d, TargetFPS: %d", frameLatency, targetFPS);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Set Swapchain timing: FrameLatency: %d, TargetFPS: %d.", frameLatency, targetFPS);
 
     SystemAssert(swapChain != ELEM_HANDLE_NULL);
 

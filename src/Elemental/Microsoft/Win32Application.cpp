@@ -16,17 +16,17 @@ void InitWin32ApplicationMemory()
         ApplicationMemoryArena = SystemAllocateMemoryArena();
         Win32RunLoopHandlers = SystemPushArray<Win32RunLoopHandler>(ApplicationMemoryArena, WIN32_MAX_RUNLOOP);
 
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
+        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK.");
 
         #ifdef _DEBUG
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode");
+        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode.");
         #endif
     }
 }
 
 void AddWin32RunLoopHandler(Win32RunLoopHandlerPtr handler, ElemHandle handle)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Add Runloop handler");
+    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Add Runloop handler.");
     Win32RunLoopHandlers[Win32CurrentRunLoopIndex++] = 
     {
         .Function = handler,

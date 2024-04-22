@@ -6,14 +6,14 @@
 #ifdef WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
-#ifdef __APPLE__
-
-#endif
 #include "volk.h"
+
+#define VULKAN_MAX_DEVICES 10u
 
 struct VulkanGraphicsDeviceData
 {
     VkDevice Device;
+    uint64_t CommandAllocationGeneration;
 };
 
 struct VulkanGraphicsDeviceDataFull
@@ -21,9 +21,17 @@ struct VulkanGraphicsDeviceDataFull
     VkPhysicalDevice PhysicalDevice;
     VkPhysicalDeviceProperties DeviceProperties;
     VkPhysicalDeviceMemoryProperties DeviceMemoryProperties;
+    uint32_t RenderCommandQueueIndex;
+    uint32_t CurrentRenderCommandQueueIndex;
+    uint32_t ComputeCommandQueueIndex;
+    uint32_t CurrentComputeCommandQueueIndex;
+    uint32_t CopyCommandQueueIndex;
+    uint32_t CurrentCopyCommandQueueIndex;
 };
 
 extern MemoryArena VulkanGraphicsMemoryArena;
+extern VkInstance VulkanInstance;
+extern bool VulkanDebugLayerEnabled;
 
 VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);

@@ -15,42 +15,36 @@ void RefreshWin32MonitorInfos(ElemWindow window)
     auto windowDataFull = GetWin32WindowDataFull(window);
     SystemAssert(windowDataFull);
 
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Refresh monitor infos");
+    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Refreshing monitor infos...");
 
-    IDXGIOutput* pOutput = nullptr;
-    ComPtr<IDXGIFactory2> pFactory = nullptr;
-    
-    AssertIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(pFactory.GetAddressOf())));
+    ComPtr<IDXGIFactory2> dxgiFactory = nullptr;
+    AssertIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(dxgiFactory.GetAddressOf())));
 
-    // Use while loops for enumerating adapters and outputs
-    IDXGIAdapter* pAdapter = nullptr;
-    UINT adapterIndex = 0;
-    bool adapterFound = false;
+    ComPtr<IDXGIAdapter> adapter = nullptr;
 
-    while (pFactory->EnumAdapters(adapterIndex++, &pAdapter) != DXGI_ERROR_NOT_FOUND) 
+    for (uint32_t i = 0; dxgiFactory->EnumAdapters(i, adapter.GetAddressOf()) != DXGI_ERROR_NOT_FOUND; i++)
     {
-        UINT outputIndex = 0;
+        ComPtr<IDXGIOutput> output = nullptr;
 
-        while (pAdapter->EnumOutputs(outputIndex++, &pOutput) != DXGI_ERROR_NOT_FOUND) 
+        for (uint32_t j = 0; adapter->EnumOutputs(j, output.GetAddressOf()) != DXGI_ERROR_NOT_FOUND; j++)
         {
-            DXGI_OUTPUT_DESC desc;
-            pOutput->GetDesc(&desc);
-            if (desc.Monitor == windowDataFull->Monitor) {
-                adapterFound = true;
-                DXGI_MODE_DESC currentMode;
-                ZeroMemory(&currentMode, sizeof(DXGI_MODE_DESC));
-                currentMode.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            DXGI_OUTPUT_DESC outputDescription;
+            output->GetDesc(&outputDescription);
 
-                if (SUCCEEDED(pOutput->FindClosestMatchingMode(&currentMode, &currentMode, nullptr))) {
-                    uint32_t refreshRate = SystemRoundUp(static_cast<float>(currentMode.RefreshRate.Numerator) / currentMode.RefreshRate.Denominator);
-                    //std::cout << "Current refresh rate: " << refreshRate << "Hz" << std::endl;
-                    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Test %d", refreshRate);
+            if (outputDescription.Monitor == windowDataFull->Monitor) 
+            {
+                DXGI_MODE_DESC currentMode
+                {
+                    .Format = DXGI_FORMAT_R8G8B8A8_UNORM
+                };
+                
+                if (SUCCEEDED(output->FindClosestMatchingMode(&currentMode, &currentMode, nullptr))) 
+                {
+                    uint32_t refreshRate = SystemRoundUp((float)currentMode.RefreshRate.Numerator / currentMode.RefreshRate.Denominator);
                     windowData->MonitorRefreshRate = refreshRate;
                 }
-                pOutput->Release();
                 break;
             }
-            pOutput->Release();
         }
     }
 }

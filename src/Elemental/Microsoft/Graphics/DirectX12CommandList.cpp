@@ -46,7 +46,7 @@ DirectX12CommandListDataFull* GetDirectX12CommandListDataFull(ElemCommandList co
     return SystemGetDataPoolItemFull(directX12CommandListPool, commandList);
 }
 
-ElemFence Direct3D12CreateCommandQueueFence(ElemCommandQueue commandQueue)
+ElemFence CreateDirectX12CommandQueueFence(ElemCommandQueue commandQueue)
 {
     auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
@@ -128,7 +128,7 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
     auto commandQueueDataFull = GetDirectX12CommandQueueDataFull(commandQueue);
     SystemAssert(commandQueueDataFull);
 
-    auto fence = Direct3D12CreateCommandQueueFence(commandQueue);
+    auto fence = CreateDirectX12CommandQueueFence(commandQueue);
     ElemWaitForFenceOnCpu(fence);
 
     // TODO: Temporary

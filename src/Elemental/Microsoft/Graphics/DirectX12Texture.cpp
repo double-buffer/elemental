@@ -53,7 +53,7 @@ ElemTexture CreateDirectX12TextureFromResource(ElemGraphicsDevice graphicsDevice
 
     if (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Creating RTV");
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Creating RTV...");
 
         rtvDescriptor = CreateDirectX12DescriptorHandle(graphicsDeviceDataFull->RTVDescriptorHeap);
 

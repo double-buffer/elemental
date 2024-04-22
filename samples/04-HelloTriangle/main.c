@@ -76,7 +76,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     
     if (updateParameters->NextPresentTimeStampInSeconds > 4 && !isLatencyUpdated)
     {
-        ElemSetSwapChainTiming(applicationPayload->SwapChain, 1, 30);
+        //ElemSetSwapChainTiming(applicationPayload->SwapChain, 1, 30);
         isLatencyUpdated = true;
     }
 

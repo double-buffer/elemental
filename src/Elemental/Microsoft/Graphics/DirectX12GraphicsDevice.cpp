@@ -45,7 +45,7 @@ void InitDirectX12()
 
         if (sdkLayerExists)
         {
-            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init DirectX12 Debug Mode");
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init DirectX12 Debug Mode.");
 
             AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebugInterface.GetAddressOf())));
             dxgiCreateFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
@@ -101,7 +101,7 @@ void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE
     // for now we hide that because we don't have a pool of commandlists
     if (severity == D3D12_MESSAGE_SEVERITY_INFO)
     {
-        return;
+        //return;
     }
 
     auto messageType = ElemLogMessageType_Debug;
@@ -225,7 +225,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE CreateDirectX12DescriptorHandle(DirectX12DescriptorH
 
 void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle)
 {
-    SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "DirectX12 Free descriptor handle not implemented");
+    SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "DirectX12 Free descriptor handle not implemented.");
     // TODO: Free List
 }
 
@@ -296,7 +296,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     DXGI_ADAPTER_DESC3 adapterDescription = {};
     bool foundAdapter = false;
 
-    for (uint32_t i = 0; DXGI_ERROR_NOT_FOUND != DxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())); i++)
+    for (uint32_t i = 0; DxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(graphicsAdapter.GetAddressOf())) != DXGI_ERROR_NOT_FOUND; i++)
     {
         if (DirectX12CheckGraphicsDeviceCompatibility(graphicsAdapter))
         {

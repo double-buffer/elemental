@@ -1037,6 +1037,7 @@ VulkanCommandPoolItem* VulkanGetCommandPool(VulkanCommandQueue* commandQueue)
     }
 
     if (*commandPoolItemPointer == nullptr)
+            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     {
         VulkanCommandPoolItem* commandPoolItem;
         commandPool.GetCurrentItemPointerAndMove(&commandPoolItem);

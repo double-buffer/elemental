@@ -134,7 +134,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     auto refreshRate = UI::Screen::mainScreen()->maximumFramesPerSecond();
     #endif
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f (%dHz)", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale, refreshRate);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f. (%dHz)", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale, refreshRate);
 
     metalLayer->setDevice(graphicsDeviceData->Device.get());
     metalLayer->setPixelFormat(format);
@@ -193,7 +193,7 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 void MetalSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
 {
     // TODO: Not implemented yet
-    SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "This feature is not yet implelmented");
+    SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "This feature is not yet implelmented.");
 }
 
 void MetalPresentSwapChain(ElemSwapChain swapChain)

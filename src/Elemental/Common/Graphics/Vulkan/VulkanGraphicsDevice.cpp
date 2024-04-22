@@ -4,13 +4,11 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-#define VULKAN_MAX_DEVICES 10u
-
 MemoryArena VulkanGraphicsMemoryArena;
 SystemDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull> vulkanGraphicsDevicePool;
 
-bool vulkanDebugLayerEnabled = false;
-VkInstance vulkanInstance = nullptr;
+bool VulkanDebugLayerEnabled = false;
+VkInstance VulkanInstance = nullptr;
 VkDebugReportCallbackEXT vulkanDebugCallback = nullptr;
 
 VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* pMessage, void*)
@@ -52,11 +50,11 @@ void InitVulkan()
     // TODO: If the vulkan loader is not here, don't proceed
     auto isSdkInstalled = SystemLoadLibrary("VkLayer_khronos_validation").Handle != nullptr;
 
-    if (vulkanDebugLayerEnabled)
+    if (VulkanDebugLayerEnabled)
     {
         if (isSdkInstalled)
         {
-            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init Vulkan Debug Mode");
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init Vulkan Debug Mode.");
 
             const char* layers[] =
             {
@@ -74,9 +72,6 @@ void InitVulkan()
                 #ifdef _WIN32
                 VK_KHR_WIN32_SURFACE_EXTENSION_NAME
                 #endif
-                #ifdef __APPLE__
-                VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
-                #endif
             };
 
             createInfo.ppEnabledExtensionNames = extensions;
@@ -92,13 +87,9 @@ void InitVulkan()
             validationFeatures.enabledValidationFeatureCount = ARRAYSIZE(enabledValidationFeatures);
             validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
 
-            #ifdef __APPLE__
-            createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-            #endif
-
             createInfo.pNext = &validationFeatures;
 
-            AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &vulkanInstance));
+            AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &VulkanInstance));
 
         }
         else
@@ -116,30 +107,23 @@ void InitVulkan()
             #ifdef WIN32
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME
             #endif
-            #ifdef __APPLE__
-            VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
-            #endif
         };
         
         createInfo.ppEnabledExtensionNames = extensions;
         createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
-        #ifdef __APPLE__
-        createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-        #endif
-
-        AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &vulkanInstance));
+        AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &VulkanInstance));
     }
 
-    volkLoadInstanceOnly(vulkanInstance);
+    volkLoadInstanceOnly(VulkanInstance);
 
-    if (vulkanDebugLayerEnabled && isSdkInstalled)
+    if (VulkanDebugLayerEnabled && isSdkInstalled)
     {
         VkDebugReportCallbackCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
         debugCreateInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
         debugCreateInfo.pfnCallback = VulkanDebugReportCallback;
 
-        AssertIfFailed(vkCreateDebugReportCallbackEXT(vulkanInstance, &debugCreateInfo, 0, &vulkanDebugCallback));
+        AssertIfFailed(vkCreateDebugReportCallbackEXT(VulkanInstance, &debugCreateInfo, 0, &vulkanDebugCallback));
     }
 }
 
@@ -173,25 +157,16 @@ ElemGraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDevicePropert
 
 bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
 {
-    #ifdef __APPLE__
-    return true;
-    #else
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
-    VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures {};
-    presentIdFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
+    VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
 
-    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = {};
-    meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
     meshShaderFeatures.pNext = &presentIdFeatures;
 
-    VkPhysicalDeviceFeatures2 features2 = {};
-    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
-
-    #ifndef __APPLE__
+    VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR };
     features2.pNext = &meshShaderFeatures;
-    #endif
 
     vkGetPhysicalDeviceFeatures2(device, &features2);
     
@@ -201,7 +176,6 @@ bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
     }
     
     return false;
-    #endif
 }
 
 VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
@@ -216,7 +190,7 @@ VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice
 
 void VulkanEnableGraphicsDebugLayer()
 {
-    vulkanDebugLayerEnabled = true;
+    VulkanDebugLayerEnabled = true;
 }
 
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices()
@@ -228,10 +202,10 @@ ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices()
     auto currentDeviceInfoIndex = 0u;
 
     uint32_t deviceCount = VULKAN_MAX_DEVICES;
-    VkPhysicalDevice devices[VULKAN_MAX_DEVICES];
+    AssertIfFailed(vkEnumeratePhysicalDevices(VulkanInstance, &deviceCount, nullptr));
 
-    AssertIfFailed(vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, nullptr));
-    AssertIfFailed(vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, devices));
+    auto devices = SystemPushArray<VkPhysicalDevice>(stackMemoryArena, deviceCount);
+    AssertIfFailed(vkEnumeratePhysicalDevices(VulkanInstance, &deviceCount, devices.Pointer));
 
     for (uint32_t i = 0; i < deviceCount; i++)
     {
@@ -258,16 +232,19 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
 {
     // TODO: Review features selection
     InitVulkanGraphicsDeviceMemory();
+    
+    auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    auto deviceCount = VULKAN_MAX_DEVICES;
-    VkPhysicalDevice devices[VULKAN_MAX_DEVICES];
     VkPhysicalDevice physicalDevice = {};
     VkPhysicalDeviceProperties deviceProperties = {};
     VkPhysicalDeviceMemoryProperties deviceMemoryProperties {};
     auto foundDevice = false;
 
-    AssertIfFailed(vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, nullptr));
-    AssertIfFailed(vkEnumeratePhysicalDevices(vulkanInstance, &deviceCount, devices));
+    uint32_t deviceCount;
+    AssertIfFailed(vkEnumeratePhysicalDevices(VulkanInstance, &deviceCount, nullptr));
+
+    auto devices = SystemPushArray<VkPhysicalDevice>(stackMemoryArena, deviceCount);
+    AssertIfFailed(vkEnumeratePhysicalDevices(VulkanInstance, &deviceCount, devices.Pointer));
 
     for (uint32_t i = 0; i < deviceCount; i++)
     {
@@ -288,56 +265,59 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     SystemAssertReturnNullHandle(foundDevice);
 
     uint32_t queueFamilyCount = 0;
-    VkQueueFamilyProperties queueFamilies[32];
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
 
-    // TODO: Review command queue selection (before we were creating 2 render command queues, is it needed?)
-    // TODO: We don't know how many queues the consumers will create so we need to foreseen some room sticking for 1 for now
+    auto queueFamilies = SystemPushArray<VkQueueFamilyProperties>(stackMemoryArena, queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.Pointer);
+
     VkDeviceQueueCreateInfo queueCreateInfos[3];
-    uint32_t renderCommandQueue = UINT32_MAX;
-    uint32_t computeCommandQueue = UINT32_MAX;
-    uint32_t copyCommandQueue = UINT32_MAX;
-    float queuePriority = 1.0f;
+    uint32_t renderCommandQueueIndex = UINT32_MAX;
+    uint32_t computeCommandQueueIndex = UINT32_MAX;
+    uint32_t copyCommandQueueIndex = UINT32_MAX;
+    float queuePriority[3] = { 1.0f, 1.0f, 1.0f };
 
     for (uint32_t i = 0; i < 3; i++)
     {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && renderCommandQueue == UINT32_MAX)
-        {
-            renderCommandQueue = i;
-        }
+        uint32_t queueCount = 1;
 
-        else if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT && computeCommandQueue == UINT32_MAX)
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && renderCommandQueueIndex == UINT32_MAX)
         {
-            computeCommandQueue = i;
+            renderCommandQueueIndex = i;
+            queueCount = SystemMin(queueFamilies[i].queueCount, 3u);
         }
-
-        else if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT && copyCommandQueue == UINT32_MAX)
+        else if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT && computeCommandQueueIndex == UINT32_MAX)
         {
-            copyCommandQueue = i;
+            computeCommandQueueIndex = i;
+            queueCount = SystemMin(queueFamilies[i].queueCount, 2u);
         }
-
+        else if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT && copyCommandQueueIndex == UINT32_MAX)
+        {
+            copyCommandQueueIndex = i;
+            queueCount = SystemMin(queueFamilies[i].queueCount, 2u);
+        }
+        else
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Wrong queue type.");
+        }
+            
         VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = queuePriority;
+        queueCreateInfo.queueCount = queueCount;
         queueCreateInfo.queueFamilyIndex = i;
 
         queueCreateInfos[i] = queueCreateInfo;
     }
 
     VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-    createInfo.queueCreateInfoCount = 3; // TODO: To Review
+    createInfo.queueCreateInfoCount = 3;
     createInfo.pQueueCreateInfos = queueCreateInfos;
 
     const char* extensions[] =
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        #ifndef __APPLE__ // TODO: Not supported yet on MacOS
-        VK_EXT_MESH_SHADER_EXTENSION_NAME
-        #endif
-        #ifdef __APPLE__
-        VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
-        #endif
+        VK_EXT_MESH_SHADER_EXTENSION_NAME,
+        VK_KHR_PRESENT_ID_EXTENSION_NAME,
+        VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
     };
 
     createInfo.ppEnabledExtensionNames = extensions;
@@ -347,10 +327,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features.features.multiDrawIndirect = true;
     features.features.shaderInt16 = true;
     features.features.shaderInt64 = true;
-
-    #ifndef __APPLE__
     features.features.pipelineStatisticsQuery = true;
-    #endif
 
     VkPhysicalDeviceVulkan12Features features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     features12.timelineSemaphore = true;
@@ -366,11 +343,9 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features12.hostQueryReset = true;
     features12.shaderInt8 = true;
 
-    if (vulkanDebugLayerEnabled)
+    if (VulkanDebugLayerEnabled)
     {
-        #ifndef __APPLE__
         features12.bufferDeviceAddressCaptureReplay = true;
-        #endif
     }
 
     VkPhysicalDeviceVulkan13Features features13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
@@ -383,10 +358,18 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     meshFeatures.taskShader = true;
     meshFeatures.meshShaderQueries = true;
 
+    VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
+    presentIdFeatures.presentId = true;
+    
+    VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR };
+    presentWaitFeatures.presentWait = true;
+
     createInfo.pNext = &features;
     features.pNext = &features12;
     features12.pNext = &features13;
-    features13.pNext = &meshFeatures;
+    features13.pNext = &presentIdFeatures;
+    presentIdFeatures.pNext = &presentWaitFeatures;
+    presentWaitFeatures.pNext = &meshFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
@@ -399,7 +382,10 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     SystemAddDataPoolItemFull(vulkanGraphicsDevicePool, handle, {
         .PhysicalDevice = physicalDevice,
         .DeviceProperties = deviceProperties,
-        .DeviceMemoryProperties = deviceMemoryProperties
+        .DeviceMemoryProperties = deviceMemoryProperties,
+        .RenderCommandQueueIndex = renderCommandQueueIndex,
+        .ComputeCommandQueueIndex = computeCommandQueueIndex,
+        .CopyCommandQueueIndex = copyCommandQueueIndex
     });
 
     return handle;
@@ -414,6 +400,8 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
+
+    vkDestroyDevice(graphicsDeviceData->Device, nullptr);
 }
 
 ElemGraphicsDeviceInfo VulkanGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)

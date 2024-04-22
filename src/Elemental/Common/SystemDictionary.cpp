@@ -211,7 +211,7 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
             if (retryCount < 5)
             {
                 #ifdef ElemAPI
-                SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Retrying to find the item to delete");
+                SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Retrying to find the item to delete.");
                 #endif
                 SystemYieldThread();
                 retryCount++;

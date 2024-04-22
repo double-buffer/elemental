@@ -30,7 +30,7 @@ struct DirectX12CommandListDataFull
     ElemBeginRenderPassParameters CurrentRenderPassParameters;
 };
 
-ElemFence Direct3D12CreateCommandQueueFence(ElemCommandQueue commandQueue);
+ElemFence CreateDirectX12CommandQueueFence(ElemCommandQueue commandQueue);
 DirectX12CommandQueueData* GetDirectX12CommandQueueData(ElemCommandQueue commandQueue);
 DirectX12CommandQueueDataFull* GetDirectX12CommandQueueDataFull(ElemCommandQueue commandQueue);
 DirectX12CommandListData* GetDirectX12CommandListData(ElemCommandList commandList);
