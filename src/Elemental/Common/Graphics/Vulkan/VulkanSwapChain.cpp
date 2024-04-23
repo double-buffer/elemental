@@ -2,11 +2,14 @@
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
 #include "VulkanTexture.h"
-#include "Win32Application.h"
-#include "Win32Window.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
+
+#ifdef _WIN32
+#include "../Elemental/Microsoft/Win32Application.h"
+#include "../Elemental/Microsoft/Win32Window.h"
+#endif
 
 #define VULKAN_MAX_SWAPCHAINS 10u
 
@@ -54,7 +57,7 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
     for (uint32_t i = 0; i < swapchainImageCount; i++)
     {
         // TODO: FreeTexture in resize
-        swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], swapChainDataFull->VulkanFormat, true);
+        swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], swapChainDataFull->VulkanFormat, width, height, true);
     }
 }
 
@@ -136,7 +139,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
-    #ifdef _WINDOWS
+    #ifdef _WIN32
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
     surfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
     surfaceCreateInfo.hwnd = windowData->WindowHandle;

@@ -26,7 +26,7 @@ VulkanTextureDataFull* GetVulkanTextureDataFull(ElemTexture texture)
     return SystemGetDataPoolItemFull(vulkanTexturePool, texture);
 }
 
-ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, bool isPresentTexture)
+ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, uint32_t width, uint32_t height, bool isPresentTexture)
 {
     InitVulkanTextureMemory();
 
@@ -53,6 +53,8 @@ ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, V
         .ImageView = imageView,
         .Format = format,
         .IsPresentTexture = isPresentTexture,
+        .Width = width,
+        .Height = height
     }); 
 
     SystemAddDataPoolItemFull(vulkanTexturePool, handle, {

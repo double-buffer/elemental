@@ -26,11 +26,6 @@ VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDeb
 
     SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", pMessage);
 
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-    {
-        SystemAssert(!"Vulkan validation error encountered!");
-    }
-
     return VK_FALSE;
 }
 

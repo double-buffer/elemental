@@ -11,14 +11,23 @@ enum CommandAllocatorQueueType
 };
 
 #define MAX_COMMANDALLOCATOR 3u
+#define MAX_COMMANDLIST 64u
+
+template<typename TCommandList>
+struct CommandListPoolItem
+{
+    TCommandList CommandList;
+    bool IsInUse;
+};
 
 template<typename TCommandAllocator, typename TCommandList>
 struct CommandAllocatorPoolItem
 {
     TCommandAllocator CommandAllocator;
-    TCommandList CommandList;
+    CommandListPoolItem<TCommandList> CommandListPoolItems[MAX_COMMANDLIST];
     ElemFence Fence;
     bool IsResetNeeded;
+    uint32_t CurrentCommandListIndex;
 };
 
 template<typename TCommandAllocator, typename TCommandList>
@@ -32,6 +41,12 @@ struct CommandAllocatorDevicePool
 
 template<typename TCommandAllocator, typename TCommandList>
 CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* GetCommandAllocatorPoolItem(CommandAllocatorDevicePool<TCommandAllocator, TCommandList>* commandAllocatorPool, uint64_t generation, CommandAllocatorQueueType commandQueueType);
+
+template<typename TCommandAllocator, typename TCommandList>
+CommandListPoolItem<TCommandList>* GetCommandListPoolItem(CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* commandAllocatorPoolItem);
+
+template<typename TCommandList>
+void ReleaseCommandListPoolItem(CommandListPoolItem<TCommandList>* commandListPoolItem);
 
 template<typename TCommandAllocator, typename TCommandList>
 void UpdateCommandAllocatorPoolItemFence(CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* commandAllocatorPoolItem, ElemFence fence);

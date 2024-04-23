@@ -95,10 +95,10 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
     if (DirectX12DebugLayerEnabled && options && options->DebugName)
     {
         commandQueue->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
-    }    
+    }
 
     auto commandAllocators = SystemPushArray<ComPtr<ID3D12CommandAllocator>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
-    auto commandLists = SystemPushArray<ComPtr<ID3D12GraphicsCommandList10>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
+    auto commandLists = SystemPushArray<ComPtr<ID3D12GraphicsCommandList10>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS * DIRECTX12_MAX_COMMANDLISTS);
 
     auto handle = SystemAddDataPoolItem(directX12CommandQueuePool, {
         .DeviceObject = commandQueue,
@@ -137,6 +137,10 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
     for (uint32_t i = 0; i < commandQueueDataFull->CurrentCommandAllocatorIndex; i++)
     {
         commandQueueDataFull->CommandAllocators[i].Reset();
+    }
+
+    for (uint32_t i = 0; i < commandQueueDataFull->CurrentCommandListIndex; i++)
+    {
         commandQueueDataFull->CommandLists[i].Reset();
     }
 
@@ -153,6 +157,8 @@ void DirectX12ResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
 
 ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
@@ -175,41 +181,54 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
             }
 
             AssertIfFailed(commandAllocatorPoolItem->CommandAllocator->Reset());
-            ComPtr<ID3D12CommandAllocator> commandAllocator;
         }
         else 
         {
+            // TODO: We should check for command list separately
+            // For now we use the same commandlist all the time, that's not correct!
+            // We should have a pool of command list per thread that we can only reuse
+            // when execute command lists was called.
             auto commandQueueDataFull = GetDirectX12CommandQueueDataFull(commandQueue);
             SystemAssert(commandQueueDataFull);
 
             ComPtr<ID3D12CommandAllocator> commandAllocator;
-            ComPtr<ID3D12GraphicsCommandList10> commandList;
-
             AssertIfFailed(graphicsDeviceData->Device->CreateCommandAllocator(commandQueueData->Type, IID_PPV_ARGS(commandAllocator.GetAddressOf())));
-            AssertIfFailed(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
-        
             commandAllocatorPoolItem->CommandAllocator = commandAllocator.Get();
-            commandAllocatorPoolItem->CommandList = commandList.Get();
 
             auto commandAllocatorIndex = SystemAtomicAdd(commandQueueDataFull->CurrentCommandAllocatorIndex, 1);
             commandQueueDataFull->CommandAllocators[commandAllocatorIndex] = commandAllocator;
 
-            auto commandListIndex = SystemAtomicAdd(commandQueueDataFull->CurrentCommandListIndex, 1);
-            commandQueueDataFull->CommandLists[commandListIndex] = commandList;
+            for (uint32_t i = 0; i < MAX_COMMANDLIST; i++)
+            {
+                ComPtr<ID3D12GraphicsCommandList10> commandList;
+                AssertIfFailed(graphicsDeviceData->Device->CreateCommandList1(0, commandQueueData->Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(commandList.GetAddressOf())));
+                commandAllocatorPoolItem->CommandListPoolItems[i].CommandList = commandList.Get();
+
+                auto commandListIndex = SystemAtomicAdd(commandQueueDataFull->CurrentCommandListIndex, 1);
+                commandQueueDataFull->CommandLists[commandListIndex] = commandList;
+            }
         }
 
         commandAllocatorPoolItem->IsResetNeeded = false;
     }
+
+    auto commandListPoolItem = GetCommandListPoolItem(commandAllocatorPoolItem);
+
+    if (DirectX12DebugLayerEnabled && options && options->DebugName)
+    {
+        commandListPoolItem->CommandList->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
+    }
             
-    AssertIfFailedReturnNullHandle(commandAllocatorPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
+    AssertIfFailedReturnNullHandle(commandListPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
 
     // TODO: Can we set the root signature for all types all the time?
-    commandAllocatorPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
+    commandListPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
     //commandList->SetComputeRootSignature(graphicsDeviceData->RootSignature.Get());
 
     auto handle = SystemAddDataPoolItem(directX12CommandListPool, {
-        .DeviceObject = commandAllocatorPoolItem->CommandList,
-        .CommandAllocatorPoolItem = commandAllocatorPoolItem
+        .DeviceObject = commandListPoolItem->CommandList,
+        .CommandAllocatorPoolItem = commandAllocatorPoolItem,
+        .CommandListPoolItem = commandListPoolItem
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
@@ -247,8 +266,8 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetDirectX12CommandListData(commandLists.Items[i]);
-
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
+        ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
 
         commandListData->DeviceObject.Reset();
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);

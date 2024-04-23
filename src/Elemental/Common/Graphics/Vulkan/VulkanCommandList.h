@@ -2,6 +2,7 @@
 
 #include "Elemental.h"
 #include "Graphics/CommandAllocatorPool.h"
+#include "SystemSpan.h"
 #include "volk.h"
 
 // TODO: Review data
@@ -18,12 +19,17 @@ struct VulkanCommandQueueData
 
 struct VulkanCommandQueueDataFull
 {
-    uint32_t reserved;
+    Span<VkCommandPool> CommandAllocators;
+    uint32_t CurrentCommandAllocatorIndex;
+    Span<VkCommandBuffer> CommandLists;
+    uint32_t CurrentCommandListIndex;
 };
 
 struct VulkanCommandListData
 {
     VkCommandBuffer DeviceObject;
+    CommandAllocatorPoolItem<VkCommandPool, VkCommandBuffer>* CommandAllocatorPoolItem;
+    CommandListPoolItem<VkCommandBuffer>* CommandListPoolItem;
 };
 
 struct VulkanCommandListDataFull

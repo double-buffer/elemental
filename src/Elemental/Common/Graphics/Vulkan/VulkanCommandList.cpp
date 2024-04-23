@@ -124,6 +124,9 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
         AssertIfFailed(vkSetDebugUtilsObjectNameEXT(graphicsDeviceData->Device, &nameInfo)); 
     } 
 
+    auto commandAllocators = SystemPushArray<VkCommandPool>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDLISTS);
+    auto commandLists = SystemPushArray<VkCommandBuffer>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDLISTS * VULKAN_MAX_COMMANDLISTS);
+
     auto handle = SystemAddDataPoolItem(vulkanCommandQueuePool, {
         .DeviceObject = commandQueue,
         .QueueFamilyIndex = queueFamilyIndex,
@@ -135,7 +138,8 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
     }); 
 
     SystemAddDataPoolItemFull(vulkanCommandQueuePool, handle, {
-
+        .CommandAllocators = commandAllocators,
+        .CommandLists = commandLists
     });
 
     return handle;
@@ -157,6 +161,8 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
     auto fence = CreateVulkanCommandQueueFence(commandQueue);
     VulkanWaitForFenceOnCpu(fence);
     
+    // TODO: Free allocators and command buffers
+
     vkDestroySemaphore(graphicsDeviceData->Device, commandQueueData->Fence, nullptr);
     
     SystemRemoveDataPoolItem(vulkanCommandQueuePool, commandQueue);
@@ -164,6 +170,10 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
 
 void VulkanResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
 {
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    graphicsDeviceData->CommandAllocationGeneration++;
 }
 
 ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
@@ -196,28 +206,47 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
         }
         else 
         {
+            auto commandQueueDataFull = GetVulkanCommandQueueDataFull(commandQueue);
+            SystemAssert(commandQueueDataFull);
+
             VkCommandPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
             createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             createInfo.queueFamilyIndex = commandQueueData->QueueFamilyIndex;
 
-            AssertIfFailed(vkCreateCommandPool(graphicsDeviceData->Device, &createInfo, 0, &commandAllocatorPoolItem->CommandAllocator));
+            VkCommandPool commandPool;
+            AssertIfFailed(vkCreateCommandPool(graphicsDeviceData->Device, &createInfo, 0, &commandPool));
 
-            VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            allocateInfo.commandPool = commandAllocatorPoolItem->CommandAllocator;
-            allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            allocateInfo.commandBufferCount = 1;
+            commandAllocatorPoolItem->CommandAllocator = commandPool;
 
-            AssertIfFailed(vkAllocateCommandBuffers(graphicsDeviceData->Device, &allocateInfo, &commandAllocatorPoolItem->CommandList));
+            auto commandAllocatorIndex = SystemAtomicAdd(commandQueueDataFull->CurrentCommandAllocatorIndex, 1);
+            commandQueueDataFull->CommandAllocators[commandAllocatorIndex] = commandPool;
+
+            for (uint32_t i = 0; i < MAX_COMMANDLIST; i++)
+            {
+                VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+                allocateInfo.commandPool = commandPool;
+                allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                allocateInfo.commandBufferCount = 1;
+
+                VkCommandBuffer commandBuffer;
+                AssertIfFailed(vkAllocateCommandBuffers(graphicsDeviceData->Device, &allocateInfo, &commandBuffer));
+                commandAllocatorPoolItem->CommandListPoolItems[i].CommandList = commandBuffer;
+
+                auto commandListIndex = SystemAtomicAdd(commandQueueDataFull->CurrentCommandListIndex, 1);
+                commandQueueDataFull->CommandLists[commandListIndex] = commandBuffer;
+            }
         }
 
         commandAllocatorPoolItem->IsResetNeeded = false;
     }
+    
+    auto commandListPoolItem = GetCommandListPoolItem(commandAllocatorPoolItem);
 
     if (VulkanDebugLayerEnabled && options && options->DebugName)
     {
         VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
         nameInfo.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER;
-        nameInfo.objectHandle = (uint64_t)commandAllocatorPoolItem->CommandList;
+        nameInfo.objectHandle = (uint64_t)commandListPoolItem->CommandList;
         nameInfo.pObjectName = options->DebugName;
 
         AssertIfFailed(vkSetDebugUtilsObjectNameEXT(graphicsDeviceData->Device, &nameInfo)); 
@@ -226,10 +255,12 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
     VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    AssertIfFailed(vkBeginCommandBuffer(commandAllocatorPoolItem->CommandList, &beginInfo));
+    AssertIfFailed(vkBeginCommandBuffer(commandListPoolItem->CommandList, &beginInfo));
 
     auto handle = SystemAddDataPoolItem(vulkanCommandListPool, {
-        .DeviceObject = commandAllocatorPoolItem->CommandList,
+        .DeviceObject = commandListPoolItem->CommandList,
+        .CommandAllocatorPoolItem = commandAllocatorPoolItem,
+        .CommandListPoolItem = commandListPoolItem
     }); 
 
     SystemAddDataPoolItemFull(vulkanCommandListPool, handle, {
@@ -250,6 +281,8 @@ void VulkanCommitCommandList(ElemCommandList commandList)
 
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
+    // TODO: Wait for fences if any
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
@@ -278,44 +311,42 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         auto commandListData = GetVulkanCommandListData(commandLists.Items[i]);
         vulkanCommandBuffers[i] = commandListData->DeviceObject;
     }
-   /* 
-    auto fenceValue = InterlockedIncrement(&commandQueue->FenceValue);
+    
+    auto fenceValue = InterlockedIncrement(&commandQueueData->FenceValue);
+
+    auto fence = ElemFence();
+    fence.CommandQueue = commandQueue;
+    fence.FenceValue = fenceValue;
 
     VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
-    timelineInfo.waitSemaphoreValueCount = (uint32_t)fenceToWaitCount;
-    timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
+    //timelineInfo.waitSemaphoreValueCount = (uint32_t)fenceToWaitCount;
+    //timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
     timelineInfo.signalSemaphoreValueCount = 1;
-    timelineInfo.pSignalSemaphoreValues = &fenceValue;*/
+    timelineInfo.pSignalSemaphoreValues = &fenceValue;
 
     VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
     //submitInfo.waitSemaphoreCount = (uint32_t)fenceToWaitCount;
     //submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
-    //submitInfo.signalSemaphoreCount = 1;
-    //submitInfo.pSignalSemaphores = &commandQueue->TimelineSemaphore;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &commandQueueData->Fence;
     submitInfo.commandBufferCount = (uint32_t)commandLists.Length;
     submitInfo.pCommandBuffers = vulkanCommandBuffers.Pointer;
     //submitInfo.pWaitDstStageMask = submitStageMasks;
-    //submitInfo.pNext = &timelineInfo;
+    submitInfo.pNext = &timelineInfo;
 
     AssertIfFailed(vkQueueSubmit(commandQueueData->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
-/*
-    for (int32_t i = 0; i < commandListCount; i++)
-    {
-        auto vulkanCommandList = (VulkanCommandList*)commandLists[i];
 
-        if (vulkanCommandList->IsFromCommandPool)
-        {
-            VulkanUpdateCommandPoolFence(vulkanCommandList, fenceValue);
-        }
+    for (uint32_t i = 0; i < commandLists.Length; i++)
+    {
+        auto commandListData = GetVulkanCommandListData(commandLists.Items[i]);
+        UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
+        ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
+
+        // TODO: Release VkCommandBuffer?
+        SystemRemoveDataPoolItem(vulkanCommandListPool, commandLists.Items[i]);
     }
 
-    auto fence = Fence();
-    fence.CommandQueuePointer = commandQueue;
-    fence.FenceValue = fenceValue;
-
-    return fence;*/
-
-    return {};
+    return fence;
 }
 
 void VulkanWaitForFenceOnCpu(ElemFence fence)

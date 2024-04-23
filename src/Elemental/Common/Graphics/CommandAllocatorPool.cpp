@@ -1,4 +1,5 @@
 #include "CommandAllocatorPool.h"
+#include "SystemFunctions.h"
 
 template<typename TCommandAllocator, typename TCommandList>
 CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* GetCommandAllocatorPoolItem(CommandAllocatorDevicePool<TCommandAllocator, TCommandList>* commandAllocatorPool, uint64_t generation, CommandAllocatorQueueType commandQueueType)
@@ -23,6 +24,24 @@ CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* GetCommandAllocatorPo
     }
 
     return commandAllocatorPool->CurrentCommandQueuePoolItems[commandQueueType];
+}
+
+template<typename TCommandAllocator, typename TCommandList>
+CommandListPoolItem<TCommandList>* GetCommandListPoolItem(CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* commandAllocatorPoolItem)
+{
+    auto commandListPoolItem = &commandAllocatorPoolItem->CommandListPoolItems[commandAllocatorPoolItem->CurrentCommandListIndex];
+    SystemAssert (!commandListPoolItem->IsInUse);
+
+    commandAllocatorPoolItem->CurrentCommandListIndex = (commandAllocatorPoolItem->CurrentCommandListIndex + 1) % MAX_COMMANDLIST;
+
+    commandListPoolItem->IsInUse = true;
+    return commandListPoolItem;
+}
+
+template<typename TCommandList>
+void ReleaseCommandListPoolItem(CommandListPoolItem<TCommandList>* commandListPoolItem)
+{
+    commandListPoolItem->IsInUse = false;
 }
 
 template<typename TCommandAllocator, typename TCommandList>
