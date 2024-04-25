@@ -28,6 +28,7 @@ struct VulkanCommandQueueDataFull
 struct VulkanCommandListData
 {
     VkCommandBuffer DeviceObject;
+    ElemGraphicsDevice GraphicsDevice;
     CommandAllocatorPoolItem<VkCommandPool, VkCommandBuffer>* CommandAllocatorPoolItem;
     CommandListPoolItem<VkCommandBuffer>* CommandListPoolItem;
 };
@@ -41,6 +42,8 @@ VulkanCommandQueueData* GetVulkanCommandQueueData(ElemCommandQueue commandQueue)
 VulkanCommandQueueDataFull* GetVulkanCommandQueueDataFull(ElemCommandQueue commandQueue);
 VulkanCommandListData* GetVulkanCommandListData(ElemCommandList commandList);
 VulkanCommandListDataFull* GetVulkanCommandListDataFull(ElemCommandList commandList);
+
+ElemFence CreateVulkanCommandQueueFence(ElemCommandQueue commandQueue);
 
 ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options);
 void VulkanFreeCommandQueue(ElemCommandQueue commandQueue);

@@ -77,10 +77,10 @@ void VulkanFreeTexture(ElemTexture texture)
     auto textureDataFull = GetVulkanTextureDataFull(texture);
     SystemAssert(textureDataFull);
 
-    auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(textureDataFull->GraphicsDevice);
-    SystemAssert(graphicsDeviceDataFull);
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(textureDataFull->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
 
-    // TODO: Implement
+    vkDestroyImageView(graphicsDeviceData->Device, textureData->ImageView, nullptr);
 
     SystemRemoveDataPoolItem(vulkanTexturePool, texture);
 }

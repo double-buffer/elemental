@@ -75,7 +75,9 @@ void InitVulkan()
             VkValidationFeatureEnableEXT enabledValidationFeatures[] =
             {
                 VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-                VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+                // TODO: For the moment we disable this error because it may be a bug related to timeline semaphore
+                // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/7455
+                //VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
             };
 
             VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
@@ -181,6 +183,26 @@ VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphic
 VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice)
 {
     return SystemGetDataPoolItemFull(vulkanGraphicsDevicePool, graphicsDevice);
+}
+
+VkPipelineLayout CreateVulkanPipelineLayout(VkDevice graphicsDevice)
+{
+    VkPipelineLayoutCreateInfo layoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	layoutCreateInfo.pSetLayouts = nullptr;
+	layoutCreateInfo.setLayoutCount = 0;
+
+    VkPushConstantRange push_constant;
+    push_constant.offset = 0;
+    push_constant.size = 16 * 4;
+    push_constant.stageFlags = VK_SHADER_STAGE_ALL;
+
+    layoutCreateInfo.pPushConstantRanges = &push_constant;
+    layoutCreateInfo.pushConstantRangeCount = 1;
+
+    VkPipelineLayout pipelineLayout;
+	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice, &layoutCreateInfo, 0, &pipelineLayout));
+
+    return pipelineLayout;
 }
 
 void VulkanEnableGraphicsDebugLayer()
@@ -319,7 +341,6 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
     VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-    features.features.multiDrawIndirect = true;
     features.features.shaderInt16 = true;
     features.features.shaderInt64 = true;
     features.features.pipelineStatisticsQuery = true;
@@ -370,8 +391,11 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
     volkLoadDevice(device);
 
+    auto pipelineLayout = CreateVulkanPipelineLayout(device);
+
     auto handle = SystemAddDataPoolItem(vulkanGraphicsDevicePool, {
-        .Device = device
+        .Device = device,
+        .PipelineLayout = pipelineLayout
     }); 
 
     SystemAddDataPoolItemFull(vulkanGraphicsDevicePool, handle, {
@@ -396,6 +420,7 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
+    vkDestroyPipelineLayout(graphicsDeviceData->Device, graphicsDeviceData->PipelineLayout, nullptr);
     vkDestroyDevice(graphicsDeviceData->Device, nullptr);
 }
 

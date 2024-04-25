@@ -53,6 +53,23 @@ message("ok")
         target_sources(${target_name} PRIVATE ${compiled_shader})
 
         list(APPEND compiled_shaders ${compiled_shader})
+        
+        if (WIN32)
+            set(compiled_shader_vulkan "${output_dir}/${file_name}_vulkan.shader")
+            set(SHADER_COMPILER_OPTIONS "--target-api" "vulkan")
+
+            add_custom_command(OUTPUT ${compiled_shader_vulkan}
+                COMMAND ${SHADER_COMPILER_BIN} ${SHADER_COMPILER_OPTIONS} ${hlsl_file} ${compiled_shader_vulkan}
+                DEPENDS ${hlsl_file}
+                COMMENT "Compiling HLSL shader for vulkan: ${hlsl_file}"
+                WORKING_DIRECTORY ${file_dir}
+            )
+
+            set_source_files_properties(${compiled_shader_vulkan} PROPERTIES GENERATED TRUE)
+            target_sources(${target_name} PRIVATE ${compiled_shader_vulkan})
+
+            list(APPEND compiled_shaders ${compiled_shader_vulkan})
+        endif()
     endforeach()
 
     set(${resource_list} "${compiled_shaders}" PARENT_SCOPE)

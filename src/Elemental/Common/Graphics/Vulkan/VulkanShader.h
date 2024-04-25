@@ -1,21 +1,28 @@
 #pragma once
 
 #include "Elemental.h"
+#include "SystemSpan.h"
+#include "volk.h"
 
 struct VulkanShaderLibraryData
 {
+    ReadOnlySpan<VkShaderModule> GraphicsShaders;
 };
 
 struct VulkanShaderLibraryDataFull
 {
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct VulkanPipelineStateData
 {
+    VkPipeline PipelineState;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct VulkanPipelineStateDataFull
 {
+    uint32_t reserved;
 };
 
 VulkanShaderLibraryData* GetVulkanShaderLibraryData(ElemShaderLibrary shaderLibrary);

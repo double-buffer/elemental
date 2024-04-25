@@ -32,6 +32,7 @@ struct VulkanSwapChainData
 struct VulkanSwapChainDataFull
 {
     VkFormat VulkanFormat;
+    VkSwapchainCreateInfoKHR CreateInfo;
 };
 
 VulkanSwapChainData* GetVulkanSwapChainData(ElemSwapChain swapChain);

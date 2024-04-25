@@ -13,6 +13,7 @@
 struct VulkanGraphicsDeviceData
 {
     VkDevice Device;
+    VkPipelineLayout PipelineLayout;
     uint64_t CommandAllocationGeneration;
 };
 

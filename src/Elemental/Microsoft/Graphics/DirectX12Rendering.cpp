@@ -88,10 +88,10 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         {
             D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
             renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
-            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
             renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
-            renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
             renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
+            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
+            renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
             renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
             renderTargetBarrier.pResource = textureData->DeviceObject.Get();
 
@@ -161,10 +161,10 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
         {
             D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
             renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_RENDER_TARGET;
-            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
             renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-            renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_PRESENT;
             renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_RENDER_TARGET;
+            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
+            renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_PRESENT;
             renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_NONE;
             renderTargetBarrier.pResource = textureData->DeviceObject.Get();
 

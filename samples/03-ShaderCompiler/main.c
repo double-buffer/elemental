@@ -142,6 +142,17 @@ int main(int argc, const char* argv[])
                 printf("iOS platform\n");
             }
         }
+
+        if (strcmp(argv[i], "--target-api") == 0)
+        {
+            const char* targetPlatformString = argv[i + 1];
+
+            if (strcmp(targetPlatformString, "vulkan") == 0)
+            {
+                targetApi = ElemToolsGraphicsApi_Vulkan;
+                printf("Vulkan api\n");
+            }
+        }
     }
 
     printf("Compiling shader: %s\n", inputPath);

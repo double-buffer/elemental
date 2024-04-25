@@ -86,12 +86,12 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
         if (textureData->IsPresentTexture)
         {
-            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Barrier1");
-            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-
+            VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
             barrier.srcAccessMask = VK_ACCESS_NONE_KHR;
-            barrier.dstAccessMask = VK_ACCESS_NONE_KHR;
             barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+            barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
             barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -100,7 +100,14 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
             barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
             barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-            vkCmdPipelineBarrier(commandListData->DeviceObject, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrier);
+            VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+            dependencyInfo.bufferMemoryBarrierCount = 0;
+            dependencyInfo.pBufferMemoryBarriers = nullptr;
+            dependencyInfo.imageMemoryBarrierCount = 1;
+            dependencyInfo.pImageMemoryBarriers = &barrier;
+
+            vkCmdPipelineBarrier2(commandListData->DeviceObject, &dependencyInfo);
         }
 
         if (i == 0)
@@ -166,16 +173,15 @@ void VulkanEndRenderPass(ElemCommandList commandList)
         SystemAssert(textureData);
 
         // TODO: Handle texture accesses, currently we only handle the image layout
-        // TODO: Use VkImageMemoryBarrier2. What are the differences?
-
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
         if (textureData->IsPresentTexture)
         {
-            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-
-            barrier.srcAccessMask = VK_ACCESS_NONE_KHR;
-            barrier.dstAccessMask = VK_ACCESS_NONE_KHR;
+            VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+            barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
             barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            barrier.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
+            barrier.dstAccessMask = VK_ACCESS_2_NONE_KHR;
             barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -184,7 +190,14 @@ void VulkanEndRenderPass(ElemCommandList commandList)
             barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
             barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-            vkCmdPipelineBarrier(commandListData->DeviceObject, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+            VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+            dependencyInfo.bufferMemoryBarrierCount = 0;
+            dependencyInfo.pBufferMemoryBarriers = nullptr;
+            dependencyInfo.imageMemoryBarrierCount = 1;
+            dependencyInfo.pImageMemoryBarriers = &barrier;
+
+            vkCmdPipelineBarrier2(commandListData->DeviceObject, &dependencyInfo);
         }
     }
 }
@@ -204,9 +217,9 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
         vulkanViewports[i] = 
         {
             .x = viewports.Items[i].X,
-            .y = viewports.Items[i].Y,
+            .y = viewports.Items[i].Y + viewports.Items[i].Height,
             .width = viewports.Items[i].Width,
-            .height = viewports.Items[i].Height,
+            .height = -viewports.Items[i].Height,
             .minDepth = viewports.Items[i].MinDepth,
             .maxDepth = viewports.Items[i].MaxDepth
         };
@@ -235,4 +248,12 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
 
 void VulkanDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
+    // TODO: Check command list type != COMPUTE
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    vkCmdDrawMeshTasksEXT(commandListData->DeviceObject, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

@@ -83,7 +83,7 @@ ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind)
     }
 }
 
-ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOnlySpan<char> target, ReadOnlySpan<char> entryPoint, const ElemCompileShaderOptions* options)
+ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOnlySpan<char> target, ElemToolsGraphicsApi targetApi, ReadOnlySpan<char> entryPoint, const ElemCompileShaderOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
@@ -103,6 +103,12 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
     {
         parameters[parameterIndex++] = L"-E";
         parameters[parameterIndex++] = SystemConvertUtf8ToWideChar(stackMemoryArena, entryPoint).Pointer;
+    }
+
+    if (targetApi == ElemToolsGraphicsApi_Vulkan)
+    {
+        parameters[parameterIndex++] = L"-spirv";
+        parameters[parameterIndex++] = L"-fspv-target-env=vulkan1.3";
     }
 
     /*
@@ -184,7 +190,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
     auto compilationMessages = SystemPushArray<ElemToolsMessage>(memoryArena, 1024);
     auto compilationMessageIndex = 0u;
 
-    ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_8", "", options);
+    ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_8", ElemToolsGraphicsApi_DirectX12, "", options);
     auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
 
     auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, 64);
@@ -231,7 +237,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
 
             if (shaderType == DxilShaderKind::Mesh || shaderType == DxilShaderKind::Pixel)
             {
-                ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(shaderType), functionDescription.Name, options);
+                ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(shaderType), targetGraphicsApi, functionDescription.Name, options);
                 hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
 
                 ComPtr<IDxcBlob> shaderByteCodeComPtr;

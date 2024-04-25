@@ -161,6 +161,14 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
     auto fence = CreateVulkanCommandQueueFence(commandQueue);
     VulkanWaitForFenceOnCpu(fence);
     
+    for (uint32_t i = 0; i < commandQueueDataFull->CurrentCommandAllocatorIndex; i++)
+    {
+        vkDestroyCommandPool(graphicsDeviceData->Device, commandQueueDataFull->CommandAllocators[i], nullptr);
+    }
+
+    for (uint32_t i = 0; i < commandQueueDataFull->CurrentCommandListIndex; i++)
+    {
+    }
     // TODO: Free allocators and command buffers
 
     vkDestroySemaphore(graphicsDeviceData->Device, commandQueueData->Fence, nullptr);
@@ -210,7 +218,6 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
             SystemAssert(commandQueueDataFull);
 
             VkCommandPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-            createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             createInfo.queueFamilyIndex = commandQueueData->QueueFamilyIndex;
 
             VkCommandPool commandPool;
@@ -259,6 +266,7 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
 
     auto handle = SystemAddDataPoolItem(vulkanCommandListPool, {
         .DeviceObject = commandListPoolItem->CommandList,
+        .GraphicsDevice = commandQueueData->GraphicsDevice,
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
         .CommandListPoolItem = commandListPoolItem
     }); 

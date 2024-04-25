@@ -56,9 +56,60 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
 
     for (uint32_t i = 0; i < swapchainImageCount; i++)
     {
-        // TODO: FreeTexture in resize
         swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], swapChainDataFull->VulkanFormat, width, height, true);
     }
+}
+
+void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+{
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d.", width, height);
+    SystemAssert(swapChain != ELEM_HANDLE_NULL);
+
+    auto swapChainData = GetVulkanSwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    auto swapChainDataFull = GetVulkanSwapChainDataFull(swapChain);
+    SystemAssert(swapChainDataFull);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(swapChainData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(swapChainData->GraphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
+
+    swapChainData->Width = width;
+    swapChainData->Height = height;
+
+    auto fence = CreateVulkanCommandQueueFence(swapChainData->CommandQueue);
+    VulkanWaitForFenceOnCpu(fence);
+    
+    // TODO: This is needed to fix a validation issue from the debug layer :(
+    VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
+    AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDeviceDataFull->PhysicalDevice, swapChainData->WindowSurface, &surfaceCapabilities));
+
+    swapChainData->PresentId = 0;
+    auto oldSwapChain = swapChainData->DeviceObject;
+
+    auto swapChainCreateInfo = swapChainDataFull->CreateInfo;
+    swapChainCreateInfo.oldSwapchain = oldSwapChain;
+    swapChainCreateInfo.imageExtent.width = width;
+    swapChainCreateInfo.imageExtent.height = height;
+    
+    AssertIfFailed(vkCreateSwapchainKHR(graphicsDeviceData->Device, &swapChainCreateInfo, nullptr, &swapChainData->DeviceObject));
+
+    for (int32_t i = 0; i < 3; i++)
+    {
+        auto texture = swapChainData->BackBufferTextures[i];
+        VulkanFreeTexture(texture);
+    }
+
+    vkDestroySwapchainKHR(graphicsDeviceData->Device, oldSwapChain, nullptr);
+    CreateVulkanSwapChainBackBuffers(swapChain, swapChainCreateInfo.imageExtent.width, swapChainCreateInfo.imageExtent.height);
 }
 
 void CheckVulkanAvailableSwapChain(ElemHandle handle)
@@ -82,15 +133,15 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
             return;
         }
     }
+    
+    // TODO: Compute timing information
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Updating frame");
-/*
     ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
     if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
     {
-        ResizeDirectX12SwapChain(handle, windowSize.Width, windowSize.Height);
-    }*/
+        ResizeVulkanSwapChain(handle, windowSize.Width, windowSize.Height);
+    }
 
     AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, VK_NULL_HANDLE, swapChainData->BackBufferAcquireFence, &swapChainData->CurrentImageIndex));
     vkWaitForFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFence, true, UINT64_MAX);
@@ -240,7 +291,8 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     }); 
 
     SystemAddDataPoolItemFull(vulkanSwapChainPool, handle, {
-        .VulkanFormat = format
+        .VulkanFormat = format,
+        .CreateInfo = swapChainCreateInfo
     });
 
     CreateVulkanSwapChainBackBuffers(handle, width, height);
@@ -251,11 +303,46 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
 
 void VulkanFreeSwapChain(ElemSwapChain swapChain)
 {
+    SystemAssert(swapChain != ELEM_HANDLE_NULL);
+
+    auto swapChainData = GetVulkanSwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(swapChainData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto fence = CreateVulkanCommandQueueFence(swapChainData->CommandQueue);
+    ElemWaitForFenceOnCpu(fence);
+
+    vkDestroyFence(graphicsDeviceData->Device, swapChainData->BackBufferAcquireFence, nullptr);
+
+    for (int i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
+    {
+        auto textureData = GetVulkanTextureData(swapChainData->BackBufferTextures[i]);
+        SystemAssert(textureData);
+
+        VulkanFreeTexture(swapChainData->BackBufferTextures[i]);
+    }
+
+    vkDestroySwapchainKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, nullptr);
+    vkDestroySurfaceKHR(VulkanInstance, swapChainData->WindowSurface, nullptr);
+
+    SystemRemoveDataPoolItem(vulkanSwapChainPool, swapChain);
 }
 
 ElemSwapChainInfo VulkanGetSwapChainInfo(ElemSwapChain swapChain)
 {
-    return {};
+    SystemAssert(swapChain != ELEM_HANDLE_NULL);
+
+    auto swapChainData = GetVulkanSwapChainData(swapChain);
+    SystemAssert(swapChainData);
+
+    return 
+    {
+        .Width = swapChainData->Width,
+        .Height = swapChainData->Height,
+        .Format = swapChainData->Format
+    };
 }
 
 void VulkanSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
@@ -292,7 +379,7 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
 
     AssertIfFailed(vkQueuePresentKHR(commandQueueData->DeviceObject, &presentInfo));
     
-    //VulkanResetCommandAllocation(swapChain->GraphicsDevice);
+    VulkanResetCommandAllocation(swapChainData->GraphicsDevice);
     swapChainData->PresentId++;
 }
 
