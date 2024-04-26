@@ -7,6 +7,7 @@
 #ifndef _WIN32
 #define MAX_PATH 255
 #include <sys/time.h>
+#include <time.h>
 #else
 #include <windows.h>
 #endif

@@ -28,7 +28,7 @@ elseif(LINUX)
 
     function(copy_dxc_to_target target)
         file(GLOB DXC_DLLS 
-             "${CMAKE_BINARY_DIR}/external/shader-compilers/dxc/lib/x64/*.so")
+             "${CMAKE_BINARY_DIR}/external/shader-compilers/dxc/lib/*.so")
         foreach(DLL ${DXC_DLLS})
             get_filename_component(DLL_NAME "${DLL}" NAME)
             add_custom_command(TARGET ${target} POST_BUILD

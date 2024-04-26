@@ -116,6 +116,8 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     // HACK: This is needed to prevent a bug in macos :(
     SystemPlatformCommitMemory(storage, sizeResized > headerResized ? headerResized + 1 : headerResized);
 
+    // BUG: On linux we have a lot of issues here!
+
     storage->CurrentPointer = (uint8_t*)storage + headerSizeInBytes;
     storage->SizeInBytes = sizeInBytes;
     storage->HeaderSizeInBytes = headerSizeInBytes;
@@ -128,7 +130,7 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     storage->StackMinAllocatedLevel = 255;
     storage->StackBytesToClear = 0;
 
-    auto headerPageCount = headerResized / systemPageSizeInBytes;
+    auto headerPageCount = SystemRoundUp((float)headerResized / systemPageSizeInBytes);
 
     for (size_t i = 0; i < (size_t)pageInfosCount; i++)
     {

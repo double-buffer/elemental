@@ -3,6 +3,7 @@
 #include "SystemDataPool.h"
 #include "SystemDictionary.h"
 #include "SystemFunctions.h"
+#include "SystemLogging.h"
 
 SystemDataPool<WaylandWindowData, WaylandWindowDataFull> windowDataPool;
 
@@ -56,6 +57,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
             windowState = options->WindowState;
         }
     }
+
+    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Welcome to wayland!");
 
     auto handle = SystemAddDataPoolItem(windowDataPool, {
     }); 
