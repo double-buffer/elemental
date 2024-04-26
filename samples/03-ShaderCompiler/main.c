@@ -120,6 +120,9 @@ int main(int argc, const char* argv[])
     #ifdef _WIN32
     ElemToolsGraphicsApi targetApi = ElemToolsGraphicsApi_DirectX12;
     ElemToolsPlatform targetPlatform = ElemToolsPlatform_Windows;
+    #elif __linux__
+    ElemToolsGraphicsApi targetApi = ElemToolsGraphicsApi_Vulkan;
+    ElemToolsPlatform targetPlatform = ElemToolsPlatform_Linux;
     #else
     ElemToolsGraphicsApi targetApi = ElemToolsGraphicsApi_Metal;
     ElemToolsPlatform targetPlatform = ElemToolsPlatform_MacOS;

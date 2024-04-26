@@ -9,7 +9,6 @@ function(configure_resource_compilation target_name resource_list)
             set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/ShaderCompiler")
         endif()
         set(SHADER_COMPILER_OPTIONS "")
-message("ok")
         add_dependencies(${target_name} ShaderCompiler)
     endif()
 
@@ -124,18 +123,25 @@ function(configure_project_package target_name resource_list)
             #set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/MacOS/Info.plist)
         endif()
     else()
-        # TODO: Linux platform
         set(output_folder "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}")
 
         set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${output_folder})
 
         add_custom_target(CopyApplicationFolder${target_name} ALL)
 
-        add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental" "${output_folder}"
-            COMMENT "Creating package folder and copying files"
-        )
+        if(WIN32)
+            add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental" "${output_folder}"
+                COMMENT "Creating package folder and copying files"
+            )
+        else()
+            add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
+                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libElemental.so" "${output_folder}"
+                COMMENT "Creating package folder and copying files"
+            )
+        endif()
 
         if(NOT resource_list_length EQUAL 0)
             foreach(file IN LISTS resource_list)

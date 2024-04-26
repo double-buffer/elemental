@@ -1,7 +1,10 @@
 #pragma once
 
 #include "Elemental.h"
+
+#ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
+#endif
 #include "volk.h"
 
 #define VULKAN_MAX_SWAPCHAIN_BUFFERS 3
@@ -18,8 +21,8 @@ struct VulkanSwapChainData
     VkFence BackBufferAcquireFence;
     ElemSwapChainUpdateHandlerPtr UpdateHandler;
     void* UpdatePayload;
-    LARGE_INTEGER CreationTimestamp;
-    LARGE_INTEGER PreviousTargetPresentationTimestamp;
+    uint64_t CreationTimestamp;
+    uint64_t PreviousTargetPresentationTimestamp;
     uint32_t Width;
     uint32_t Height;
     ElemTextureFormat Format;

@@ -28,18 +28,29 @@ add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-missing-field-initializers>)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
 set(CMAKE_CXX_STANDARD "23")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
-set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(LINUX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
+
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
 set(CMAKE_C_STANDARD "99")
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# TODO: MacOS specific
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_NAME_DIR "@rpath")
-set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../Frameworks;@executable_path/Frameworks;@loader_path")
+
+if(APPLE)
+    set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../Frameworks;@executable_path/Frameworks;@loader_path")
+elseif(LINUX)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/../Frameworks;$ORIGIN/Frameworks")
+endif()
 
 if(APPLE)
     project(Elemental LANGUAGES C CXX Swift)

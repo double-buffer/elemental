@@ -9,6 +9,9 @@
 #ifdef _WIN32
 #include "../Elemental/Microsoft/Win32Application.h"
 #include "../Elemental/Microsoft/Win32Window.h"
+#else
+#include "../Elemental/Linux/WaylandApplication.h"
+#include "../Elemental/Linux/WaylandWindow.h"
 #endif
 
 #define VULKAN_MAX_SWAPCHAINS 10u
@@ -187,16 +190,21 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
+    #ifdef _WIN32
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
-    #ifdef _WIN32
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
     surfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
     surfaceCreateInfo.hwnd = windowData->WindowHandle;
 
     VkSurfaceKHR windowSurface;
     AssertIfFailed(vkCreateWin32SurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
+    #else
+    auto windowData = GetWaylandWindowData(window);
+
+    VkSurfaceKHR windowSurface;
+    //AssertIfFailed(vkCreateWin32SurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
     #endif
 
     VkBool32 isPresentSupported;
@@ -269,8 +277,9 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     AssertIfFailed(vkCreateFence(graphicsDeviceData->Device, &fenceCreateInfo, 0, &acquireFence ));
 
-    LARGE_INTEGER creationTimestamp;
-    QueryPerformanceCounter(&creationTimestamp);
+    uint64_t creationTimestamp;
+    // TODO: Put that in a system function
+    //QueryPerformanceCounter(&creationTimestamp);
 
     auto handle = SystemAddDataPoolItem(vulkanSwapChainPool, {
         .DeviceObject = swapChain,
@@ -296,7 +305,10 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     });
 
     CreateVulkanSwapChainBackBuffers(handle, width, height);
+
+    #ifdef _WIN32
     AddWin32RunLoopHandler(CheckVulkanAvailableSwapChain, handle);
+    #endif
 
     return handle;
 }

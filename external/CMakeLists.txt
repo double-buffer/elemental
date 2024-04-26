@@ -6,7 +6,6 @@ set(DXC_VERSION_CUSTOM "v2024-03-12")
 
 add_library(dxc INTERFACE)
 
-# TODO: Get rid of macos x64
 if(WIN32)
     get_github_release("microsoft/DirectXShaderCompiler" ${DXC_VERSION_OFFICIAL} "dxc_*.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/")
     target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/inc/dxc/)
@@ -14,6 +13,22 @@ if(WIN32)
     function(copy_dxc_to_target target)
         file(GLOB DXC_DLLS 
              "${CMAKE_BINARY_DIR}/external/shader-compilers/dxc/bin/x64/*.dll")
+        foreach(DLL ${DXC_DLLS})
+            get_filename_component(DLL_NAME "${DLL}" NAME)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL}"
+                    "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
+        endforeach()
+    endfunction()
+elseif(LINUX)
+    get_github_release("microsoft/DirectXShaderCompiler" ${DXC_VERSION_OFFICIAL} "linux_dxc_*.x86_64.tar.gz" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/")
+    target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/include/dxc/)
+    target_include_directories(dxc INTERFACE ./DirectX-Headers/include/directx/)
+
+    function(copy_dxc_to_target target)
+        file(GLOB DXC_DLLS 
+             "${CMAKE_BINARY_DIR}/external/shader-compilers/dxc/lib/x64/*.so")
         foreach(DLL ${DXC_DLLS})
             get_filename_component(DLL_NAME "${DLL}" NAME)
             add_custom_command(TARGET ${target} POST_BUILD
@@ -43,41 +58,43 @@ endif()
 #=======================================================================
 # Metal Shader Converter
 #=======================================================================
-set(METAL_SHADER_CONVERTER_VERSION "v2024-03-12")
+if (WIN32 OR APPLE)
+    set(METAL_SHADER_CONVERTER_VERSION "v2024-03-12")
 
-add_library(metal-shader-converter INTERFACE)
-target_include_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/include/)
-target_link_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/lib/)
-target_link_libraries(metal-shader-converter INTERFACE metalirconverter)
+    add_library(metal-shader-converter INTERFACE)
+    target_include_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/include/)
+    target_link_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/lib/)
+    target_link_libraries(metal-shader-converter INTERFACE metalirconverter)
 
-if(WIN32)
-    get_github_release("double-buffer/shader-compilers-bin" ${METAL_SHADER_CONVERTER_VERSION} "windows_MetalShaderConverter_*_x64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/")
-    
-    function(copy_MetalShaderConverter_to_target target)
-        file(GLOB DXC_DLLS 
-             "${CMAKE_BINARY_DIR}/external/shader-compilers/MetalShaderConverter/lib/*.dll")
-        foreach(DLL ${DXC_DLLS})
-            get_filename_component(DLL_NAME "${DLL}" NAME)
-            add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${DLL}"
-                    "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
-        endforeach()
-    endfunction()
-elseif(NOT BUILD_FOR_IOS)
-    get_github_release("double-buffer/shader-compilers-bin" ${METAL_SHADER_CONVERTER_VERSION} "macos_MetalShaderConverter_*_arm64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/")
-    
-    function(copy_MetalShaderConverter_to_target target)
-        file(GLOB DXC_DLLS 
-             "${CMAKE_BINARY_DIR}/external/shader-compilers/MetalShaderConverter/lib/*.dylib")
-        foreach(DLL ${DXC_DLLS})
-            get_filename_component(DLL_NAME "${DLL}" NAME)
-            add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${DLL}"
-                    "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
-        endforeach()
-    endfunction()
+    if(WIN32)
+        get_github_release("double-buffer/shader-compilers-bin" ${METAL_SHADER_CONVERTER_VERSION} "windows_MetalShaderConverter_*_x64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/")
+        
+        function(copy_MetalShaderConverter_to_target target)
+            file(GLOB DXC_DLLS 
+                 "${CMAKE_BINARY_DIR}/external/shader-compilers/MetalShaderConverter/lib/*.dll")
+            foreach(DLL ${DXC_DLLS})
+                get_filename_component(DLL_NAME "${DLL}" NAME)
+                add_custom_command(TARGET ${target} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL}"
+                        "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
+            endforeach()
+        endfunction()
+    elseif(NOT BUILD_FOR_IOS)
+        get_github_release("double-buffer/shader-compilers-bin" ${METAL_SHADER_CONVERTER_VERSION} "macos_MetalShaderConverter_*_arm64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/")
+        
+        function(copy_MetalShaderConverter_to_target target)
+            file(GLOB DXC_DLLS 
+                 "${CMAKE_BINARY_DIR}/external/shader-compilers/MetalShaderConverter/lib/*.dylib")
+            foreach(DLL ${DXC_DLLS})
+                get_filename_component(DLL_NAME "${DLL}" NAME)
+                add_custom_command(TARGET ${target} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL}"
+                        "$<TARGET_FILE_DIR:${target}>/${DLL_NAME}")
+            endforeach()
+        endfunction()
+    endif()
 endif()
 
 #=======================================================================
@@ -132,7 +149,11 @@ endif()
 # Shader Compilers
 #=======================================================================
 add_library(tools_shader_compilers INTERFACE)
-target_link_libraries(tools_shader_compilers INTERFACE spirv-cross dxc metal-shader-converter)
+target_link_libraries(tools_shader_compilers INTERFACE spirv-cross dxc)
+
+if(WIN32 OR APPLE)
+    target_link_libraries(tools_shader_compilers INTERFACE metal-shader-converter)
+endif()
 
 #=======================================================================
 # Tools External Dependencies

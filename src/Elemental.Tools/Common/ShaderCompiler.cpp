@@ -55,12 +55,14 @@ void InitShaderCompiler()
             .CompileShaderFunction = DirectXShaderCompilerCompileShader
         };
 
+        #ifndef __linux__
         compilerArray[shaderCompilerIndex++] = {
             .InputLanguage = ElemShaderLanguage_Dxil, 
             .OutputLanguages = InitShaderLanguages({ ElemShaderLanguage_MetalIR }),
             .CheckCompilerFunction = MetalShaderConverterIsInstalled,
             .CompileShaderFunction = MetalShaderConverterCompileShader
         };
+        #endif
 
         shaderCompilers = compilerArray.Slice(0, shaderCompilerIndex);
     }

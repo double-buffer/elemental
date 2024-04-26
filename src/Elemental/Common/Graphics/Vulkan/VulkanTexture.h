@@ -22,6 +22,5 @@ VulkanTextureData* GetVulkanTextureData(ElemTexture texture);
 VulkanTextureDataFull* GetVulkanTextureDataFull(ElemTexture texture);
 
 ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, uint32_t width, uint32_t height, bool isPresentTexture);
-DXGI_FORMAT ConvertToVulkanTextureFormat(ElemTextureFormat format);
             
 void VulkanFreeTexture(ElemTexture texture);

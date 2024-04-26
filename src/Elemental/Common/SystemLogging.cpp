@@ -16,13 +16,13 @@ void SystemCallLogMessageHandler(ReadOnlySpan<char> functionName, ElemLogMessage
         return;
     }
 
-    __builtin_va_list arguments;
-    __builtin_va_start(arguments, format); 
+    va_list arguments;
+    va_start(arguments, format); 
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     auto formattedString = SystemFormatString(stackMemoryArena, format, arguments);
     systemLogHandler(type, category, functionName.Pointer, formattedString.Pointer);
 
-    __builtin_va_end(arguments);
+    va_end(arguments);
 }

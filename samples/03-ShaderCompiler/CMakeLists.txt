@@ -1,2 +1,2 @@
-add_executable(ShaderCompiler Main.c)
+add_executable(ShaderCompiler main.c)
 target_link_libraries(ShaderCompiler PRIVATE ElementalToolsInterface)

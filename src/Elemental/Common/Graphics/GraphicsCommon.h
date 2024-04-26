@@ -26,3 +26,14 @@ extern bool useVulkan;
 #define DispatchReturnGraphicsFunction(functionName, ...) \
         return Metal##functionName(__VA_ARGS__);
 #endif
+
+#ifdef __linux__
+#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+
+#define DispatchGraphicsFunction(functionName, ...) \
+        Vulkan##functionName(__VA_ARGS__);
+
+#define DispatchReturnGraphicsFunction(functionName, ...) \
+        return Vulkan##functionName(__VA_ARGS__); 
+
+#endif

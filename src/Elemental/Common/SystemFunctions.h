@@ -151,7 +151,7 @@ ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char
  * @param arguments The variable arguments for formatting.
  * @return A read-only span containing the formatted string.
  */
-ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments);
+ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, va_list arguments);
 
 /**
  * Splits a string into substrings based on the specified separator.

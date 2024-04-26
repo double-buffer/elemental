@@ -3,6 +3,8 @@ if(WIN32)
     set(ELEM_PLATFORM_DIR Microsoft)
 elseif(APPLE)
     set(ELEM_PLATFORM_DIR Apple)
+elseif(LINUX)
+    set(ELEM_PLATFORM_DIR Linux)
 endif()
 
 add_library(Elemental.Tools SHARED Common/UnityBuild.cpp)

@@ -137,6 +137,8 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
 
 // TODO: ExitApplication();
 
+// TODO: Add the ability to specify window with no decorations for app that needs to render their own ui
+
 /**
  * Creates a window for an application with specified options.
  *

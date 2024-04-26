@@ -107,16 +107,16 @@ ReadOnlySpan<char> SystemConvertFloatToString(MemoryArena memoryArena, double va
 
 ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, ...)
 {
-    __builtin_va_list arguments;
+    va_list arguments;
 
-    __builtin_va_start(arguments, format);
+    va_start(arguments, format);
     auto result = SystemFormatString(memoryArena, format, arguments);    
-    __builtin_va_end(arguments);
+    va_end(arguments);
 
     return result;
 }
 
-ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, __builtin_va_list arguments)
+ReadOnlySpan<char> SystemFormatString(MemoryArena memoryArena, ReadOnlySpan<char> format, va_list arguments)
 {
     bool insideFormat = true;
     size_t elementCount = 0;

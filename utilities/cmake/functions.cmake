@@ -1,13 +1,28 @@
-function(extract_zip_file pathZip pathExtract)
+function(extract_zip_file pathArchive pathExtract)
+    if(${pathArchive} MATCHES "\\.zip$")
+        set(IS_ZIP TRUE)
+    elseif(${pathArchive} MATCHES "\\.tar\\.gz$")
+        set(IS_TAR_GZ TRUE)
+    else()
+        message(FATAL_ERROR "Unsupported archive format: ${pathArchive}")
+    endif()
+
     if (UNIX)
-        # Use unzip command on Unix-based systems
-        execute_process(
-            COMMAND unzip -q ${pathZip} -d ${pathExtract}
-        )
+        if(IS_ZIP)
+            # Use unzip command on Unix-based systems for .zip files
+            execute_process(
+                COMMAND unzip -q ${pathArchive} -d ${pathExtract}
+            )
+        elseif(IS_TAR_GZ)
+            # Use tar command on Unix-based systems for .tar.gz files
+            execute_process(
+                COMMAND tar -xzf ${pathArchive} -C ${pathExtract}
+            )
+        endif()
     elseif (WIN32)
         # Use powershell command on Windows systems
         execute_process(
-            COMMAND powershell -Command "Expand-Archive -Force -Path '${pathZip}' -DestinationPath '${pathExtract}'"
+            COMMAND powershell -Command "Expand-Archive -Force -Path '${pathArchive}' -DestinationPath '${pathExtract}'"
         )
     endif()
 endfunction()
@@ -47,9 +62,18 @@ function(get_github_release repo tag filenamePattern pathExtract)
     string(REGEX REPLACE "\"browser_download_url\": \"" "" downloadUrl "${downloadUrlMatch}")
     string(REGEX REPLACE "\".*" "" downloadUrl "${downloadUrl}")
 
+    if("${downloadUrl}" MATCHES "\\.zip$")
+        set(fileExt ".zip")
+    elseif("${downloadUrl}" MATCHES "\\.tar\\.gz$")
+        set(fileExt ".tar.gz")
+    else()
+        message(FATAL_ERROR "Unsupported file format: ${downloadUrl}")
+    endif()
+
+    set(pathZip "${CMAKE_BINARY_DIR}/temp${fileExt}")
+    
     # Download the asset to a temporary zip file
     message(STATUS "Downloading file ${downloadUrl}")
-    set(pathZip "${CMAKE_BINARY_DIR}/temp.zip")
     execute_process(
         COMMAND curl -s -L -o ${pathZip} ${downloadUrl}
     )

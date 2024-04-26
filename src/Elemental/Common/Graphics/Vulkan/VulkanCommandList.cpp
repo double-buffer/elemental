@@ -320,7 +320,7 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         vulkanCommandBuffers[i] = commandListData->DeviceObject;
     }
     
-    auto fenceValue = InterlockedIncrement(&commandQueueData->FenceValue);
+    auto fenceValue = SystemAtomicAdd(commandQueueData->FenceValue, 1) + 1;
 
     auto fence = ElemFence();
     fence.CommandQueue = commandQueue;
@@ -372,7 +372,7 @@ void VulkanWaitForFenceOnCpu(ElemFence fence)
         uint64_t semaphoreValue;
         vkGetSemaphoreCounterValue(graphicsDeviceData->Device, commandQueueToWaitData->Fence, &semaphoreValue);
 
-        commandQueueToWaitData->LastCompletedFenceValue = max(commandQueueToWaitData->LastCompletedFenceValue, semaphoreValue);
+        commandQueueToWaitData->LastCompletedFenceValue = SystemMax(commandQueueToWaitData->LastCompletedFenceValue, semaphoreValue);
     }
 
     if (fence.FenceValue > commandQueueToWaitData->LastCompletedFenceValue)

@@ -35,7 +35,8 @@ typedef enum
 {
     ElemToolsPlatform_Windows = 0,
     ElemToolsPlatform_MacOS = 1,
-    ElemToolsPlatform_iOS = 2
+    ElemToolsPlatform_iOS = 2,
+    ElemToolsPlatform_Linux = 3
 } ElemToolsPlatform;
 
 typedef enum

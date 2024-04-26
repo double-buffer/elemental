@@ -1,4 +1,4 @@
-include("../common/sample.cmake")
+include("../Common/sample.cmake")
 
 set(SAMPLE_NAME HelloWindow)
 
