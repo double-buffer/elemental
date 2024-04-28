@@ -168,7 +168,7 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
     ElemWindowSize renderSize = ElemGetWindowRenderSize(window);
 
     char temp[256];
-    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u@%.1f, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, AvailableMemory=%llu)", 
+    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u@%.1f, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, AvailableMemory=%lu)", 
                         applicationName,
                         fps,
                         frameTimeInSeconds * 1000.0,

@@ -34,7 +34,7 @@ void InitSample(void* payload)
     ElemSwapChain swapChain = ElemCreateSwapChain(commandQueue, window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(swapChain);
 
-    ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, !applicationPayload->ProgramPath ? "Triangle.shader": "Triangle_vulkan.shader");
+    ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, !applicationPayload->PreferVulkan ? "Triangle.shader": "Triangle_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = shaderData.Items, .Length = shaderData.Length });
 
     ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {

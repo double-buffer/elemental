@@ -1,7 +1,7 @@
-#include "WaylandApplication.cpp"
-#include "WaylandWindow.cpp"
+#include "GtkApplication.cpp"
+#include "GtkWindow.cpp"
 
-//#define VK_USE_PLATFORM_WIN32_KHR
+#define VK_USE_PLATFORM_WAYLAND_KHR
 #define VOLK_IMPLEMENTATION
 #include "volk.h"
 

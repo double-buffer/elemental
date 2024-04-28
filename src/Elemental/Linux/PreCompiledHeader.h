@@ -12,6 +12,9 @@
 #include <libgen.h>
 #include <dlfcn.h>
 
+#include <gtk/gtk.h>
+#include <gdk/wayland/gdkwayland.h>
+
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)
 #define ElemAPI extern "C" __attribute__((visibility("default")))

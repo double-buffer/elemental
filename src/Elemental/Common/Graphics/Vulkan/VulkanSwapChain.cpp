@@ -10,8 +10,8 @@
 #include "../Elemental/Microsoft/Win32Application.h"
 #include "../Elemental/Microsoft/Win32Window.h"
 #else
-#include "../Elemental/Linux/WaylandApplication.h"
-#include "../Elemental/Linux/WaylandWindow.h"
+#include "../Elemental/Linux/GtkApplication.h"
+#include "../Elemental/Linux/GtkWindow.h"
 #endif
 
 #define VULKAN_MAX_SWAPCHAINS 10u
@@ -129,12 +129,15 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
 
     if (swapChainData->PresentId > swapChainData->FrameLatency)
     {
+        // TODO: This is only needed on win32?
+        #ifdef _WIN32
         auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
 
         if (vkWaitForPresentKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, presentId, 0) != VK_SUCCESS)
         {
             return;
         }
+        #endif
     }
     
     // TODO: Compute timing information
@@ -171,6 +174,41 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
 
 }
 
+#ifdef __linux__
+// BUG: Sometimes we have a crash if we exit the program at the wrong time
+static void WaylandFrameCallback(void *data, wl_callback* callback, uint32_t time);
+
+void WaylandRegisterFrameCallback(wl_surface* surface)
+{
+    wl_callback* callback = wl_surface_frame(surface);
+
+    static const struct wl_callback_listener frame_listener = {
+        WaylandFrameCallback
+    };
+    wl_callback_add_listener(callback, &frame_listener, surface);
+
+    wl_surface_set_buffer_scale(surface, 2);
+    //wl_surface_commit(windowData->WaylandSurface);
+    // It's important to commit the surface to ensure the callback is triggered
+    wl_surface_commit(surface);
+}
+
+static void WaylandFrameCallback(void *data, wl_callback* callback, uint32_t time) 
+{
+    struct wl_surface *surface = (struct wl_surface *)data;
+    //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wayland callback: %u", time);
+    // Cast the data back to your context or surface data structure if needed
+    // Redraw or schedule a redraw here
+
+    // HACK: We need to have the actual swapchain
+    CheckVulkanAvailableSwapChain(1);
+
+    // It is crucial to destroy the callback object after use
+    wl_callback_destroy(callback);
+    WaylandRegisterFrameCallback(surface);
+}
+#endif
+
 ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -201,10 +239,16 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     VkSurfaceKHR windowSurface;
     AssertIfFailed(vkCreateWin32SurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
     #else
-    auto windowData = GetWaylandWindowData(window);
+    auto windowData = GetGtkWindowData(window);
+    SystemAssert(windowData);
+    
+    VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR };
+    surfaceCreateInfo.display = windowData->WaylandDisplay;
+    surfaceCreateInfo.surface = windowData->WaylandSurface;
+    //surfaceCreateInfo.surface = windowData->WaylandSurfaceParent;
 
     VkSurfaceKHR windowSurface;
-    //AssertIfFailed(vkCreateWin32SurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
+    AssertIfFailed(vkCreateWaylandSurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
     #endif
 
     VkBool32 isPresentSupported;
@@ -227,6 +271,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     auto format = VK_FORMAT_B8G8R8A8_SRGB; // TODO: Enumerate compatible formats first
     auto colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     auto frameLatency = 1u;
+    auto refreshRate = 1.0f / 144.0f; // TODO:
 
     auto targetFPS = windowData->MonitorRefreshRate;
     void* updatePayload = nullptr;
@@ -255,6 +300,8 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
             updatePayload = options->UpdatePayload;
         }
     }
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f. (%dHz)", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale, refreshRate);
 
     VkSwapchainCreateInfoKHR swapChainCreateInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     swapChainCreateInfo.surface = windowSurface;
@@ -308,6 +355,8 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
 
     #ifdef _WIN32
     AddWin32RunLoopHandler(CheckVulkanAvailableSwapChain, handle);
+    #elif __linux__
+    WaylandRegisterFrameCallback(windowData->WaylandSurfaceParent);
     #endif
 
     return handle;

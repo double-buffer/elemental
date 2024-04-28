@@ -42,8 +42,27 @@ void InitVulkan()
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     createInfo.pApplicationInfo = &appInfo;
     
-    // TODO: If the vulkan loader is not here, don't proceed
-    auto isSdkInstalled = SystemLoadLibrary("VkLayer_khronos_validation").Handle != nullptr;
+    auto isSdkInstalled = false;
+    auto instanceCreated = false;
+
+    uint32_t instanceLayerCount;
+    vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr);
+
+    auto instanceLayers = SystemPushArray<VkLayerProperties>(stackMemoryArena, instanceLayerCount);
+    vkEnumerateInstanceLayerProperties(&instanceLayerCount, instanceLayers.Pointer);
+
+    for (uint32_t i = 0; i < instanceLayerCount; i++)
+    {
+        // TODO: Use a system function for that
+        if (strcmp(instanceLayers[i].layerName, "VK_LAYER_KHRONOS_validation") == 0)
+        {
+            isSdkInstalled = true;
+            break;
+        }
+    }
+
+    // TODO: Enumerate instance extensions like in the cube sample to see if the system
+    // is compatible with the current surface extension
 
     if (VulkanDebugLayerEnabled)
     {
@@ -66,6 +85,8 @@ void InitVulkan()
                 VK_KHR_SURFACE_EXTENSION_NAME,
                 #ifdef _WIN32
                 VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+                #elif __linux__
+                VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
                 #endif
             };
 
@@ -87,14 +108,17 @@ void InitVulkan()
             createInfo.pNext = &validationFeatures;
 
             AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &VulkanInstance));
+            instanceCreated = true;
 
         }
         else
         {
             SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "VkLayer_khronos_validation not found but EnableGraphicsDebugLayer() was called. Debug layer will not be enabled."); 
+            VulkanDebugLayerEnabled = false;
         }
     }
-    else
+    
+    if (!instanceCreated)
     {
         SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init Vulkan..."); 
 
@@ -103,6 +127,8 @@ void InitVulkan()
             VK_KHR_SURFACE_EXTENSION_NAME,
             #ifdef WIN32
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+            #elif __linux__
+            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
             #endif
         };
         
