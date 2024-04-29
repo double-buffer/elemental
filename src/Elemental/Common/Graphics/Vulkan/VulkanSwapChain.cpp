@@ -175,37 +175,35 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
 }
 
 #ifdef __linux__
-// BUG: Sometimes we have a crash if we exit the program at the wrong time
-static void WaylandFrameCallback(void *data, wl_callback* callback, uint32_t time);
-
-void WaylandRegisterFrameCallback(wl_surface* surface)
+struct WaylandCallbackParameters
 {
-    wl_callback* callback = wl_surface_frame(surface);
+    ElemSwapChain SwapChain;
+    wl_surface* WaylandSurface;
+};
 
-    static const struct wl_callback_listener frame_listener = {
-        WaylandFrameCallback
-    };
-    wl_callback_add_listener(callback, &frame_listener, surface);
+void RegisterWaylandFrameCallback(WaylandCallbackParameters* parameters);
 
-    wl_surface_set_buffer_scale(surface, 2);
-    //wl_surface_commit(windowData->WaylandSurface);
-    // It's important to commit the surface to ensure the callback is triggered
-    wl_surface_commit(surface);
+// BUG: Sometimes we have a crash if we exit the program at the wrong time
+static void WaylandFrameCallback(void* data, wl_callback* callback, uint32_t time) 
+{
+    auto parameters = (WaylandCallbackParameters*)data;
+    //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wayland callback: %u", time);
+
+    CheckVulkanAvailableSwapChain(parameters->SwapChain);
+
+    wl_callback_destroy(callback);
+    RegisterWaylandFrameCallback(parameters);
 }
 
-static void WaylandFrameCallback(void *data, wl_callback* callback, uint32_t time) 
+static wl_callback_listener frame_listener = { WaylandFrameCallback };
+
+void RegisterWaylandFrameCallback(WaylandCallbackParameters* parameters)
 {
-    struct wl_surface *surface = (struct wl_surface *)data;
-    //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wayland callback: %u", time);
-    // Cast the data back to your context or surface data structure if needed
-    // Redraw or schedule a redraw here
+    auto callback = wl_surface_frame(parameters->WaylandSurface);
+    SystemAssert(callback);
 
-    // HACK: We need to have the actual swapchain
-    CheckVulkanAvailableSwapChain(1);
-
-    // It is crucial to destroy the callback object after use
-    wl_callback_destroy(callback);
-    WaylandRegisterFrameCallback(surface);
+    wl_callback_add_listener(callback, &frame_listener, parameters);
+    wl_surface_commit(parameters->WaylandSurface);
 }
 #endif
 
@@ -245,7 +243,6 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR };
     surfaceCreateInfo.display = windowData->WaylandDisplay;
     surfaceCreateInfo.surface = windowData->WaylandSurface;
-    //surfaceCreateInfo.surface = windowData->WaylandSurfaceParent;
 
     VkSurfaceKHR windowSurface;
     AssertIfFailed(vkCreateWaylandSurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
@@ -344,7 +341,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .Format = ElemTextureFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
-    }); 
+    });
 
     SystemAddDataPoolItemFull(vulkanSwapChainPool, handle, {
         .VulkanFormat = format,
@@ -356,7 +353,11 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     #ifdef _WIN32
     AddWin32RunLoopHandler(CheckVulkanAvailableSwapChain, handle);
     #elif __linux__
-    WaylandRegisterFrameCallback(windowData->WaylandSurfaceParent);
+    auto waylandCallbackParameters = SystemPushStruct<WaylandCallbackParameters>(VulkanGraphicsMemoryArena);
+    waylandCallbackParameters->SwapChain = handle;
+    waylandCallbackParameters->WaylandSurface = windowData->WaylandSurfaceParent;
+
+    RegisterWaylandFrameCallback(waylandCallbackParameters);
     #endif
 
     return handle;

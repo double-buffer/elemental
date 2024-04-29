@@ -88,10 +88,12 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     
     gtk_window_set_application(GTK_WINDOW(window), GTK_APPLICATION(GlobalGtkApplication));
     gtk_window_set_title(GTK_WINDOW(window), title);
-    gtk_window_set_default_size(GTK_WINDOW(window), width, height);
+    //gtk_window_set_default_size(GTK_WINDOW(window), width, height);
 
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_window_set_child(GTK_WINDOW(window), box);
+    // TODO: If we use that, it will be considered the min size :(
+    gtk_widget_set_size_request(box, width, height);
 
     gtk_window_present(GTK_WINDOW(window));
 
@@ -164,13 +166,25 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     auto uiScale = (float)gdk_surface_get_scale_factor(windowData->GdkSurface);
     auto windowState = ElemWindowState_Normal;
 
-    double x, y;
-    //gtk_widget_compute_point(
-    gtk_widget_translate_coordinates(windowData->GtkContent, windowData->GtkWindow, 0, 0, &x, &y);
+    auto inputPoint = GRAPHENE_POINT_INIT_ZERO;
+    graphene_point_t contentOffset;
+    AssertIfFailed(gtk_widget_compute_point(windowData->GtkContent, windowData->GtkWindow, &inputPoint, &contentOffset));
 
+    auto gdkWidth = gdk_surface_get_width(windowData->GdkSurface);
+    auto gdkHeight = gdk_surface_get_height(windowData->GdkSurface);
+
+    auto offsetSurfaceX = (gdkWidth - width) / 2;
+    auto offsetSurfaceY = (gdkHeight - height) / 2;
+    
     // TODO: Get offset for window
-    wl_subsurface_set_position(windowData->WaylandSubSurface, x + 14, y + 12);
+    uint32_t offsetX = offsetSurfaceX; // 14;
+    uint32_t offsetY = 12;
+    wl_subsurface_set_position(windowData->WaylandSubSurface, contentOffset.x + offsetX, contentOffset.y + offsetY);
 
+    //SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "OffsetX: %d, OffsetY: %d", offsetSurfaceX, offsetSurfaceY);
+
+    // BUG: For the moment we have a suboptimal swapchain in vulkan if we go fullscreen with offset 0
+    //gtk_window_fullscreen(GTK_WINDOW(windowData->GtkWindow));
     // TODO: Is it needed?
     //auto waylandRegion = wl_compositor_create_region(WaylandCompositor);
     //wl_region_add(waylandRegion, 0, 0, width, height);
