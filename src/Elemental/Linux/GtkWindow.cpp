@@ -1,14 +1,12 @@
 #include "GtkWindow.h"
 #include "GtkApplication.h"
 #include "SystemDataPool.h"
-#include "SystemDictionary.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
 SystemDataPool<GtkWindowData, GtkWindowDataFull> windowDataPool;
 
-// TODO: Temporary
-wl_subcompositor* WaylandSubCompositor;
+wl_subcompositor* waylandSubCompositor;
 
 void InitGtkWindowMemory()
 {
@@ -28,13 +26,6 @@ GtkWindowDataFull* GetGtkWindowDataFull(ElemWindow window)
     return SystemGetDataPoolItemFull(windowDataPool, window);
 }
 
-static void on_resize(GtkWidget *widget, int width, int height, gpointer user_data) {
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Resize");
-    // Handle the resize event, you can adjust conditions or respond to the new size
-    // For example, you might adjust internal drawing parameters or react to the size change
-    g_print("Widget resized to: %d x %d\n", width, height);
-}
-
 void WaylandRegistryHandler(void *data, struct wl_registry *registry, uint32_t id, const char *interface, uint32_t version)
 { 
     SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Got a registry event for %s id %d", interface, id);
@@ -42,7 +33,7 @@ void WaylandRegistryHandler(void *data, struct wl_registry *registry, uint32_t i
     // TODO: Replace by system functions
     if (strcmp(interface, "wl_subcompositor") == 0) 
     {
-        WaylandSubCompositor = (wl_subcompositor*)wl_registry_bind(registry, id, &wl_subcompositor_interface, 1);
+        waylandSubCompositor = (wl_subcompositor*)wl_registry_bind(registry, id, &wl_subcompositor_interface, 1);
     }
 }
 
@@ -99,6 +90,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 
     auto gdkSurface = gtk_native_get_surface(gtk_widget_get_native(window));
     auto gdkDisplay = gdk_surface_get_display(gdkSurface);
+    auto gdkMonitor = gdk_display_get_monitor_at_surface(gdkDisplay, gdkSurface);
+    auto refreshRate = SystemRoundUp((float)gdk_monitor_get_refresh_rate(gdkMonitor) / 1000.0f);
 
     auto waylandDisplay = gdk_wayland_display_get_wl_display(gdkDisplay);
 
@@ -114,14 +107,14 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     wl_display_dispatch(waylandDisplay);
     wl_display_roundtrip(waylandDisplay);
 
-    SystemAssert(WaylandSubCompositor);
+    SystemAssert(waylandSubCompositor);
     auto waylandSurface = gdk_wayland_surface_get_wl_surface(gdkSurface);
     auto WaylandCompositor = gdk_wayland_display_get_wl_compositor(gdkDisplay);
 
     auto contentWaylandSurface = wl_compositor_create_surface(WaylandCompositor);
     wl_surface_set_buffer_scale(contentWaylandSurface, 2);
 
-    auto contentWaylandSubsurface = wl_subcompositor_get_subsurface(WaylandSubCompositor, contentWaylandSurface, waylandSurface);
+    auto contentWaylandSubsurface = wl_subcompositor_get_subsurface(waylandSubCompositor, contentWaylandSurface, waylandSurface);
     wl_subsurface_set_desync(contentWaylandSubsurface);
 
     auto handle = SystemAddDataPoolItem(windowDataPool, {
@@ -131,7 +124,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
         .WaylandDisplay = waylandDisplay,
         .WaylandSurfaceParent = waylandSurface,
         .WaylandSurface = contentWaylandSurface,
-        .WaylandSubSurface = contentWaylandSubsurface
+        .WaylandSubSurface = contentWaylandSubsurface,
+        .MonitorRefreshRate = (uint32_t)refreshRate
     }); 
 
     SystemAddDataPoolItemFull(windowDataPool, handle, {
@@ -161,35 +155,30 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     auto windowData = GetGtkWindowData(window);
     SystemAssert(windowData);
 
-    auto width = SystemMax((uint32_t)gtk_widget_get_width(windowData->GtkContent), 10u);
-    auto height = SystemMax((uint32_t)gtk_widget_get_height(windowData->GtkContent), 10u);
+    auto width = SystemMax((uint32_t)gtk_widget_get_width(windowData->GtkContent), 1u);
+    auto height = SystemMax((uint32_t)gtk_widget_get_height(windowData->GtkContent), 1u);
     auto uiScale = (float)gdk_surface_get_scale_factor(windowData->GdkSurface);
     auto windowState = ElemWindowState_Normal;
 
     auto inputPoint = GRAPHENE_POINT_INIT_ZERO;
     graphene_point_t contentOffset;
     AssertIfFailed(gtk_widget_compute_point(windowData->GtkContent, windowData->GtkWindow, &inputPoint, &contentOffset));
-
-    auto gdkWidth = gdk_surface_get_width(windowData->GdkSurface);
-    auto gdkHeight = gdk_surface_get_height(windowData->GdkSurface);
-
-    auto offsetSurfaceX = (gdkWidth - width) / 2;
-    auto offsetSurfaceY = (gdkHeight - height) / 2;
     
-    // TODO: Get offset for window
-    uint32_t offsetX = offsetSurfaceX; // 14;
-    uint32_t offsetY = 12;
+    double offsetX, offsetY;
+    gtk_native_get_surface_transform(gtk_widget_get_native(windowData->GtkWindow), &offsetX, &offsetY);
     wl_subsurface_set_position(windowData->WaylandSubSurface, contentOffset.x + offsetX, contentOffset.y + offsetY);
 
-    //SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "OffsetX: %d, OffsetY: %d", offsetSurfaceX, offsetSurfaceY);
 
     // BUG: For the moment we have a suboptimal swapchain in vulkan if we go fullscreen with offset 0
+    // Use GDK fullscreen?
     //gtk_window_fullscreen(GTK_WINDOW(windowData->GtkWindow));
     // TODO: Is it needed?
     //auto waylandRegion = wl_compositor_create_region(WaylandCompositor);
     //wl_region_add(waylandRegion, 0, 0, width, height);
     //wl_surface_opaque_region();
     //s.set_opaque_region(r)
+
+    // TODO: Update monitor refresh rate?
 
     return 
     {

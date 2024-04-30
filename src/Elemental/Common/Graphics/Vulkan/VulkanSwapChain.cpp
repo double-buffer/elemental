@@ -10,7 +10,6 @@
 #include "../Elemental/Microsoft/Win32Application.h"
 #include "../Elemental/Microsoft/Win32Window.h"
 #else
-#include "../Elemental/Linux/GtkApplication.h"
 #include "../Elemental/Linux/GtkWindow.h"
 #endif
 
@@ -124,12 +123,21 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     auto swapChainData = GetVulkanSwapChainData(handle);
     SystemAssert(swapChainData);
 
+    #ifdef _WIN32
+    auto windowData = GetWin32WindowData(swapChainData->Window);
+    #elif __linux__
+    auto windowData = GetGtkWindowData(swapChainData->Window);
+    #endif
+
+    SystemAssert(windowData);
+
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(swapChainData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
     if (swapChainData->PresentId > swapChainData->FrameLatency)
     {
-        // TODO: This is only needed on win32?
+        // TODO: This is only needed on win32? Normally on wayland even if use an update handle
+        // We should be able to call this function
         #ifdef _WIN32
         auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
 
@@ -141,6 +149,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     }
     
     // TODO: Compute timing information
+    auto deltaTime = 1.0f / windowData->MonitorRefreshRate;
 
     ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
@@ -160,7 +169,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     {
         .SwapChainInfo = VulkanGetSwapChainInfo(handle),
         .BackBufferTexture = backBufferTexture,
-        .DeltaTimeInSeconds = 1.0f / 120.0f,//deltaTime,
+        .DeltaTimeInSeconds = deltaTime,
         .NextPresentTimeStampInSeconds = 1.0f//nextPresentTimeStampInSeconds
     };
     
@@ -187,6 +196,8 @@ void RegisterWaylandFrameCallback(WaylandCallbackParameters* parameters);
 static void WaylandFrameCallback(void* data, wl_callback* callback, uint32_t time) 
 {
     auto parameters = (WaylandCallbackParameters*)data;
+
+    // TODO: investigate frame time
     //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wayland callback: %u", time);
 
     CheckVulkanAvailableSwapChain(parameters->SwapChain);

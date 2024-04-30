@@ -14,6 +14,7 @@
 
 #include <gtk/gtk.h>
 #include <gdk/wayland/gdkwayland.h>
+#include <wayland-client.h>
 
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)

@@ -131,7 +131,7 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
-// TODO: ElemGetSystemInfo
+// TODO: ElemGetSystemInfo (with System enum, application folder path, etc.)
 
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters);
 
