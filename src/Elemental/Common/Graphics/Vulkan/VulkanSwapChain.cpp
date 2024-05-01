@@ -279,7 +279,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     auto format = VK_FORMAT_B8G8R8A8_SRGB; // TODO: Enumerate compatible formats first
     auto colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     auto frameLatency = 1u;
-    auto refreshRate = 1.0f / 144.0f; // TODO:
+    auto refreshRate = windowData->MonitorRefreshRate;
 
     auto targetFPS = windowData->MonitorRefreshRate;
     void* updatePayload = nullptr;

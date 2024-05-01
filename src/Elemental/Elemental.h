@@ -282,9 +282,9 @@ typedef struct
     uint32_t Length;
 } ElemFenceSpan;
 
-// TODO: Always insert a fence but awaitable on cpu is an option
 typedef struct
 {
+    // TODO: Always insert a fence but awaitable on cpu is an option
     bool InsertFence;
     bool FenceAwaitableOnCpu;
     ElemFenceSpan FencesToWait;
@@ -391,7 +391,6 @@ ElemAPI void ElemCommitCommandList(ElemCommandList commandList);
 ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options);
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
-// TODO: ResetCommandAllocation?
 
 ElemAPI ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options);
 ElemAPI void ElemFreeSwapChain(ElemSwapChain swapChain);
