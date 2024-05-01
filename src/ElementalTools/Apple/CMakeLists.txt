@@ -1,9 +1,9 @@
-target_include_directories(Elemental.Tools PRIVATE ../../Elemental/Apple/)
-target_include_directories(Elemental.Tools PRIVATE ./Interop/)
-target_compile_options(Elemental.Tools PRIVATE -fms-extensions -fno-objc-arc -Wno-language-extension-token)
-target_link_options(Elemental.Tools PRIVATE "SHELL:-framework Foundation")
+target_include_directories(ElementalTools PRIVATE ../../Elemental/Apple/)
+target_include_directories(ElementalTools PRIVATE ./Interop/)
+target_compile_options(ElementalTools PRIVATE -fms-extensions -fno-objc-arc -Wno-language-extension-token)
+target_link_options(ElementalTools PRIVATE "SHELL:-framework Foundation")
 
-set_target_properties(Elemental.Tools PROPERTIES
+set_target_properties(ElementalTools PROPERTIES
   FRAMEWORK TRUE
   FRAMEWORK_VERSION A
   MACOSX_FRAMEWORK_IDENTIFIER ElementalTools

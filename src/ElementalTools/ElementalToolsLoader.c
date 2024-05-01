@@ -35,16 +35,16 @@ static bool LoadElementalToolsLibrary(void)
     if (!libraryElementalTools) 
     {
         #if defined(_WIN32)
-            libraryElementalTools = LoadLibrary(L"Elemental.Tools.dll");
+            libraryElementalTools = LoadLibrary(L"ElementalTools.dll");
         #elif __APPLE__
-            libraryElementalTools = dlopen("Elemental.Tools.framework/Elemental.Tools", RTLD_LAZY);
+            libraryElementalTools = dlopen("ElementalTools.framework/ElementalTools", RTLD_LAZY);
 
             if (!libraryElementalTools)
             {
-                libraryElementalTools = dlopen("libElemental.Tools.dylib", RTLD_LAZY);
+                libraryElementalTools = dlopen("libElementalTools.dylib", RTLD_LAZY);
             }
         #else
-            libraryElementalTools = dlopen("libElemental.Tools.so", RTLD_LAZY);
+            libraryElementalTools = dlopen("libElementalTools.so", RTLD_LAZY);
         #endif
 
         if (!libraryElementalTools) 

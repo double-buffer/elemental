@@ -305,7 +305,7 @@ public class CLoaderCodeGenerator : ICodeGenerator
 
         builder.Replace("##SOURCE_HEADER##", Path.GetFileName(input));
         builder.Replace("##LIBRARY_NAME##", libraryName);
-        builder.Replace("##DLL_NAME##", libraryName == "Elemental" ? "Elemental" : "Elemental.Tools");
+        builder.Replace("##DLL_NAME##", libraryName == "Elemental" ? "Elemental" : "ElementalTools");
 
         File.WriteAllText(output, builder.ToString());
     }

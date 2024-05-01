@@ -69,7 +69,7 @@ add_subdirectory(src/Elemental/Common)
 add_subdirectory(src/Elemental)
     
 if(NOT BUILD_FOR_IOS)
-add_subdirectory(src/Elemental.Tools)
+add_subdirectory(src/ElementalTools)
 endif()
 
 add_subdirectory(tests/SystemFunctionsTests)
@@ -81,14 +81,13 @@ add_subdirectory(tests/ToolsTests)
 endif()
 
 # TODO: Use a sub cmakefile?
-add_subdirectory(samples/01-HelloWorld)
-add_subdirectory(samples/02-HelloWindow)
+add_subdirectory(samples/01-HelloWindow)
 
 if(NOT BUILD_FOR_IOS)
-    add_subdirectory(samples/03-ShaderCompiler)
+    add_subdirectory(samples/02-ShaderCompiler)
 endif()
 
-add_subdirectory(samples/04-HelloTriangle)
+add_subdirectory(samples/03-HelloTriangle)
 
 
 # DEBUG Deps
