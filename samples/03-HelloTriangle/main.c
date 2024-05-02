@@ -9,7 +9,6 @@ typedef struct
 
 typedef struct
 {
-    const char* ProgramPath;
     bool PreferVulkan;
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
@@ -34,7 +33,7 @@ void InitSample(void* payload)
     ElemSwapChain swapChain = ElemCreateSwapChain(commandQueue, window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(swapChain);
 
-    ElemDataSpan shaderData = SampleReadFile(applicationPayload->ProgramPath, !applicationPayload->PreferVulkan ? "Triangle.shader": "Triangle_vulkan.shader");
+    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Triangle.shader": "Triangle_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = shaderData.Items, .Length = shaderData.Length });
 
     ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
@@ -139,8 +138,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // Backbuffer
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
-    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);
-    SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", graphicsDeviceInfo, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
+    SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
 
     applicationPayload->ShaderParameters.AspectRatio = (float)updateParameters->SwapChainInfo.Width / updateParameters->SwapChainInfo.Height;
     applicationPayload->ShaderParameters.RotationY += 1.5f * (float)updateParameters->DeltaTimeInSeconds;
@@ -161,7 +159,6 @@ int main(int argc, const char* argv[])
 
     ApplicationPayload payload =
     {
-        .ProgramPath = argv[0],
         .PreferVulkan = preferVulkan
     };
 

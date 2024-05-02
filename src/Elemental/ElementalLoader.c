@@ -24,6 +24,7 @@ static int functionPointersLoadedElemental = 0;
 typedef struct ElementalFunctions 
 {
     void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
+    ElemSystemInfo (*ElemGetSystemInfo)(void);
     int (*ElemRunApplication)(const ElemRunApplicationParameters*);
     ElemWindow (*ElemCreateWindow)(const ElemWindowOptions*);
     void (*ElemFreeWindow)(ElemWindow);
@@ -112,6 +113,7 @@ static bool LoadElementalFunctionPointers(void)
     }
 
     listElementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetElementalFunctionPointer("ElemConfigureLogHandler");
+    listElementalFunctions.ElemGetSystemInfo = (ElemSystemInfo (*)(void))GetElementalFunctionPointer("ElemGetSystemInfo");
     listElementalFunctions.ElemRunApplication = (int (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication");
     listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
     listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
@@ -255,6 +257,37 @@ static inline void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     }
 
     listElementalFunctions.ElemConfigureLogHandler(logHandler);
+}
+
+static inline ElemSystemInfo ElemGetSystemInfo(void)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemSystemInfo result = {};
+        #else
+        ElemSystemInfo result = (ElemSystemInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetSystemInfo) 
+    {
+        assert(listElementalFunctions.ElemGetSystemInfo);
+
+        #ifdef __cplusplus
+        ElemSystemInfo result = {};
+        #else
+        ElemSystemInfo result = (ElemSystemInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetSystemInfo();
 }
 
 static inline int ElemRunApplication(const ElemRunApplicationParameters* parameters)

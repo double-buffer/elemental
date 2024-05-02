@@ -53,6 +53,14 @@ typedef enum
     ElemLogMessageCategory_Inputs = 4
 } ElemLogMessageCategory;
 
+typedef enum
+{
+    ElemPlatform_Windows = 0,
+    ElemPlatform_MacOS = 1,
+    ElemPlatform_iOS = 2,
+    ElemPlatform_Linux = 3
+} ElemPlatform;
+
 /**
  * Enumerates the possible window states.
  */
@@ -83,6 +91,12 @@ typedef struct
     ElemApplicationHandlerPtr FreeHandler;
     void* Payload;
 } ElemRunApplicationParameters;
+
+typedef struct
+{
+    ElemPlatform Platform;
+    const char* ApplicationPath;
+} ElemSystemInfo;
 
 /**
  * Specifies options for window creation.
@@ -131,7 +145,7 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
-// TODO: ElemGetSystemInfo (with System enum, application folder path, etc.)
+ElemAPI ElemSystemInfo ElemGetSystemInfo();
 
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters);
 
@@ -284,8 +298,6 @@ typedef struct
 
 typedef struct
 {
-    // TODO: Always insert a fence but awaitable on cpu is an option
-    bool InsertFence;
     bool FenceAwaitableOnCpu;
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;

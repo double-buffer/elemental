@@ -26,6 +26,24 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     } 
 }
 
+ElemAPI ElemSystemInfo ElemGetSystemInfo()
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto executablePath = SystemPlatformGetExecutablePath(stackMemoryArena);
+    auto environment = SystemPlatformGetEnvironment(stackMemoryArena);
+                      
+    auto lastIndex = SystemLastIndexOf(executablePath, environment->PathSeparator);
+    SystemAssert(lastIndex != -1);
+
+    auto applicationPath = SystemDuplicateBuffer(stackMemoryArena, executablePath.Slice(0, lastIndex + 1));
+
+    return
+    {
+        .Platform = ElemPlatform_iOS,
+        .ApplicationPath = applicationPath.Pointer
+    };
+}
+
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters)
 {
     InitApplicationMemory();

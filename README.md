@@ -7,7 +7,8 @@ it was very easy to start working on its own custom program that took full advan
 they are hard to use. They also have many ways of doing things because they must maintain backward compatibility.
 
 The goal of Elemental is to simplify and unify all graphics API on all platforms. It doesn't mean that it will simplify or abstract graphics development. 
-It is still difficult but developers can now focus on learning graphics programming like in the old days.
+It is still challenging but developers can now focus on learning graphics programming like in the old days. And build their graphics app or engine by focusing
+on graphics algorithms.
 
 The library is still in heavy development stage. The goal is not to be compatible with the majority of graphics cards now but to be ready for the future.
 

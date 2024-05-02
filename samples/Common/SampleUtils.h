@@ -28,39 +28,37 @@ void CopyString(char* destination, uint32_t destinationLength, const char* sourc
     #endif
 }
 
-void SampleGetFullPath(char* destination, const char* programPath, const char* path)
+void SampleGetFullPath(char* destination, const char* path)
 {
     memset(destination, 0, MAX_PATH);
 
-    char* pointer = strrchr(programPath, '\\');
+    char* pointer = NULL;
+    ElemSystemInfo systemInfo = ElemGetSystemInfo();
 
-    if (!pointer)
+    CopyString(destination, MAX_PATH, systemInfo.ApplicationPath, strlen(systemInfo.ApplicationPath));
+    pointer = destination + strlen(systemInfo.ApplicationPath);
+
+    const char* folderPrefix = "Data/";
+
+    if (systemInfo.Platform == ElemPlatform_MacOS)
     {
-        pointer = strrchr(programPath, '/');
+        folderPrefix = "../Resources/";
+    }
+    else if (systemInfo.Platform == ElemPlatform_iOS)
+    {
+        folderPrefix = "./";
     }
 
-    uint32_t programPathLength = pointer + 1 - programPath;
-    CopyString(destination, MAX_PATH, programPath, programPathLength);
-    pointer = destination + programPathLength;
-
-    #if TARGET_OS_IOS
-    const char* folderPrefix = "./";
-    #elif TARGET_OS_MAC
-    const char* folderPrefix = "../Resources/";
-    #else
-    const char* folderPrefix = "Data/";
-    #endif
-    
     CopyString(pointer, pointer - destination, folderPrefix, strlen(folderPrefix));
     pointer = pointer + strlen(folderPrefix);
 
     CopyString(pointer, pointer - destination, path, strlen(path));
 }
 
-ElemDataSpan SampleReadFile(const char* executablePath, const char* filename) 
+ElemDataSpan SampleReadFile(const char* filename) 
 {
     char absolutePath[MAX_PATH];
-    SampleGetFullPath(absolutePath, executablePath, filename);
+    SampleGetFullPath(absolutePath, filename);
 
     printf("Read path: %s\n", absolutePath);
 
@@ -146,6 +144,26 @@ ElemDataSpan SampleReadFile(const char* executablePath, const char* filename)
 // UI Functions
 // -----------------------------------------------------------------------------
 
+const char* SampleGetPlatformLabel(ElemPlatform platform)
+{
+    switch (platform)
+    {
+        case ElemPlatform_Windows:
+            return "Windows";
+
+        case ElemPlatform_MacOS:
+            return "MacOS";
+
+        case ElemPlatform_iOS:
+            return "iOS";
+
+        case ElemPlatform_Linux:
+            return "Linux";
+    }
+
+    return "Unknown";
+}
+
 const char* SampleGetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
 {
     switch (graphicsApi)
@@ -163,12 +181,15 @@ const char* SampleGetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
     return "Unknown";
 }
 
-void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGraphicsDeviceInfo graphicsDeviceInfo, double frameTimeInSeconds, uint32_t fps)
+void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGraphicsDevice graphicsDevice, double frameTimeInSeconds, uint32_t fps)
 {
     ElemWindowSize renderSize = ElemGetWindowRenderSize(window);
+    
+    ElemSystemInfo systemInfo = ElemGetSystemInfo();
+    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
     char temp[256];
-    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u@%.1f, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, AvailableMemory=%lu)", 
+    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u@%.1f, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, Platform=%s, AvailableMemory=%llu)", 
                         applicationName,
                         fps,
                         frameTimeInSeconds * 1000.0,
@@ -177,6 +198,7 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
                         renderSize.UIScale,
                         graphicsDeviceInfo.DeviceName, 
                         SampleGetGraphicsApiLabel(graphicsDeviceInfo.GraphicsApi),
+                        SampleGetPlatformLabel(systemInfo.Platform),
                         graphicsDeviceInfo.AvailableMemory);
     ElemSetWindowTitle(window, temp);
 }

@@ -84,7 +84,7 @@ UTEST(CommandList, ExecuteCommandListWithInsertFence)
     ElemCommitCommandList(commandList);
 
     // Act
-    ElemExecuteCommandListOptions executeOptions = { .InsertFence = true, .FenceAwaitableOnCpu = true }; 
+    ElemExecuteCommandListOptions executeOptions = { .FenceAwaitableOnCpu = true }; 
     auto fence = ElemExecuteCommandList(commandQueue, commandList, &executeOptions);
     ElemWaitForFenceOnCpu(fence);
 

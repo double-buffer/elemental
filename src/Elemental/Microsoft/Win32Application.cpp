@@ -1,6 +1,8 @@
 #include "Win32Application.h"
+#include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
+#include "SystemPlatformFunctions.h"
 
 #define WIN32_MAX_RUNLOOP 10u
 
@@ -64,6 +66,24 @@ ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler)
     {
         SystemRegisterLogHandler(logHandler);
     } 
+}
+
+ElemAPI ElemSystemInfo ElemGetSystemInfo()
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto executablePath = SystemPlatformGetExecutablePath(stackMemoryArena);
+    auto environment = SystemPlatformGetEnvironment(stackMemoryArena);
+                      
+    auto lastIndex = SystemLastIndexOf(executablePath, environment->PathSeparator);
+    SystemAssert(lastIndex != -1);
+
+    auto applicationPath = SystemDuplicateBuffer(stackMemoryArena, executablePath.Slice(0, lastIndex + 1));
+
+    return
+    {
+        .Platform = ElemPlatform_Windows,
+        .ApplicationPath = applicationPath.Pointer
+    };
 }
 
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters)
