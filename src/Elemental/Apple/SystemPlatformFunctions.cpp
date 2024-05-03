@@ -126,7 +126,7 @@ size_t SystemPlatformFileGetSizeInBytes(ReadOnlySpan<char> path)
 
     if (stat(path.Pointer, &buffer) != 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open file %s for reading.", path.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for reading.", path.Pointer);
         return 0;
     }
 
@@ -139,13 +139,13 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
 
     if (fileHandle < 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open file %s for writing.", path.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for writing.", path.Pointer);
         return;
     }
     
     if (write(fileHandle, data.Pointer, data.Length) < 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Error writing to file %s.", path.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error writing to file %s.", path.Pointer);
     }
 
     close(fileHandle);
@@ -157,7 +157,7 @@ void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
 
     if (fileHandle < 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open file %s for reading.", path.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for reading.", path.Pointer);
         return;
     }
 
@@ -165,7 +165,7 @@ void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
 
     if (bytesRead < 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Error reading file %s.", path.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error reading file %s.", path.Pointer);
     }
 
     close(fileHandle);
@@ -175,7 +175,7 @@ void SystemPlatformFileDelete(ReadOnlySpan<char> path)
 {
     if (unlink(path.Pointer) != 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot delete file %s.", path.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot delete file %s.", path.Pointer);
     }
 }
 
@@ -189,14 +189,14 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
 
     if (pipe(pipefd) == -1) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot open pipe for launching command: %s", command.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open pipe for launching command: %s", command.Pointer);
         return ReadOnlySpan<char>();
     }
 
     pid_t pid = fork();
     if (pid == -1) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot fork process for launching command: %s", command.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot fork process for launching command: %s", command.Pointer);
         close(pipefd[0]);
         close(pipefd[1]);
         return ReadOnlySpan<char>();
@@ -290,13 +290,13 @@ void* SystemPlatformCreateThread(void* threadFunction, void* parameters)
 
     if (i == MAX_THREADS) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Maximum thread limit reached");
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Maximum thread limit reached");
         return nullptr;
     }
 
     if (pthread_create(&thread, NULL, (void* (*)(void*))threadFunction, parameters) != 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot create thread");
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot create thread");
         return nullptr;
     }
 

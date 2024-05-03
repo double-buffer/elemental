@@ -3,6 +3,7 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
+#include "SystemPlatformFunctions.h"
 
 MemoryArena ApplicationMemoryArena;
 
@@ -12,10 +13,10 @@ void InitApplicationMemory()
     {
         ApplicationMemoryArena = SystemAllocateMemoryArena();
 
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Init OK");
 
         #ifdef _DEBUG
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Debug Mode");
         #endif
     }
 }
@@ -122,7 +123,8 @@ ElemAPI ElemSystemInfo ElemGetSystemInfo()
     return
     {
         .Platform = ElemPlatform_MacOS,
-        .ApplicationPath = applicationPath.Pointer
+        .ApplicationPath = applicationPath.Pointer,
+        .SupportMultiWindows = true
     };
 }
 
@@ -142,6 +144,11 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     }
 
     return 0;
+}
+
+ElemAPI void ElemExitApplication()
+{
+    NS::Application::sharedApplication()->terminate(nullptr);
 }
 
 MacOSApplicationDelegate::MacOSApplicationDelegate(const ElemRunApplicationParameters* parameters)

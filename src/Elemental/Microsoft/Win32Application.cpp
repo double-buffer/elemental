@@ -18,17 +18,17 @@ void InitWin32ApplicationMemory()
         ApplicationMemoryArena = SystemAllocateMemoryArena();
         Win32RunLoopHandlers = SystemPushArray<Win32RunLoopHandler>(ApplicationMemoryArena, WIN32_MAX_RUNLOOP);
 
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK.");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Init OK.");
 
         #ifdef _DEBUG
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode.");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Debug Mode.");
         #endif
     }
 }
 
 void AddWin32RunLoopHandler(Win32RunLoopHandlerPtr handler, ElemHandle handle)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Add Runloop handler.");
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Add Runloop handler.");
     Win32RunLoopHandlers[Win32CurrentRunLoopIndex++] = 
     {
         .Function = handler,
@@ -82,7 +82,8 @@ ElemAPI ElemSystemInfo ElemGetSystemInfo()
     return
     {
         .Platform = ElemPlatform_Windows,
-        .ApplicationPath = applicationPath.Pointer
+        .ApplicationPath = applicationPath.Pointer,
+        .SupportMultiWindows = true
     };
 }
 
@@ -118,4 +119,9 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     }
 
     return 0;
+}
+
+ElemAPI void ElemExitApplication()
+{
+    PostQuitMessage(0);
 }

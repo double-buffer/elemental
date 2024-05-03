@@ -15,7 +15,7 @@ void RefreshWin32MonitorInfos(ElemWindow window)
     auto windowDataFull = GetWin32WindowDataFull(window);
     SystemAssert(windowDataFull);
 
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Refreshing monitor infos...");
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Refreshing monitor infos...");
 
     ComPtr<IDXGIFactory2> dxgiFactory = nullptr;
     AssertIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(dxgiFactory.GetAddressOf())));
@@ -66,7 +66,7 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
                 {
                     if (!SystemDictionaryContainsKey(windowDictionary, window))
                     {
-                        SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot enter fullscreen because window is not valid.");
+                        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot enter fullscreen because window is not valid.");
                     }
 
                     auto windowHandle = windowDictionary[window];
@@ -119,7 +119,7 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
         {
             if (!SystemDictionaryContainsKey(windowDictionary, window))
             {
-                SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Cannot destroy window because the window is not known.");
+                SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot destroy window because the window is not known.");
             }
 
             auto windowHandle = windowDictionary[window];

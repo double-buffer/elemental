@@ -28,7 +28,7 @@ GtkWindowDataFull* GetGtkWindowDataFull(ElemWindow window)
 
 void WaylandRegistryHandler(void *data, struct wl_registry *registry, uint32_t id, const char *interface, uint32_t version)
 { 
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Got a registry event for %s id %d", interface, id);
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Got a registry event for %s id %d", interface, id);
 
     // TODO: Replace by system functions
     if (strcmp(interface, "wl_subcompositor") == 0) 
@@ -39,7 +39,7 @@ void WaylandRegistryHandler(void *data, struct wl_registry *registry, uint32_t i
 
 void WaylandRegistryRemover(void *data, struct wl_registry *registry, uint32_t id)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Wayland registrery remove");
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Wayland registrery remove");
 }
 
 ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)

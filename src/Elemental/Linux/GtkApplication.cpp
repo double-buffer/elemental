@@ -3,6 +3,7 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 #include "SystemSpan.h"
+#include "SystemPlatformFunctions.h"
 
 MemoryArena ApplicationMemoryArena;
 
@@ -14,16 +15,16 @@ void InitLinuxApplicationMemory()
     {
         ApplicationMemoryArena = SystemAllocateMemoryArena();
 
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK.");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Init OK.");
 
         #ifdef _DEBUG
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode.");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Debug Mode.");
         #endif
     }
 }
 
 static void on_theme_changed(GSettings *settings, gchar *key, GtkApplication *app) {
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Theme");
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Theme");
     gchar *theme_name = g_settings_get_string(settings, "gtk-theme");
     gboolean use_dark_theme = g_strrstr(theme_name, "dark") != NULL;
 
@@ -40,7 +41,7 @@ void GtkAppActivate(GApplication* app, gpointer* userData)
     
     g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", true, nullptr);
 
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Welcome to GTK! %s", parameters->ApplicationName);
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Welcome to GTK! %s", parameters->ApplicationName);
 
     if (parameters->InitHandler)
     {
@@ -70,7 +71,8 @@ ElemAPI ElemSystemInfo ElemGetSystemInfo()
     return
     {
         .Platform = ElemPlatform_Linux,
-        .ApplicationPath = applicationPath.Pointer
+        .ApplicationPath = applicationPath.Pointer,
+        .SupportMultiWindows = true
     };
 }
 
@@ -98,4 +100,10 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     g_object_unref(GlobalGtkApplication);
 
     return result;
+}
+
+ElemAPI void ElemExitApplication()
+{
+    // TODO:
+    SystemLogErrorMessage(ElemLogMessageCategory_Application, "Not implemented.");
 }

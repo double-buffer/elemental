@@ -144,7 +144,7 @@ void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictiona
         if (entryIndex == (int32_t)storage->Entries.Length)
         {
             #ifdef ElemAPI
-            SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "Max items in dictionary reached, the item will not be added.");
+            SystemLogErrorMessage(ElemLogMessageCategory_Application, "Max items in dictionary reached, the item will not be added.");
             #endif
             return;
         }
@@ -211,7 +211,7 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
             if (retryCount < 5)
             {
                 #ifdef ElemAPI
-                SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Retrying to find the item to delete.");
+                SystemLogDebugMessage(ElemLogMessageCategory_Application, "Retrying to find the item to delete.");
                 #endif
                 SystemYieldThread();
                 retryCount++;
@@ -220,7 +220,7 @@ void RemoveDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDicti
             }
 
             #ifdef ElemAPI
-            SystemLogErrorMessage(ElemLogMessageCategory_NativeApplication, "No entry found to delete.");
+            SystemLogErrorMessage(ElemLogMessageCategory_Application, "No entry found to delete.");
             #endif
             return;
         }
@@ -431,7 +431,7 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
         if (storage->Buckets[i] == SYSTEM_DICTIONARY_INDEX_EMPTY)
         {
             #ifdef ElemAPI
-            SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Bucket %u => (EMPTY)", i);
+            SystemLogDebugMessage(ElemLogMessageCategory_Application, "Bucket %u => (EMPTY)", i);
             #endif
         }
         else 
@@ -456,7 +456,7 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
             }
 
             #ifdef ElemAPI
-            SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
+            SystemLogDebugMessage(ElemLogMessageCategory_Application, "%s", debugMessage.Pointer);
             #endif
         }
     }
@@ -472,6 +472,6 @@ void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
     }
 
     #ifdef ElemAPI
-    SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "%s", debugMessage.Pointer);
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "%s", debugMessage.Pointer);
     #endif
 }

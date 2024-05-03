@@ -14,6 +14,7 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
 }
 
 // TODO: Test Init and Free
+// TODO: Test ExitApplication
 
 /*
 bool TestRunHandler(ElemApplicationStatus status)

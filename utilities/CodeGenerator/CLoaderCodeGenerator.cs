@@ -101,9 +101,9 @@ public class CLoaderCodeGenerator : ICodeGenerator
             {
                 printf("Memory");
             }
-            else if (category == ElemLogMessageCategory_NativeApplication)
+            else if (category == ElemLogMessageCategory_Application)
             {
-                printf("NativeApplication");
+                printf("Application");
             }
             else if (category == ElemLogMessageCategory_Graphics)
             {
@@ -157,9 +157,9 @@ public class CLoaderCodeGenerator : ICodeGenerator
             {
                 printf("Memory");
             }
-            else if (category == ElemLogMessageCategory_NativeApplication)
+            else if (category == ElemLogMessageCategory_Application)
             {
-                printf("NativeApplication");
+                printf("Application");
             }
             else if (category == ElemLogMessageCategory_Graphics)
             {

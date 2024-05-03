@@ -26,6 +26,7 @@ typedef struct ElementalFunctions
     void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
     ElemSystemInfo (*ElemGetSystemInfo)(void);
     int (*ElemRunApplication)(const ElemRunApplicationParameters*);
+    void (*ElemExitApplication)(void);
     ElemWindow (*ElemCreateWindow)(const ElemWindowOptions*);
     void (*ElemFreeWindow)(ElemWindow);
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
@@ -115,6 +116,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetElementalFunctionPointer("ElemConfigureLogHandler");
     listElementalFunctions.ElemGetSystemInfo = (ElemSystemInfo (*)(void))GetElementalFunctionPointer("ElemGetSystemInfo");
     listElementalFunctions.ElemRunApplication = (int (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication");
+    listElementalFunctions.ElemExitApplication = (void (*)(void))GetElementalFunctionPointer("ElemExitApplication");
     listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
     listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
     listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
@@ -167,9 +169,9 @@ static inline void ElemConsoleLogHandler(ElemLogMessageType messageType, ElemLog
     {
         printf("Memory");
     }
-    else if (category == ElemLogMessageCategory_NativeApplication)
+    else if (category == ElemLogMessageCategory_Application)
     {
-        printf("NativeApplication");
+        printf("Application");
     }
     else if (category == ElemLogMessageCategory_Graphics)
     {
@@ -223,9 +225,9 @@ static inline void ElemConsoleErrorLogHandler(ElemLogMessageType messageType, El
     {
         printf("Memory");
     }
-    else if (category == ElemLogMessageCategory_NativeApplication)
+    else if (category == ElemLogMessageCategory_Application)
     {
-        printf("NativeApplication");
+        printf("Application");
     }
     else if (category == ElemLogMessageCategory_Graphics)
     {
@@ -319,6 +321,23 @@ static inline int ElemRunApplication(const ElemRunApplicationParameters* paramet
     }
 
     return listElementalFunctions.ElemRunApplication(parameters);
+}
+
+static inline void ElemExitApplication(void)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemExitApplication) 
+    {
+        assert(listElementalFunctions.ElemExitApplication);
+        return;
+    }
+
+    listElementalFunctions.ElemExitApplication();
 }
 
 static inline ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
