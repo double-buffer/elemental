@@ -45,8 +45,7 @@ typedef enum
     ElemLogMessageCategory_Assert = 0,
     // Memory related messages.
     ElemLogMessageCategory_Memory = 1,
-    // Native application messages.
-    ElemLogMessageCategory_NativeApplication = 2,
+    ElemLogMessageCategory_Application = 2,
     // Graphics system messages.
     ElemLogMessageCategory_Graphics = 3,
     // Input system messages.
@@ -96,6 +95,7 @@ typedef struct
 {
     ElemPlatform Platform;
     const char* ApplicationPath;
+    bool SupportMultiWindows;
 } ElemSystemInfo;
 
 /**
@@ -145,11 +145,11 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
-ElemAPI ElemSystemInfo ElemGetSystemInfo();
+ElemAPI ElemSystemInfo ElemGetSystemInfo(void);
 
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters);
 
-// TODO: ExitApplication();
+ElemAPI void ElemExitApplication(void);
 
 // TODO: Add the ability to specify window with no decorations for app that needs to render their own ui
 

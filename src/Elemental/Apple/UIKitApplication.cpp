@@ -1,6 +1,8 @@
 #include "UIKitApplication.h"
+#include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
+#include "SystemPlatformFunctions.h"
 
 MemoryArena ApplicationMemoryArena;
 
@@ -10,10 +12,10 @@ void InitApplicationMemory()
     {
         ApplicationMemoryArena = SystemAllocateMemoryArena();
 
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Init OK");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Init OK");
 
         #ifdef _DEBUG
-        SystemLogDebugMessage(ElemLogMessageCategory_NativeApplication, "Debug Mode");
+        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Debug Mode");
         #endif
     }
 }
@@ -50,6 +52,11 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
 
     auto applicationDelegate = UIKitApplicationDelegate(parameters);
     return UI::ApplicationMain(0, nullptr, &applicationDelegate);
+}
+
+ElemAPI void ElemExitApplication()
+{
+    SystemLogWarningMessage(ElemLogMessageCategory_Application, "Exit application is not supported in UIKit.");
 }
 
 UIKitApplicationDelegate::UIKitApplicationDelegate(const ElemRunApplicationParameters* parameters)
