@@ -15,6 +15,8 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
 
 // TODO: Test Init and Free
 
+// TODO: GetSystemInfo
+
 /*
 bool TestRunHandler(ElemApplicationStatus status)
 {
