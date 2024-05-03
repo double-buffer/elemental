@@ -8,6 +8,10 @@
 #include "DictionaryTests.cpp"
 #include "DataPoolTests.cpp"
 
+#ifndef __WIN32
+#include "PosixPlatformFunctions.cpp"
+#endif
+
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"
 #include "SystemMemory.cpp"

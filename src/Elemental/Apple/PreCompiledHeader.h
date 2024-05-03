@@ -2,12 +2,12 @@
 
 #include <xxh3.h>
 
-// Include mach.h?
-#include <sys/stat.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
 
 #define NS_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION

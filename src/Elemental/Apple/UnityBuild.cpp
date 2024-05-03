@@ -21,6 +21,7 @@
 #include "Graphics/Shader.cpp"
 #include "Graphics/Rendering.cpp"
 
+#include "PosixPlatformFunctions.cpp"
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"
 #include "SystemMemory.cpp"

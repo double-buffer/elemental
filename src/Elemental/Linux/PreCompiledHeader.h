@@ -2,15 +2,16 @@
 
 #include <xxh3.h>
 
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <libgen.h>
+#include <pthread.h>
+#include <stdarg.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <stdarg.h>
+#include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <libgen.h>
-#include <dlfcn.h>
 
 #include <gtk/gtk.h>
 #include <gdk/wayland/gdkwayland.h>
