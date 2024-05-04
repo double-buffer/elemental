@@ -4,7 +4,7 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-// TODO: Put magic numbers into define
+#define SHADERCOMPILER_MAX_COMPILERS 32 
 
 typedef bool (*CheckCompilerPtr)();
 typedef ElemShaderCompilationResult (*CompileShaderPtr)(MemoryArena memoryArena, ReadOnlySpan<uint8_t> shaderCode, ElemShaderLanguage targetLanguage, ElemToolsGraphicsApi targetGraphicsApi, ElemToolsPlatform targetPlatform, const ElemCompileShaderOptions* options);
@@ -45,7 +45,7 @@ void InitShaderCompiler()
     {
         ShaderCompilerMemoryArena = SystemAllocateMemoryArena();
 
-        auto compilerArray = SystemPushArray<ShaderCompiler>(ShaderCompilerMemoryArena, 32);
+        auto compilerArray = SystemPushArray<ShaderCompiler>(ShaderCompilerMemoryArena, SHADERCOMPILER_MAX_COMPILERS);
         uint32_t shaderCompilerIndex = 0;
 
         compilerArray[shaderCompilerIndex++] = {
@@ -96,7 +96,7 @@ void ReverseCompilerChainArray(Span<ShaderCompilerStep> steps, uint32_t count)
 ReadOnlySpan<const ShaderCompiler*> FindShaderCompilersForTargetLanguage(ElemShaderLanguage targetLanguage)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto result = SystemPushArray<const ShaderCompiler*>(stackMemoryArena, 32);
+    auto result = SystemPushArray<const ShaderCompiler*>(stackMemoryArena, SHADERCOMPILER_MAX_COMPILERS);
     auto currentIndex = 0;
     
     for (uint32_t i = 0; i < shaderCompilers.Length; i++)
@@ -156,7 +156,7 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
 {
     InitShaderCompiler();
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto compilerSteps = SystemPushArray<ShaderCompilerStep>(stackMemoryArena, 32);
+    auto compilerSteps = SystemPushArray<ShaderCompilerStep>(stackMemoryArena, SHADERCOMPILER_MAX_COMPILERS);
     auto targetLanguage = GetApiTargetLanguage(graphicsApi);
     auto level = 0u;
 
@@ -169,7 +169,7 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
 
     InitShaderCompiler();
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto compilerSteps = SystemPushArray<ShaderCompilerStep>(stackMemoryArena, 32);
+    auto compilerSteps = SystemPushArray<ShaderCompilerStep>(stackMemoryArena, SHADERCOMPILER_MAX_COMPILERS);
     auto targetLanguage = GetApiTargetLanguage(graphicsApi);
     auto level = 0u;
 

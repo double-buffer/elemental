@@ -11,6 +11,6 @@
 #include "SystemMemory.cpp"
 #include "SystemPlatformFunctions.cpp"
 
-#ifndef __WIN32
+#ifndef _WIN32
 #include "PosixPlatformFunctions.cpp"
 #endif

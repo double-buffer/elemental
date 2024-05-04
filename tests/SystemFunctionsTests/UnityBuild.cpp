@@ -8,7 +8,7 @@
 #include "DictionaryTests.cpp"
 #include "DataPoolTests.cpp"
 
-#ifndef __WIN32
+#ifndef _WIN32
 #include "PosixPlatformFunctions.cpp"
 #endif
 
