@@ -21,6 +21,12 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Install Linux Clang
+      if: inputs.platform == 'linux'
+      uses: rlalik/setup-cpp-compiler@master
+      with:
+        compiler: clang 
+
           #TODO: Support macOS xc framework!
     # Conditional setup for MSVC on Windows
     - name: Setup MSVC
