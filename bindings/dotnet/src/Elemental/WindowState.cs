@@ -1,7 +1,7 @@
 namespace Elemental;
 
 /// <summary>
-/// Enumerates the possible window states.
+/// Enumerates the possible states of a window.
 /// </summary>
 public enum WindowState
 {

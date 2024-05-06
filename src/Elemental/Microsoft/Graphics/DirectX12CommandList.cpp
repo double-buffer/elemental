@@ -184,10 +184,6 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
         }
         else 
         {
-            // TODO: We should check for command list separately
-            // For now we use the same commandlist all the time, that's not correct!
-            // We should have a pool of command list per thread that we can only reuse
-            // when execute command lists was called.
             auto commandQueueDataFull = GetDirectX12CommandQueueDataFull(commandQueue);
             SystemAssert(commandQueueDataFull);
 

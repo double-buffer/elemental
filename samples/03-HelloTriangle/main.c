@@ -24,19 +24,19 @@ void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    ElemWindow window = ElemCreateWindow(NULL);
+    applicationPayload->Window = ElemCreateWindow(NULL);
 
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
-    ElemGraphicsDevice graphicsDevice = ElemCreateGraphicsDevice(NULL);
+    applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
-    ElemCommandQueue commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, &(ElemCommandQueueOptions) { .DebugName = "TestCommandQueue" });
-    ElemSwapChain swapChain = ElemCreateSwapChain(commandQueue, window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
-    ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(swapChain);
+    applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
+    applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
+    ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Triangle.shader": "Triangle_vulkan.shader");
-    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, (ElemDataSpan) { .Items = shaderData.Items, .Length = shaderData.Length });
+    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, (ElemDataSpan) { .Items = shaderData.Items, .Length = shaderData.Length });
 
-    ElemPipelineState graphicsPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "Test PSO",
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
@@ -45,13 +45,6 @@ void InitSample(void* payload)
     });
     
     ElemFreeShaderLibrary(shaderLibrary);
-
-    applicationPayload->Window = window;
-    applicationPayload->GraphicsDevice = graphicsDevice;
-    applicationPayload->CommandQueue = commandQueue;
-    applicationPayload->SwapChain = swapChain;
-    applicationPayload->GraphicsPipeline = graphicsPipeline;
-    
     SampleStartFrameMeasurement();
 }
 
@@ -63,27 +56,16 @@ void FreeSample(void* payload)
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
-
-    printf("Exit Sample\n");
 }
-
-bool isLatencyUpdated = false;
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-    
-    if (updateParameters->NextPresentTimeStampInSeconds > 4 && !isLatencyUpdated)
-    {
-        //ElemSetSwapChainTiming(applicationPayload->SwapChain, 1, 30);
-        isLatencyUpdated = true;
-    }
 
     //printf("Next Present Timestamp in seconds: %f\n", updateParameters->NextPresentTimeStampInSeconds);
     //printf("DeltaTime in seconds: %f\n", updateParameters->DeltaTimeInSeconds);
-    //Sleep(7);
 
-    ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, &(ElemCommandListOptions) { .DebugName = "TestCommandList" }); 
+    ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
@@ -95,35 +77,11 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
                 .LoadAction = ElemRenderPassLoadAction_Clear
             }},
             .Length = 1
-        },
-        /*.Viewports = 
-        {
-            .Items = (ElemViewport[]) {
-            {
-                .X = 200, 
-                .Y = 200,
-                .Width = 800, 
-                .Height = 600, 
-                .MinDepth = 0, 
-                .MaxDepth = 1
-            }},
-            .Length = 1
-        }*/
+        }
     });
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-
-    /*
-    ElemSetViewport(commandList, &(ElemViewport)
-    {
-        .X = 200, 
-        .Y = 200,
-        .Width = 800, 
-        .Height = 600, 
-        .MinDepth = 0, 
-        .MaxDepth = 1
-    });*/
 
     ElemDispatchMesh(commandList, 1, 1, 1);
 
@@ -140,7 +98,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
 
-    applicationPayload->ShaderParameters.AspectRatio = (float)updateParameters->SwapChainInfo.Width / updateParameters->SwapChainInfo.Height;
+    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
     applicationPayload->ShaderParameters.RotationY += 1.5f * (float)updateParameters->DeltaTimeInSeconds;
     
     SampleStartFrameMeasurement();

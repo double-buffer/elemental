@@ -1,7 +1,7 @@
 namespace Elemental;
 
 /// <summary>
-/// Handle that represents an elemental window.
+/// Represents a handle to an elemental window.
 /// </summary>
 public readonly record struct Window : IDisposable
 {

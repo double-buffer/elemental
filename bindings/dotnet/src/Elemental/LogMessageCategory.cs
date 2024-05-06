@@ -1,32 +1,32 @@
 namespace Elemental;
 
 /// <summary>
-/// Enumerates the categories of log messages.
+/// Categorizes log messages by their related system components.
 /// </summary>
 public enum LogMessageCategory
 {
     /// <summary>
-    /// Memory related messages.
+    /// Assertions and checks.
     /// </summary>
     Assert = 0,
 
     /// <summary>
-    /// Memory related messages.
+    /// Memory allocation and management.
     /// </summary>
     Memory = 1,
 
     /// <summary>
-    /// Native application messages.
+    /// General application behavior.
     /// </summary>
-    NativeApplication = 2,
+    Application = 2,
 
     /// <summary>
-    /// Graphics system messages.
+    /// Graphics system-related messages.
     /// </summary>
     Graphics = 3,
 
     /// <summary>
-    /// Input system messages.
+    /// Input system-related messages.
     /// </summary>
     Inputs = 4
 }

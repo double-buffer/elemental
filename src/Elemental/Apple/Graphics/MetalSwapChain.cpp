@@ -60,6 +60,7 @@ void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t heig
 
     swapChainData->Width = width;
     swapChainData->Height = height;
+    swapChainData->AspectRatio = (float)width / height;
     swapChainData->DeviceObject->setDrawableSize(CGSizeMake(width, height));
 }
 
@@ -150,6 +151,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime(),
         .Width = width,
         .Height = height,
+        .AspectRatio = (float)width / height,
         .Format = ElemTextureFormat_B8G8R8A8_SRGB // TODO: Temporary
     }); 
 
@@ -186,6 +188,7 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
     {
         .Width = swapChainData->Width,
         .Height = swapChainData->Height,
+        .AspectRatio = swapChainData->AspectRatio,
         .Format = swapChainData->Format
     };
 }

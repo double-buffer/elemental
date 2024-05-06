@@ -1,7 +1,7 @@
 namespace Elemental;
 
 /// <summary>
-/// Contains information about the size and scale of a window.
+/// Contains detailed information about the size and scaling factors of a window's render area.
 /// </summary>
 public record struct WindowSize
 {
@@ -16,7 +16,7 @@ public record struct WindowSize
     public uint Height { get; set; }
 
     /// <summary>
-    /// Scale factor for the UI, useful for DPI adjustments.
+    /// UI scale factor, typically used for DPI adjustments.
     /// </summary>
     public float UIScale { get; set; }
 

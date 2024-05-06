@@ -27,6 +27,7 @@ struct VulkanSwapChainData
     uint64_t PreviousTargetPresentationTimestamp;
     uint32_t Width;
     uint32_t Height;
+    float AspectRatio;
     ElemTextureFormat Format;
     bool PresentCalled;
     uint64_t PresentId;

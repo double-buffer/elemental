@@ -11,6 +11,10 @@ function(configure_resource_compilation target_name resource_list)
         set(SHADER_COMPILER_OPTIONS "")
         add_dependencies(${target_name} ShaderCompiler)
     endif()
+        
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        list(APPEND SHADER_COMPILER_OPTIONS "--debug")
+    endif()
 
     # TODO: Take into account other type of resources
     set(hlsl_files_list "")
@@ -74,8 +78,15 @@ function(configure_resource_compilation target_name resource_list)
     set(${resource_list} "${compiled_shaders}" PARENT_SCOPE)
 endfunction()
 
-function(configure_project_package target_name resource_list)
-    list(LENGTH resource_list resource_list_length)
+function(configure_project_package target_name)
+    set(options "")
+    set(oneValueArgs "")
+    set(multiValueArgs RESOURCE_LIST)
+
+    cmake_parse_arguments(PARSE_ARGV 1 ARG "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
+    list(LENGTH ARG_RESOURCE_LIST resource_list_length)
+    message(STATUS "Number of resources: ${resource_list_length}")
 
     if(APPLE)
         set_target_properties(${target_name} PROPERTIES 

@@ -17,6 +17,7 @@ In order to simplify the API, the library makes the following assumptions:
 - Use of Mesh shaders for the geometry pipeline: so no vertex layout setup, no geometry shaders, no vertex shaders.
 - No copy queue exposed: you need to use IO queue to copy data from disk to GPU memory. (Internally the library try to use DirectStorage, MetalIO, etc.)
 For dynamic gpu data that is short lived, we use GPU upload heap (rebar memory).
+- Use of bindless resources
 - No indirect commands: The future will be about work graphs. 
 
 It currently runs on:

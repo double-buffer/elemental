@@ -104,6 +104,7 @@ int main(int argc, const char* argv[])
         printf("OPTIONS:\n");
         printf("   --target-api\tTarget API to use: DirectX12, Vulkan, Metal. Default: to the default system target API.\n");
         printf("   --target-platform\tTarget Platform to use: Windows, MacOS, iOS. Default: to the default system target API.\n");
+        printf("   --debug\tCompile with debug information.\n");
         printf("\n");
         return 0;
     }
@@ -145,8 +146,7 @@ int main(int argc, const char* argv[])
                 printf("iOS platform\n");
             }
         }
-
-        if (strcmp(argv[i], "--target-api") == 0)
+        else if (strcmp(argv[i], "--target-api") == 0)
         {
             const char* targetPlatformString = argv[i + 1];
 
@@ -156,9 +156,13 @@ int main(int argc, const char* argv[])
                 printf("Vulkan api\n");
             }
         }
+        else if (strcmp(argv[i], "--debug") == 0)
+        {
+            debugMode = true;
+        }
     }
 
-    printf("Compiling shader: %s\n", inputPath);
+    printf("Compiling shader: %s (DebugMode=%d)\n", inputPath, debugMode);
 
     char* shaderSource = ReadFileToString(inputPath);
     ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };

@@ -130,7 +130,7 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     storage->StackMinAllocatedLevel = 255;
     storage->StackBytesToClear = 0;
 
-    auto headerPageCount = SystemRoundUp((float)headerResized / systemPageSizeInBytes);
+    auto headerPageCount = (size_t)SystemRoundUp((float)headerResized / systemPageSizeInBytes);
 
     for (size_t i = 0; i < (size_t)pageInfosCount; i++)
     {

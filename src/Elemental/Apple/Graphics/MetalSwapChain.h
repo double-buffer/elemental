@@ -27,6 +27,7 @@ struct MetalSwapChainData
     CFTimeInterval PreviousTargetPresentationTimestamp;
     uint32_t Width;
     uint32_t Height;
+    float AspectRatio;
     ElemTextureFormat Format;
 };
 

@@ -161,12 +161,10 @@ void InitVulkanGraphicsDeviceMemory()
     }
 }
 
-ElemGraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
+ElemGraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(MemoryArena memoryArena, VkPhysicalDeviceProperties deviceProperties, VkPhysicalDeviceMemoryProperties deviceMemoryProperties)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-
     auto deviceName = ReadOnlySpan<char>(deviceProperties.deviceName);
-    auto destinationDeviceName = SystemPushArray<char>(stackMemoryArena, deviceName.Length);
+    auto destinationDeviceName = SystemPushArray<char>(memoryArena, deviceName.Length);
     SystemCopyBuffer<char>(destinationDeviceName, deviceName);
 
     return 
@@ -260,7 +258,7 @@ ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices()
 
         if (VulkanCheckGraphicsDeviceCompatibility(devices[i]))
         {
-            deviceInfos[currentDeviceInfoIndex++] = VulkanConstructGraphicsDeviceInfo(deviceProperties, deviceMemoryProperties);
+            deviceInfos[currentDeviceInfoIndex++] = VulkanConstructGraphicsDeviceInfo(stackMemoryArena, deviceProperties, deviceMemoryProperties);
         }
     }
 
@@ -454,8 +452,9 @@ ElemGraphicsDeviceInfo VulkanGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDe
 {
     SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
 
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
-    return VulkanConstructGraphicsDeviceInfo(graphicsDeviceDataFull->DeviceProperties, graphicsDeviceDataFull->DeviceMemoryProperties);
+    return VulkanConstructGraphicsDeviceInfo(stackMemoryArena, graphicsDeviceDataFull->DeviceProperties, graphicsDeviceDataFull->DeviceMemoryProperties);
 }

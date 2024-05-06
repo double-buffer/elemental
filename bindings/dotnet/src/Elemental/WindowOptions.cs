@@ -1,7 +1,7 @@
 namespace Elemental;
 
 /// <summary>
-/// Specifies options for window creation.
+/// Defines options for creating a new window.
 /// </summary>
 public ref struct WindowOptions
 {

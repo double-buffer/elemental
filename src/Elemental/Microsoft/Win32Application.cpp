@@ -10,7 +10,6 @@ MemoryArena ApplicationMemoryArena;
 Span<Win32RunLoopHandler> Win32RunLoopHandlers;
 uint32_t Win32CurrentRunLoopIndex;
 
-// TODO: Use Xaml Islands?
 void InitWin32ApplicationMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
@@ -28,7 +27,6 @@ void InitWin32ApplicationMemory()
 
 void AddWin32RunLoopHandler(Win32RunLoopHandlerPtr handler, ElemHandle handle)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Add Runloop handler.");
     Win32RunLoopHandlers[Win32CurrentRunLoopIndex++] = 
     {
         .Function = handler,

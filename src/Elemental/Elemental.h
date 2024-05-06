@@ -470,6 +470,8 @@ typedef struct
     uint32_t Width;
     // Height of the swap chain in pixels.
     uint32_t Height;
+    // Aspect ratio of the swap chain.
+    float AspectRatio;
     // Format of the textures used in the swap chain.
     ElemTextureFormat Format;
 } ElemSwapChainInfo;

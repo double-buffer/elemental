@@ -18,6 +18,7 @@ struct DirectX12SwapChainData
     LARGE_INTEGER PreviousTargetPresentationTimestamp;
     uint32_t Width;
     uint32_t Height;
+    float AspectRatio;
     ElemTextureFormat Format;
     bool PresentCalled;
     uint32_t FrameLatency;

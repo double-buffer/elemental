@@ -1,7 +1,7 @@
 namespace Elemental;
 
 /// <summary>
-/// Enumerates the types of log messages.
+/// Defines the types of log messages that can be generated.
 /// </summary>
 public enum LogMessageType
 {

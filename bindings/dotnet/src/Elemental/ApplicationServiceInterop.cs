@@ -8,21 +8,21 @@ internal static partial class ApplicationServiceInterop
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void ConfigureLogHandler(LogHandler logHandler);
 
-    [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateApplication")]
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemGetSystemInfo")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial ElementalApplication CreateApplication(ReadOnlySpan<byte> applicationName);
-
-    [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeApplication")]
-    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void FreeApplication(ElementalApplication application);
+    internal static partial SystemInfoUnsafe GetSystemInfo();
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemRunApplication")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void RunApplication(ElementalApplication application, RunHandler runHandler);
+    internal static partial int RunApplication(in RunApplicationParametersUnsafe parameters);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemExitApplication")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void ExitApplication();
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateWindow")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial Window CreateWindow(ElementalApplication application, in WindowOptionsUnsafe options);
+    internal static partial Window CreateWindow(in WindowOptionsUnsafe options);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeWindow")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

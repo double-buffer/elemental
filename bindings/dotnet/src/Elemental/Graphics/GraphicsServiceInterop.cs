@@ -30,6 +30,10 @@ internal static partial class GraphicsServiceInterop
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void FreeCommandQueue(CommandQueue commandQueue);
 
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemResetCommandAllocation")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void ResetCommandAllocation(GraphicsDevice graphicsDevice);
+
     [LibraryImport("Elemental.Native", EntryPoint = "ElemGetCommandList")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial CommandList GetCommandList(CommandQueue commandQueue, in CommandListOptionsUnsafe options);
@@ -52,7 +56,7 @@ internal static partial class GraphicsServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateSwapChain")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial SwapChain CreateSwapChain(CommandQueue commandQueue, Window window, in SwapChainOptions options);
+    internal static partial SwapChain CreateSwapChain(CommandQueue commandQueue, Window window, SwapChainUpdateHandler updateHandler, in SwapChainOptions options);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeSwapChain")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -62,25 +66,17 @@ internal static partial class GraphicsServiceInterop
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial SwapChainInfo GetSwapChainInfo(SwapChain swapChain);
 
-    [LibraryImport("Elemental.Native", EntryPoint = "ElemResizeSwapChain")]
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemSetSwapChainTiming")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void ResizeSwapChain(SwapChain swapChain, uint width, uint height);
-
-    [LibraryImport("Elemental.Native", EntryPoint = "ElemGetSwapChainBackBufferTexture")]
-    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial Texture GetSwapChainBackBufferTexture(SwapChain swapChain);
+    internal static partial void SetSwapChainTiming(SwapChain swapChain, uint frameLatency, uint targetFPS);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemPresentSwapChain")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void PresentSwapChain(SwapChain swapChain);
 
-    [LibraryImport("Elemental.Native", EntryPoint = "ElemWaitForSwapChainOnCpu")]
-    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void WaitForSwapChainOnCpu(SwapChain swapChain);
-
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateShaderLibrary")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, SpanUnsafe<byte> shaderLibraryData);
+    internal static partial ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, SpanUnsafe<const Data> shaderLibraryData);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeShaderLibrary")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -100,7 +96,7 @@ internal static partial class GraphicsServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemPushPipelineStateConstants")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, SpanUnsafe<byte> data);
+    internal static partial void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, SpanUnsafe<const Data> data);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemBeginRenderPass")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -109,6 +105,14 @@ internal static partial class GraphicsServiceInterop
     [LibraryImport("Elemental.Native", EntryPoint = "ElemEndRenderPass")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void EndRenderPass(CommandList commandList);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemSetViewport")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void SetViewport(CommandList commandList, in Viewport viewport);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemSetViewports")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void SetViewports(CommandList commandList, SpanUnsafe<Viewport> viewports);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemDispatchMesh")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

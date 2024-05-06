@@ -111,54 +111,16 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
         parameters[parameterIndex++] = L"-fspv-target-env=vulkan1.3";
     }
 
-    /*
-    // TODO: Use utils function to build parameters
-    std::vector<const wchar_t*> arguments;
-    arguments.push_back(L"-HV 2021");
+    parameters[parameterIndex++] = L"-HV";
+    parameters[parameterIndex++] = L"2021";
 
-    //-E for the entry point (eg. PSMain)
-    arguments.push_back(L"-E");
-    
-    auto entryPointString = SystemConvertUtf8ToWideChar(stackMemoryArena, (char*)entryPoint);
-    arguments.push_back(entryPointString.Pointer);
+    parameters[parameterIndex++] = DXC_ARG_ALL_RESOURCES_BOUND;
 
-    // TODO: Use defines
-    auto shaderTarget = L"ms_6_7";
-
-    if (shaderStage == ShaderStage_AmplificationShader)
+    if (options->DebugMode)
     {
-        shaderTarget = L"as_6_7";
+        parameters[parameterIndex++] = DXC_ARG_DEBUG;
+        parameters[parameterIndex++] = L"-Qembed_debug";
     }
-    else if (shaderStage == ShaderStage_PixelShader)
-    {
-        shaderTarget = L"ps_6_7";
-    }
-
-    arguments.push_back(L"-T");
-    arguments.push_back(shaderTarget);
-    
-
-    // TODO: pass all-resources-bound!!!
-    
-            
-    // TODO: Additional options to be considered
-    // Pass a parameter for debug and release mode
-*/
-    /*
-    //Strip reflection data and pdbs (see later)
-    arguments.push_back(L"-Qstrip_debug");
-    arguments.push_back(L"-Qstrip_reflect");
-
-    arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-    arguments.push_back(DXC_ARG_DEBUG); //-Zi
-    arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
-
-
-    for (const std::wstring& define : defines)
-    {
-        arguments.push_back(L"-D");
-        arguments.push_back(define.c_str());
-    }*/
 
     DxcBuffer sourceBuffer;
     sourceBuffer.Ptr = shaderCode.Pointer;
@@ -208,7 +170,6 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
             .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode)
         };
 
-        // Reflection
         ComPtr<IDxcUtils> dxcUtils;
         AssertIfFailed(directXShaderCompilerCreateInstanceFunction(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
         
@@ -244,11 +205,11 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
                 AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
 
                 auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
-                
+
                 outputShaderDataList[outputShaderDataListIndex++] = 
                 {
                     .ShaderType = shaderType == DxilShaderKind::Mesh ? ShaderType_Mesh : ShaderType_Pixel, 
-                    .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode)
+                    .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode),
                 };
             }
         }
