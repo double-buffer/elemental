@@ -13,6 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <gio/gio.h>
 #include <gtk/gtk.h>
 #include <gdk/wayland/gdkwayland.h>
 #include <wayland-client.h>
