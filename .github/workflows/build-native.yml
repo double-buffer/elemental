@@ -30,6 +30,7 @@ jobs:
 
     - name: Use compiler
       if: inputs.platform == 'linux'
+      shell: bash
       env:
           CC: ${{ steps.install_clang.outputs.cc }}
           CXX: ${{ steps.install_clang.outputs.cxx }}
