@@ -23,8 +23,6 @@ float4 PSMain(PSInput input) : SV_TARGET \
 	return input.color;\
 }";
 
-
-// TODO: Those 2 tests will only run on win32 and macos
 UTEST(ShaderCompiler, CanCompileShaderTest_HlslToDirectX12) 
 {
     // Act
@@ -67,7 +65,6 @@ UTEST_F_SETUP(ShaderCompiler_CompileShader)
 UTEST_F_TEARDOWN(ShaderCompiler_CompileShader) 
 {
     // Act / Assert
-    // TODO: Make a macro to select the correct source code
     auto sourceCode = !utest_fixture->WithError ? hlslTestSource : hlslTestSourceError;
 
     ElemShaderSourceData sourceData =
@@ -121,6 +118,38 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Windows_Error)
     utest_fixture->WithError = true;
 }
 
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Windows) 
+{
+    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
+    utest_fixture->WithError = false;
+}
+
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Windows_Error) 
+{
+    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
+    utest_fixture->WithError = true;
+}
+
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Linux) 
+{
+    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_Linux;
+    utest_fixture->WithError = false;
+}
+
+UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Linux_Error) 
+{
+    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
+    utest_fixture->TargetPlatform = ElemToolsPlatform_Linux;
+    utest_fixture->WithError = true;
+}
+
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS) 
 {
     utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
@@ -153,4 +182,3 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_iOS_Error)
     utest_fixture->WithError = true;
 }
 
-// TODO: Test multiple config like HLSL => SPIRV => METALIR

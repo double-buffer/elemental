@@ -16,17 +16,18 @@ jobs:
       platform: ${{ matrix.platform }}
       architecture: ${{ matrix.architecture }}
 
-  build_dotnet:
-    uses: ./.github/workflows/build-dotnet.yml
-    name: 'build-dotnet'
-    secrets: inherit
+  # TODO: Do a build bindings sub workflow
+  #build_dotnet:
+    #  uses: ./.github/workflows/build-dotnet.yml
+    #name: 'build-dotnet'
+    #secrets: inherit
     
   run_tests:
     strategy:
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/run-tests.yml
-    needs: [ build_native, build_dotnet ]
+    needs: [ build_native ]
     name: 'run-tests'
     secrets: inherit
     with:

@@ -86,7 +86,6 @@ ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind)
 ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOnlySpan<char> target, ElemToolsGraphicsApi targetApi, ReadOnlySpan<char> entryPoint, const ElemCompileShaderOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
-
     
     ComPtr<IDxcCompiler3> compiler;
     AssertIfFailed(directXShaderCompilerCreateInstanceFunction(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
@@ -116,7 +115,7 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
 
     parameters[parameterIndex++] = DXC_ARG_ALL_RESOURCES_BOUND;
 
-    if (options->DebugMode)
+    if (options && options->DebugMode)
     {
         parameters[parameterIndex++] = DXC_ARG_DEBUG;
         parameters[parameterIndex++] = L"-Qembed_debug";

@@ -4,105 +4,44 @@
 
 UTEST(Window, CreateWindow) 
 {
-    // Arrange
-    auto width = 640u;
-    auto height = 480u;
+    RunApplicationTest([utest_result]() 
+    {
+        // Arrange
+        auto width = 640u;
+        auto height = 480u;
 
-    InitLog();
+        // Act
+        ElemWindowOptions options = { .Width = width, .Height = height };
+        auto window = ElemCreateWindow(&options); 
 
-    // Act
-    ElemWindowOptions options = { .Width = width, .Height = height };
-    auto window = ElemCreateWindow(&options); 
+        // Assert
+        auto size = ElemGetWindowRenderSize(window);
 
-    // Assert
-    auto size = ElemGetWindowRenderSize(window);
+        ElemFreeWindow(window);
 
-    ElemFreeWindow(window);
-
-    ASSERT_NE(0.0f, size.UIScale);
-    ASSERT_EQ(width * size.UIScale, size.Width);
-    ASSERT_EQ(height * size.UIScale, size.Height);
-    ASSERT_EQ(ElemWindowState_Normal, size.WindowState);
+        ASSERT_NE(0.0f, size.UIScale);
+        ASSERT_EQ(width * size.UIScale, size.Width);
+        ASSERT_EQ(height * size.UIScale, size.Height);
+        ASSERT_EQ(ElemWindowState_Normal, size.WindowState);
+    });
 }
 
 // TODO: Only run those tests for Windows/MacOS/Linux
 UTEST(Window, CreateWindowWithState) 
 {
-    // Arrange
-    InitLog();
-
-    // Act
-    ElemWindowOptions options = { .WindowState = ElemWindowState_Maximized };
-    auto window = ElemCreateWindow(&options); 
-
-    // Assert
-    auto size = ElemGetWindowRenderSize(window);
-
-    ElemFreeWindow(window);
-
-    ASSERT_EQ(ElemWindowState_Maximized, size.WindowState);
-}
-
-// TODO: Rework those tests
-/*
-ElemWindow testLastWindowClosedWindow = 0;
-bool testLastWindowDestroyed = false;
-int32_t testLastWindowClosedCounter = 0;
-
-bool TestLastWindowClosedRunHandler(ElemApplicationStatus status)
-{
-    testLastWindowClosedCounter++;
-
-    if (testLastWindowClosedCounter >= 128 || status == ElemApplicationStatus_Closing)
+    RunApplicationTest([utest_result]() 
     {
-        return false;
-    }
+        // Act
+        ElemWindowOptions options = { .WindowState = ElemWindowState_Maximized };
+        auto window = ElemCreateWindow(&options); 
 
-    if (!testLastWindowDestroyed)
-    {
-        ElemFreeWindow(testLastWindowClosedWindow);
-        testLastWindowDestroyed = true;
-    }
+        // Assert
+        auto size = ElemGetWindowRenderSize(window);
 
-    return true;
-}
+        ElemFreeWindow(window);
 
-UTEST(Window, LastWindowClosed) 
-{
-    // Arrange
-    InitLog();
-    testLastWindowClosedCounter = 0;
-    testLastWindowDestroyed = false;
-    auto application = ElemCreateApplication("TestApplication");
-    testLastWindowClosedWindow = ElemCreateWindow(application, nullptr); 
-
-    // Act
-    ElemRunApplication(application, TestLastWindowClosedRunHandler);
-
-    // Assert
-    ElemFreeApplication(application);
-
-    ASSERT_EQ(1, testLastWindowClosedCounter);
-}
-
-UTEST(Window, LastWindowClosedWithRemainingWindow) 
-{
-    // Arrange
-    InitLog();
-    testLastWindowClosedCounter = 0;
-    testLastWindowDestroyed = false;
-    auto application = ElemCreateApplication("TestApplication");
-    testLastWindowClosedWindow = ElemCreateWindow(application, nullptr); 
-    auto testWindow = ElemCreateWindow(application, nullptr); 
-
-    // Act
-    ElemRunApplication(application, TestLastWindowClosedRunHandler);
-
-    // Assert
-    ElemFreeWindow(testWindow);
-    ElemFreeApplication(application);
-
-    ASSERT_EQ(128, testLastWindowClosedCounter);
+        ASSERT_EQ(ElemWindowState_Maximized, size.WindowState);
+    });
 }
 
 struct Window_SetWindowState
@@ -117,38 +56,36 @@ UTEST_F_SETUP(Window_SetWindowState)
 
 UTEST_F_TEARDOWN(Window_SetWindowState) 
 {
-    // Arrange
-    auto width = 640u;
-    auto height = 480u;
-
-    InitLog();
-    auto application = ElemCreateApplication("TestApplication");
-    ElemWindowOptions options = { .Width = width, .Height = height, .WindowState = utest_fixture->SourceState };
-    auto window = ElemCreateWindow(application, &options); 
-    ElemRunApplication(application, TestIterationRunHandler);
-
-    // Act
-    ElemSetWindowState(window, utest_fixture->DestinationState);
-    ElemRunApplication(application, TestIterationRunHandler);
-
-    // Assert
-    auto size = ElemGetWindowRenderSize(window);    
-
-    ElemFreeWindow(window);
-    ElemFreeApplication(application);
-
-    ASSERT_EQ(utest_fixture->DestinationState, size.WindowState);
-
-    if (utest_fixture->DestinationState == ElemWindowState_Normal)
+    RunApplicationTest([utest_fixture, utest_result]() 
     {
-        ASSERT_EQ(width * size.UIScale, size.Width);
-        ASSERT_EQ(height * size.UIScale, size.Height);
-    }
-    else if (utest_fixture->DestinationState == ElemWindowState_Minimized)
-    {
-        ASSERT_EQ(0u, size.Width);
-        ASSERT_EQ(0u, size.Height);
-    }
+        // Arrange
+        auto width = 640u;
+        auto height = 480u;
+
+        ElemWindowOptions options = { .Width = width, .Height = height, .WindowState = utest_fixture->SourceState };
+        auto window = ElemCreateWindow( &options); 
+
+        // Act
+        ElemSetWindowState(window, utest_fixture->DestinationState);
+
+        // Assert
+        auto size = ElemGetWindowRenderSize(window);    
+
+        ElemFreeWindow(window);
+
+        ASSERT_EQ(utest_fixture->DestinationState, size.WindowState);
+
+        if (utest_fixture->DestinationState == ElemWindowState_Normal)
+        {
+            ASSERT_EQ(width * size.UIScale, size.Width);
+            ASSERT_EQ(height * size.UIScale, size.Height);
+        }
+        else if (utest_fixture->DestinationState == ElemWindowState_Minimized)
+        {
+            ASSERT_EQ(0u, size.Width);
+            ASSERT_EQ(0u, size.Height);
+        }
+    });
 }
 
 UTEST_F(Window_SetWindowState, Normal_FullScreen) 
@@ -209,4 +146,4 @@ UTEST_F(Window_SetWindowState, Maximized_Normal)
 {
     utest_fixture->SourceState = ElemWindowState_Maximized;
     utest_fixture->DestinationState = ElemWindowState_Normal;
-}*/
+}
