@@ -23,9 +23,16 @@ jobs:
 
     - name: Install Linux Clang
       if: inputs.platform == 'linux'
+      id: install_clang
       uses: rlalik/setup-cpp-compiler@master
       with:
         compiler: clang 
+
+    - name: Use compiler
+      if: inputs.platform == 'linux'
+      env:
+          CC: ${{ steps.install_clang.outputs.cc }}
+          CXX: ${{ steps.install_clang.outputs.cxx }}
 
           #TODO: Support macOS xc framework!
     # Conditional setup for MSVC on Windows
