@@ -29,6 +29,10 @@ jobs:
       with:
         arch: ${{ inputs.architecture }}
 
+    - name: Install GTK4
+      if: inputs.platform == 'linux'
+      run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
+
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
