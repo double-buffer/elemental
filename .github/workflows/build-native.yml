@@ -21,20 +21,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install Linux Clang
-      if: inputs.platform == 'linux'
-      id: install_clang
-      uses: rlalik/setup-cpp-compiler@master
-      with:
-        compiler: clang 
-
-    - name: Use compiler
-      if: inputs.platform == 'linux'
-      shell: bash
-      env:
-          CC: ${{ steps.install_clang.outputs.cc }}
-          CXX: ${{ steps.install_clang.outputs.cxx }}
-
           #TODO: Support macOS xc framework!
     # Conditional setup for MSVC on Windows
     - name: Setup MSVC
@@ -50,7 +36,7 @@ jobs:
     - name: Configure Build
       run: |
         mkdir ./build
-        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }}
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }} -DCMAKE_C_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang' }}
 
     - name: Build
       run: |
