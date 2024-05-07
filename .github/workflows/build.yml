@@ -55,11 +55,11 @@ jobs:
     - name: Upload Elemental Tools Binaries
       uses: actions/upload-artifact@master
       with:
-        name: elemental.bin.${{ inputs.platform }}-${{ inputs.architecture }}
+        name: elemental-tools.bin.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/ElementalTools/
 
     - name: Upload Tests Binaries
       uses: actions/upload-artifact@master
       with:
-        name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
+        name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/tests/
