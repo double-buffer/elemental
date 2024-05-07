@@ -32,8 +32,8 @@ set(CMAKE_Swift_LANGUAGE_VERSION 5)
 add_library(ElementalSwiftLib STATIC Graphics/MetalView.swift)
  
 target_compile_options(ElementalSwiftLib PRIVATE -cxx-interoperability-mode=default)
-target_compile_options(ElementalSwiftLib PRIVATE -emit-clang-header-path "${CMAKE_BINARY_DIR}/swift/include/ElementalSwiftLib.h")
-target_include_directories(ElementalSwiftLib INTERFACE "${CMAKE_BINARY_DIR}/swift/include")
+target_compile_options(ElementalSwiftLib PRIVATE -emit-clang-header-path "${CMAKE_BINARY_DIR}/ElementalSwiftLib.h")
+target_include_directories(ElementalSwiftLib INTERFACE "${CMAKE_BINARY_DIR}/")
 set_target_properties(ElementalSwiftLib PROPERTIES XCODE_ATTRIBUTE_SWIFT_OBJC_INTERFACE_HEADER_NAME "")
 
 target_link_libraries(Elemental PRIVATE ElementalSwiftLib)
