@@ -29,15 +29,28 @@ endfunction()
 
 
 set(CMAKE_Swift_LANGUAGE_VERSION 5)
+set(HEADER_OUTPUT_PATH "${CMAKE_BINARY_DIR}/ElementalSwiftLib.h")
 add_library(ElementalSwiftLib STATIC Graphics/MetalView.swift)
  
 target_compile_options(ElementalSwiftLib PRIVATE -cxx-interoperability-mode=default)
-target_compile_options(ElementalSwiftLib PRIVATE -emit-clang-header-path "${CMAKE_BINARY_DIR}/ElementalSwiftLib.h")
+target_compile_options(ElementalSwiftLib PRIVATE -emit-clang-header-path "${HEADER_OUTPUT_PATH}")
 target_include_directories(ElementalSwiftLib INTERFACE "${CMAKE_BINARY_DIR}/")
 set_target_properties(ElementalSwiftLib PROPERTIES XCODE_ATTRIBUTE_SWIFT_OBJC_INTERFACE_HEADER_NAME "")
 
 target_link_libraries(Elemental PRIVATE ElementalSwiftLib)
 add_dependencies(Elemental ElementalSwiftLib)
 
-set_source_files_properties("${CMAKE_BINARY_DIR}/../src/Elemental/Apple/UnityBuild.cpp"
-                            PROPERTIES OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/ElementalSwiftLib.h")
+add_custom_command(
+    OUTPUT ${HEADER_OUTPUT_PATH}
+    COMMAND echo "Waiting for ${HEADER_OUTPUT_PATH} to be generated."
+    DEPENDS ElementalSwiftLib
+    COMMENT "Checking for existence of ElementalSwiftLib.h"
+)
+
+# Custom target that depends on the custom command
+add_custom_target(
+    CheckForSwiftHeader ALL
+    DEPENDS ${HEADER_OUTPUT_PATH}
+)
+
+add_dependencies(Elemental CheckForSwiftHeader)
