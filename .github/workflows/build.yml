@@ -36,6 +36,8 @@ jobs:
 
     - name: Configure Build
       run: cmake --preset release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build
       run: cmake --build --preset release
