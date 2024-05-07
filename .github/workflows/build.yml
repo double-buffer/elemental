@@ -21,13 +21,13 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Setup Windows Dependencies
+    - name: Setup Dependencies (Windows)
       if: inputs.platform == 'win'
       uses: TheMrMilchmann/setup-msvc-dev@v3
       with:
         arch: ${{ inputs.architecture }}
 
-    - name: Setup Linux Dependencies
+    - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
       run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
 
@@ -45,7 +45,7 @@ jobs:
     - name: Install
       run: cmake --install ./build-release --prefix ./install-release
 
-    - name: Archive Elemental Windows
+    - name: Archive Elemental (Windows)
       if: inputs.platform == 'win'
       working-directory: ./install-release
       run: 7z a ./elemental.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./Elemental/
@@ -61,20 +61,50 @@ jobs:
         name: elemental.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/elemental.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
 
+    - name: Archive ElementalTools (Windows)
+      if: inputs.platform == 'win'
+      working-directory: ./install-release
+      run: 7z a ./elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./ElementalTools/
+
+    - name: Archive Elemental Tools
+      if: inputs.platform != 'win'
+      working-directory: ./install-release
+      run: tar -czvf ./elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./ElementalTools/
+
     - name: Upload Elemental Tools Binaries
       uses: actions/upload-artifact@master
       with:
         name: elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./install-release/ElementalTools/
+        path: ./install-release/elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+
+    - name: Archive Tests (Windows)
+      if: inputs.platform == 'win'
+      working-directory: ./install-release
+      run: 7z a ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./tests/
+
+    - name: Archive Tests
+      if: inputs.platform != 'win'
+      working-directory: ./install-release
+      run: tar -czvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
     - name: Upload Tests Binaries
       uses: actions/upload-artifact@master
       with:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./install-release/tests/
+        path: ./install-release/tests.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+
+    - name: Archive Samples (Windows)
+      if: inputs.platform == 'win'
+      working-directory: ./install-release
+      run: 7z a ./samples.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./samples/
+
+    - name: Archive Samples
+      if: inputs.platform != 'win'
+      working-directory: ./install-release
+      run: tar -czvf ./samples.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./samples/
 
     - name: Upload Samples Binaries
       uses: actions/upload-artifact@master
       with:
         name: samples.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./install-release/samples/
+        path: ./install-release/samples.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
