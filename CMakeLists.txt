@@ -91,4 +91,4 @@ add_subdirectory(samples/03-HelloTriangle)
 
 
 # DEBUG Deps
-#set_property(GLOBAL PROPERTY GLOBAL_DEPENDS_DEBUG_MODE 1)
+set_property(GLOBAL PROPERTY GLOBAL_DEPENDS_DEBUG_MODE 1)
