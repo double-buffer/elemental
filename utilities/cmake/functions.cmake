@@ -41,7 +41,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
 
     # Set the authorization headers if the GITHUB_TOKEN environment variable is defined
     if(DEFINED ENV{GITHUB_TOKEN})
-        set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
+        set(headers "-H Authorization: Bearer $ENV{GITHUB_TOKEN}")
     else()
         set(headers "")
         message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
@@ -52,14 +52,15 @@ function(get_github_release repo tag filenamePattern pathExtract)
     execute_process(
         COMMAND curl -s -H "Accept: application/vnd.github+json" ${headers} ${releasesUri}
         OUTPUT_VARIABLE releasesJson
+        RESULT_VARIABLE result
     )
 
     # Log curl call result and output for debugging
     message(STATUS "curl command result: ${result}")
-    message(STATUS "Received releases JSON: ${releasesJson}")
 
     if(NOT "${result}" STREQUAL "0")
         message(FATAL_ERROR "Failed to download release information")
+        message(STATUS "Received releases JSON: ${releasesJson}")
     endif()
 
     # Convert filenamePattern to regex pattern
