@@ -21,7 +21,7 @@ jobs:
       with:
         submodules: recursive
 
-          #TODO: Support macOS xc framework!
+    # TODO: For Release Support macOS xc framework!
     # Conditional setup for MSVC on Windows
     - name: Setup MSVC
       if: inputs.platform == 'win'
@@ -29,7 +29,7 @@ jobs:
       with:
         arch: ${{ inputs.architecture }}
 
-    - name: Install GTK4
+    - name: Install GTK4 and GLib
       if: inputs.platform == 'linux'
       run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libglib2.0-dev
 
