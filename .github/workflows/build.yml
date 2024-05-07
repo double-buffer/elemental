@@ -48,7 +48,7 @@ jobs:
       uses: ksm2/archive-action@v1
       with:
         root-directory: ./install-release/Elemental/
-        format: ${{ inputs.platform == 'win' && 'zip' || 'tar.gz' }}
+        format: ${{ inputs.platform == 'win' && 'zip' || 'tar' }}
         name: elemental.${{ inputs.platform }}-${{ inputs.architecture }}
 
     - name: Upload Elemental Binaries
