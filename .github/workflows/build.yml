@@ -46,18 +46,20 @@ jobs:
     - name: Install
       run: cmake --install ./build-release --prefix ./install-release
 
-    - name: Upload Binaries
+    - name: Upload Elemental Binaries
       uses: actions/upload-artifact@master
       with:
-        name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
-          #path: ./build/bin/Release/*.${{ inputs.platform == 'win' && 'dll' || inputs.platform == 'osx' && 'dylib' || 'so' }}
-        path: ./build/bin/Release/
+        name: elemental.bin.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./install-release/Elemental/
+
+    - name: Upload Elemental Tools Binaries
+      uses: actions/upload-artifact@master
+      with:
+        name: elemental.bin.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./install-release/ElementalTools/
 
     - name: Upload Tests Binaries
       uses: actions/upload-artifact@master
       with:
         name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: |
-          ./build/bin/Release/SystemFunctionsTests*
-          ./build/bin/Release/ApplicationTests*
-          ./build/bin/Release/GraphicsTests*
+        path: ./install-release/tests/
