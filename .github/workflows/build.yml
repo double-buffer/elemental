@@ -43,11 +43,19 @@ jobs:
     - name: Install
       run: cmake --install ./build-release --prefix ./install-release
 
+    - name: Archive Elemental
+      id: archive-elemental
+      uses: ksm2/archive-action@v1
+      with:
+        root-directory: ./install-release/Elemental/
+        format: ${{ inputs.platform == 'win' && "zip" || "tar.gz" }}
+        name: elemental.${{ inputs.platform }}-${{ inputs.architecture }}
+
     - name: Upload Elemental Binaries
       uses: actions/upload-artifact@master
       with:
         name: elemental.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./install-release/Elemental/
+        path: ${{ steps.archive-elemental.outputs.path }}
 
     - name: Upload Elemental Tools Binaries
       uses: actions/upload-artifact@master
