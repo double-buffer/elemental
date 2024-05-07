@@ -38,7 +38,6 @@ target_include_directories(ElementalSwiftLib INTERFACE "${CMAKE_BINARY_DIR}/")
 set_target_properties(ElementalSwiftLib PROPERTIES XCODE_ATTRIBUTE_SWIFT_OBJC_INTERFACE_HEADER_NAME "")
 
 target_link_libraries(Elemental PRIVATE ElementalSwiftLib)
-add_dependencies(Elemental ElementalSwiftLib)
 
 add_custom_command(
     OUTPUT ${HEADER_OUTPUT_PATH}
@@ -47,7 +46,6 @@ add_custom_command(
     COMMENT "Checking for existence of ElementalSwiftLib.h"
 )
 
-# Custom target that depends on the custom command
 add_custom_target(
     CheckForSwiftHeader ALL
     DEPENDS ${HEADER_OUTPUT_PATH}
