@@ -34,11 +34,8 @@ jobs:
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
-    #TODO: We don't need to use ninja-multiconfig because we build only in release
     - name: Configure Build
       run: cmake --preset release
-      #mkdir ./build
-      #cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }} -DCMAKE_C_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang' }}
 
     - name: Build
       run: cmake --build --preset release
@@ -63,3 +60,9 @@ jobs:
       with:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/tests/
+
+    - name: Upload Samples Binaries
+      uses: actions/upload-artifact@master
+      with:
+        name: samples.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./install-release/samples/

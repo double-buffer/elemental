@@ -62,8 +62,6 @@ else()
     project(Elemental LANGUAGES C CXX)
 endif()
 
-# TODO: Use CMAKE INSTALL ?
-
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/utilities/cmake)
 include(functions)
 
@@ -84,15 +82,7 @@ if(NOT BUILD_FOR_IOS)
 add_subdirectory(tests/ToolsTests)
 endif()
 
-# TODO: Use a sub cmakefile?
-add_subdirectory(samples/01-HelloWindow)
-
-if(NOT BUILD_FOR_IOS)
-    add_subdirectory(samples/02-ShaderCompiler)
-endif()
-
-add_subdirectory(samples/03-HelloTriangle)
-
+add_subdirectory(samples)
 
 # DEBUG Deps
 #set_property(GLOBAL PROPERTY GLOBAL_DEPENDS_DEBUG_MODE 1)
