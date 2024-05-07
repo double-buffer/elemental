@@ -17,26 +17,13 @@ jobs:
       }}
 
     steps:
-    - name: Download Native Binaries ${{ inputs.platform }}-${{ inputs.architecture }}
+    - name: Download Test Binaries
       uses: actions/download-artifact@master
       with:
-        name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./Tests/
- 
-    - name: Download Native Test Binaries
-      uses: actions/download-artifact@master
-      with:
-        name: native.tests.${{ inputs.platform }}-${{ inputs.architecture }}
+        name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./Tests/
 
-    - name: Set Executable Permission
-      if: inputs.platform == 'osx'
-      run: |
-        chmod +x ./Tests/SystemFunctionsTests
-        chmod +x ./Tests/ApplicationTests
-        chmod +x ./Tests/GraphicsTests
-
-    - name: Run Native System Functions Tests
+    - name: Run System Functions Tests
       run: ./Tests/SystemFunctionsTests
     
     - name: Run Application Tests
