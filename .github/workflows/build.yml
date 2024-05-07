@@ -41,7 +41,7 @@ jobs:
       #cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G "Ninja Multi-Config" -B build -S . -DCMAKE_CXX_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang++' }} -DCMAKE_C_COMPILER=${{ inputs.platform == 'win' && 'clang-cl' || 'clang' }}
 
     - name: Build
-      run: cmake --build --release
+      run: cmake --build --preset release
           
     - name: Install
       run: cmake --install ./build-release --prefix ./install-release
