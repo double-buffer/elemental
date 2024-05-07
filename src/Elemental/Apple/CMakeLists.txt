@@ -38,3 +38,6 @@ set_target_properties(ElementalSwiftLib PROPERTIES XCODE_ATTRIBUTE_SWIFT_OBJC_IN
 
 target_link_libraries(Elemental PRIVATE ElementalSwiftLib)
 add_dependencies(Elemental ElementalSwiftLib)
+
+set_source_files_properties("${CMAKE_BINARY_DIR}/../src/Elemental/Apple/UnityBuild.cpp"
+                            PROPERTIES OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/ElementalSwiftLib.h")
