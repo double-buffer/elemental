@@ -22,14 +22,13 @@ jobs:
         submodules: recursive
 
     # TODO: For Release Support macOS xc framework!
-    # Conditional setup for MSVC on Windows
     - name: Setup MSVC
       if: inputs.platform == 'win'
       uses: TheMrMilchmann/setup-msvc-dev@v3
       with:
         arch: ${{ inputs.architecture }}
 
-    - name: Install GTK4 and GLib
+    - name: Install GTK4
       if: inputs.platform == 'linux'
       run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
 
@@ -87,7 +86,8 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: native.bin.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./build/bin/Release/*.${{ inputs.platform == 'win' && 'dll' || inputs.platform == 'osx' && 'dylib' || 'so' }}
+          #path: ./build/bin/Release/*.${{ inputs.platform == 'win' && 'dll' || inputs.platform == 'osx' && 'dylib' || 'so' }}
+        path: ./build/bin/Release/
 
     - name: Upload Tests Binaries
       uses: actions/upload-artifact@master
