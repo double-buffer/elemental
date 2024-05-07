@@ -31,13 +31,7 @@ jobs:
 
     - name: Install GTK4 and GLib
       if: inputs.platform == 'linux'
-      run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libglib2.0-dev
-
-    - name: Check GLib version
-      if: inputs.platform == 'linux'
-      run: dpkg -s libglib2.0-dev | grep '^Version'
-    - name: Setup Ninja
-      uses: seanmiddleditch/gha-setup-ninja@master
+      run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
 
     #TODO: We don't need to use ninja-multiconfig because we build only in release
     - name: Configure Build
