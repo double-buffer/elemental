@@ -23,8 +23,26 @@ copy_platform_dependencies(Elemental)
 add_custom_command(TARGET Elemental POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/file.txt
     COMMENT "Touching file.txt after building ProjectA"
-
 )
+
 add_library(ElementalInterface INTERFACE)
 target_include_directories(ElementalInterface INTERFACE .)
 add_dependencies(ElementalInterface Elemental)
+
+get_target_property(ELEMENTAL_OUTPUT_DIR Elemental RUNTIME_OUTPUT_DIRECTORY)
+
+install(DIRECTORY ${ELEMENTAL_OUTPUT_DIR}/
+        DESTINATION Elemental/bin
+)
+
+install(FILES Elemental.h ElementalLoader.c
+        DESTINATION Elemental/include
+)
+
+install(FILES ../../LICENSE
+        DESTINATION Elemental
+)
+
+install(DIRECTORY ${ELEMENTAL_OUTPUT_DIR}/
+        DESTINATION tests
+)

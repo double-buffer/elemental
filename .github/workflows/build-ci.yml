@@ -1,16 +1,15 @@
 name: Build CI
 
 on:
-  #push:
   pull_request:
 
 jobs:
-  build_native:
+  build:
     strategy:
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
-    uses: ./.github/workflows/build-native.yml
-    name: 'build-native'
+    uses: ./.github/workflows/build.yml
+    name: 'build'
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
@@ -27,7 +26,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/run-tests.yml
-    needs: [ build_native ]
+    needs: [ build ]
     name: 'run-tests'
     secrets: inherit
     with:

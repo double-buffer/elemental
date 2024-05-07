@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
+include(ExternalProject)
 
 if(WIN32)
     set(CMAKE_SYSTEM_PROCESSOR "x64")

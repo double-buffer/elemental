@@ -36,3 +36,7 @@ elseif(LINUX)
     target_compile_options(SystemFunctionsTests PRIVATE ${GTK4_CFLAGS_OTHER})
     target_link_libraries(SystemFunctionsTests PRIVATE ${GTK4_LIBRARIES})
 endif()
+
+install(TARGETS SystemFunctionsTests
+    RUNTIME DESTINATION tests
+    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)

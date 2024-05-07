@@ -22,3 +22,21 @@ copy_platform_dependencies(ElementalTools)
 add_library(ElementalToolsInterface INTERFACE)
 target_include_directories(ElementalToolsInterface INTERFACE .)
 add_dependencies(ElementalToolsInterface ElementalTools)
+
+get_target_property(ELEMENTALTOOLS_OUTPUT_DIR ElementalTools RUNTIME_OUTPUT_DIRECTORY)
+
+install(DIRECTORY ${ELEMENTALTOOLS_OUTPUT_DIR}/
+        DESTINATION ElementalTools/bin
+)
+
+install(FILES ElementalTools.h ElementalToolsLoader.c
+        DESTINATION ElementalTools/include
+)
+
+install(FILES ../../LICENSE
+        DESTINATION ElementalTools
+)
+
+install(DIRECTORY ${ELEMENTALTOOLS_OUTPUT_DIR}/
+        DESTINATION tests
+)

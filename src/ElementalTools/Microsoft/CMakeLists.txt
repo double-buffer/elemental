@@ -4,7 +4,14 @@ target_include_directories(ElementalTools PRIVATE ../../Elemental/Microsoft)
 target_link_libraries(ElementalTools PRIVATE Dwmapi UxTheme onecore)
 target_compile_definitions(ElementalTools PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
 
+set_target_properties(ElementalTools PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ElementalTools")
+
 function(copy_platform_dependencies target)
     copy_dxc_to_target(${target})
     copy_MetalShaderConverter_to_target(${target})
+
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ElementalTools" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+        COMMENT "Copy Elemental Tools Binaries"
+    )
 endfunction()

@@ -1,3 +1,4 @@
+#TODO: Use cmake add external project instead?
 function(extract_zip_file pathArchive pathExtract)
     if(${pathArchive} MATCHES "\\.zip$")
         set(IS_ZIP TRUE)

@@ -52,3 +52,6 @@ add_custom_target(
 )
 
 add_dependencies(Elemental CheckForSwiftHeader)
+    
+# TODO: For Release Support macOS xc framework!
+

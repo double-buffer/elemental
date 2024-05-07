@@ -17,6 +17,16 @@
             "binaryDir": "${sourceDir}/build"
         },
         {
+            "name": "release",
+            "inherits": "default",
+            "displayName": "Release",
+            "description": "Release build",
+            "binaryDir": "${sourceDir}/build-release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
             "name": "ios",
             "inherits": "default",
             "displayName": "iOS Build",
@@ -41,6 +51,10 @@
         {
             "name": "default",
             "configurePreset": "default"
+        },
+        {
+            "name": "release",
+            "configurePreset": "release"
         },
         {
             "name": "ios",
