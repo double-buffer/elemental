@@ -37,3 +37,4 @@ target_include_directories(ElementalSwiftLib INTERFACE "${CMAKE_BINARY_DIR}/swif
 set_target_properties(ElementalSwiftLib PROPERTIES XCODE_ATTRIBUTE_SWIFT_OBJC_INTERFACE_HEADER_NAME "")
 
 target_link_libraries(Elemental PRIVATE ElementalSwiftLib)
+add_dependencies(Elemental ElementalSwiftLib)
