@@ -53,6 +53,14 @@ function(get_github_release repo tag filenamePattern pathExtract)
         OUTPUT_VARIABLE releasesJson
     )
 
+    # Log curl call result and output for debugging
+    message(STATUS "curl command result: ${result}")
+    message(STATUS "Received releases JSON: ${releasesJson}")
+
+    if(NOT "${result}" STREQUAL "0")
+        message(FATAL_ERROR "Failed to download release information")
+    endif()
+
     # Convert filenamePattern to regex pattern
     string(REGEX REPLACE "\\." "\\\\." filenamePattern "${filenamePattern}")
     string(REGEX REPLACE "\\*" ".*" filenamePattern "${filenamePattern}")

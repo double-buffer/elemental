@@ -49,7 +49,7 @@ jobs:
 
     - name: Archive Elemental
       if: inputs.platform != 'win'
-      run: tar -czvf ./elemental.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./install-release/Elemental/
+      run: tar -czvf ./elemental.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./install-release/Elemental/
 
     - name: Upload Elemental Binaries
       uses: actions/upload-artifact@master
