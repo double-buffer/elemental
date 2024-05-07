@@ -41,7 +41,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
 
     # Set the authorization headers if the GITHUB_TOKEN environment variable is defined
     if(DEFINED ENV{GITHUB_TOKEN})
-        set(headers "-H Authorization: Bearer $ENV{GITHUB_TOKEN}")
+        set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
     else()
         set(headers "")
         message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
