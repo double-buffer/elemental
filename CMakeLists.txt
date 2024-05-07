@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 include(ExternalProject)
 
+set(CMAKE_CXX_COMPILER "clang")
+set(CMAKE_C_COMPILER "clang")
+
 if(WIN32)
     set(CMAKE_SYSTEM_PROCESSOR "x64")
     set(CMAKE_CXX_COMPILER "clang-cl")
