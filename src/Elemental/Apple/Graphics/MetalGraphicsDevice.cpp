@@ -137,6 +137,7 @@ void MetalFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     SystemAssert(graphicsDeviceData);
     
     graphicsDeviceData->Device.reset();
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing Metal");
 }
 
 ElemGraphicsDeviceInfo MetalGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)

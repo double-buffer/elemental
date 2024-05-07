@@ -1,15 +1,16 @@
 cmake_minimum_required(VERSION 3.28)
 include(ExternalProject)
 
-set(CMAKE_CXX_COMPILER "clang")
-set(CMAKE_C_COMPILER "clang")
-
 if(WIN32)
     set(CMAKE_SYSTEM_PROCESSOR "x64")
     set(CMAKE_CXX_COMPILER "clang-cl")
     set(CMAKE_C_COMPILER "clang-cl")
     
     add_compile_options(/W4)
+elseif(LINUX)
+    set(CMAKE_CXX_COMPILER "clang")
+    set(CMAKE_C_COMPILER "clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 else()
     if(BUILD_FOR_IOS)
         set(CMAKE_SYSTEM_NAME iOS)
@@ -33,10 +34,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
 set(CMAKE_CXX_STANDARD "23")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-if(LINUX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-endif()
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")

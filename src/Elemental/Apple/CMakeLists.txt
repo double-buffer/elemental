@@ -9,6 +9,8 @@ if(BUILD_FOR_IOS)
 else()
     target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework QuartzCore" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
 endif()
+
+set(ELEMENTAL_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental.framework" PARENT_SCOPE)
         
 #et(HEADERS "../Elemental.h" "../ElementalLoader.c")
 #set_source_files_properties(ElementalLoader.c PROPERTIES HEADER_FILE_ONLY TRUE)

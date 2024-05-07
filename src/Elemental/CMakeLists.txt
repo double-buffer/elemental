@@ -29,10 +29,9 @@ add_library(ElementalInterface INTERFACE)
 target_include_directories(ElementalInterface INTERFACE .)
 add_dependencies(ElementalInterface Elemental)
 
-get_target_property(ELEMENTAL_OUTPUT_DIR Elemental RUNTIME_OUTPUT_DIRECTORY)
-
-install(DIRECTORY ${ELEMENTAL_OUTPUT_DIR}/
+install(DIRECTORY ${ELEMENTAL_OUTPUT_DIR}
         DESTINATION Elemental/bin
+        USE_SOURCE_PERMISSIONS
 )
 
 install(FILES Elemental.h ElementalLoader.c
@@ -43,6 +42,7 @@ install(FILES ../../LICENSE
         DESTINATION Elemental
 )
 
-install(DIRECTORY ${ELEMENTAL_OUTPUT_DIR}/
+install(DIRECTORY ${ELEMENTAL_OUTPUT_DIR}
         DESTINATION tests
+        USE_SOURCE_PERMISSIONS
 )

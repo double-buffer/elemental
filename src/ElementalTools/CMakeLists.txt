@@ -23,10 +23,9 @@ add_library(ElementalToolsInterface INTERFACE)
 target_include_directories(ElementalToolsInterface INTERFACE .)
 add_dependencies(ElementalToolsInterface ElementalTools)
 
-get_target_property(ELEMENTALTOOLS_OUTPUT_DIR ElementalTools RUNTIME_OUTPUT_DIRECTORY)
-
-install(DIRECTORY ${ELEMENTALTOOLS_OUTPUT_DIR}/
+install(DIRECTORY ${ELEMENTALTOOLS_OUTPUT_DIR}
         DESTINATION ElementalTools/bin
+        USE_SOURCE_PERMISSIONS
 )
 
 install(FILES ElementalTools.h ElementalToolsLoader.c
@@ -37,6 +36,7 @@ install(FILES ../../LICENSE
         DESTINATION ElementalTools
 )
 
-install(DIRECTORY ${ELEMENTALTOOLS_OUTPUT_DIR}/
+install(DIRECTORY ${ELEMENTALTOOLS_OUTPUT_DIR}
         DESTINATION tests
+        USE_SOURCE_PERMISSIONS
 )
