@@ -2,6 +2,18 @@
 
 #include "Elemental.h"
 
+class MacOSWindowDelegate : public NS::WindowDelegate
+{
+    public:
+        MacOSWindowDelegate(ElemWindow window);
+        ~MacOSWindowDelegate();
+
+        void windowWillClose(NS::Notification* pNotification ) override;
+
+    private:
+        ElemWindow _window;
+};
+
 struct MacOSWindowData
 {
     NS::SharedPtr<NS::Window> WindowHandle;

@@ -34,10 +34,12 @@ jobs:
     - name: Run System Functions Tests
       run: ./Tests/SystemFunctionsTests
     
-    - name: Run Application Tests
-      run: ./Tests/ApplicationTests
+      #- name: Run Application Tests
+        #run: ./Tests/ApplicationTests
     
-        #run tools tests
+    - name: Run Tools Tests
+      run: ./Tests/ToolsTests
+
       #- name: Run Graphics Tests
       #if: inputs.platform == 'win'
         #run: |

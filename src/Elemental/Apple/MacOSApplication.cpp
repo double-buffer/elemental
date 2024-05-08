@@ -138,11 +138,6 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     sharedApplication->setDelegate(&applicationDelegate);
     sharedApplication->run();
 
-    if (parameters && parameters->FreeHandler)
-    {
-        parameters->FreeHandler(parameters->Payload);
-    }
-
     return 0;
 }
 
@@ -185,6 +180,10 @@ bool MacOSApplicationDelegate::applicationShouldTerminateAfterLastWindowClosed(N
 
 NS::TerminateReply MacOSApplicationDelegate::applicationShouldTerminate(NS::Application* pSender) 
 {
-    NS::Application::sharedApplication()->stop(pSender);
-    return NS::TerminateReplyTerminateCancel;
+    if (_runParameters && _runParameters->FreeHandler)
+    {
+        _runParameters->FreeHandler(_runParameters->Payload);
+    }
+
+    return NS::TerminateReplyTerminateNow;
 }

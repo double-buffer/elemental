@@ -74,7 +74,7 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     auto handle = SystemAddDataPoolItem(windowDataPool, {
         .WindowHandle = windowHandle
     }); 
-    
+
     SystemAddDataPoolItemFull(windowDataPool, handle, {
         .Width = (uint32_t)width,
         .Height = (uint32_t)height,
@@ -89,10 +89,13 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
     auto windowData = GetMacOSWindowData(window);
-    SystemAssert(windowData);
+
+    if (windowData == ELEM_HANDLE_NULL)
+    {
+        return;
+    }
 
     SystemRemoveDataPoolItem(windowDataPool, window);
-    windowData->WindowHandle.reset();
 }
 
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
