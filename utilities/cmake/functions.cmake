@@ -53,18 +53,17 @@ cmake_print_variables(ENV{GITHUB_TOKEN})
 
     # Get the download URL of the asset with the given filename pattern from the specified GitHub repository and tag
     set(releasesUri "https://api.github.com/repos/${repo}/releases/tags/${tag}")
-    set(test "curl -H \"Accept: application/vnd.github+json\" \"https://api.github.com/rate_limit\"")
 
-cmake_print_variables(test)
-    execute_process(
-        COMMAND ${test}
-        OUTPUT_VARIABLE releasesJson
-        RESULT_VARIABLE result
-        ERROR_VARIABLE curlError
-    )
-    # Log curl call result and output for debugging
-    message(STATUS "curl command result: ${result}")
-    message(STATUS "Received releases JSON: ${releasesJson}")
+    set(json_output_file "${pathExtract}/DownloadGitHubReleaseAsset-${repo}-${tag}.json")
+
+      file(DOWNLOAD "https://api.github.com/repos/${repo}/releases/tags/${tag}" ${json_output_file}
+        HTTPHEADER "Authorization: token $ENV{GITHUB_TOKEN}"
+        HTTPHEADER "Accept: application/vnd.github+json"
+        )
+
+  file(READ ${json_output_file} json_output)
+       # Log curl call result and output for debugging
+    message(STATUS "Received releases JSON: ${json_output}")
 
     if(NOT "${result}" STREQUAL "0")
         message(FATAL_ERROR "Failed to download release information: ${curlError}")
