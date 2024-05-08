@@ -57,7 +57,7 @@ cmake_print_variables(ENV{GITHUB_TOKEN})
 
 cmake_print_variables(test)
     execute_process(
-        COMMAND test
+        COMMAND ${test}
         OUTPUT_VARIABLE releasesJson
         RESULT_VARIABLE result
         ERROR_VARIABLE curlError
