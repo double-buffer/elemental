@@ -29,7 +29,6 @@ function(extract_zip_file pathArchive pathExtract)
 endfunction()
 
 function(get_github_release repo tag filenamePattern pathExtract)
-    # Check if the output directory already exists
     if (EXISTS ${pathExtract})
         message(STATUS "Output directory ${pathExtract} already exists, skipping download.")
         return()
@@ -38,51 +37,33 @@ function(get_github_release repo tag filenamePattern pathExtract)
     endif()
 
     message(STATUS "Downloading ${repo} ${tag} ${filenamePattern}")
-
-include(CMakePrintHelpers)
-cmake_print_variables(Token)
-cmake_print_variables(ENV{GITHUB_TOKEN})
-
-    if(DEFINED ENV{GITHUB_TOKEN})
-        #set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
-        set(headers "Authorization: Bearer ${Token}")
-    else()
-        set(headers "")
-        message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
-    endif()
-
-    # Get the download URL of the asset with the given filename pattern from the specified GitHub repository and tag
     set(releasesUri "https://api.github.com/repos/${repo}/releases/tags/${tag}")
-
+    set(json_ratelimit "${pathExtract}/rate_limit.json")
     set(json_output_file "${pathExtract}/DownloadGitHubReleaseAsset-${repo}-${tag}.json")
 
-      file(DOWNLOAD "https://api.github.com/rate_limit" ${json_output_file}
-        HTTPHEADER "Authorization: token $ENV{GITHUB_TOKEN}"
-        HTTPHEADER "Accept: application/vnd.github+json"
+    if(DEFINED ENV{GITHUB_TOKEN})
+        file(DOWNLOAD ${releasesUri} ${json_ratelimit}
+            HTTPHEADER "Authorization: token $ENV{GITHUB_TOKEN}"
+            HTTPHEADER "Accept: application/vnd.github+json"
         )
 
-  file(READ ${json_output_file} json_output)
-       # Log curl call result and output for debugging
-    message(STATUS "Received releases JSON: ${json_output}")
+        file(READ ${json_ratelimit} rate_limit_json)
+        message(STATUS "Received rate limit JSON: ${rate_limit_json}")
+        
+        file(DOWNLOAD "https://api.github.com/rate_limit" ${json_output_file}
+            HTTPHEADER "Authorization: token $ENV{GITHUB_TOKEN}"
+            HTTPHEADER "Accept: application/vnd.github+json"
+        )
+    else()
+        message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
 
-    if(NOT "${result}" STREQUAL "0")
-        message(FATAL_ERROR "Failed to download release information: ${curlError}")
+        file(DOWNLOAD ${releasesUri} ${json_output_file}
+            HTTPHEADER "Accept: application/vnd.github+json"
+        )
     endif()
-    execute_process(
-        COMMAND curl -s -H "Accept: application/vnd.github+json" 
-               $<$<BOOL:${headers}>:-H> "${headers}" "${releasesUri}"
-        OUTPUT_VARIABLE releasesJson
-        RESULT_VARIABLE result
-        ERROR_VARIABLE curlError
-    )
 
-    # Log curl call result and output for debugging
-    message(STATUS "curl command result: ${result}")
+    file(READ ${json_output_file} releasesJson)
     message(STATUS "Received releases JSON: ${releasesJson}")
-
-    if(NOT "${result}" STREQUAL "0")
-        message(FATAL_ERROR "Failed to download release information: ${curlError}")
-    endif()
 
     # Convert filenamePattern to regex pattern
     string(REGEX REPLACE "\\." "\\\\." filenamePattern "${filenamePattern}")
