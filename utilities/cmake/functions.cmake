@@ -39,6 +39,9 @@ function(get_github_release repo tag filenamePattern pathExtract)
 
     message(STATUS "Downloading ${repo} ${tag} ${filenamePattern}")
 
+include(CMakePrintHelpers)
+cmake_print_variables(Token)
+
     if(DEFINED ENV{GITHUB_TOKEN})
         set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
     else()

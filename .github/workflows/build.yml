@@ -38,7 +38,7 @@ jobs:
       uses: seanmiddleditch/gha-setup-ninja@master
 
     - name: Configure Build
-      run: cmake --preset release
+      run: cmake --preset release -DToken=${{ secrets.DB_PAT }}
       env:
         GITHUB_TOKEN: ${{ secrets.DB_PAT }}
 
