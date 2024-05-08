@@ -39,9 +39,8 @@ function(get_github_release repo tag filenamePattern pathExtract)
 
     message(STATUS "Downloading ${repo} ${tag} ${filenamePattern}")
 
-    # Set the authorization headers if the GITHUB_TOKEN environment variable is defined
     if(DEFINED ENV{GITHUB_TOKEN})
-        set(headers "-H 'Authorization: Bearer $ENV{GITHUB_TOKEN}'")
+        set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
     else()
         set(headers "")
         message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
@@ -50,17 +49,18 @@ function(get_github_release repo tag filenamePattern pathExtract)
     # Get the download URL of the asset with the given filename pattern from the specified GitHub repository and tag
     set(releasesUri "https://api.github.com/repos/${repo}/releases/tags/${tag}")
     execute_process(
-        COMMAND "curl -s -H 'Accept: application/vnd.github+json' ${headers} ${releasesUri}"
+        COMMAND curl -s -H "Accept: application/vnd.github+json" 
+               $<$<BOOL:${headers}>:-H> "${headers}" "${releasesUri}"
         OUTPUT_VARIABLE releasesJson
         RESULT_VARIABLE result
+        ERROR_VARIABLE curlError
     )
 
     # Log curl call result and output for debugging
     message(STATUS "curl command result: ${result}")
-        message(STATUS "Received releases JSON: ${releasesJson}")
-
+    message(STATUS "Received releases JSON: ${releasesJson}")
     if(NOT "${result}" STREQUAL "0")
-        message(FATAL_ERROR "Failed to download release information")
+        message(FATAL_ERROR "Failed to download release information: ${curlError}")
     endif()
 
     # Convert filenamePattern to regex pattern
