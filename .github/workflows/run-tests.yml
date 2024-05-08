@@ -21,7 +21,15 @@ jobs:
       uses: actions/download-artifact@master
       with:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
-        path: ./Tests/
+        path: ./
+
+    - name: Archive Tests (Windows)
+      if: inputs.platform == 'win'
+      run: 7z x ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./tests/
+
+    - name: Archive Tests
+      if: inputs.platform != 'win'
+      run: tar -xvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
     - name: Run System Functions Tests
       run: ./Tests/SystemFunctionsTests
