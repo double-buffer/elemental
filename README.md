@@ -1,4 +1,4 @@
-# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/double-buffer/elemental/build-ci.yml)
+# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/double-buffer/elemental/build-ci.yml?branch=main)
 
 ## 📖 Purpose
 
