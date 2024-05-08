@@ -42,7 +42,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
     set(json_output_file "${pathExtract}/DownloadGitHubReleaseAsset-${repo}-${tag}.json")
 
     if(DEFINED ENV{GITHUB_TOKEN})
-        file(DOWNLOAD ${releasesUri} ${json_ratelimit}
+        file(DOWNLOAD "https://api.github.com/rate_limit" ${json_output_file}
             HTTPHEADER "Authorization: token $ENV{GITHUB_TOKEN}"
             HTTPHEADER "Accept: application/vnd.github+json"
         )
@@ -50,7 +50,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
         file(READ ${json_ratelimit} rate_limit_json)
         message(STATUS "Received rate limit JSON: ${rate_limit_json}")
         
-        file(DOWNLOAD "https://api.github.com/rate_limit" ${json_output_file}
+        file(DOWNLOAD ${releasesUri} ${json_ratelimit}
             HTTPHEADER "Authorization: token $ENV{GITHUB_TOKEN}"
             HTTPHEADER "Accept: application/vnd.github+json"
         )
