@@ -53,7 +53,7 @@ cmake_print_variables(ENV{GITHUB_TOKEN})
 
     # Get the download URL of the asset with the given filename pattern from the specified GitHub repository and tag
     set(releasesUri "https://api.github.com/repos/${repo}/releases/tags/${tag}")
-    set(test "curl -H \"Accept: application/vnd.github+json\" -H \"${headers}\" \"https://api.github.com/rate_limit\"")
+    set(test "curl -H \"Accept: application/vnd.github+json\" \"https://api.github.com/rate_limit\"")
 
 cmake_print_variables(test)
     execute_process(
