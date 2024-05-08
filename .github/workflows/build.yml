@@ -7,9 +7,6 @@ on:
       architecture:
         required: true
         type: string
-    secrets:
-      DB_PAT:
-        required: true
 
 jobs:
   build:
@@ -40,7 +37,7 @@ jobs:
     - name: Configure Build
       run: cmake --preset release
       env:
-        GITHUB_TOKEN: ${{ secrets.DB_PAT }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build
       run: cmake --build --preset release
