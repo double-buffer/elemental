@@ -40,7 +40,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
     message(STATUS "Downloading ${repo} ${tag} ${filenamePattern}")
 
     if(DEFINED ENV{GITHUB_TOKEN})
-        set(headers "Authorization: token $ENV{GITHUB_TOKEN}")
+        set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
     else()
         set(headers "")
         message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
