@@ -50,16 +50,16 @@ function(get_github_release repo tag filenamePattern pathExtract)
     # Get the download URL of the asset with the given filename pattern from the specified GitHub repository and tag
     set(releasesUri "https://api.github.com/repos/${repo}/releases/tags/${tag}")
     execute_process(
-        COMMAND curl -s -H "Accept: application/vnd.github+json" ${headers} ${releasesUri}
+        COMMAND "curl -s -H Accept: application/vnd.github+json ${headers} ${releasesUri}"
         OUTPUT_VARIABLE releasesJson
         RESULT_VARIABLE result
     )
 
     # Log curl call result and output for debugging
     message(STATUS "curl command result: ${result}")
+        message(STATUS "Received releases JSON: ${releasesJson}")
 
     if(NOT "${result}" STREQUAL "0")
-        message(STATUS "Received releases JSON: ${releasesJson}")
         message(FATAL_ERROR "Failed to download release information")
     endif()
 
