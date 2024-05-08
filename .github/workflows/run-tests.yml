@@ -23,11 +23,11 @@ jobs:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./
 
-    - name: Archive Tests (Windows)
+    - name: Extract Tests Archive (Windows)
       if: inputs.platform == 'win'
-      run: 7z x ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./tests/
+      run: 7z x ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.zip -o"./tests/"
 
-    - name: Archive Tests
+    - name: Extradt Tests Archive
       if: inputs.platform != 'win'
       run: tar -xvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
