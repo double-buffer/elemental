@@ -25,9 +25,9 @@ jobs:
 
     - name: Extract Tests Archive (Windows)
       if: inputs.platform == 'win'
-      run: 7z x ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.zip -o"./tests/"
+      run: 7z x ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.zip -o"."
 
-    - name: Extradt Tests Archive
+    - name: Extract Tests Archive
       if: inputs.platform != 'win'
       run: tar -xvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
