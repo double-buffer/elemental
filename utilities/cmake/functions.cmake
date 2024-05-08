@@ -52,7 +52,7 @@ cmake_print_variables(ENV{GITHUB_TOKEN})
     endif()
 
     # Get the download URL of the asset with the given filename pattern from the specified GitHub repository and tag
-    set(releasesUri "https://api.github.com/repos/${repo}/releases/tags/${tag}")
+    set(releasesUri "https://api.github.com/rate_limit")
 
     set(json_output_file "${pathExtract}/DownloadGitHubReleaseAsset-${repo}-${tag}.json")
 
