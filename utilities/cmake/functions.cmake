@@ -45,7 +45,7 @@ cmake_print_variables(ENV{GITHUB_TOKEN})
 
     if(DEFINED ENV{GITHUB_TOKEN})
         #set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
-        set(headers "Authorization: Bearer fskdfjsdflkj")
+        set(headers "Authorization: Bearer ${Token}")
     else()
         set(headers "")
         message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
