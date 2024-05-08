@@ -41,6 +41,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
 
 include(CMakePrintHelpers)
 cmake_print_variables(Token)
+cmake_print_variables(ENV{GITHUB_TOKEN})
 
     if(DEFINED ENV{GITHUB_TOKEN})
         set(headers "Authorization: Bearer $ENV{GITHUB_TOKEN}")
