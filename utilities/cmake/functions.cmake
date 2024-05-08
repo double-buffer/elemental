@@ -75,7 +75,7 @@ cmake_print_variables(ENV{GITHUB_TOKEN})
         RESULT_VARIABLE result
         ERROR_VARIABLE curlError
     )
-curl -H "Authorization: token {myToken}" -X GET https://api.github.com/rate_limit.
+
     # Log curl call result and output for debugging
     message(STATUS "curl command result: ${result}")
     message(STATUS "Received releases JSON: ${releasesJson}")
