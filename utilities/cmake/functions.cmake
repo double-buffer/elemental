@@ -41,7 +41,6 @@ function(get_github_release repo tag filenamePattern pathExtract)
 
     # Set the authorization headers if the GITHUB_TOKEN environment variable is defined
     if(DEFINED ENV{GITHUB_TOKEN})
-        message(STATUS "Using Github token: $ENV{GITHUB_TOKEN}")
         set(headers "-H Authorization: Bearer $ENV{GITHUB_TOKEN}")
     else()
         set(headers "")
@@ -60,8 +59,8 @@ function(get_github_release repo tag filenamePattern pathExtract)
     message(STATUS "curl command result: ${result}")
 
     if(NOT "${result}" STREQUAL "0")
-        message(FATAL_ERROR "Failed to download release information")
         message(STATUS "Received releases JSON: ${releasesJson}")
+        message(FATAL_ERROR "Failed to download release information")
     endif()
 
     # Convert filenamePattern to regex pattern
