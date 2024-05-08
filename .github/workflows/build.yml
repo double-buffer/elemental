@@ -7,6 +7,9 @@ on:
       architecture:
         required: true
         type: string
+    secrets:
+      DB_PAT:
+        required: true
 
 jobs:
   build:
