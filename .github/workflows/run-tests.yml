@@ -39,8 +39,13 @@ jobs:
       if: inputs.platform == 'osx'
       run: ./Tests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
     
-      #- name: Run Application Tests
-        #run: ./Tests/ApplicationTests
+    - name: Run Application Tests
+      if: inputs.platform != 'osx'
+      run: ./Tests/ApplicationTests/ApplicationTests
+
+    - name: Run Application Tests (MacOS)
+      if: inputs.platform == 'osx'
+      run: ./Tests/ApplicationTests.app/Contents/MacOS/ApplicationTests
     
     - name: Run Tools Tests
       if: inputs.platform != 'osx'
