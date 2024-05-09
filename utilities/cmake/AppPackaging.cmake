@@ -92,6 +92,8 @@ function(configure_project_package target_name install_folder)
     message("Number of resources: ${resources_length}")
 
     if(APPLE)
+        set(APPFOLDER_EXTENSION ".app")
+
         set_target_properties(${target_name} PROPERTIES 
             MACOSX_BUNDLE "TRUE"
         )
@@ -125,7 +127,6 @@ function(configure_project_package target_name install_folder)
                 # TODO: Remove also headers in the version directory
                 add_custom_command(TARGET CopyFrameworkFolder${target_name} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E make_directory "${framework_destination}"
-                    #COMMAND ${CMAKE_COMMAND} -E copy_directory "${ELEMENTAL_PATH}" "${framework_destination}"
                     COMMAND cp -RP "${ELEMENTAL_PATH}/" "${framework_destination}/"
                     COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Headers"
                     #COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Versions"
