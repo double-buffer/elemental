@@ -119,7 +119,7 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     return 0;
 }
 
-ElemAPI void ElemExitApplication()
+ElemAPI void ElemExitApplication(int32_t exitCode)
 {
-    PostQuitMessage(0);
+    PostQuitMessage(exitCode);
 }

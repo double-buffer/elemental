@@ -19,3 +19,4 @@ class MacOSApplicationDelegate : public NS::ApplicationDelegate
 };
 
 extern MemoryArena ApplicationMemoryArena;
+extern bool ApplicationExited;

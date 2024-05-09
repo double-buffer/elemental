@@ -17,6 +17,7 @@ class MacOSWindowDelegate : public NS::WindowDelegate
 struct MacOSWindowData
 {
     NS::SharedPtr<NS::Window> WindowHandle;
+    bool IsClosed;
 };
 
 struct MacOSWindowDataFull

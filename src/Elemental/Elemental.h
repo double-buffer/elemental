@@ -189,8 +189,10 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
 
 /**
  * Exits the application, performing necessary cleanup.
+ *
+ * @param exitCode Exit code of the application.
  */
-ElemAPI void ElemExitApplication(void);
+ElemAPI void ElemExitApplication(int32_t exitCode);
 
 /**
  * Creates a window with the specified options or default settings if none are provided.

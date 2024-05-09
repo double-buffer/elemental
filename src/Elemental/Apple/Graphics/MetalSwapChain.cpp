@@ -19,6 +19,7 @@ struct Test
 };
 
 #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+#include "../MacOSApplication.h"
 #include "../MacOSWindow.h"
 #else
 #include "../UIKitWindow.h"
@@ -115,15 +116,6 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     
     auto refreshRate = windowData->WindowHandle->screen()->maximumFramesPerSecond();
     windowData->WindowHandle->setContentView((NS::View*)metalViewResult->View);
-
-    // TODO: On MacOS
-   /* // Register to receive a notification when the window closes so that you
-    // can stop the display link.
-    NSNotificationCenter* notificationCenter = [NSNotificationCenter defaultCenter];
-    [notificationCenter addObserver:self
-                           selector:@selector(windowWillClose:)
-                               name:NSWindowWillCloseNotification
-                             object:self.window];*/
     #else
     auto windowData = GetUIKitWindowData(window);
     SystemAssert(windowData);
@@ -243,11 +235,19 @@ MetalDisplayLinkHandler::MetalDisplayLinkHandler(ElemSwapChain swapChain, ElemSw
 
 void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* displayLink, CA::MetalDisplayLinkUpdate* update)
 {
+    auto swapChainData = GetMetalSwapChainData(_swapChain);
+    SystemAssert(swapChainData);
+
+    #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
+    auto windowData = GetMacOSWindowData(swapChainData->Window);
+
+    if (ApplicationExited || windowData->IsClosed)
+    {
+        return;
+    }
+    #endif
     if (_updateHandler)
     {
-        auto swapChainData = GetMetalSwapChainData(_swapChain);
-        SystemAssert(swapChainData);
-
         auto deltaTime = update->targetPresentationTimestamp() - swapChainData->PreviousTargetPresentationTimestamp;
         swapChainData->PreviousTargetPresentationTimestamp = update->targetPresentationTimestamp();
 

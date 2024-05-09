@@ -54,9 +54,9 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     return UI::ApplicationMain(0, nullptr, &applicationDelegate);
 }
 
-ElemAPI void ElemExitApplication()
+ElemAPI void ElemExitApplication(int32_t exitCode)
 {
-    SystemLogWarningMessage(ElemLogMessageCategory_Application, "Exit application is not supported in UIKit.");
+    exit(exitCode);
 }
 
 UIKitApplicationDelegate::UIKitApplicationDelegate(const ElemRunApplicationParameters* parameters)

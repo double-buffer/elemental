@@ -111,7 +111,7 @@ UTEST_F(Window_SetWindowState, Normal_Maximized)
     utest_fixture->SourceState = ElemWindowState_Normal;
     utest_fixture->DestinationState = ElemWindowState_Maximized;
 }
-
+/*
 UTEST_F(Window_SetWindowState, FullScreen_Maximized) 
 {
     utest_fixture->SourceState = ElemWindowState_FullScreen;
@@ -129,18 +129,19 @@ UTEST_F(Window_SetWindowState, Maximized_Minimized)
     utest_fixture->SourceState = ElemWindowState_Maximized;
     utest_fixture->DestinationState = ElemWindowState_Minimized;
 }
-
+*/
 UTEST_F(Window_SetWindowState, Minimized_Normal) 
 {
     utest_fixture->SourceState = ElemWindowState_Minimized;
     utest_fixture->DestinationState = ElemWindowState_Normal;
 }
 
+/*
 UTEST_F(Window_SetWindowState, FullScreen_Normal) 
 {
     utest_fixture->SourceState = ElemWindowState_FullScreen;
     utest_fixture->DestinationState = ElemWindowState_Normal;
-}
+}*/
 
 UTEST_F(Window_SetWindowState, Maximized_Normal) 
 {

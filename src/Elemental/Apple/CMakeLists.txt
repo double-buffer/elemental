@@ -16,6 +16,19 @@ set(ELEMENTAL_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental.framework"
 #set_source_files_properties(ElementalLoader.c PROPERTIES HEADER_FILE_ONLY TRUE)
 #target_sources(Elemental PUBLIC ${HEADERS})
 
+if(BUILD_FOR_IOS)
+set_target_properties(Elemental PROPERTIES
+  FRAMEWORK TRUE
+  FRAMEWORK_VERSION A
+  MACOSX_FRAMEWORK_IDENTIFIER Elemental
+  MACOSX_FRAMEWORK_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
+  XCODE_ATTRIBUTE_DEVELOPMENT_TEAM ${APPLE_SIGNING_TEAM_ID}
+  XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
+  VERSION 1.0.0
+  SOVERSION 1.0.0
+  PUBLIC_HEADER "${HEADERS}"
+)
+else()
 set_target_properties(Elemental PROPERTIES
   FRAMEWORK TRUE
   FRAMEWORK_VERSION A
@@ -25,6 +38,7 @@ set_target_properties(Elemental PROPERTIES
   SOVERSION 1.0.0
   PUBLIC_HEADER "${HEADERS}"
 )
+endif()
 
 function(copy_platform_dependencies target)
 endfunction()

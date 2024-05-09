@@ -26,7 +26,7 @@ typedef struct ElementalFunctions
     void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
     ElemSystemInfo (*ElemGetSystemInfo)(void);
     int (*ElemRunApplication)(const ElemRunApplicationParameters*);
-    void (*ElemExitApplication)(void);
+    void (*ElemExitApplication)(int);
     ElemWindow (*ElemCreateWindow)(const ElemWindowOptions*);
     void (*ElemFreeWindow)(ElemWindow);
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
@@ -50,12 +50,12 @@ typedef struct ElementalFunctions
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemSetSwapChainTiming)(ElemSwapChain, unsigned int, unsigned int);
     void (*ElemPresentSwapChain)(ElemSwapChain);
-    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
+    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, const ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*);
     void (*ElemFreePipelineState)(ElemPipelineState);
     void (*ElemBindPipelineState)(ElemCommandList, ElemPipelineState);
-    void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, ElemDataSpan);
+    void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, const ElemDataSpan);
     void (*ElemBeginRenderPass)(ElemCommandList, const ElemBeginRenderPassParameters*);
     void (*ElemEndRenderPass)(ElemCommandList);
     void (*ElemSetViewport)(ElemCommandList, const ElemViewport*);
@@ -116,7 +116,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetElementalFunctionPointer("ElemConfigureLogHandler");
     listElementalFunctions.ElemGetSystemInfo = (ElemSystemInfo (*)(void))GetElementalFunctionPointer("ElemGetSystemInfo");
     listElementalFunctions.ElemRunApplication = (int (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication");
-    listElementalFunctions.ElemExitApplication = (void (*)(void))GetElementalFunctionPointer("ElemExitApplication");
+    listElementalFunctions.ElemExitApplication = (void (*)(int))GetElementalFunctionPointer("ElemExitApplication");
     listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
     listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
     listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
@@ -140,12 +140,12 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemSetSwapChainTiming = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemSetSwapChainTiming");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
-    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
+    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, const ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
     listElementalFunctions.ElemFreePipelineState = (void (*)(ElemPipelineState))GetElementalFunctionPointer("ElemFreePipelineState");
     listElementalFunctions.ElemBindPipelineState = (void (*)(ElemCommandList, ElemPipelineState))GetElementalFunctionPointer("ElemBindPipelineState");
-    listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
+    listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, const ElemDataSpan))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
     listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassParameters*))GetElementalFunctionPointer("ElemBeginRenderPass");
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
     listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, const ElemViewport*))GetElementalFunctionPointer("ElemSetViewport");
@@ -323,7 +323,7 @@ static inline int ElemRunApplication(const ElemRunApplicationParameters* paramet
     return listElementalFunctions.ElemRunApplication(parameters);
 }
 
-static inline void ElemExitApplication(void)
+static inline void ElemExitApplication(int exitCode)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -337,7 +337,7 @@ static inline void ElemExitApplication(void)
         return;
     }
 
-    listElementalFunctions.ElemExitApplication();
+    listElementalFunctions.ElemExitApplication(exitCode);
 }
 
 static inline ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
@@ -885,7 +885,7 @@ static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
     listElementalFunctions.ElemPresentSwapChain(swapChain);
 }
 
-static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
+static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, const ElemDataSpan shaderLibraryData)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -998,7 +998,7 @@ static inline void ElemBindPipelineState(ElemCommandList commandList, ElemPipeli
     listElementalFunctions.ElemBindPipelineState(commandList, pipelineState);
 }
 
-static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, unsigned int offsetInBytes, ElemDataSpan data)
+static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, unsigned int offsetInBytes, const ElemDataSpan data)
 {
     if (!LoadElementalFunctionPointers()) 
     {

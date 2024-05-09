@@ -6,6 +6,7 @@
 #include "SystemPlatformFunctions.h"
 
 MemoryArena ApplicationMemoryArena;
+bool ApplicationExited = false;
 
 void InitApplicationMemory()
 {
@@ -141,9 +142,16 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     return 0;
 }
 
-ElemAPI void ElemExitApplication()
+ElemAPI void ElemExitApplication(int32_t exitCode)
 {
-    NS::Application::sharedApplication()->terminate(nullptr);
+    if (exitCode == 0)
+    {
+        NS::Application::sharedApplication()->terminate(nullptr);
+    }
+    else 
+    {
+        exit(exitCode);
+    }
 }
 
 MacOSApplicationDelegate::MacOSApplicationDelegate(const ElemRunApplicationParameters* parameters)
@@ -180,6 +188,8 @@ bool MacOSApplicationDelegate::applicationShouldTerminateAfterLastWindowClosed(N
 
 NS::TerminateReply MacOSApplicationDelegate::applicationShouldTerminate(NS::Application* pSender) 
 {
+    ApplicationExited = true;
+
     if (_runParameters && _runParameters->FreeHandler)
     {
         _runParameters->FreeHandler(_runParameters->Payload);

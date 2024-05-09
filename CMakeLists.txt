@@ -26,6 +26,17 @@ else()
     add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wall>)
     add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wextra>)
     add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wpedantic>)
+
+    find_program(DSYMUTIL_PROGRAM dsymutil)
+    # TODO: This method work when we need to debug but it causes errors when recompiling
+    #[[
+    if (DSYMUTIL_PROGRAM)
+      foreach(lang C CXX)
+        foreach(var LINK_EXECUTABLE CREATE_SHARED_LIBRARY)
+          set(CMAKE_${lang}_${var} "${CMAKE_${lang}_${var}}" "${DSYMUTIL_PROGRAM} <TARGET>")
+        endforeach()
+      endforeach()
+    endif()]]
 endif()
 
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>)

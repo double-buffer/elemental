@@ -75,6 +75,10 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
         .WindowHandle = windowHandle
     }); 
 
+    // TODO: Avoid the new here
+    auto windowDelegate = new MacOSWindowDelegate(handle);
+    windowHandle->setDelegate(windowDelegate);
+
     SystemAddDataPoolItemFull(windowDataPool, handle, {
         .Width = (uint32_t)width,
         .Height = (uint32_t)height,
@@ -149,7 +153,7 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
     auto windowData = GetMacOSWindowData(window);
     SystemAssert(windowData);
-/*
+
     auto contentView = windowData->WindowHandle->contentView();
     SystemAssert(contentView);
 
@@ -177,6 +181,29 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
     else if (windowState == ElemWindowState_Minimized && !windowData->WindowHandle->miniaturized())
     {
         windowData->WindowHandle->miniaturize(nullptr);
-    }*/
+    }
 }
 
+MacOSWindowDelegate::MacOSWindowDelegate(ElemWindow window)
+{
+    _window = window;
+}
+
+MacOSWindowDelegate::~MacOSWindowDelegate()
+{
+}
+
+void MacOSWindowDelegate::windowWillClose(NS::Notification* pNotification)
+{            
+    // BUG: This method is never executed when the user click on the close button
+    // So sometimes the update swapchain method crash
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Window will close");
+    auto windowData = GetMacOSWindowData(_window);
+
+    if (!windowData)
+    {
+        return;
+    }
+
+    windowData->IsClosed = true;
+}

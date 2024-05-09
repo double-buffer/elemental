@@ -103,7 +103,7 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     return result;
 }
 
-ElemAPI void ElemExitApplication()
+ElemAPI void ElemExitApplication(int32_t exitCode)
 {
     // TODO:
     SystemLogErrorMessage(ElemLogMessageCategory_Application, "Not implemented.");
