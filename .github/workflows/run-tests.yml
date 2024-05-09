@@ -37,7 +37,7 @@ jobs:
 
     - name: Run System Functions Tests (MacOS)
       if: inputs.platform == 'osx'
-      run: ./Tests/SystemFunctionsTests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
+      run: ./Tests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
     
       #- name: Run Application Tests
         #run: ./Tests/ApplicationTests
@@ -48,7 +48,7 @@ jobs:
 
     - name: Run Tools Tests (MacOS)
       if: inputs.platform == 'osx'
-      run: ./Tests/ToolsTests/ToolsTests.app/Contents/MacOS/ToolsTests
+      run: ./Tests/ToolsTests.app/Contents/MacOS/ToolsTests
 
       #- name: Run Graphics Tests
       #if: inputs.platform == 'win'
