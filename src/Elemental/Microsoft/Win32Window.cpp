@@ -288,7 +288,11 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
     auto windowData = GetWin32WindowData(window);
-    SystemAssert(windowData);
+
+    if (windowData == ELEM_HANDLE_NULL)
+    {
+        return;
+    }
 
     auto windowDataFull = GetWin32WindowDataFull(window);
     SystemAssert(windowDataFull);

@@ -33,7 +33,7 @@ void InitSample(void* payload)
 void FreeSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-    ElemFreeWindow( applicationPayload->Window);
+    ElemFreeWindow(applicationPayload->Window);
     printf("Exit Sample\n");
 }
 
