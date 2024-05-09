@@ -32,13 +32,23 @@ jobs:
       run: tar -xvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
     - name: Run System Functions Tests
+      if: inputs.platform != 'osx'
       run: ./Tests/SystemFunctionsTests/SystemFunctionsTests
+
+    - name: Run System Functions Tests (MacOS)
+      if: inputs.platform == 'osx'
+      run: ./Tests/SystemFunctionsTests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
     
       #- name: Run Application Tests
         #run: ./Tests/ApplicationTests
     
     - name: Run Tools Tests
+      if: inputs.platform != 'osx'
       run: ./Tests/ToolsTests/ToolsTests
+
+    - name: Run Tools Tests (MacOS)
+      if: inputs.platform == 'osx'
+      run: ./Tests/ToolsTests/ToolsTests.app/Contents/MacOS/ToolsTests
 
       #- name: Run Graphics Tests
       #if: inputs.platform == 'win'

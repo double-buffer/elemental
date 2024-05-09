@@ -4,7 +4,11 @@ function(configure_resource_compilation target_name resource_list)
         set(SHADER_COMPILER_OPTIONS "--target-platform" "iOS")
     else()
         if(CMAKE_GENERATOR STREQUAL "Ninja")
-            set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ShaderCompiler/ShaderCompiler")
+            if (APPLE)
+                set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ShaderCompiler.app/Contents/MacOS/ShaderCompiler")
+            else()
+                set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ShaderCompiler/ShaderCompiler")
+            endif()
         else()
             set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/ShaderCompiler")
         endif()
@@ -108,23 +112,27 @@ function(configure_project_package target_name install_folder)
                 XCODE_EMBED_FRAMEWORKS_REMOVE_HEADERS_ON_COPY "YES"
             )
         else()
-            set(ELEMENTAL_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental.framework")
-
-            get_filename_component(FRAMEWORK_NAME "${ELEMENTAL_PATH}" NAME)
-            set(framework_destination "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.app/Contents/Frameworks/${FRAMEWORK_NAME}")
-
             add_custom_target(CopyFrameworkFolder${target_name} ALL)
 
-            # TODO: Remove also headers in the version directory
-            add_custom_command(TARGET CopyFrameworkFolder${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${framework_destination}"
-                COMMAND ${CMAKE_COMMAND} -E copy_directory "${ELEMENTAL_PATH}" "${framework_destination}"
-                COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Headers"
-                #COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Versions"
-                COMMENT "Copying framework folder to destination"
-            )
+            foreach(dependency IN LISTS ARG_DEPENDENCIES)
+                message("Dep: ${dependency}")
+                add_dependencies(CopyFrameworkFolder${target_name} ${dependency})
+            
+                set(ELEMENTAL_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dependency}.framework")
+                get_filename_component(FRAMEWORK_NAME "${ELEMENTAL_PATH}" NAME)
+                set(framework_destination "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.app/Contents/Frameworks/${FRAMEWORK_NAME}")
+            
+                # TODO: Remove also headers in the version directory
+                add_custom_command(TARGET CopyFrameworkFolder${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E make_directory "${framework_destination}"
+                    #COMMAND ${CMAKE_COMMAND} -E copy_directory "${ELEMENTAL_PATH}" "${framework_destination}"
+                    COMMAND cp -RP "${ELEMENTAL_PATH}/" "${framework_destination}/"
+                    COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Headers"
+                    #COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Versions"
+                    COMMENT "Copying ${dependency} framework folder to destination"
+                )
+            endforeach()
 
-            add_dependencies(CopyFrameworkFolder${target_name} Elemental)
             add_dependencies(${target_name} CopyFrameworkFolder${target_name})
         endif()
         
