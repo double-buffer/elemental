@@ -1,6 +1,6 @@
 function(configure_resource_compilation target_name resource_list)
     if(BUILD_FOR_IOS)
-        set(SHADER_COMPILER_BIN "${CMAKE_SOURCE_DIR}/build/bin/ShaderCompiler")
+        set(SHADER_COMPILER_BIN "${CMAKE_SOURCE_DIR}/build/bin/ShaderCompiler.app/Contents/MacOS/ShaderCompiler")
         set(SHADER_COMPILER_OPTIONS "--target-platform" "iOS")
     else()
         if(CMAKE_GENERATOR STREQUAL "Ninja")
@@ -138,7 +138,11 @@ function(configure_project_package target_name install_folder)
         endif()
         
         if(BUILD_FOR_IOS)
-            set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/iOS/Info.plist)
+            set_target_properties(${target_name} PROPERTIES 
+                MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/utilities/cmake/iOS/Info.plist
+                XCODE_ATTRIBUTE_DEVELOPMENT_TEAM ${APPLE_SIGNING_TEAM_ID}
+                XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
+            )
         else()
             #set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/MacOS/Info.plist)
         endif()
