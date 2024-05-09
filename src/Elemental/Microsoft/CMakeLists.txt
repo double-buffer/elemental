@@ -10,9 +10,4 @@ set(ELEMENTAL_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental/" PARENT_S
 
 function(copy_platform_dependencies target)
     copy_direct3d12_to_target(${target})
-
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
-        COMMENT "Copy Elemental Binaries"
-    )
 endfunction()

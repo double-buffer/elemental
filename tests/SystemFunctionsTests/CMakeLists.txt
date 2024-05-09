@@ -37,6 +37,4 @@ elseif(LINUX)
     target_link_libraries(SystemFunctionsTests PRIVATE ${GTK4_LIBRARIES})
 endif()
 
-install(TARGETS SystemFunctionsTests
-    RUNTIME DESTINATION tests
-    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
+configure_project_package(SystemFunctionsTests "tests")

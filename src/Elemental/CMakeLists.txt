@@ -20,6 +20,7 @@ add_subdirectory(${ELEM_PLATFORM_DIR})
 
 copy_platform_dependencies(Elemental)
 
+# TODO: Review that
 add_custom_command(TARGET Elemental POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/file.txt
     COMMENT "Touching file.txt after building ProjectA"
@@ -40,9 +41,4 @@ install(FILES Elemental.h ElementalLoader.c
 
 install(FILES ../../LICENSE
         DESTINATION Elemental
-)
-
-install(DIRECTORY ${ELEMENTAL_OUTPUT_DIR}
-        DESTINATION tests
-        USE_SOURCE_PERMISSIONS
 )

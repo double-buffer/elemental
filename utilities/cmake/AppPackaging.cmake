@@ -4,7 +4,7 @@ function(configure_resource_compilation target_name resource_list)
         set(SHADER_COMPILER_OPTIONS "--target-platform" "iOS")
     else()
         if(CMAKE_GENERATOR STREQUAL "Ninja")
-            set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ShaderCompiler")
+            set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ShaderCompiler/ShaderCompiler")
         else()
             set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/ShaderCompiler")
         endif()
@@ -78,27 +78,27 @@ function(configure_resource_compilation target_name resource_list)
     set(${resource_list} "${compiled_shaders}" PARENT_SCOPE)
 endfunction()
 
-function(configure_project_package target_name)
-    set(options "")
-    set(oneValueArgs "")
-    set(multiValueArgs RESOURCE_LIST)
+function(configure_project_package target_name install_folder)
+    cmake_parse_arguments(ARG "" "" "DEPENDENCIES;RESOURCES" ${ARGV})
 
-    cmake_parse_arguments(PARSE_ARGV 1 ARG "${options}" "${oneValueArgs}" "${multiValueArgs}")
-
-    list(LENGTH ARG_RESOURCE_LIST resource_list_length)
-    message(STATUS "Number of resources: ${resource_list_length}")
+    list(LENGTH ARG_DEPENDENCIES dependencies_length)
+    message("Number of Dependencies: ${dependencies_length}")
+            
+    list(LENGTH ARG_RESOURCES resources_length)
+    message("Number of resources: ${resources_length}")
 
     if(APPLE)
         set_target_properties(${target_name} PROPERTIES 
             MACOSX_BUNDLE "TRUE"
         )
 
-        if(NOT resource_list_length EQUAL 0)
+        if(NOT resources_length EQUAL 0)
             set_target_properties(${target_name} PROPERTIES 
-                RESOURCE ${resource_list}    
+                RESOURCE ${ARG_RESOURCES}    
             )
         endif()
 
+        # TODO: Use dependencies variable instead
         if(CMAKE_GENERATOR STREQUAL "Xcode")
             set(ELEMENTAL_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/Elemental.framework")
 
@@ -140,22 +140,31 @@ function(configure_project_package target_name)
 
         add_custom_target(CopyApplicationFolder${target_name} ALL)
 
+        add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
+            COMMENT "Creating package folder"
+        )
+
         if(WIN32)
-            add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
-                COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental" "${output_folder}"
-                COMMENT "Creating package folder and copying files"
-            )
+            foreach(dependency IN LISTS ARG_DEPENDENCIES)
+                message("Dep: ${dependency}")
+                add_dependencies(CopyApplicationFolder${target_name} ${dependency})
+            
+                add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dependency}" "${output_folder}"
+                    COMMENT "Copy ${dependency}"
+                )
+            endforeach()
         else()
+            #TODO: Remove linux specific code
             add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
                 COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libElemental.so" "${output_folder}"
                 COMMENT "Creating package folder and copying files"
             )
         endif()
 
-        if(NOT resource_list_length EQUAL 0)
-            foreach(file IN LISTS resource_list)
+        if(NOT resources_length EQUAL 0)
+            foreach(file IN LISTS ARG_RESOURCES)
                 get_filename_component(file_name "${file}" NAME)
                 get_filename_component(full_path "${file}" ABSOLUTE)
                 set(output_file "${output_folder}/Data/${file_name}")
@@ -176,8 +185,12 @@ function(configure_project_package target_name)
             add_dependencies(${target_name} CopyResources${target_name})
         endif()
 
-        add_dependencies(CopyApplicationFolder${target_name} Elemental)
         add_dependencies(${target_name} CopyApplicationFolder${target_name})
     endif()
+
+    install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}${APPFOLDER_EXTENSION}
+        DESTINATION ${install_folder}
+        USE_SOURCE_PERMISSIONS
+    )
 endfunction()
 

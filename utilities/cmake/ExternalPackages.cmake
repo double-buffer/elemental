@@ -1,30 +1,20 @@
-#TODO: Use cmake add external project instead?
 function(extract_zip_file pathArchive pathExtract)
-    if(${pathArchive} MATCHES "\\.zip$")
+    if (${pathArchive} MATCHES "\\.zip$")
         set(IS_ZIP TRUE)
-    elseif(${pathArchive} MATCHES "\\.tar\\.gz$")
+    elseif (${pathArchive} MATCHES "\\.tar\\.gz$")
         set(IS_TAR_GZ TRUE)
     else()
         message(FATAL_ERROR "Unsupported archive format: ${pathArchive}")
     endif()
 
     if (UNIX)
-        if(IS_ZIP)
-            # Use unzip command on Unix-based systems for .zip files
-            execute_process(
-                COMMAND unzip -q ${pathArchive} -d ${pathExtract}
-            )
-        elseif(IS_TAR_GZ)
-            # Use tar command on Unix-based systems for .tar.gz files
-            execute_process(
-                COMMAND tar -xzf ${pathArchive} -C ${pathExtract}
-            )
+        if (IS_ZIP)
+            execute_process(COMMAND unzip -q ${pathArchive} -d ${pathExtract})
+        elseif (IS_TAR_GZ)
+            execute_process(COMMAND tar -xzf ${pathArchive} -C ${pathExtract})
         endif()
     elseif (WIN32)
-        # Use powershell command on Windows systems
-        execute_process(
-            COMMAND powershell -Command "Expand-Archive -Force -Path '${pathArchive}' -DestinationPath '${pathExtract}'"
-        )
+        execute_process(COMMAND powershell -Command "Expand-Archive -Force -Path '${pathArchive}' -DestinationPath '${pathExtract}'")
     endif()
 endfunction()
 
@@ -41,7 +31,7 @@ function(get_github_release repo tag filenamePattern pathExtract)
     set(json_ratelimit "${pathExtract}/rate_limit.json")
     set(json_output_file "${pathExtract}/DownloadGitHubReleaseAsset-${repo}-${tag}.json")
 
-    if(DEFINED ENV{GITHUB_TOKEN})
+    if (DEFINED ENV{GITHUB_TOKEN})
         file(DOWNLOAD "https://api.github.com/rate_limit" ${json_ratelimit}
             HTTPHEADER "Authorization: token $ENV{GITHUB_TOKEN}"
             HTTPHEADER "Accept: application/vnd.github+json"
@@ -55,15 +45,12 @@ function(get_github_release repo tag filenamePattern pathExtract)
             HTTPHEADER "Accept: application/vnd.github+json"
         )
     else()
-        message(WARNING "GITHUB_TOKEN not found. Using unauthenticated requests.")
-
         file(DOWNLOAD ${releasesUri} ${json_output_file}
             HTTPHEADER "Accept: application/vnd.github+json"
         )
     endif()
 
     file(READ ${json_output_file} releasesJson)
-    message(STATUS "Received releases JSON: ${releasesJson}")
 
     # Convert filenamePattern to regex pattern
     string(REGEX REPLACE "\\." "\\\\." filenamePattern "${filenamePattern}")
@@ -75,9 +62,9 @@ function(get_github_release repo tag filenamePattern pathExtract)
     string(REGEX REPLACE "\"browser_download_url\": \"" "" downloadUrl "${downloadUrlMatch}")
     string(REGEX REPLACE "\".*" "" downloadUrl "${downloadUrl}")
 
-    if("${downloadUrl}" MATCHES "\\.zip$")
+    if ("${downloadUrl}" MATCHES "\\.zip$")
         set(fileExt ".zip")
-    elseif("${downloadUrl}" MATCHES "\\.tar\\.gz$")
+    elseif ("${downloadUrl}" MATCHES "\\.tar\\.gz$")
         set(fileExt ".tar.gz")
     else()
         message(FATAL_ERROR "Unsupported file format: ${downloadUrl}")
@@ -87,14 +74,9 @@ function(get_github_release repo tag filenamePattern pathExtract)
     
     # Download the asset to a temporary zip file
     message(STATUS "Downloading file ${downloadUrl}")
-    execute_process(
-        COMMAND curl -s -L -o ${pathZip} ${downloadUrl}
-    )
+    file(DOWNLOAD ${downloadUrl} ${pathZip})
 
-    # Extract the downloaded zip file to the extractPath
     extract_zip_file(${pathZip} ${pathExtract})
-
-    # Clean up the temporary zip file
     file(REMOVE ${pathZip})
 
 endfunction()
@@ -115,13 +97,13 @@ function(download_and_extract_nuget_package_path target packageId packageVersion
     set(DEFAULT_BIN_DIR "build/native/bin/${CMAKE_SYSTEM_PROCESSOR}")
 
     # Use the custom include and lib paths if provided, otherwise use the default paths
-    if(includePath)
+    if (includePath)
         set(INCLUDE_DIR "${PACKAGE_DIR}/${includePath}")
     else()
         set(INCLUDE_DIR "${PACKAGE_DIR}/${DEFAULT_INCLUDE_DIR}")
     endif()
 
-    if(libPath)
+    if (libPath)
         set(LIB_DIR "${PACKAGE_DIR}/${libPath}")
     else()
         set(LIB_DIR "${PACKAGE_DIR}/${DEFAULT_LIB_DIR}")

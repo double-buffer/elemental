@@ -10,9 +10,4 @@ set(ELEMENTALTOOLS_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ElementalTools/
 function(copy_platform_dependencies target)
     copy_dxc_to_target(${target})
     copy_MetalShaderConverter_to_target(${target})
-
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ElementalTools" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
-        COMMENT "Copy Elemental Tools Binaries"
-    )
 endfunction()

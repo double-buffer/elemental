@@ -36,7 +36,3 @@ install(FILES ../../LICENSE
         DESTINATION ElementalTools
 )
 
-install(DIRECTORY ${ELEMENTALTOOLS_OUTPUT_DIR}
-        DESTINATION tests
-        USE_SOURCE_PERMISSIONS
-)

@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.28)
-include(ExternalProject)
 
 if(WIN32)
     set(CMAKE_SYSTEM_PROCESSOR "x64")
@@ -59,10 +58,16 @@ else()
     project(Elemental LANGUAGES C CXX)
 endif()
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/utilities/cmake)
-include(functions)
+set(UTILITIES "./utilities/cmake")
 
-# TODO: Don't include tools dep for the runtime
+foreach(UTILITY IN LISTS UTILITIES)
+    file(GLOB UTILITY_FILES "${UTILITY}/*.cmake")
+
+    foreach(UTILITY_FILE IN LISTS UTILITY_FILES)
+        include(${UTILITY_FILE})
+    endforeach()
+endforeach()
+
 add_subdirectory(external)
 add_subdirectory(src/Elemental/Common)
 add_subdirectory(src/Elemental)
@@ -71,15 +76,15 @@ if(NOT BUILD_FOR_IOS)
 add_subdirectory(src/ElementalTools)
 endif()
 
-add_subdirectory(tests/SystemFunctionsTests)
-add_subdirectory(tests/ApplicationTests)
-add_subdirectory(tests/GraphicsTests)
+set(SUB_PROJECTS "./tests" "./samples")
 
-if(NOT BUILD_FOR_IOS)
-add_subdirectory(tests/ToolsTests)
-endif()
-
-add_subdirectory(samples)
+foreach(SUB_PROJECT IN LISTS SUB_PROJECTS)
+    file(GLOB_RECURSE SUB_PROJECT_FILES "${SUB_PROJECT}/**/CMakeLists.txt")
+    foreach(SUB_PROJECT_FILE IN LISTS SUB_PROJECT_FILES)
+        get_filename_component(SUB_PROJECT_DIR ${SUB_PROJECT_FILE} DIRECTORY)
+        add_subdirectory(${SUB_PROJECT_DIR})
+    endforeach()
+endforeach()
 
 # DEBUG Deps
 #set_property(GLOBAL PROPERTY GLOBAL_DEPENDS_DEBUG_MODE 1)

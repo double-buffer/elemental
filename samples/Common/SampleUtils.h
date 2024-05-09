@@ -189,7 +189,7 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
     char temp[256];
-    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize: %ux%u@%.1f, GraphicsDevice: DeviceName=%s, GraphicsApi=%s, Platform=%s, AvailableMemory=%llu)", 
+    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize=%ux%u@%.1f, GraphicsDevice=%s, GraphicsApi=%s, Platform=%s, AvailableMemory=%llu)", 
                         applicationName,
                         fps,
                         frameTimeInSeconds * 1000.0,
