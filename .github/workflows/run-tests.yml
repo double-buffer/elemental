@@ -33,27 +33,27 @@ jobs:
 
     - name: Run System Functions Tests
       if: inputs.platform != 'osx'
-      run: ./Tests/SystemFunctionsTests/SystemFunctionsTests
+      run: ./tests/SystemFunctionsTests/SystemFunctionsTests
 
     - name: Run System Functions Tests (MacOS)
       if: inputs.platform == 'osx'
-      run: ./Tests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
+      run: ./tests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
     
     - name: Run Application Tests
       if: inputs.platform != 'osx'
-      run: ./Tests/ApplicationTests/ApplicationTests
+      run: ./tests/ApplicationTests/ApplicationTests
 
     - name: Run Application Tests (MacOS)
       if: inputs.platform == 'osx'
-      run: ./Tests/ApplicationTests.app/Contents/MacOS/ApplicationTests
+      run: ./tests/ApplicationTests.app/Contents/MacOS/ApplicationTests
     
     - name: Run Tools Tests
       if: inputs.platform != 'osx'
-      run: ./Tests/ToolsTests/ToolsTests
+      run: ./tests/ToolsTests/ToolsTests
 
     - name: Run Tools Tests (MacOS)
       if: inputs.platform == 'osx'
-      run: ./Tests/ToolsTests.app/Contents/MacOS/ToolsTests
+      run: ./tests/ToolsTests.app/Contents/MacOS/ToolsTests
 
       #- name: Run Graphics Tests
       #if: inputs.platform == 'win'
