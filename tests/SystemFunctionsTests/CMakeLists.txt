@@ -35,6 +35,7 @@ elseif(LINUX)
     target_link_directories(SystemFunctionsTests PRIVATE ${GTK4_LIBRARY_DIRS})
     target_compile_options(SystemFunctionsTests PRIVATE ${GTK4_CFLAGS_OTHER})
     target_link_libraries(SystemFunctionsTests PRIVATE ${GTK4_LIBRARIES})
+
 endif()
 
 configure_project_package(SystemFunctionsTests "tests")

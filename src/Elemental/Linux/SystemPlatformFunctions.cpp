@@ -13,15 +13,16 @@ ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena memoryArena)
 
     if (count == -1) 
     {
+        #ifdef ElemAPI
         SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot get the current executable path.");
+        #endif
         return "";
     }
     
     executablePath[count] = '\0';
-    auto directory = dirname(executablePath);
 
-    auto result = SystemPushArrayZero<char>(memoryArena, strlen(directory));
-    SystemCopyBuffer<char>(result, directory);
+    auto result = SystemPushArrayZero<char>(memoryArena, strlen(executablePath));
+    SystemCopyBuffer<char>(result, executablePath);
 
     return result;
 

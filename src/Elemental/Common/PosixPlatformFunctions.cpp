@@ -227,7 +227,11 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
 void* SystemPlatformLoadLibrary(ReadOnlySpan<char> libraryName)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
+    #ifdef __linux__
+    auto fullName = SystemConcatBuffers<char>(stackMemoryArena, libraryName, ".so");
+    #else
     auto fullName = SystemConcatBuffers<char>(stackMemoryArena, libraryName, ".dylib");
+    #endif
     fullName = SystemConcatBuffers<char>(stackMemoryArena, "lib", fullName);
 
     return dlopen(fullName.Pointer, RTLD_NOW);

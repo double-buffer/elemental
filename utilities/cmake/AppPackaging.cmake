@@ -158,24 +158,16 @@ function(configure_project_package target_name install_folder)
             COMMENT "Creating package folder"
         )
 
-        if(WIN32)
-            foreach(dependency IN LISTS ARG_DEPENDENCIES)
-                message("Dep: ${dependency}")
-                add_dependencies(CopyApplicationFolder${target_name} ${dependency})
-            
-                add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dependency}" "${output_folder}"
-                    COMMENT "Copy ${dependency}"
-                )
-            endforeach()
-        else()
-            #TODO: Remove linux specific code
+        foreach(dependency IN LISTS ARG_DEPENDENCIES)
+            message("Dep: ${dependency}")
+            add_dependencies(CopyApplicationFolder${target_name} ${dependency})
+        
             add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libElemental.so" "${output_folder}"
-                COMMENT "Creating package folder and copying files"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dependency}" "${output_folder}"
+                COMMENT "Copy ${dependency}"
             )
-        endif()
-
+        endforeach()
+      
         if(NOT resources_length EQUAL 0)
             foreach(file IN LISTS ARG_RESOURCES)
                 get_filename_component(file_name "${file}" NAME)
