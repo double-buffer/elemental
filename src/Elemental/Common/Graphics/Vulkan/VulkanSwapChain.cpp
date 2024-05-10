@@ -139,6 +139,10 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     {
         // TODO: This is only needed on win32? Normally on wayland even if use an update handle
         // We should be able to call this function
+        // BUG: On win32, it seems laggy maybe something is wrong here. (We get 144 fps but it seems laggy)
+        // It only happens on the first launch and for some reason if we go fullscreen it is fluid.
+        // Looks like a windowed issue where we miss the vsync
+        // The issue seems to be resolved for now... to monitor!
         #ifdef _WIN32
         auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
 
