@@ -196,8 +196,8 @@ UTEST(DataPool, ConcurrentAdd)
     // Arrange
     const int32_t itemCount = 80000;
     const int32_t threadCount = 32;
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dataPool = SystemCreateDataPool<DataPoolTestData, DataPoolTestDataFull>(stackMemoryArena, itemCount);
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dataPool = SystemCreateDataPool<DataPoolTestData, DataPoolTestDataFull>(memoryArena, itemCount);
     
     // Act
     SystemThread threads[threadCount];
@@ -208,7 +208,7 @@ UTEST(DataPool, ConcurrentAdd)
         threadParameters[i].DataPool = dataPool;
         threadParameters[i].ItemCount = itemCount / threadCount;
         threadParameters[i].ThreadId = i;
-        threadParameters[i].Handles = SystemPushArray<ElemHandle>(stackMemoryArena, threadParameters[i].ItemCount);
+        threadParameters[i].Handles = SystemPushArray<ElemHandle>(memoryArena, threadParameters[i].ItemCount);
 
         threads[i] = SystemCreateThread(DataPoolConcurrentAddFunction, &threadParameters[i]);
     }
@@ -246,8 +246,8 @@ UTEST(DataPool, ConcurrentRemove)
     // Arrange
     const int32_t itemCount = 80000;
     const int32_t threadCount = 32;
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dataPool = SystemCreateDataPool<DataPoolTestData, DataPoolTestDataFull>(stackMemoryArena, itemCount);
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dataPool = SystemCreateDataPool<DataPoolTestData, DataPoolTestDataFull>(memoryArena, itemCount);
     
     // Act
     SystemThread threads[threadCount];
@@ -260,7 +260,7 @@ UTEST(DataPool, ConcurrentRemove)
         threadParameters[i].DataPool = dataPool;
         threadParameters[i].ItemCount = itemCount / 2 / threadCount;
         threadParameters[i].ThreadId = i;
-        threadParameters[i].Handles = SystemPushArray<ElemHandle>(stackMemoryArena, threadParameters[i].ItemCount);
+        threadParameters[i].Handles = SystemPushArray<ElemHandle>(memoryArena, threadParameters[i].ItemCount);
 
         threads[i] = SystemCreateThread(DataPoolConcurrentAddFunction, &threadParameters[i]);
     }
@@ -276,7 +276,7 @@ UTEST(DataPool, ConcurrentRemove)
         threadParameters2[i].DataPool = dataPool;
         threadParameters2[i].ItemCount = itemCount / 2 / threadCount;
         threadParameters2[i].ThreadId = i;
-        threadParameters2[i].Handles = SystemPushArray<ElemHandle>(stackMemoryArena, threadParameters2[i].ItemCount);
+        threadParameters2[i].Handles = SystemPushArray<ElemHandle>(memoryArena, threadParameters2[i].ItemCount);
 
         threads2[i] = SystemCreateThread(DataPoolConcurrentAddFunction, &threadParameters2[i]);
         threads[i] = SystemCreateThread(DataPoolConcurrentRemoveFunction, &threadParameters[i]);

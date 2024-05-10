@@ -229,7 +229,7 @@ UTEST(Dictionary, BigDictionary)
 {
     // Arrange
     auto maxElements = 1000000;
-    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto stackMemoryArena = SystemAllocateMemoryArena();
     auto memoryArena = SystemAllocateMemoryArena();
     auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(memoryArena, maxElements);
     
@@ -252,8 +252,8 @@ UTEST(Dictionary, ConcurrentAdd)
     // Arrange
     const int32_t itemCount = 80000;
     const int32_t threadCount = 32;
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, itemCount);
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(memoryArena, itemCount);
     
     // Act
     SystemThread threads[threadCount];
@@ -272,14 +272,21 @@ UTEST(Dictionary, ConcurrentAdd)
     }
 
     // Assert
-    auto testEnumerator = SystemGetDictionaryEnumerator(dictionary);
     auto count = 0;
-    auto testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
 
-    while (testValue != nullptr)
+    for (int32_t i = 0; i < threadCount; i++)
     {
-        count++;
-        testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
+        auto threadItemCount = (itemCount / threadCount);
+
+        for (int32_t j = 0; j < threadItemCount; j++)
+        {
+            auto key = i * threadItemCount + j;
+
+            if (SystemDictionaryContainsKey(dictionary, key))
+            {
+                count++;
+            }
+        }
     }
 
     ASSERT_EQ(itemCount, count);
@@ -290,8 +297,8 @@ UTEST(Dictionary, ConcurrentRemove)
     // Arrange
     const int32_t itemCount = 32000;
     const int32_t threadCount = 32;
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, itemCount);
+    auto memoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(memoryArena, itemCount);
     
     for (int32_t i = 0; i < itemCount; i++)
     {
@@ -315,14 +322,21 @@ UTEST(Dictionary, ConcurrentRemove)
     }
 
     // Assert
-    auto testEnumerator = SystemGetDictionaryEnumerator(dictionary);
     auto count = 0;
-    auto testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
 
-    while (testValue != nullptr)
+    for (int32_t i = 0; i < threadCount; i++)
     {
-        count++;
-        testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
+        auto threadItemCount = (itemCount / threadCount);
+
+        for (int32_t j = 0; j < threadItemCount; j++)
+        {
+            auto key = i * threadItemCount + j;
+
+            if (SystemDictionaryContainsKey(dictionary, key))
+            {
+                count++;
+            }
+        }
     }
 
     ASSERT_EQ(itemCount / 2, count);
@@ -365,41 +379,3 @@ UTEST(Dictionary, ContainsKey_KeyStruct)
     ASSERT_TRUE(testValue);
 }
 
-UTEST(Dictionary, Enumeration) 
-{
-    // Arrange
-    const int32_t maxEntries = 100;
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto dictionary = SystemCreateDictionary<int32_t, DictionaryTestStruct>(stackMemoryArena, maxEntries);
-    
-    // Act
-    for (int32_t i = 0; i < maxEntries / 2; i++)
-    {
-        DictionaryTestStruct testStruct = {};
-        testStruct.Value1 = i;
-        testStruct.Value2 = i * i;
-
-        SystemAddDictionaryEntry(dictionary, i, testStruct);
-    }
-
-    // Act
-    auto testEnumerator = SystemGetDictionaryEnumerator(dictionary);
-    auto count = 0;
-    DictionaryTestStruct resultItems[maxEntries];
-    auto testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
-
-    while (testValue != nullptr)
-    {
-        resultItems[count++] = *testValue;
-        testValue = SystemGetDictionaryEnumeratorNextValue(&testEnumerator);
-    }
-
-    // Assert
-    ASSERT_EQ(maxEntries / 2, count);
-
-    for (int32_t i = 0; i < maxEntries / 2; i++)
-    {
-        ASSERT_EQ(i, resultItems[i].Value1);
-        ASSERT_EQ(i * i, resultItems[i].Value2);
-    }
-}

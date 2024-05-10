@@ -28,19 +28,6 @@ struct SystemDictionary
 };
 
 /**
- * Enumerator structure for iterating over a SystemDictionary.
- * 
- * @tparam TKey The type of the keys.
- * @tparam TValue The type of the values.
- */
-template<typename TKey, typename TValue>
-struct SystemDictionaryEnumerator
-{
-    SystemDictionary<TKey, TValue> Dictionary; ///< The dictionary being enumerated.
-    size_t Index; ///< Current index in the partition.
-};
-
-/**
  * Creates a dictionary with a specified maximum number of items.
  * 
  * @tparam TKey The type of the keys.
@@ -176,26 +163,6 @@ bool SystemDictionaryContainsKey(SystemDictionary<ReadOnlySpan<char>, TValue> di
  */
 template<typename TValue, typename T>
 bool SystemDictionaryContainsKey(SystemDictionary<ReadOnlySpan<T>, TValue> dictionary, ReadOnlySpan<T> key);
-
-/**
- * Gets an enumerator for a given dictionary.
- * @tparam TKey The type of the keys.
- * @tparam TValue The type of the values.
- * @param dictionary The dictionary to enumerate.
- * @return A SystemDictionaryEnumerator for the dictionary.
- */
-template<typename TKey, typename TValue>
-SystemDictionaryEnumerator<TKey, TValue> SystemGetDictionaryEnumerator(SystemDictionary<TKey, TValue> dictionary);
-
-/**
- * Retrieves the next value in the dictionary enumeration.
- * @tparam TKey The type of the keys.
- * @tparam TValue The type of the values.
- * @param enumerator Pointer to the enumerator.
- * @return Pointer to the next value in the enumeration, or nullptr if at the end.
- */
-template<typename TKey, typename TValue>
-TValue* SystemGetDictionaryEnumeratorNextValue(SystemDictionaryEnumerator<TKey, TValue>* enumerator);
 
 /**
  * Prints debug information for a given dictionary. This function is useful for 

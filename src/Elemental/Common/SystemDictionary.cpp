@@ -392,35 +392,6 @@ bool SystemDictionaryContainsKey(SystemDictionary<ReadOnlySpan<T>, TValue> dicti
 }
 
 template<typename TKey, typename TValue>
-SystemDictionaryEnumerator<TKey, TValue> SystemGetDictionaryEnumerator(SystemDictionary<TKey, TValue> dictionary)
-{
-    SystemDictionaryEnumerator<TKey, TValue> result = {};
-    result.Dictionary = dictionary;
-    result.Index = 0;
-
-    return result;
-}
-
-template<typename TKey, typename TValue>
-TValue* SystemGetDictionaryEnumeratorNextValue(SystemDictionaryEnumerator<TKey, TValue>* enumerator)
-{
-    auto storage = enumerator->Dictionary.Storage;
-
-    while (enumerator->Index < storage->Entries.Length)
-    {
-        auto result = &(storage->Entries[enumerator->Index]);
-        enumerator->Index++;
-        
-        if (result->Hash != 0)
-        {
-            return &result->Value;
-        }
-    }
-
-    return nullptr;
-}
-
-template<typename TKey, typename TValue>
 void SystemDebugDictionary(SystemDictionary<TKey, TValue> dictionary)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();

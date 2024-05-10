@@ -314,6 +314,11 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
 
     if (!needToCommit)
     {
+        if (memoryArena.Storage == stackMemoryArenaStorage)
+        {
+            SystemPlatformClearMemory(pointer, sizeInBytes);
+        }
+
         return;
     }
 
@@ -344,6 +349,11 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
     {
         SystemAtomicStore(storage->IsCommitOperationInProgres, false);
     }
+
+    if (memoryArena.Storage == stackMemoryArenaStorage)
+    {
+        SystemPlatformClearMemory(pointer, sizeInBytes);
+    }
 }
 
 void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes)
@@ -355,7 +365,7 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
     {
         return;
     }
-    
+
     auto pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
     auto needToDecommit = false;
 
@@ -404,13 +414,6 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
                 SystemPlatformDecommitMemory(pagePointer, systemPageSizeInBytes);
                 ClearPageCommitted(storage, (uint32_t)i);
                 storage->CommittedPagesCount--;
-            }
-            else if (memoryArena.Storage == stackMemoryArenaStorage)
-            {
-                auto endPagePointer = pagePointer + systemPageSizeInBytes;
-                auto clearPointer = SystemMax(pagePointer, (uint8_t*)pointer);
-
-                SystemPlatformClearMemory(clearPointer, endPagePointer - clearPointer);
             }
         }
     }
@@ -476,9 +479,8 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
     else
     {
         pointer = SystemAtomicSubstract(storage->CurrentPointer, sizeInBytes);
+        SystemDecommitMemory(memoryArena, pointer - sizeInBytes, sizeInBytes);
     }
-
-    SystemDecommitMemory(memoryArena, pointer - sizeInBytes, sizeInBytes);
 }
 
 void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes)
