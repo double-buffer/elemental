@@ -22,6 +22,10 @@ jobs:
       with:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./
+    
+    - name: Setup Dependencies (Linux)
+      if: inputs.platform == 'linux'
+      run: sudo apt-get update && sudo apt-get install -y libgtk-4
 
     - name: Extract Tests Archive (Windows)
       if: inputs.platform == 'win'
