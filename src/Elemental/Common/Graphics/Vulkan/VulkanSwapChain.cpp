@@ -203,6 +203,7 @@ static void WaylandFrameCallback(void* data, wl_callback* callback, uint32_t tim
     auto parameters = (WaylandCallbackParameters*)data;
 
     // TODO: investigate frame time
+    // See: https://gitlab.gnome.org/GNOME/gtk/-/blob/main/gdk/wayland/gdksurface-wayland.c
     //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wayland callback: %u", time);
 
     CheckVulkanAvailableSwapChain(parameters->SwapChain);

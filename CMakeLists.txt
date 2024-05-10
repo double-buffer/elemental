@@ -10,6 +10,8 @@ elseif(LINUX)
     set(CMAKE_CXX_COMPILER "clang++")
     set(CMAKE_C_COMPILER "clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
 else()
     if(BUILD_FOR_IOS)
         set(CMAKE_SYSTEM_NAME iOS)
@@ -26,6 +28,9 @@ else()
     add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wall>)
     add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wextra>)
     add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wpedantic>)
+
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
 
     find_program(DSYMUTIL_PROGRAM dsymutil)
     # TODO: This method work when we need to debug but it causes errors when recompiling

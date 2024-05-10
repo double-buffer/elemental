@@ -35,7 +35,6 @@ struct MemoryArenaStorage
     MemoryArena StackExtraStorage;
     uint8_t StackLevel;
     uint8_t StackMinAllocatedLevel;
-    size_t StackBytesToClear;
 };
 
 struct PageSizeIndexes
@@ -114,9 +113,8 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     auto headerResized = ResizeToPageSizeMultiple(headerSizeInBytes, systemPageSizeInBytes);
 
     // HACK: This is needed to prevent a bug in macos :(
-    SystemPlatformCommitMemory(storage, sizeResized > headerResized ? headerResized + 1 : headerResized);
-
-    // BUG: On linux we have a lot of issues here!
+    //SystemPlatformCommitMemory(storage, sizeResized > headerResized ? headerResized + 1 : headerResized);
+    SystemPlatformCommitMemory(storage, headerResized);
 
     storage->CurrentPointer = (uint8_t*)storage + headerSizeInBytes;
     storage->SizeInBytes = sizeInBytes;
@@ -128,7 +126,6 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     storage->StackExtraStorage = {};
     storage->StackLevel = 0;
     storage->StackMinAllocatedLevel = 255;
-    storage->StackBytesToClear = 0;
 
     auto headerPageCount = (size_t)SystemRoundUp((float)headerResized / systemPageSizeInBytes);
 
@@ -393,16 +390,28 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
     {
         SystemAtomicReplace(storage->IsCommitOperationInProgres, false, true);
     }
-
+    
     for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
     {
         auto pageInfos = &storage->PagesInfos[i];
 
-        if (IsPageCommitted(storage, (uint32_t)i) && (int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
+        if (IsPageCommitted(storage, (uint32_t)i))
         {
-            SystemPlatformDecommitMemory((uint8_t*)storage + i * systemPageSizeInBytes, systemPageSizeInBytes);
-            ClearPageCommitted(storage, (uint32_t)i);
-            storage->CommittedPagesCount--;
+            auto pagePointer = (uint8_t*)storage + i * systemPageSizeInBytes;
+
+            if ((int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
+            {
+                SystemPlatformDecommitMemory(pagePointer, systemPageSizeInBytes);
+                ClearPageCommitted(storage, (uint32_t)i);
+                storage->CommittedPagesCount--;
+            }
+            else if (memoryArena.Storage == stackMemoryArenaStorage)
+            {
+                auto endPagePointer = pagePointer + systemPageSizeInBytes;
+                auto clearPointer = SystemMax(pagePointer, (uint8_t*)pointer);
+
+                SystemPlatformClearMemory(clearPointer, endPagePointer - clearPointer);
+            }
         }
     }
 
@@ -432,12 +441,6 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
     {
         pointer = storage->CurrentPointer;
         storage->CurrentPointer += sizeInBytes;
-
-        if (storage->StackBytesToClear > 0)
-        {
-            SystemPlatformClearMemory(pointer, storage->StackBytesToClear);
-            storage->StackBytesToClear = 0;
-        }
     }
     else
     {
@@ -469,14 +472,13 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
     {
         pointer = storage->CurrentPointer;
         storage->CurrentPointer -= sizeInBytes;
-        storage->StackBytesToClear += sizeInBytes;
     }
     else
     {
         pointer = SystemAtomicSubstract(storage->CurrentPointer, sizeInBytes);
     }
 
-    SystemDecommitMemory(memoryArena, pointer, sizeInBytes);
+    SystemDecommitMemory(memoryArena, pointer - sizeInBytes, sizeInBytes);
 }
 
 void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes)

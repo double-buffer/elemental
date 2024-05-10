@@ -294,22 +294,19 @@ UTEST(Memory, AllocateReservedCommit)
     auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
     
     // Act
-    printf("Fist Commit\n");
     auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
     SystemCommitMemory(memoryArena, array.Pointer + offset, bufferSize);
 
     for (size_t i = 0; i < bufferSize; i++)
     {
-        array[offset - bufferSize + i] = i % 256;
+        array[offset + i] = i % 256;
     }
 
-    printf("Second Commit\n");
     SystemCommitMemory(memoryArena, array.Pointer + offset2, bufferSize);
-    printf("After Commit\n");
 
     for (size_t i = 0; i < bufferSize; i++)
     {
-        array[offset2 - bufferSize + i] = i % 256;
+        array[offset2 + i] = i % 256;
     }
 
     // Assert
@@ -335,14 +332,14 @@ UTEST(Memory, AllocateReservedDecommit)
 
     for (size_t i = 0; i < bufferSize; i++)
     {
-        array[offset - bufferSize + i] = i % 256;
+        array[offset + i] = i % 256;
     }
 
     SystemCommitMemory(memoryArena, array.Pointer + offset2, bufferSize);
 
     for (size_t i = 0; i < bufferSize; i++)
     {
-        array[offset2 - bufferSize + i] = i % 256;
+        array[offset2 + i] = i % 256;
     }
 
     // Act
