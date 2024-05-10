@@ -25,7 +25,7 @@ jobs:
     
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
-      run: sudo apt-get update && sudo apt-get install -y libgtk-4
+      run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
 
     - name: Extract Tests Archive (Windows)
       if: inputs.platform == 'win'
