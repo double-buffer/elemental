@@ -28,7 +28,7 @@ GtkWindowDataFull* GetGtkWindowDataFull(ElemWindow window)
 
 void WaylandRegistryHandler(void *data, struct wl_registry *registry, uint32_t id, const char *interface, uint32_t version)
 { 
-    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Got a registry event for %s id %d", interface, id);
+    //SystemLogDebugMessage(ElemLogMessageCategory_Application, "Got a registry event for %s id %d", interface, id);
 
     // TODO: Replace by system functions
     if (strcmp(interface, "wl_subcompositor") == 0) 
@@ -139,15 +139,12 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
-    /*auto windowData = GetGtkWindowData(window);
+    auto windowData = GetGtkWindowData(window);
     SystemAssert(windowData);
 
-    auto windowDataFull = GetGtkWindowDataFull(window);
-    SystemAssert(windowDataFull);
+    gtk_window_close(GTK_WINDOW(windowData->GtkWindow));
 
-    // TODO: Close application if last window
-
-    SystemRemoveDataPoolItem(windowDataPool, window);*/
+    SystemRemoveDataPoolItem(windowDataPool, window);
 }
 
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)

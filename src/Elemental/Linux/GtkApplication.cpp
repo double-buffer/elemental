@@ -42,8 +42,6 @@ void GtkAppActivate(GApplication* app, gpointer* userData)
     
     g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", true, nullptr);
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Welcome to GTK! %s", parameters->ApplicationName);
-
     if (parameters->InitHandler)
     {
         parameters->InitHandler(parameters->Payload);
@@ -106,6 +104,5 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
 
 ElemAPI void ElemExitApplication(int32_t exitCode)
 {
-    // TODO:
-    SystemLogErrorMessage(ElemLogMessageCategory_Application, "Not implemented.");
+    g_application_quit(G_APPLICATION(GlobalGtkApplication));
 }

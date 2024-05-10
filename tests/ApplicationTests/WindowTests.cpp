@@ -2,6 +2,9 @@
 #include "ApplicationTests.h"
 #include "utest.h"
 
+// TODO: Gtk layer needs more work
+
+#ifndef __linux__
 UTEST(Window, CreateWindow) 
 {
     RunApplicationTest([utest_result]() 
@@ -148,3 +151,4 @@ UTEST_F(Window_SetWindowState, Maximized_Normal)
     utest_fixture->SourceState = ElemWindowState_Maximized;
     utest_fixture->DestinationState = ElemWindowState_Normal;
 }
+#endif

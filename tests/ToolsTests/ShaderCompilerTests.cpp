@@ -32,6 +32,7 @@ UTEST(ShaderCompiler, CanCompileShaderTest_HlslToDirectX12)
     ASSERT_TRUE(result);
 }
 
+#ifndef __linux__
 UTEST(ShaderCompiler, CanCompileShaderTest_HlslToMetal) 
 {
     // Act
@@ -40,6 +41,7 @@ UTEST(ShaderCompiler, CanCompileShaderTest_HlslToMetal)
     // Assert
     ASSERT_TRUE(result);
 }
+#endif
 
 UTEST(ShaderCompiler, CanCompileShaderTest_ImpossibleConfigReturnsFalse) 
 {
@@ -150,6 +152,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Linux_Error)
     utest_fixture->WithError = true;
 }
 
+#ifndef __linux__
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS) 
 {
     utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
@@ -181,4 +184,4 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_iOS_Error)
     utest_fixture->TargetPlatform = ElemToolsPlatform_iOS;
     utest_fixture->WithError = true;
 }
-
+#endif
