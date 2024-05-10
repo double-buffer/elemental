@@ -82,7 +82,7 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
 
     auto parametersCopy = SystemDuplicateBuffer(ApplicationMemoryArena, ReadOnlySpan<ElemRunApplicationParameters>((ElemRunApplicationParameters*)parameters, 1));
 
-    GlobalGtkApplication = gtk_application_new("io.libelemental", (GApplicationFlags)0);
+    GlobalGtkApplication = gtk_application_new("io.libelemental", G_APPLICATION_DEFAULT_FLAGS);
 
     g_signal_connect(GlobalGtkApplication, "activate", G_CALLBACK(GtkAppActivate), parametersCopy.Pointer);
 
