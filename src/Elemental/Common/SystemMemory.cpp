@@ -111,9 +111,6 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     auto storage = (MemoryArenaStorage*)SystemPlatformReserveMemory(sizeResized);
 
     auto headerResized = ResizeToPageSizeMultiple(headerSizeInBytes, systemPageSizeInBytes);
-
-    // HACK: This is needed to prevent a bug in macos :(
-    //SystemPlatformCommitMemory(storage, sizeResized > headerResized ? headerResized + 1 : headerResized);
     SystemPlatformCommitMemory(storage, headerResized);
 
     storage->CurrentPointer = (uint8_t*)storage + headerSizeInBytes;

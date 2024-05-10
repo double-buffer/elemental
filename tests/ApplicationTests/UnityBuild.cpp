@@ -23,6 +23,7 @@ int main(int argc, const char* argv[])
     ElemConfigureLogHandler(ElemConsoleLogHandler);
     #endif
 
+    #ifndef __linux__
     ApplicationTestPayload payload =
     {
         .argc = argc,
@@ -36,5 +37,6 @@ int main(int argc, const char* argv[])
     };
 
     ElemRunApplication(&runParameters);
+    #endif
     return 0;
 }
