@@ -181,6 +181,21 @@ const char* SampleGetGraphicsApiLabel(ElemGraphicsApi graphicsApi)
     return "Unknown";
 }
 
+void FormatMemorySize(uint64_t bytes, char* outputBuffer, size_t bufferSize) 
+{
+    const char* suffixes[] = { "B", "KB", "MB", "GB", "TB" }; // Extend if more are needed
+    double size = bytes;
+    int i = 0;
+
+    while (size >= 1024 && i < sizeof(suffixes)/sizeof(suffixes[0]) - 1) 
+    {
+        size /= 1024.0;
+        i++;
+    }
+
+    snprintf(outputBuffer, bufferSize, "%.2f %s", size, suffixes[i]);
+}
+
 void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGraphicsDevice graphicsDevice, double frameTimeInSeconds, uint32_t fps)
 {
     ElemWindowSize renderSize = ElemGetWindowRenderSize(window);
@@ -188,19 +203,23 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
     ElemSystemInfo systemInfo = ElemGetSystemInfo();
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
-    char temp[256];
-    sprintf(temp, "%s FPS: %u / Cpu FrameTime: %.2f (RenderSize=%ux%u@%.1f, GraphicsDevice=%s, GraphicsApi=%s, Platform=%s, AvailableMemory=%llu)", 
+    char memoryFormatted[64];
+    FormatMemorySize(graphicsDeviceInfo.AvailableMemory, memoryFormatted, sizeof(memoryFormatted));
+
+    char titleFormatted[256];
+    snprintf(titleFormatted, sizeof(titleFormatted), "%s FPS: %u / Cpu FrameTime: %.2f (Elemental=%s, RenderSize=%ux%u@%.1f, GraphicsDevice=%s, GraphicsApi=%s, Platform=%s, AvailableMemory=%s)", 
                         applicationName,
                         fps,
                         frameTimeInSeconds * 1000.0,
+                        ELEM_VERSION_LABEL,
                         renderSize.Width,
                         renderSize.Height,
                         renderSize.UIScale,
                         graphicsDeviceInfo.DeviceName, 
                         SampleGetGraphicsApiLabel(graphicsDeviceInfo.GraphicsApi),
                         SampleGetPlatformLabel(systemInfo.Platform),
-                        graphicsDeviceInfo.AvailableMemory);
-    ElemSetWindowTitle(window, temp);
+                        memoryFormatted);
+    ElemSetWindowTitle(window, titleFormatted);
 }
 
 // -----------------------------------------------------------------------------

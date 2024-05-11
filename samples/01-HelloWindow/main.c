@@ -5,23 +5,6 @@ typedef struct
     ElemWindow Window;
 } ApplicationPayload;
 
-const char* GetWindowStateLabel(ElemWindowState state)
-{
-    switch (state)
-    {
-        case ElemWindowState_FullScreen:
-            return "FullScreen";
-        case ElemWindowState_Maximized:
-            return "Maximized";
-        case ElemWindowState_Minimized:
-            return "Minimized";
-        case ElemWindowState_Normal:
-            return "Normal";
-    }
-
-    return "Unknown";
-}
-
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;

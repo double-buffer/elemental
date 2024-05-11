@@ -62,6 +62,44 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
     }
 }
 
+VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, VkSurfaceKHR windowSurface, VkSwapchainCreateInfoKHR* swapChainCreateInfo)
+{
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
+
+    VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
+    AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &surfaceCapabilities));
+
+    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
+    if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
+    {
+        compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+    }
+    else if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+    {
+        compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+    }
+
+    swapChainCreateInfo->imageArrayLayers = 1;
+    swapChainCreateInfo->imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapChainCreateInfo->imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapChainCreateInfo->presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    swapChainCreateInfo->preTransform = surfaceCapabilities.currentTransform;
+    swapChainCreateInfo->compositeAlpha = compositeAlpha;
+    swapChainCreateInfo->flags = 0;
+
+    VkSwapchainKHR swapChain;
+    AssertIfFailed(vkCreateSwapchainKHR(graphicsDeviceData->Device, swapChainCreateInfo, nullptr, &swapChain));
+
+    swapChainCreateInfo->oldSwapchain = swapChain;
+
+    return swapChain;
+}
+
 void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
 {
     if (width == 0 || height == 0)
@@ -90,20 +128,15 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
 
     auto fence = CreateVulkanCommandQueueFence(swapChainData->CommandQueue);
     VulkanWaitForFenceOnCpu(fence);
-    
-    // TODO: This is needed to fix a validation issue from the debug layer :(
-    VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-    AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDeviceDataFull->PhysicalDevice, swapChainData->WindowSurface, &surfaceCapabilities));
 
     swapChainData->PresentId = 0;
     auto oldSwapChain = swapChainData->DeviceObject;
 
-    auto swapChainCreateInfo = swapChainDataFull->CreateInfo;
-    swapChainCreateInfo.oldSwapchain = oldSwapChain;
-    swapChainCreateInfo.imageExtent.width = width;
-    swapChainCreateInfo.imageExtent.height = height;
+    auto swapChainCreateInfo = &swapChainDataFull->CreateInfo;
+    swapChainCreateInfo->imageExtent.width = width;
+    swapChainCreateInfo->imageExtent.height = height;
     
-    AssertIfFailed(vkCreateSwapchainKHR(graphicsDeviceData->Device, &swapChainCreateInfo, nullptr, &swapChainData->DeviceObject));
+    swapChainData->DeviceObject = CreateVulkanSwapChainObject(swapChainData->CommandQueue, swapChainData->WindowSurface, swapChainCreateInfo);
 
     for (int32_t i = 0; i < 3; i++)
     {
@@ -112,14 +145,12 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     }
 
     vkDestroySwapchainKHR(graphicsDeviceData->Device, oldSwapChain, nullptr);
-    CreateVulkanSwapChainBackBuffers(swapChain, swapChainCreateInfo.imageExtent.width, swapChainCreateInfo.imageExtent.height);
+    CreateVulkanSwapChainBackBuffers(swapChain, swapChainCreateInfo->imageExtent.width, swapChainCreateInfo->imageExtent.height);
 }
 
 void CheckVulkanAvailableSwapChain(ElemHandle handle)
 {
     SystemAssert(handle != ELEM_HANDLE_NULL);
-
-    auto stackMemoryArena = SystemGetStackMemoryArena();
 
     auto swapChainData = GetVulkanSwapChainData(handle);
     SystemAssert(swapChainData);
@@ -269,9 +300,6 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     AssertIfFailed(vkGetPhysicalDeviceSurfaceSupportKHR(graphicsDeviceDataFull->PhysicalDevice, commandQueueData->QueueFamilyIndex, windowSurface, &isPresentSupported));
     SystemAssert(isPresentSupported);
 
-    VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-    AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &surfaceCapabilities));
-
     uint32_t surfaceFormatCount = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &surfaceFormatCount, nullptr);
 
@@ -315,6 +343,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         }
     }
     
+    // TODO: Extract function
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f. (%dHz)", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale, refreshRate);
 
     VkSwapchainCreateInfoKHR swapChainCreateInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
@@ -322,17 +351,10 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     swapChainCreateInfo.minImageCount = VULKAN_MAX_SWAPCHAIN_BUFFERS;
     swapChainCreateInfo.imageFormat = format;
     swapChainCreateInfo.imageColorSpace = colorSpace;
-    swapChainCreateInfo.imageArrayLayers = 1;
-    swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swapChainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    swapChainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
-    swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapChainCreateInfo.flags = 0;
     swapChainCreateInfo.imageExtent.width = width;
     swapChainCreateInfo.imageExtent.height = height;
 
-    VkSwapchainKHR swapChain;
-    AssertIfFailed(vkCreateSwapchainKHR(graphicsDeviceData->Device, &swapChainCreateInfo, nullptr, &swapChain));
+    auto swapChain = CreateVulkanSwapChainObject(commandQueueData->GraphicsDevice, windowSurface, &swapChainCreateInfo);
 
     VkFence acquireFence;
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };

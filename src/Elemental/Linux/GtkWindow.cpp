@@ -26,11 +26,28 @@ GtkWindowDataFull* GetGtkWindowDataFull(ElemWindow window)
     return SystemGetDataPoolItemFull(windowDataPool, window);
 }
 
+gboolean ToggleGtkFullScreen(GtkWidget *widget, GVariant *args, gpointer data) 
+{
+    auto surface = gtk_native_get_surface(GTK_NATIVE(widget));
+    auto state = gdk_toplevel_get_state(GDK_TOPLEVEL(surface));
+
+    if (state & GDK_TOPLEVEL_STATE_FULLSCREEN)
+    {
+        gtk_window_unfullscreen(GTK_WINDOW(widget));
+    }
+    else
+    {
+        gtk_window_fullscreen(GTK_WINDOW(widget));
+    }
+
+    return true;
+}
+
 void WaylandRegistryHandler(void *data, struct wl_registry *registry, uint32_t id, const char *interface, uint32_t version)
 { 
     //SystemLogDebugMessage(ElemLogMessageCategory_Application, "Got a registry event for %s id %d", interface, id);
 
-    // TODO: Replace by system functions
+    // TODO: Replace strcmp by system functions
     if (strcmp(interface, "wl_subcompositor") == 0) 
     {
         waylandSubCompositor = (wl_subcompositor*)wl_registry_bind(registry, id, &wl_subcompositor_interface, 1);
@@ -88,6 +105,12 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 
     gtk_window_present(GTK_WINDOW(window));
 
+    auto controller = gtk_shortcut_controller_new();
+    gtk_widget_add_controller(window, controller);
+    gtk_shortcut_controller_add_shortcut(GTK_SHORTCUT_CONTROLLER(controller),
+          gtk_shortcut_new(gtk_keyval_trigger_new(GDK_KEY_F11, GDK_NO_MODIFIER_MASK),
+                           gtk_callback_action_new(ToggleGtkFullScreen, NULL, NULL)));
+
     auto gdkSurface = gtk_native_get_surface(gtk_widget_get_native(window));
     auto gdkDisplay = gdk_surface_get_display(gdkSurface);
     auto gdkMonitor = gdk_display_get_monitor_at_surface(gdkDisplay, gdkSurface);
@@ -131,7 +154,6 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     SystemAddDataPoolItemFull(windowDataPool, handle, {
     });
 
-
     ElemSetWindowState(handle, windowState);
 
     return handle;
@@ -143,7 +165,6 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
     SystemAssert(windowData);
 
     gtk_window_close(GTK_WINDOW(windowData->GtkWindow));
-
     SystemRemoveDataPoolItem(windowDataPool, window);
 }
 
@@ -155,7 +176,23 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     auto width = SystemMax((uint32_t)gtk_widget_get_width(windowData->GtkContent), 1u);
     auto height = SystemMax((uint32_t)gtk_widget_get_height(windowData->GtkContent), 1u);
     auto uiScale = (float)gdk_surface_get_scale_factor(windowData->GdkSurface);
+
+    auto state = gdk_toplevel_get_state(GDK_TOPLEVEL(windowData->GdkSurface));
+
     auto windowState = ElemWindowState_Normal;
+
+    if (state & GDK_TOPLEVEL_STATE_MINIMIZED)
+    {
+        windowState = ElemWindowState_Minimized;
+    }
+    else if (state & GDK_TOPLEVEL_STATE_FULLSCREEN)
+    {
+        windowState = ElemWindowState_FullScreen;
+    }
+    else if (state & GDK_TOPLEVEL_STATE_MAXIMIZED)
+    {
+        windowState = ElemWindowState_Maximized;
+    }
 
     auto inputPoint = GRAPHENE_POINT_INIT_ZERO;
     graphene_point_t contentOffset;
@@ -165,10 +202,6 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     gtk_native_get_surface_transform(gtk_widget_get_native(windowData->GtkWindow), &offsetX, &offsetY);
     wl_subsurface_set_position(windowData->WaylandSubSurface, contentOffset.x + offsetX, contentOffset.y + offsetY);
 
-
-    // BUG: For the moment we have a suboptimal swapchain in vulkan if we go fullscreen with offset 0
-    // Use GDK fullscreen?
-    //gtk_window_fullscreen(GTK_WINDOW(windowData->GtkWindow));
     // TODO: Is it needed?
     //auto waylandRegion = wl_compositor_create_region(WaylandCompositor);
     //wl_region_add(waylandRegion, 0, 0, width, height);
@@ -196,9 +229,34 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
 
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
-    /*auto windowData = GetGtkWindowData(window);
+    auto windowData = GetGtkWindowData(window);
     SystemAssert(windowData);
 
-    auto windowDataFull = GetGtkWindowDataFull(window);
-    SystemAssert(windowDataFull);*/
+    auto state = gdk_toplevel_get_state(GDK_TOPLEVEL(windowData->GdkSurface));
+
+    if (state & GDK_TOPLEVEL_STATE_MINIMIZED && windowState != ElemWindowState_Minimized)
+    {
+        gtk_window_unminimize(GTK_WINDOW(windowData->GtkWindow));
+    }
+    else if (state & GDK_TOPLEVEL_STATE_FULLSCREEN && windowState != ElemWindowState_FullScreen)
+    {
+        gtk_window_unfullscreen(GTK_WINDOW(windowData->GtkWindow));
+    }
+    else if (state & GDK_TOPLEVEL_STATE_MAXIMIZED && windowState != ElemWindowState_Maximized)
+    {
+        gtk_window_unmaximize(GTK_WINDOW(windowData->GtkWindow));
+    }
+
+    if (windowState == ElemWindowState_Maximized && !(state & GDK_TOPLEVEL_STATE_MAXIMIZED))
+    {
+        gtk_window_maximize(GTK_WINDOW(windowData->GtkWindow));
+    }
+    else if (windowState == ElemWindowState_FullScreen && !(state & GDK_TOPLEVEL_STATE_FULLSCREEN))
+    {
+        gtk_window_fullscreen(GTK_WINDOW(windowData->GtkWindow));
+    }
+    else if (windowState == ElemWindowState_Minimized && !(state & GDK_TOPLEVEL_STATE_MINIMIZED))
+    {
+        gtk_window_minimize(GTK_WINDOW(windowData->GtkWindow));
+    }
 }

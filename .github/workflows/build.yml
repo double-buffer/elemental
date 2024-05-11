@@ -27,6 +27,8 @@ jobs:
       with:
         arch: ${{ inputs.architecture }}
 
+    # TODO: For the moment Github actions doesn't have the latest version of ubuntu
+    # we will re enable the linux build after
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
       run: |

@@ -9,6 +9,8 @@
 #define UseLoader
 #endif
 
+#define ELEM_VERSION_LABEL "1.0.0-dev3"
+
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
 
