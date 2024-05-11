@@ -223,6 +223,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
 struct WaylandCallbackParameters
 {
     ElemSwapChain SwapChain;
+    ElemWindow Window;
     wl_surface* WaylandSurface;
 };
 
@@ -232,6 +233,13 @@ void RegisterWaylandFrameCallback(WaylandCallbackParameters* parameters);
 static void WaylandFrameCallback(void* data, wl_callback* callback, uint32_t time) 
 {
     auto parameters = (WaylandCallbackParameters*)data;
+
+    auto windowData = GetGtkWindowData(parameters->Window);
+    if (windowData->IsClosed)
+{
+        ElemExitApplication(0);
+        return;
+    }
 
     // TODO: investigate frame time
     // See: https://gitlab.gnome.org/GNOME/gtk/-/blob/main/gdk/wayland/gdksurface-wayland.c
@@ -291,6 +299,8 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR };
     surfaceCreateInfo.display = windowData->WaylandDisplay;
     surfaceCreateInfo.surface = windowData->WaylandSurface;
+
+    gdk_display_sync(windowData->GdkDisplay);
 
     VkSurfaceKHR windowSurface;
     AssertIfFailed(vkCreateWaylandSurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
@@ -395,6 +405,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     #elif __linux__
     auto waylandCallbackParameters = SystemPushStruct<WaylandCallbackParameters>(VulkanGraphicsMemoryArena);
     waylandCallbackParameters->SwapChain = handle;
+    waylandCallbackParameters->Window = window;
     waylandCallbackParameters->WaylandSurface = windowData->WaylandSurfaceParent;
 
     RegisterWaylandFrameCallback(waylandCallbackParameters);

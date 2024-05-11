@@ -152,4 +152,5 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
 
 void MetalWaitForFenceOnCpu(ElemFence fence)
 {
+    // TODO: Implement this
 }

@@ -4,6 +4,11 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
+struct WindowGtkCallbackParameter
+{
+    ElemWindow Window;
+};
+
 SystemDataPool<GtkWindowData, GtkWindowDataFull> windowDataPool;
 
 wl_subcompositor* waylandSubCompositor;
@@ -24,6 +29,14 @@ GtkWindowData* GetGtkWindowData(ElemWindow window)
 GtkWindowDataFull* GetGtkWindowDataFull(ElemWindow window)
 {
     return SystemGetDataPoolItemFull(windowDataPool, window);
+}
+
+gboolean WindowCloseRequestHandler(GtkWindow* window, WindowGtkCallbackParameter* parameter)
+{
+    auto windowData = GetGtkWindowData(parameter->Window);
+    windowData->IsClosed = true;
+
+    return true;
 }
 
 gboolean ToggleGtkFullScreen(GtkWidget *widget, GVariant *args, gpointer data) 
@@ -143,6 +156,7 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     auto handle = SystemAddDataPoolItem(windowDataPool, {
         .GtkWindow = window,
         .GtkContent = box,
+        .GdkDisplay = gdkDisplay,
         .GdkSurface = gdkSurface,
         .WaylandDisplay = waylandDisplay,
         .WaylandSurfaceParent = waylandSurface,
@@ -155,6 +169,11 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     });
 
     ElemSetWindowState(handle, windowState);
+
+    auto windowParameter = SystemPushStruct<WindowGtkCallbackParameter>(ApplicationMemoryArena);
+    windowParameter->Window = handle;
+
+    g_signal_connect(window, "close-request", G_CALLBACK(WindowCloseRequestHandler), windowParameter);
 
     return handle;
 }

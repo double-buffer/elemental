@@ -446,6 +446,8 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     vkDestroyPipelineLayout(graphicsDeviceData->Device, graphicsDeviceData->PipelineLayout, nullptr);
     vkDestroyDevice(graphicsDeviceData->Device, nullptr);
+        
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing Vulkan");
 }
 
 ElemGraphicsDeviceInfo VulkanGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)
