@@ -34,11 +34,15 @@ The library is exposed as a C library but other bindings will be available:
 
 | Binding | Status | Download      |
 |:-------:|:------:|:-------------:|
-| .NET    | WIP    | Not available |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/dotnet-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/dotnet-light.svg"><img alt=".NET" width="20pt"></picture>    | WIP    | Not available |
 
-For shader development you can use the following languages:
+For shader development, the shader compiler supports the following languages and platforms:
 
-HLSL | 
+| Shader Language | Target API | Compilation Platform |
+|:---------------:|:----------:|:--------------------:|
+| HLSL            | DirectX12  | <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/windows-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/windows-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/linux-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/linux-light.svg"><img alt="Linux" width="20pt"></picture> |
+| HLSL            | Vulkan     | <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/windows-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/windows-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/linux-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/linux-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/apple-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/apple-light.svg"><img alt="MacOS" width="20pt"></picture> |
+| HLSL            | Metal3     | <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/windows-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/windows-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/apple-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/apple-light.svg"><img alt="MacOS" width="20pt"></picture> |
 
 ## 🚀 Getting Started
 
@@ -174,11 +178,11 @@ int main(int argc, const char* argv[])
 }
 ```
 
-[!TIP]
-Please note that this code uses both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
+> [!TIP]
+> Please note that this code uses both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
 
-[!WARNING]
-This code will only runs on platforms that support shader compilation. (Windows, MacOS, Linux) 
-If you want to run code on other platforms you should compile your shaders offline.
+> [!WARNING]
+> This code will only runs on platforms that support shader compilation. (Windows, MacOS, Linux) 
+> If you want to run code on other platforms you should compile your shaders offline.
 
 You will find more examples in the [samples folder](samples).
