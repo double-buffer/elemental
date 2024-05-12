@@ -28,7 +28,7 @@
 #include "Graphics/Shader.cpp"
 #include "Graphics/Rendering.cpp"
 
-#include "Inputs.cpp"
+#include "Inputs/Inputs.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"

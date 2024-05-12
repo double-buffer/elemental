@@ -128,8 +128,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
-    applicationPayload->ShaderParameters.RotationX += (applicationPayload->InputState.KeyDownPressed - applicationPayload->InputState.KeyUpPressed) * 1.5f * updateParameters->DeltaTimeInSeconds;
-    applicationPayload->ShaderParameters.RotationY += (applicationPayload->InputState.KeyRightPressed - applicationPayload->InputState.KeyLeftPressed) * 1.5f * updateParameters->DeltaTimeInSeconds;
+    applicationPayload->ShaderParameters.RotationX += (applicationPayload->InputState.KeyDownPressed - applicationPayload->InputState.KeyUpPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+    applicationPayload->ShaderParameters.RotationY += (applicationPayload->InputState.KeyRightPressed - applicationPayload->InputState.KeyLeftPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 

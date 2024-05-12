@@ -894,7 +894,64 @@ typedef enum
     ElemInputId_KeyX,
     ElemInputId_KeyY,
     ElemInputId_KeyZ,
-    ElemInputId_Escape
+    ElemInputId_Back,
+    ElemInputId_Tab,
+    ElemInputId_Clear,
+    ElemInputId_Return,
+    ElemInputId_Control,
+    ElemInputId_Menu,
+    ElemInputId_Pause,
+    ElemInputId_CapsLock,
+    ElemInputId_Escape,
+    ElemInputId_Space,
+    ElemInputId_PageUp,
+    ElemInputId_PageDown,
+    ElemInputId_End,
+    ElemInputId_Home,
+    ElemInputId_Left,
+    ElemInputId_Up,
+    ElemInputId_Right,
+    ElemInputId_Down,
+    ElemInputId_Execute,
+    ElemInputId_PrintScreen,
+    ElemInputId_Insert,
+    ElemInputId_Delete,
+    ElemInputId_LeftSystemButton,
+    ElemInputId_RightSystemButton,
+    ElemInputId_Numpad0,
+    ElemInputId_Numpad1,
+    ElemInputId_Numpad2,
+    ElemInputId_Numpad3,
+    ElemInputId_Numpad4,
+    ElemInputId_Numpad5,
+    ElemInputId_Numpad6,
+    ElemInputId_Numpad7,
+    ElemInputId_Numpad8,
+    ElemInputId_Numpad9,
+    ElemInputId_Multiply,
+    ElemInputId_Add,
+    ElemInputId_Separator,
+    ElemInputId_Subtract,
+    ElemInputId_Decimal,
+    ElemInputId_Divide,
+    ElemInputId_F1,
+    ElemInputId_F2,
+    ElemInputId_F3,
+    ElemInputId_F4,
+    ElemInputId_F5,
+    ElemInputId_F6,
+    ElemInputId_F7,
+    ElemInputId_F8,
+    ElemInputId_F9,
+    ElemInputId_F10,
+    ElemInputId_F11,
+    ElemInputId_F12,
+    ElemInputId_LeftShift,
+    ElemInputId_RightShift,
+    ElemInputId_LeftControl,
+    ElemInputId_RightControl,
+    ElemInputId_LeftAlt,
+    ElemInputId_RightAlt,
 } ElemInputId;
 
 typedef struct
@@ -918,8 +975,7 @@ typedef struct
 
 typedef struct
 {
-    // TODO: Filter on window
-    // TODO: Filter on device
+    // TODO: Not sure to keep options in this function
 } ElemGetInputStreamOptions;
 
 ElemAPI ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions* options);
