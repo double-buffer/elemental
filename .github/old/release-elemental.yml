@@ -1,0 +1,188 @@
+name: Release Elemental
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "tag: git tag you want create. (sample 1.0.0)"
+        required: true
+        type: string
+      publish-nuget:
+        description: "publish-nuget: true = publish nuget package. false = create the nuget package but don't publish it."
+        required: true
+        default: false
+        type: boolean
+    secrets:
+      NUGET_APIKEY:
+        required: true
+
+jobs:
+  build_windows_x64:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        msbuild-architecture: x64
+
+    - name: Build Windows Platform
+      working-directory: ./src/Platforms/Windows
+      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Download Vulkan Loader
+      working-directory: ./src/Platforms/Windows
+      run: |
+        mkdir ./tmp/
+        curl -L -o ./tmp/vulkan-loader.zip https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip
+
+    - name: Extract Vulkan Loader
+      working-directory: ./src/Platforms/Windows
+      run: |
+        unzip ./tmp/vulkan-loader.zip -d ./bin/
+
+    - name: Set Vulkan DLL Path
+      id: set-vulkan-dll-path
+      working-directory: ./src/Platforms/Windows
+      shell: bash
+      run: |
+        dllPath=$(find ./bin -name vulkan-1.dll -type f -print -quit)
+        echo "vulkan_dll_path=$dllPath" >> $GITHUB_ENV
+
+    - name: Copy files
+      working-directory: ./src/Platforms/Windows
+      shell: bash
+      run: |
+        cp ./bin/D3D12/*.dll ./bin/
+        cp ${{ env.vulkan_dll_path }} ./bin/
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: WindowsNativex64
+        path: |
+            ./src/Platforms/Windows/bin/*.dll
+        
+  build_macos_x64:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build MacOS Platform
+      working-directory: ./src/Platforms/Apple
+      run: swift build --package-path . -c release
+
+    - name: Copy Binary
+      working-directory: ./src/Platforms/Apple
+      run: |
+        mkdir ./build/
+        cp ./.build/release/libElemental.Native.dylib ./build/
+        mv ./build/libElemental.Native.dylib ./build/Elemental.Native.dylib
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: MacOSNative
+        path: ./src/Platforms/Apple/build/*.dylib
+
+  build_dotnet:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.202
+
+    - name: Configure MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        msbuild-architecture: x64
+
+    - name: Build Library
+      run: |
+        dotnet build ./src/Elemental -c Release -p:BuildProjectReferences="False" -p:Version=${{ inputs.tag }} 
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: DotnetBinaries
+        path: |
+          ./src/Elemental/bin/Release/net7.0/Elemental.dll
+          ./src/Elemental/bin/Release/net7.0/Elemental.xml
+          ./src/Elemental/bin/Release/net7.0/Elemental.Common.dll
+          ./src/Elemental/bin/Release/net7.0/Elemental.Common.xml
+          
+  build_nuget:
+    runs-on: windows-latest
+    needs: [build_windows_x64, build_macos_x64, build_dotnet]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.202
+
+    - name: Download Windows Native x64
+      uses: actions/download-artifact@master
+      with:
+        name: WindowsNativex64
+        path: ./publish/Elemental/runtimes/win-x64
+          
+    - name: Download MacOS Native
+      uses: actions/download-artifact@master
+      with:
+        name: MacOSNative
+        path: ./publish/Elemental/runtimes/osx
+          
+    - name: Download Dotnet Binaries
+      uses: actions/download-artifact@master
+      with:
+        name: DotnetBinaries
+        path: ./publish/Elemental/lib/net7.0
+
+    - name: Replace tokens in nuspec file
+      uses: datamonsters/replace-action@master
+      with:
+        files: "./publish/Elemental/Elemental.nuspec"
+        replacements: '#VERSION#=${{ inputs.tag }},#COMMIT#=${{ github.sha }}'
+
+    - name: Nuget pack
+      working-directory: ./publish/Elemental
+      run: nuget.exe pack -OutputDirectory build
+
+    - name: Push Nuget Package
+      if: ${{ inputs.publish-nuget == true }}
+      run: dotnet nuget push ./publish/Elemental/build/Elemental.${{ inputs.tag }}.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{ secrets.NUGET_APIKEY }}
+          
+    - name: Upload Nuget package
+      uses: actions/upload-artifact@v3
+      with:
+        name: Elemental.${{ inputs.tag }}
+        path: ./publish/Elemental/build/*.nupkg
+
+    - name: Delete Windows Native x64
+      uses: geekyeggo/delete-artifact@v2
+      with:
+          name: WindowsNativex64
+
+    - name: Delete MacOS Native
+      uses: geekyeggo/delete-artifact@v2
+      with:
+          name: MacOSNative
+          
+    - name: Delete Dotnet Binaries
+      uses: geekyeggo/delete-artifact@v2
+      with:
+          name: DotnetBinaries

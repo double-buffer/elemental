@@ -1,5 +1,5 @@
 .vs/
-.vscode/
+.cache/
 
 *.rsuser
 *.suo
@@ -12,6 +12,8 @@ xcuserdata/
 packages/
 
 # Build results
+build*/
+install*/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -28,3 +30,5 @@ bld/
 .build/
 .swiftpm/
 external/shader-compilers/
+.DS_Store
+artifacts/

@@ -2,63 +2,49 @@ name: Build CI
 
 on:
   push:
-    branches: [ github-actions ]
+    branches:
+      - main
+  pull_request:
 
 jobs:
-  build_windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        include: ${{ fromJSON(vars.Platforms) }}
+    uses: ./.github/workflows/build.yml
+    name: 'build'
+    secrets: inherit
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
 
+  # TODO: Do a build bindings sub workflow
+  #build_dotnet:
+    #  uses: ./.github/workflows/build-dotnet.yml
+    #name: 'build-dotnet'
+    #secrets: inherit
+    
+  run_tests:
+    strategy:
+      matrix:
+        include: ${{ fromJSON(vars.Platforms) }}
+    uses: ./.github/workflows/run-tests.yml
+    needs: [ build ]
+    name: 'run-tests'
+    secrets: inherit
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
+
+  ci-build-check:
+    if: always()
+    runs-on: ubuntu-latest
+    name: CI Build Check
+    needs: [ run_tests ]
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-
-    - name: Configure MSBuild
-      uses: microsoft/setup-msbuild@v1.1
-      with:
-        vs-version: '[17.0, 17.5)'
-        msbuild-architecture: x64
-
-    - name: Build Windows Platform
-      working-directory: ./src/Platforms/Windows
-      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
-        
-  build_macos:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    # TODO: Change that, we use native swift packages now
-    - name: Build MacOS Platform
-      working-directory: ./src/Platforms/MacOS
-      run: pwsh ./Build.ps1 -outputDirectory ./bin/ -configuration Release
-
-  build_dotnet:
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 7.0.100
-
-    - name: Configure MSBuild
-      uses: microsoft/setup-msbuild@v1.1
-      with:
-        vs-version: '[17.0, 17.5)'
-        msbuild-architecture: x64
-
-    - name: Build Library
-      run: |
-        dotnet build ./src/Elemental -c Release 
-        
-    - name: Build Samples
-      run: |
-        dotnet build ./samples/01-HelloWorld
-        dotnet build ./samples/02-HelloWindow
-        dotnet build ./samples/03-HelloTriangle
-
-
+      - run: exit 1
+        if: >-
+          ${{
+               contains(needs.*.result, 'failure')
+            || contains(needs.*.result, 'cancelled')
+          }}

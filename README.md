@@ -1,17 +1,42 @@
-# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) [![NuGet](https://img.shields.io/nuget/dt/Elemental.svg)](https://www.nuget.org/packages/Elemental/)
-
-Elemental: [![NuGet](https://img.shields.io/nuget/v/Elemental.svg)](https://www.nuget.org/packages/Elemental/) 
-
-Elemental Tools: [![NuGet](https://img.shields.io/nuget/v/Elemental.Tools.svg)](https://www.nuget.org/packages/Elemental.Tools/)
+# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/double-buffer/elemental/build-ci.yml?branch=main)
 
 ## 📖 Purpose
 
-Elemental is a portable low-level game platform abstraction library for .NET 7+ that targets only next-gen features.
+Elemental is a portable low-level game platform abstraction library that targets only next-gen features. Back in the days of DirectX11 and OpenGL,
+it was very easy to start working on its own custom program that took full advantage of the GPU. New apis give more control to the developper but 
+they are hard to use. They also have many ways of doing things because they must maintain backward compatibility.
+
+The goal of Elemental is to simplify and unify all graphics API on all platforms. It doesn't mean that it will simplify or abstract graphics development. 
+It is still challenging but developers can now focus on learning graphics programming like in the old days. And build their graphics app or engine by focusing
+on graphics algorithms.
+
+The library is still in heavy development stage. The goal is not to be compatible with the majority of graphics cards now but to be ready for the future.
+
+In order to simplify the API, the library makes the following assumptions:
+
+- Use of Mesh shaders for the geometry pipeline: so no vertex layout setup, no geometry shaders, no vertex shaders.
+- No copy queue exposed: you need to use IO queue to copy data from disk to GPU memory. (Internally the library try to use DirectStorage, MetalIO, etc.)
+For dynamic gpu data that is short lived, we use GPU upload heap (rebar memory).
+- Use of bindless resources
+- No indirect commands: The future will be about work graphs. 
 
 It currently runs on:
 
 - Windows (Direct3D12, Vulkan)
+- Linux (Vulkan)
 - MacOS (Metal)
+- iOS (Metal)
+
+The library is exposed as a C library but other bindings will are available:
+
+- dotnet: WIP
+Elemental: [![NuGet](https://img.shields.io/nuget/v/Elemental.svg)](https://www.nuget.org/packages/Elemental/) 
+
+Elemental Tools: [![NuGet](https://img.shields.io/nuget/v/Elemental.Tools.svg)](https://www.nuget.org/packages/Elemental.Tools/)
+
+For shader development you can use the following languages:
+
+HLSL | 
 
 ## 🚀 Getting Started
 

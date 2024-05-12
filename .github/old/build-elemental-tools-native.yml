@@ -1,0 +1,80 @@
+name: Build Elemental Tools Native
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
+
+jobs:
+  build_tools_native:
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu' || inputs.platform == 'win' && 'windows' || inputs.platform == 'osx' && 'macos' || inputs.platform }}-latest
+
+    steps:
+    - uses: actions/checkout@master
+      with:
+        submodules: recursive
+
+    - name: Restore Dependencies
+      uses: actions/cache@master
+      id: cache-dependencies
+      with:
+        path: |
+          external/shader-compilers
+        key: ${{ runner.os }}-deps-${{ inputs.platform }}-${{ inputs.architecture }}
+
+    - name: Configure MSBuild
+      if: inputs.platform == 'windows'
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        msbuild-architecture: x64
+        
+    - name: Get Shader Compilers
+      working-directory: ./external
+      shell: powershell
+      run: ./GetShaderCompilers.ps1
+
+    - name: Build Windows Platform
+      working-directory: ./src/Elemental.Tools.Native
+      shell: powershell
+      run: ./Build.ps1 -outputDirectory ./bin/ -configuration Release
+
+    - name: Copy files Windows
+      if: inputs.platform == 'windows'
+      working-directory: ./src/Elemental.Tools.Native
+      run: |
+        cp ../../external/shader-compilers/dxc/bin/x64/*.dll ./bin/
+        
+    - name: Copy files MacOS
+      if: inputs.platform == 'macos'
+      working-directory: ./src/Elemental.Tools.Native
+      run: |
+        cp ../../external/shader-compilers/dxc/lib/*.dylib ./bin/
+
+    - name: Upload Binaries Windows
+      if: inputs.platform == 'windows'
+      uses: actions/upload-artifact@master
+      with:
+        name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
+        path: |
+            ./src/Elemental.Tools.Native/bin/*.dll
+            
+    - name: Upload Binaries MacOS
+      if: inputs.platform == 'macos'
+      uses: actions/upload-artifact@master
+      with:
+        name: ElementalToolsNative_${{ inputs.platform }}_${{ inputs.architecture }}
+        path: |
+            ./src/Elemental.Tools.Native/bin/*.dylib
+
+    - name: Save Dependencies to Cache
+      if: steps.cache-dependencies.outputs.cache-hit != 'true'
+      uses: actions/cache@master
+      with:
+        path: |
+          external/shader-compilers
+        key: ${{ runner.os }}-deps-${{ inputs.platform }}-${{ inputs.architecture }}

@@ -1,0 +1,114 @@
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ 
+      (inputs.platform == 'osx' && 'macos-14') ||
+      (inputs.platform == 'linux' && 'ubuntu-latest') ||
+      (inputs.platform == 'win' && 'windows-latest')
+      }}
+
+    steps:
+    - uses: actions/checkout@master
+      with:
+        submodules: recursive
+
+    - name: Setup Dependencies (Windows)
+      if: inputs.platform == 'win'
+      uses: TheMrMilchmann/setup-msvc-dev@v3
+      with:
+        arch: ${{ inputs.architecture }}
+
+    # TODO: For the moment Github actions doesn't have the latest version of ubuntu
+    # we will re enable the linux build after
+    - name: Setup Dependencies (Linux)
+      if: inputs.platform == 'linux'
+      run: |
+        sudo apt-get update 
+        sudo apt-get install -y -V libgtk-4-dev
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Configure Build
+      run: cmake --preset release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build
+      run: cmake --build --preset release
+          
+    - name: Install
+      run: cmake --install ./build-release --prefix ./install-release
+
+    - name: Archive Elemental (Windows)
+      if: inputs.platform == 'win'
+      working-directory: ./install-release
+      run: 7z a ./elemental.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./Elemental/
+
+    - name: Archive Elemental
+      if: inputs.platform != 'win'
+      working-directory: ./install-release
+      run: tar -czvf ./elemental.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./Elemental/
+
+    - name: Upload Elemental Binaries
+      uses: actions/upload-artifact@master
+      with:
+        name: elemental.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./install-release/elemental.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+
+    - name: Archive ElementalTools (Windows)
+      if: inputs.platform == 'win'
+      working-directory: ./install-release
+      run: 7z a ./elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./ElementalTools/
+
+    - name: Archive Elemental Tools
+      if: inputs.platform != 'win'
+      working-directory: ./install-release
+      run: tar -czvf ./elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./ElementalTools/
+
+    - name: Upload Elemental Tools Binaries
+      uses: actions/upload-artifact@master
+      with:
+        name: elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./install-release/elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+
+    - name: Archive Tests (Windows)
+      if: inputs.platform == 'win'
+      working-directory: ./install-release
+      run: 7z a ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./tests/
+
+    - name: Archive Tests
+      if: inputs.platform != 'win'
+      working-directory: ./install-release
+      run: tar -czvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
+
+    - name: Upload Tests Binaries
+      uses: actions/upload-artifact@master
+      with:
+        name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./install-release/tests.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+
+    - name: Archive Samples (Windows)
+      if: inputs.platform == 'win'
+      working-directory: ./install-release
+      run: 7z a ./samples.${{ inputs.platform }}-${{ inputs.architecture }}.zip ./samples/
+
+    - name: Archive Samples
+      if: inputs.platform != 'win'
+      working-directory: ./install-release
+      run: tar -czvf ./samples.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./samples/
+
+    - name: Upload Samples Binaries
+      uses: actions/upload-artifact@master
+      with:
+        name: samples.${{ inputs.platform }}-${{ inputs.architecture }}
+        path: ./install-release/samples.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}

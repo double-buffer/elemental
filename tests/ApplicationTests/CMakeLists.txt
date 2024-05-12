@@ -1,0 +1,5 @@
+add_executable(ApplicationTests UnityBuild.cpp)
+target_link_libraries(ApplicationTests PRIVATE utest)
+target_link_libraries(ApplicationTests PRIVATE ElementalInterface)
+
+configure_project_package(ApplicationTests "tests" DEPENDENCIES Elemental)
