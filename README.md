@@ -25,8 +25,8 @@ It currently runs on:
 
 | Platform | Graphics API      | Tools Supported |
 |:--------:|:-----------------:|:---------------:|
-| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/windows.svg" width="18" height="18" /> Windows | DirectX12, Vulkan | ✅              |
-| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/linux.svg" width="18" height="18" /> Linux    | Vulkan/Wayland    | ✅              |
+| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/windows.svg" width="18" height="18" style="fill:red" /> | DirectX12, Vulkan | ✅              |
+| <img src="/doc/icons/apple.svg" width="18" height="18" /> Linux    | Vulkan/Wayland    | ✅              |
 | <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/apple.svg" width="18" height="18" /> MacOS    | Metal3            | ✅              |
 | <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/ios.svg" width="18" height="18" /> iOS      | Metal3            |                 |
 
