@@ -1,3 +1,5 @@
+#pragma once
+
 extern bool useVulkan;
 
 #ifdef _WIN32

@@ -206,7 +206,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
         .SwapChainInfo = VulkanGetSwapChainInfo(handle),
         .BackBufferTexture = backBufferTexture,
         .DeltaTimeInSeconds = deltaTime,
-        .NextPresentTimeStampInSeconds = 1.0f//nextPresentTimeStampInSeconds
+        .NextPresentTimestampInSeconds = 1.0f//nextPresentTimestampInSeconds
     };
     
     swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);

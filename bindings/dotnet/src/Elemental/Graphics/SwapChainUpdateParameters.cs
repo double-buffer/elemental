@@ -23,5 +23,5 @@ public ref struct SwapChainUpdateParameters
     /// <summary>
     /// Timestamp for when the next frame is expected to be presented, in seconds.
     /// </summary>
-    public double NextPresentTimeStampInSeconds { get; set; }
+    public double NextPresentTimestampInSeconds { get; set; }
 }

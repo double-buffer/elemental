@@ -61,6 +61,7 @@ typedef struct ElementalFunctions
     void (*ElemSetViewport)(ElemCommandList, const ElemViewport*);
     void (*ElemSetViewports)(ElemCommandList, ElemViewportSpan);
     void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
+    ElemInputStream (*ElemGetInputStream)(ElemGetInputStreamOptions*);
     
 } ElementalFunctions;
 
@@ -151,6 +152,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, const ElemViewport*))GetElementalFunctionPointer("ElemSetViewport");
     listElementalFunctions.ElemSetViewports = (void (*)(ElemCommandList, ElemViewportSpan))GetElementalFunctionPointer("ElemSetViewports");
     listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
+    listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(ElemGetInputStreamOptions*))GetElementalFunctionPointer("ElemGetInputStream");
     
 
     functionPointersLoadedElemental = 1;
@@ -1098,4 +1100,35 @@ static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int th
     }
 
     listElementalFunctions.ElemDispatchMesh(commandList, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+}
+
+static inline ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions* options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemInputStream result = {};
+        #else
+        ElemInputStream result = (ElemInputStream){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetInputStream) 
+    {
+        assert(listElementalFunctions.ElemGetInputStream);
+
+        #ifdef __cplusplus
+        ElemInputStream result = {};
+        #else
+        ElemInputStream result = (ElemInputStream){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetInputStream(options);
 }

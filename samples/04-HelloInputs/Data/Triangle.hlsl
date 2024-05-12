@@ -1,6 +1,7 @@
 struct ShaderParameters
 {
     float AspectRatio;
+    float RotationX;
     float RotationY;
 };
 
@@ -92,7 +93,7 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
     {
         float cameraZDistance = parameters.AspectRatio >= 0.75 ? -2.0 : -4.0;
 
-        float4x4 worldMatrix = RotationMatrix(0.0, parameters.RotationY, 0.0);
+        float4x4 worldMatrix = RotationMatrix(parameters.RotationX, parameters.RotationY, 0.0);
         float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, cameraZDistance), float3(0, 0, 0), float3(0, 1, 0));
         float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
 

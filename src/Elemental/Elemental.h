@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------
 // Elemental Library
-// Version: 1.0.0-dev3
+// Version: 1.0.0-dev4
 //
 // MIT License
 //
@@ -36,7 +36,7 @@
 #define UseLoader
 #endif
 
-#define ELEM_VERSION_LABEL "1.0.0-dev3"
+#define ELEM_VERSION_LABEL "1.0.0-dev4"
 
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
@@ -519,7 +519,7 @@ typedef struct
     // Time since the last frame was presented, in seconds.
     double DeltaTimeInSeconds; 
     // Timestamp for when the next frame is expected to be presented, in seconds.
-    double NextPresentTimeStampInSeconds;
+    double NextPresentTimestampInSeconds;
 } ElemSwapChainUpdateParameters;
 
 /**
@@ -843,6 +843,86 @@ ElemAPI void ElemSetViewports(ElemCommandList commandList, ElemViewportSpan view
  * @param threadGroupCountZ The number of thread groups in the Z dimension.
  */
 ElemAPI void ElemDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
+
+//--------------------------------------------------------------------------------
+// ##Module_Inputs##
+//--------------------------------------------------------------------------------
+
+// TODO: Assign values to enum
+typedef enum
+{
+    ElemInputEventType_Digital,
+    ElemInputEventType_Analog
+} ElemInputEventType;
+
+typedef enum
+{
+    ElemInputId_Unknown,
+    ElemInputId_Key0,
+    ElemInputId_Key1,
+    ElemInputId_Key2,
+    ElemInputId_Key3,
+    ElemInputId_Key4,
+    ElemInputId_Key5,
+    ElemInputId_Key6,
+    ElemInputId_Key7,
+    ElemInputId_Key8,
+    ElemInputId_Key9,
+    ElemInputId_KeyA,
+    ElemInputId_KeyB,
+    ElemInputId_KeyC,
+    ElemInputId_KeyD,
+    ElemInputId_KeyE,
+    ElemInputId_KeyF,
+    ElemInputId_KeyG,
+    ElemInputId_KeyH,
+    ElemInputId_KeyI,
+    ElemInputId_KeyJ,
+    ElemInputId_KeyK,
+    ElemInputId_KeyL,
+    ElemInputId_KeyM,
+    ElemInputId_KeyN,
+    ElemInputId_KeyO,
+    ElemInputId_KeyP,
+    ElemInputId_KeyQ,
+    ElemInputId_KeyR,
+    ElemInputId_KeyS,
+    ElemInputId_KeyT,
+    ElemInputId_KeyU,
+    ElemInputId_KeyV,
+    ElemInputId_KeyW,
+    ElemInputId_KeyX,
+    ElemInputId_KeyY,
+    ElemInputId_KeyZ,
+    ElemInputId_Escape
+} ElemInputId;
+
+typedef struct
+{
+    ElemWindow Window;
+    ElemInputId InputId;
+    float Value;
+} ElemInputEvent;
+
+typedef struct
+{
+    ElemInputEvent* Items;
+    uint32_t Length;
+} ElemInputEventSpan;
+
+typedef struct
+{
+    ElemInputEventSpan Events;
+    double TimestampInSeconds;
+} ElemInputStream;
+
+typedef struct
+{
+    // TODO: Filter on window
+    // TODO: Filter on device
+} ElemGetInputStreamOptions;
+
+ElemAPI ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions* options);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

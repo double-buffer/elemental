@@ -1,5 +1,6 @@
 #include "Win32Application.cpp"
 #include "Win32Window.cpp"
+#include "Win32Inputs.cpp"
 
 // TODO: only Include vulkan headers if needed
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -26,6 +27,8 @@
 #include "Graphics/SwapChain.cpp"
 #include "Graphics/Shader.cpp"
 #include "Graphics/Rendering.cpp"
+
+#include "Inputs.cpp"
 
 #include "SystemPlatformFunctions.cpp"
 #include "SystemLogging.cpp"

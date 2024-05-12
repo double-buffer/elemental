@@ -1,5 +1,6 @@
 #include "Win32Window.h"
 #include "Win32Application.h"
+#include "Win32Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemDictionary.h"
 #include "SystemFunctions.h"
@@ -58,6 +59,17 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
             return MAKELRESULT(0, MNC_CLOSE);
         }
 
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+        {
+            if (!SystemDictionaryContainsKey(windowDictionary, window))
+            {
+                break;
+            }
+
+            ProcessWin32KeyboardInput(windowDictionary[window], message, wParam, lParam);
+            break;
+        }
         case WM_SYSKEYDOWN:
         {
             if (wParam == VK_RETURN)
@@ -67,6 +79,7 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
                     if (!SystemDictionaryContainsKey(windowDictionary, window))
                     {
                         SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot enter fullscreen because window is not valid.");
+                        break;
                     }
 
                     auto windowHandle = windowDictionary[window];

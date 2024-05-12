@@ -251,7 +251,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         auto deltaTime = update->targetPresentationTimestamp() - swapChainData->PreviousTargetPresentationTimestamp;
         swapChainData->PreviousTargetPresentationTimestamp = update->targetPresentationTimestamp();
 
-        auto nextPresentTimeStampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
+        auto nextPresentTimestampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
 
         auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
@@ -276,7 +276,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             .SwapChainInfo = MetalGetSwapChainInfo(_swapChain),
             .BackBufferTexture = backBufferTexture,
             .DeltaTimeInSeconds = deltaTime,
-            .NextPresentTimeStampInSeconds = nextPresentTimeStampInSeconds
+            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds
         };
 
         _updateHandler(&updateParameters, _updatePayload);

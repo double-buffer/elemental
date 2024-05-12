@@ -185,7 +185,7 @@ void FormatMemorySize(uint64_t bytes, char* outputBuffer, size_t bufferSize)
 {
     const char* suffixes[] = { "B", "KB", "MB", "GB", "TB" }; // Extend if more are needed
     double size = bytes;
-    int i = 0;
+    size_t i = 0;
 
     while (size >= 1024 && i < sizeof(suffixes)/sizeof(suffixes[0]) - 1) 
     {

@@ -121,10 +121,10 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         }
         else 
         {
-            LARGE_INTEGER currentTimeStamp;
-            QueryPerformanceCounter(&currentTimeStamp);
+            LARGE_INTEGER currentTimestamp;
+            QueryPerformanceCounter(&currentTimestamp);
 
-            syncQPCTime.QuadPart = currentTimeStamp.QuadPart - swapChainData->CreationTimestamp.QuadPart;
+            syncQPCTime.QuadPart = currentTimestamp.QuadPart - swapChainData->CreationTimestamp.QuadPart;
         }
 
         double refreshInterval = 1.0 / windowData->MonitorRefreshRate;
@@ -133,7 +133,7 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         LARGE_INTEGER nextVSyncQPCTime;
         nextVSyncQPCTime.QuadPart = syncQPCTime.QuadPart + (LONGLONG)intervalTicks;
 
-        double nextPresentTimeStampInSeconds = nextVSyncQPCTime.QuadPart / ticksPerSecond;
+        double nextPresentTimestampInSeconds = nextVSyncQPCTime.QuadPart / ticksPerSecond;
 
         auto deltaTime = (nextVSyncQPCTime.QuadPart - swapChainData->PreviousTargetPresentationTimestamp.QuadPart) / ticksPerSecond;
         swapChainData->PreviousTargetPresentationTimestamp = nextVSyncQPCTime;
@@ -154,7 +154,7 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
             .SwapChainInfo = DirectX12GetSwapChainInfo(handle),
             .BackBufferTexture = backBufferTexture,
             .DeltaTimeInSeconds = deltaTime,
-            .NextPresentTimeStampInSeconds = nextPresentTimeStampInSeconds
+            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds
         };
         
         swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
