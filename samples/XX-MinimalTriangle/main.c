@@ -1,21 +1,50 @@
 #include "Elemental.h"
-#include "../Common/SampleUtils.h"
+#include "ElementalTools.h"
+
+const char* shaderSource = 
+    "struct Vertex { float3 Position; float4 Color; };"
+    "struct VertexOutput { float4 Position: SV_Position; float4 Color: TEXCOORD0; };"
+
+    "static Vertex triangleVertices[] ="
+    "{"
+    "    { float3(-0.5, 0.5, 0.0), float4(1.0, 0.0, 0.0, 1.0) },"
+    "    { float3(0.5, 0.5, 0.0), float4(0.0, 1.0, 0.0, 1.0) },"
+    "    { float3(-0.5, -0.5, 0.0), float4(0.0, 0.0, 1.0, 1.0) }"
+    "};"
+
+    "[shader(\"mesh\")]"
+    "[OutputTopology(\"triangle\")]"
+    "[NumThreads(32, 1, 1)]"
+    "void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[3], out indices uint3 indices[1])"
+    "{"
+    "    const uint meshVertexCount = 3;"
+    "    SetMeshOutputCounts(meshVertexCount, 1);"
+
+    "    if (groupThreadId < meshVertexCount)"
+    "    {"
+    "        vertices[groupThreadId].Position = float4(triangleVertices[groupThreadId].Position, 1);"
+    "        vertices[groupThreadId].Color = triangleVertices[groupThreadId].Color;"
+    "    }"
+
+    "    if (groupThreadId == 0)"
+    "    {"
+    "        indices[groupThreadId] = uint3(0, 1, 2);"
+    "    }"
+    "}"
+
+    "[shader(\"pixel\")]"
+    "float4 PixelMain(const VertexOutput input) : SV_Target0"
+    "{"
+    "    return input.Color;"
+    "}";
 
 typedef struct
 {
-    float AspectRatio;
-    float RotationY;
-} ShaderParameters;
-
-typedef struct
-{
-    bool PreferVulkan;
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
     ElemSwapChain SwapChain;
     ElemPipelineState GraphicsPipeline;
-    ShaderParameters ShaderParameters;
 } ApplicationPayload;
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
@@ -26,18 +55,20 @@ void InitSample(void* payload)
 
     applicationPayload->Window = ElemCreateWindow(NULL);
 
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
-
     applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
     applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
-    ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
-    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Triangle.shader": "Triangle_vulkan.shader");
-    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
+    ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
+    ElemSystemInfo systemInfo = ElemGetSystemInfo();
+    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);
+
+    ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
+    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, (ElemToolsPlatform)systemInfo.Platform, &shaderSourceData, NULL);
+
+    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, (ElemDataSpan) { .Items = compilationResult.Data.Items, .Length = compilationResult.Data.Length });
 
     applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
-        .DebugName = "Test PSO",
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
@@ -45,7 +76,6 @@ void InitSample(void* payload)
     });
     
     ElemFreeShaderLibrary(shaderLibrary);
-    SampleStartFrameMeasurement();
 }
 
 void FreeSample(void* payload)
@@ -62,70 +92,34 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    //printf("Next Present Timestamp in seconds: %f\n", updateParameters->NextPresentTimeStampInSeconds);
-    //printf("DeltaTime in seconds: %f\n", updateParameters->DeltaTimeInSeconds);
-
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
         {
-            .Items = (ElemRenderPassRenderTarget[]) { 
-            {
+            .Items = (ElemRenderPassRenderTarget[]) {{ 
                 .RenderTarget = updateParameters->BackBufferTexture, 
-                .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
-                .LoadAction = ElemRenderPassLoadAction_Clear
+                .LoadAction = ElemRenderPassLoadAction_Clear 
             }},
             .Length = 1
         }
     });
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
-    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-
     ElemDispatchMesh(commandList, 1, 1, 1);
-
     ElemEndRenderPass(commandList);
 
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
 
     ElemPresentSwapChain(applicationPayload->SwapChain);
-
-    // NOTE: This is the update part of the loop. If render fast this will create a gap and add latency because we need to wait for the next available
-    // Backbuffer
-    SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
-
-    SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
-
-    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
-    applicationPayload->ShaderParameters.RotationY += 1.5f * (float)updateParameters->DeltaTimeInSeconds;
-    
-    SampleStartFrameMeasurement();
 }
 
 int main(int argc, const char* argv[]) 
 {
-    bool preferVulkan = false;
-
-    if (argc > 1 && strcmp(argv[1], "--vulkan") == 0)
-    {
-        preferVulkan = true;
-    }
-
-    ElemConfigureLogHandler(ElemConsoleLogHandler);
-
-    ApplicationPayload payload =
-    {
-        .PreferVulkan = preferVulkan
-    };
-
-    ElemRunApplication(&(ElemRunApplicationParameters)
-    {
-        .ApplicationName = "Hello Triangle",
+    ElemRunApplication(&(ElemRunApplicationParameters) {
         .InitHandler = InitSample,
         .FreeHandler = FreeSample,
-        .Payload = &payload
+        .Payload = &(ApplicationPayload){}
     });
 }
-

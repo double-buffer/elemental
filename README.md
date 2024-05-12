@@ -1,4 +1,5 @@
-# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/double-buffer/elemental/build-ci.yml?branch=main)
+# Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) ![GitHub Repo stars](https://img.shields.io/github/stars/double-buffer/elemental?style=flat) [![GitHub Release Downloads](https://img.shields.io/github/downloads/double-buffer/elemental/total)](https://github.com/double-buffer/elemental/releases) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/double-buffer/elemental/build-ci.yml?branch=main)
+
 
 ## 📖 Purpose
 
@@ -40,146 +41,138 @@ HLSL |
 
 ## 🚀 Getting Started
 
-This getting started exemple, displays a colored triangle using a mesh shader.
+Here is a minimal application that displays a colored triangle using a mesh shader.
 
-![](/samples/screenshots/GettingStarted.png)
+![Minimal Triangle Application](/doc/GettingStarted.png)
 
-Open a command line, create a new console project and add the Elemental NuGet package.
+```c
+#include "Elemental.h"
+#include "ElementalTools.h"
 
-```powershell
-dotnet new console
-dotnet add package Elemental --prerelease
-dotnet add package Elemental.Tools --prerelease
-```
+const char* shaderSource = 
+    "struct Vertex { float3 Position; float4 Color; };"
+    "struct VertexOutput { float4 Position: SV_Position; float4 Color: TEXCOORD0; };"
 
-Copy and paste this sample code to create an empty window and display its current render size in the title bar.
+    "static Vertex triangleVertices[] ="
+    "{"
+    "    { float3(-0.5, 0.5, 0.0), float4(1.0, 0.0, 0.0, 1.0) },"
+    "    { float3(0.5, 0.5, 0.0), float4(0.0, 1.0, 0.0, 1.0) },"
+    "    { float3(-0.5, -0.5, 0.0), float4(0.0, 0.0, 1.0, 1.0) }"
+    "};"
 
-```csharp
-using System.Numerics;
-using Elemental;
-using Elemental.Graphics;
-using Elemental.Tools;
+    "[shader(\"mesh\")]"
+    "[OutputTopology(\"triangle\")]"
+    "[NumThreads(32, 1, 1)]"
+    "void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[3], out indices uint3 indices[1])"
+    "{"
+    "    const uint meshVertexCount = 3;"
+    "    SetMeshOutputCounts(meshVertexCount, 1);"
 
-var applicationService = new NativeApplicationService();
-using var graphicsService = new GraphicsService();
+    "    if (groupThreadId < meshVertexCount)"
+    "    {"
+    "        vertices[groupThreadId].Position = float4(triangleVertices[groupThreadId].Position, 1);"
+    "        vertices[groupThreadId].Color = triangleVertices[groupThreadId].Color;"
+    "    }"
 
-using var application = applicationService.CreateApplication("Hello Window");
-using var window = applicationService.CreateWindow(application);
+    "    if (groupThreadId == 0)"
+    "    {"
+    "        indices[groupThreadId] = uint3(0, 1, 2);"
+    "    }"
+    "}"
 
-using var graphicsDevice = graphicsService.CreateGraphicsDevice();
-using var commandQueue = graphicsService.CreateCommandQueue(graphicsDevice, CommandQueueType.Graphics);
-using var swapChain = graphicsService.CreateSwapChain(window, commandQueue);
-var currentRenderSize = applicationService.GetWindowRenderSize(window);
+    "[shader(\"pixel\")]"
+    "float4 PixelMain(const VertexOutput input) : SV_Target0"
+    "{"
+    "    return input.Color;"
+    "}";
 
-var shaderCode = 
-    """
-    #define RootSignatureDef "RootFlags(0)"
-
-    struct Vertex { float3 Position; float4 Color; };
-    struct VertexOutput { float4 Position: SV_Position; float4 Color: TEXCOORD0; };
-
-    static Vertex triangleVertices[] =
-    {
-        { float3(-0.5, 0.5, 0.0), float4(1.0, 0.0, 0.0, 1.0) },
-        { float3(0.5, 0.5, 0.0), float4(0.0, 1.0, 0.0, 1.0) },
-        { float3(-0.5, -0.5, 0.0), float4(0.0, 0.0, 1.0, 1.0) }
-    };
-
-    [OutputTopology("triangle")]
-    [NumThreads(32, 1, 1)]
-    void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[3], out indices uint3 indices[1])
-    {
-        const uint meshVertexCount = 3;
-
-        SetMeshOutputCounts(meshVertexCount, 1);
-
-        if (groupThreadId < meshVertexCount)
-        {
-            vertices[groupThreadId].Position = float4(triangleVertices[groupThreadId].Position, 1.0);
-            vertices[groupThreadId].Color = triangleVertices[groupThreadId].Color;
-        }
-
-        if (groupThreadId == 0)
-        {
-            indices[groupThreadId] = uint3(0, 1, 2);
-        }
-    }
-
-    float4 PixelMain(const VertexOutput input) : SV_Target0
-    {
-        return input.Color; 
-    }
-    """;
-
-using var shaderCompiler = new ShaderCompiler();
-
-var shaderInputs = new ShaderCompilerInput[]
+typedef struct
 {
-    new() { ShaderCode = shaderCode, Stage = ShaderStage.MeshShader, EntryPoint = "MeshMain", ShaderLanguage = ShaderLanguage.Hlsl },
-    new() { ShaderCode = shaderCode, Stage = ShaderStage.PixelShader, EntryPoint = "PixelMain", ShaderLanguage = ShaderLanguage.Hlsl }
-};
+    ElemWindow Window;
+    ElemGraphicsDevice GraphicsDevice;
+    ElemCommandQueue CommandQueue;
+    ElemSwapChain SwapChain;
+    ElemPipelineState GraphicsPipeline;
+} ApplicationPayload;
 
-var shaderCompilationResults = shaderCompiler.CompileShaders(shaderInputs, graphicsService.GetGraphicsDeviceInfo(graphicsDevice).GraphicsApi);
-var shaderParts = new ShaderPart[shaderCompilationResults.Length];
+void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
 
-for (var i = 0; i < shaderCompilationResults.Length; i++)
+void InitSample(void* payload)
 {
-    shaderParts[i] = new() 
-    { 
-        Stage = shaderCompilationResults[i].Stage, 
-        EntryPoint = shaderCompilationResults[i].EntryPoint, 
-        Data = shaderCompilationResults[i].ShaderData, 
-        MetaData = shaderCompilationResults[i].MetaData
-    };
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+
+    applicationPayload->Window = ElemCreateWindow(NULL);
+
+    applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
+    applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
+    applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
+
+    ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
+    ElemSystemInfo systemInfo = ElemGetSystemInfo();
+    ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);
+
+    ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
+    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, (ElemToolsPlatform)systemInfo.Platform, &shaderSourceData, NULL);
+
+    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, (ElemDataSpan) { .Items = compilationResult.Data.Items, .Length = compilationResult.Data.Length });
+
+    applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+        .ShaderLibrary = shaderLibrary,
+        .MeshShaderFunction = "MeshMain",
+        .PixelShaderFunction = "PixelMain",
+        .TextureFormats = { .Items = (ElemTextureFormat[]) { swapChainInfo.Format }, .Length = 1 }
+    });
+    
+    ElemFreeShaderLibrary(shaderLibrary);
 }
 
-using var shader = graphicsService.CreateShader(graphicsDevice, shaderParts);
-
-applicationService.RunApplication(application, (status) =>
+void FreeSample(void* payload)
 {
-    if (status.IsClosing) return false;
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    var renderSize = applicationService.GetWindowRenderSize(window);
+    ElemFreePipelineState(applicationPayload->GraphicsPipeline);
+    ElemFreeSwapChain(applicationPayload->SwapChain);
+    ElemFreeCommandQueue(applicationPayload->CommandQueue);
+    ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
+}
 
-    if (renderSize != currentRenderSize)
-    {
-        graphicsService.ResizeSwapChain(swapChain, renderSize.Width, renderSize.Height);
-        currentRenderSize = renderSize;
-    }
+void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
+{
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    graphicsService.WaitForSwapChainOnCpu(swapChain);
+    ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
-    var commandList = graphicsService.CreateCommandList(commandQueue);
-    using var backbufferTexture = graphicsService.GetSwapChainBackBufferTexture(swapChain);
-    graphicsService.BeginRenderPass(commandList, new() { RenderTarget0 = new() { Texture = backbufferTexture, ClearColor = new Vector4(0.0f, 1.0f, 1.0f, 1.0f) } });
-    graphicsService.SetShader(commandList, shader);
-    graphicsService.DispatchMesh(commandList, 1, 1, 1);
-    graphicsService.EndRenderPass(commandList);
-    graphicsService.CommitCommandList(commandList);
-    graphicsService.ExecuteCommandList(commandQueue, commandList);
+    ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
+        .RenderTargets = 
+        {
+            .Items = (ElemRenderPassRenderTarget[]) {{ 
+                .RenderTarget = updateParameters->BackBufferTexture, 
+                .LoadAction = ElemRenderPassLoadAction_Clear 
+            }},
+            .Length = 1
+        }
+    });
 
-    graphicsService.PresentSwapChain(swapChain);
-    return true;
-});
+    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
+    ElemDispatchMesh(commandList, 1, 1, 1);
+    ElemEndRenderPass(commandList);
+
+    ElemCommitCommandList(commandList);
+    ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
+
+    ElemPresentSwapChain(applicationPayload->SwapChain);
+}
+
+int main(int argc, const char* argv[]) 
+{
+    ElemRunApplication(&(ElemRunApplicationParameters) {
+        .InitHandler = InitSample,
+        .FreeHandler = FreeSample,
+        .Payload = &(ApplicationPayload){}
+    });
+}
 ```
 
-For MacOS, put those lines into the csproj:
-
-```xml
-  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>./bin/$(Configuration)/$(AssemblyName).app/Contents/MacOS</OutputPath>
-  </PropertyGroup>
-```
-
-Run the app using on any supported platform. (Currently Windows and MacOS)
-
-```
-dotnet run
-```
-
-Warning: Please note that that for the moment this getting started code will not run on MacOS. It is because SPIRV-Cross doesn't support yet Metal Mesh Shader. 
-
-In the near future, it will work on MacOS too. For a work around see the sample HelloTriangle that use a metal shader for the mesh shader.
+Please note that this code use both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
 
 You will find more examples in the [samples folder](samples).
