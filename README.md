@@ -27,7 +27,7 @@ It currently runs on:
 |:--------:|:-----------------:|:---------------:|
 | <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/windows.svg" width="18" height="18" style="fill:red" /> | DirectX12, Vulkan | ✅              |
 | <img src="/doc/icons/apple.svg" width="18" height="18" /> Linux    | Vulkan/Wayland    | ✅              |
-| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/apple.svg" width="18" height="18" /> MacOS    | Metal3            | ✅              |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/apple-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/apple-light.svg"><img alt="MacOS"></picture> | Metal3            | ✅              |
 | <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/ios.svg" width="18" height="18" /> iOS      | Metal3            |                 |
 
 The library is exposed as a C library but other bindings will be available:
