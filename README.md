@@ -4,9 +4,9 @@ Elemental is a portable low-level game platform library that targets only next-g
 It is exposed as a simple C header and other language bindings also exist.
 
 It is a great choice if you want to:
-- Create your own game engine
-- Learn game programming
-- Do graphics research projects.
+- Create your own game engine.
+- Learn game programming.
+- Do graphics research projects with the latest available tech.
 
 > [!WARNING]
 > The project is currently in heavy development. API may have a lot of breaking changes until the first release.
