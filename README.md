@@ -25,10 +25,10 @@ It currently runs on:
 
 | Platform | Graphics API      | Tools Supported |
 |:--------:|:-----------------:|:---------------:|
-| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/windows.svg" width="18" height="18" style="fill:red" /> | DirectX12, Vulkan | ✅              |
-| <img src="/doc/icons/apple.svg" width="18" height="18" /> Linux    | Vulkan/Wayland    | ✅              |
-| <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/apple-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/apple-light.svg"><img alt="MacOS"></picture> | Metal3            | ✅              |
-| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/ios.svg" width="18" height="18" /> iOS      | Metal3            |                 |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/windows-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/windows-light.svg"><img alt="Linux" width="20pt"></picture> | DirectX12, Vulkan | ✅              |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/linux-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/linux-light.svg"><img alt="Linux" width="20pt"></picture> | Vulkan/Wayland    | ✅              |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/apple-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/apple-light.svg"><img alt="MacOS" width="20pt"></picture> | Metal3            | ✅              |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/ios-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/ios-light.svg"><img alt="iOS" width="20pt"></picture> | Metal3            |                 |
 
 The library is exposed as a C library but other bindings will be available:
 
@@ -174,9 +174,11 @@ int main(int argc, const char* argv[])
 }
 ```
 
-ℹ️ Please note that this code uses both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
+[!TIP]
+Please note that this code uses both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
 
-⚠️ This code will only runs on platforms that support shader compilation. (Windows, MacOS, Linux) 
+[!WARNING]
+This code will only runs on platforms that support shader compilation. (Windows, MacOS, Linux) 
 If you want to run code on other platforms you should compile your shaders offline.
 
 You will find more examples in the [samples folder](samples).
