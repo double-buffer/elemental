@@ -1,6 +1,5 @@
 # Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) ![GitHub Repo stars](https://img.shields.io/github/stars/double-buffer/elemental?style=flat) [![GitHub Release Downloads](https://img.shields.io/github/downloads/double-buffer/elemental/total)](https://github.com/double-buffer/elemental/releases) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/double-buffer/elemental/build-ci.yml?branch=main)
 
-
 ## 📖 Purpose
 
 Elemental is a portable low-level game platform abstraction library that targets only next-gen features. Back in the days of DirectX11 and OpenGL,
@@ -21,19 +20,21 @@ For dynamic gpu data that is short lived, we use GPU upload heap (rebar memory).
 - Use of bindless resources
 - No indirect commands: The future will be about work graphs. 
 
+## 📋 Features
 It currently runs on:
 
-- Windows (Direct3D12, Vulkan)
-- Linux (Vulkan)
-- MacOS (Metal)
-- iOS (Metal)
+| Platform | Graphics API      | Tools Supported |
+|:--------:|:-----------------:|:---------------:|
+| ![Windows](/doc/icons/windows-color.svg){width="30pt"}  | DirectX12, Vulkan | ✅              |
+| ![Linux](/doc/icons/linux.svg){width="30pt"}    | Vulkan/Wayland    | ✅              |
+| ![MacOS](/doc/icons/apple.svg){width="30pt"}    | Metal3            | ✅              |
+| ![iOS](/doc/icons/ios.svg){width="30pt"}      | Metal3            |                 |
 
-The library is exposed as a C library but other bindings will are available:
+The library is exposed as a C library but other bindings will be available:
 
-- dotnet: WIP
-Elemental: [![NuGet](https://img.shields.io/nuget/v/Elemental.svg)](https://www.nuget.org/packages/Elemental/) 
-
-Elemental Tools: [![NuGet](https://img.shields.io/nuget/v/Elemental.Tools.svg)](https://www.nuget.org/packages/Elemental.Tools/)
+| Binding | Status | Download      |
+|:-------:|:------:|:-------------:|
+| .NET    | WIP    | Not available |
 
 For shader development you can use the following languages:
 
@@ -173,6 +174,9 @@ int main(int argc, const char* argv[])
 }
 ```
 
-Please note that this code use both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
+ℹ️ Please note that this code uses both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
+
+⚠️ This code will only runs on platforms that support shader compilation. (Windows, MacOS, Linux) 
+If you want to run code on other platforms you should compile your shaders offline.
 
 You will find more examples in the [samples folder](samples).
