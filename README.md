@@ -25,10 +25,10 @@ It currently runs on:
 
 | Platform | Graphics API      | Tools Supported |
 |:--------:|:-----------------:|:---------------:|
-| ![Windows](/doc/icons/windows-color.svg){width="30pt"}  | DirectX12, Vulkan | ✅              |
-| ![Linux](/doc/icons/linux.svg){width="30pt"}    | Vulkan/Wayland    | ✅              |
-| ![MacOS](/doc/icons/apple.svg){width="30pt"}    | Metal3            | ✅              |
-| ![iOS](/doc/icons/ios.svg){width="30pt"}      | Metal3            |                 |
+| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/windows.svg" width="18" height="18" /> Windows | DirectX12, Vulkan | ✅              |
+| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/linux.svg" width="18" height="18" /> Linux    | Vulkan/Wayland    | ✅              |
+| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/apple.svg" width="18" height="18" /> MacOS    | Metal3            | ✅              |
+| <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@develop/icons/ios.svg" width="18" height="18" /> iOS      | Metal3            |                 |
 
 The library is exposed as a C library but other bindings will be available:
 
