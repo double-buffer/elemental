@@ -1,14 +1,28 @@
 # Elemental ![License](https://img.shields.io/github/license/double-buffer/elemental.svg) ![GitHub Repo stars](https://img.shields.io/github/stars/double-buffer/elemental?style=flat) [![GitHub Release Downloads](https://img.shields.io/github/downloads/double-buffer/elemental/total)](https://github.com/double-buffer/elemental/releases) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/double-buffer/elemental/build-ci.yml?branch=main)
 
+Elemental is a portable low-level game platform library that targets only next-gen features. 
+It is exposed as a simple C header and other language bindings also exist.
+
+It is a great choice if you want to:
+- Create your own game engine
+- Learn game programming
+- Do graphics research projects.
+
+> [!WARNING]
+> The project is currently in heavy development. API may have a lot of breaking changes until the first release.
+
 ## 📖 Purpose
 
-Elemental is a portable low-level game platform abstraction library that targets only next-gen features. Back in the days of DirectX11 and OpenGL,
-it was very easy to start working on its own custom program that took full advantage of the GPU. New apis give more control to the developper but 
-they are hard to use. They also have many ways of doing things because they must maintain backward compatibility.
+Elemental aims to simplify and standardize game development across different platforms by offering a unified API.
 
-The goal of Elemental is to simplify and unify all graphics API on all platforms. It doesn't mean that it will simplify or abstract graphics development. 
-It is still challenging but developers can now focus on learning graphics programming like in the old days. And build their graphics app or engine by focusing
-on graphics algorithms.
+Back in the days of DirectX11 and OpenGL, it was very easy to start working on its own game or custom engine that took full advantage of the GPU. 
+Newer apis give more control to the developpers but they are hard to use. They also provide many ways of doing things because they must maintain backward compatibility.
+
+Elemental bridges this gap by focusing on powerful, next-gen features without the overhead of backward compatibility. 
+This approach not only facilitates learning and using graphics programming as in earlier times but also gears developers up for future advancements without compromising on performance.
+
+It doesn't mean that it will simplify or abstract graphics development. 
+It is a challenging topic but developers can now focus on learning graphics programming like in the old days by focusing on graphics algorithms and not on the complicated platform specific implementation details.
 
 The library is still in heavy development stage. The goal is not to be compatible with the majority of graphics cards now but to be ready for the future.
 
@@ -21,6 +35,20 @@ For dynamic gpu data that is short lived, we use GPU upload heap (rebar memory).
 - No indirect commands: The future will be about work graphs. 
 
 ## 📋 Features
+
+Implemented features for current version **1.0.0-DEV3**:
+
+- Application: 
+    - Application Lifetime with the same code for all platforms.
+    - Windows.
+- Graphics:
+    - Graphics Device.
+    - CommandQueues and CommandLists.
+    - SwapChain.
+    - Mesh shaders.
+- Tools:
+    - Shader Compiler.
+
 It currently runs on:
 
 | Platform | Graphics API      | Tools Supported |
@@ -38,8 +66,8 @@ The library is exposed as a C library but other bindings will be available:
 
 For shader development, the shader compiler supports the following languages and platforms:
 
-| Shader Language | Target API | Compilation Platform |
-|:---------------:|:----------:|:--------------------:|
+| Shader Language | Target API | Compilation Platforms |
+|:---------------:|:----------:|:---------------------:|
 | HLSL            | DirectX12  | <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/windows-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/windows-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/linux-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/linux-light.svg"><img alt="Linux" width="20pt"></picture> |
 | HLSL            | Vulkan     | <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/windows-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/windows-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/linux-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/linux-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/apple-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/apple-light.svg"><img alt="MacOS" width="20pt"></picture> |
 | HLSL            | Metal3     | <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/windows-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/windows-light.svg"><img alt="Linux" width="20pt"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="/doc/icons/apple-dark.svg"><source media="(prefers-color-scheme: light)" srcset="/doc/icons/apple-light.svg"><img alt="MacOS" width="20pt"></picture> |
@@ -179,10 +207,10 @@ int main(int argc, const char* argv[])
 ```
 
 > [!TIP]
-> Please note that this code uses both Elemental and ElementalTools. In a real world app, you should compile your shaders offline with a tool.
+> Please note that this code uses both Elemental and ElementalTools. In a real world app, you should compile your shaders offline.
 
 > [!WARNING]
 > This code will only runs on platforms that support shader compilation. (Windows, MacOS, Linux) 
 > If you want to run code on other platforms you should compile your shaders offline.
 
-You will find more examples in the [samples folder](samples).
+You will find detailled examples in the [samples folder](samples).
