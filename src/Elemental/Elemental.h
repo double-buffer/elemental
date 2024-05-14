@@ -959,6 +959,7 @@ typedef struct
     ElemWindow Window;
     ElemInputId InputId;
     float Value;
+    double ElapsedSeconds;
 } ElemInputEvent;
 
 typedef struct

@@ -14,7 +14,6 @@ struct DirectX12SwapChainData
     ElemTexture BackBufferTextures[DIRECTX12_MAX_SWAPCHAIN_BUFFERS];
     ElemSwapChainUpdateHandlerPtr UpdateHandler;
     void* UpdatePayload;
-    LARGE_INTEGER CreationTimestamp;
     LARGE_INTEGER PreviousTargetPresentationTimestamp;
     uint32_t Width;
     uint32_t Height;

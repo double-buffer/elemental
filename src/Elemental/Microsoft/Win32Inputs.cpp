@@ -1,5 +1,7 @@
 #include "Win32Inputs.h"
+#include "Win32Application.h"
 #include "Inputs/Inputs.h"
+#include "SystemPlatformFunctions.h"
 
 ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
 {
@@ -105,11 +107,14 @@ ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
 
 void ProcessWin32KeyboardInput(ElemWindow window, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - Win32PerformanceCounterStart) / Win32PerformanceCounterFrequencyInSeconds;
+
     ElemInputEvent event =
     {
         .Window = window,
         .InputId = GetWin32InputIdFromKeyCode(wParam),
-        .Value = (message == WM_KEYDOWN) ? 1.0f : 0.0f
+        .Value = (message == WM_KEYDOWN) ? 1.0f : 0.0f,
+        .ElapsedSeconds = elapsedSeconds
     };
 
     AddInputEvent(event);

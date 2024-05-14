@@ -25,43 +25,43 @@ typedef struct ElementalFunctions
 {
     void (*ElemConfigureLogHandler)(ElemLogHandlerPtr);
     ElemSystemInfo (*ElemGetSystemInfo)(void);
-    int (*ElemRunApplication)(const ElemRunApplicationParameters*);
+    int (*ElemRunApplication)(ElemRunApplicationParameters const *);
     void (*ElemExitApplication)(int);
-    ElemWindow (*ElemCreateWindow)(const ElemWindowOptions*);
+    ElemWindow (*ElemCreateWindow)(ElemWindowOptions const *);
     void (*ElemFreeWindow)(ElemWindow);
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
-    void (*ElemSetWindowTitle)(ElemWindow, const char*);
+    void (*ElemSetWindowTitle)(ElemWindow, char const *);
     void (*ElemSetWindowState)(ElemWindow, ElemWindowState);
-    void (*ElemSetGraphicsOptions)(const ElemGraphicsOptions*);
+    void (*ElemSetGraphicsOptions)(ElemGraphicsOptions const *);
     ElemGraphicsDeviceInfoSpan (*ElemGetAvailableGraphicsDevices)(void);
-    ElemGraphicsDevice (*ElemCreateGraphicsDevice)(const ElemGraphicsDeviceOptions*);
+    ElemGraphicsDevice (*ElemCreateGraphicsDevice)(ElemGraphicsDeviceOptions const *);
     void (*ElemFreeGraphicsDevice)(ElemGraphicsDevice);
     ElemGraphicsDeviceInfo (*ElemGetGraphicsDeviceInfo)(ElemGraphicsDevice);
-    ElemCommandQueue (*ElemCreateCommandQueue)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*);
+    ElemCommandQueue (*ElemCreateCommandQueue)(ElemGraphicsDevice, ElemCommandQueueType, ElemCommandQueueOptions const *);
     void (*ElemFreeCommandQueue)(ElemCommandQueue);
     void (*ElemResetCommandAllocation)(ElemGraphicsDevice);
-    ElemCommandList (*ElemGetCommandList)(ElemCommandQueue, const ElemCommandListOptions*);
+    ElemCommandList (*ElemGetCommandList)(ElemCommandQueue, ElemCommandListOptions const *);
     void (*ElemCommitCommandList)(ElemCommandList);
-    ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*);
-    ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*);
+    ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, ElemExecuteCommandListOptions const *);
+    ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, ElemExecuteCommandListOptions const *);
     void (*ElemWaitForFenceOnCpu)(ElemFence);
-    ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*);
+    ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, ElemSwapChainOptions const *);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemSetSwapChainTiming)(ElemSwapChain, unsigned int, unsigned int);
     void (*ElemPresentSwapChain)(ElemSwapChain);
-    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, const ElemDataSpan);
+    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan const);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
-    ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*);
+    ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
     void (*ElemFreePipelineState)(ElemPipelineState);
     void (*ElemBindPipelineState)(ElemCommandList, ElemPipelineState);
-    void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, const ElemDataSpan);
-    void (*ElemBeginRenderPass)(ElemCommandList, const ElemBeginRenderPassParameters*);
+    void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, ElemDataSpan const);
+    void (*ElemBeginRenderPass)(ElemCommandList, ElemBeginRenderPassParameters const *);
     void (*ElemEndRenderPass)(ElemCommandList);
-    void (*ElemSetViewport)(ElemCommandList, const ElemViewport*);
+    void (*ElemSetViewport)(ElemCommandList, ElemViewport const *);
     void (*ElemSetViewports)(ElemCommandList, ElemViewportSpan);
     void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
-    ElemInputStream (*ElemGetInputStream)(ElemGetInputStreamOptions*);
+    ElemInputStream (*ElemGetInputStream)(ElemGetInputStreamOptions *);
     
 } ElementalFunctions;
 
@@ -116,43 +116,43 @@ static bool LoadElementalFunctionPointers(void)
 
     listElementalFunctions.ElemConfigureLogHandler = (void (*)(ElemLogHandlerPtr))GetElementalFunctionPointer("ElemConfigureLogHandler");
     listElementalFunctions.ElemGetSystemInfo = (ElemSystemInfo (*)(void))GetElementalFunctionPointer("ElemGetSystemInfo");
-    listElementalFunctions.ElemRunApplication = (int (*)(const ElemRunApplicationParameters*))GetElementalFunctionPointer("ElemRunApplication");
+    listElementalFunctions.ElemRunApplication = (int (*)(ElemRunApplicationParameters const *))GetElementalFunctionPointer("ElemRunApplication");
     listElementalFunctions.ElemExitApplication = (void (*)(int))GetElementalFunctionPointer("ElemExitApplication");
-    listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(const ElemWindowOptions*))GetElementalFunctionPointer("ElemCreateWindow");
+    listElementalFunctions.ElemCreateWindow = (ElemWindow (*)(ElemWindowOptions const *))GetElementalFunctionPointer("ElemCreateWindow");
     listElementalFunctions.ElemFreeWindow = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemFreeWindow");
     listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
-    listElementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, const char*))GetElementalFunctionPointer("ElemSetWindowTitle");
+    listElementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, char const *))GetElementalFunctionPointer("ElemSetWindowTitle");
     listElementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetElementalFunctionPointer("ElemSetWindowState");
-    listElementalFunctions.ElemSetGraphicsOptions = (void (*)(const ElemGraphicsOptions*))GetElementalFunctionPointer("ElemSetGraphicsOptions");
+    listElementalFunctions.ElemSetGraphicsOptions = (void (*)(ElemGraphicsOptions const *))GetElementalFunctionPointer("ElemSetGraphicsOptions");
     listElementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoSpan (*)(void))GetElementalFunctionPointer("ElemGetAvailableGraphicsDevices");
-    listElementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(const ElemGraphicsDeviceOptions*))GetElementalFunctionPointer("ElemCreateGraphicsDevice");
+    listElementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(ElemGraphicsDeviceOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsDevice");
     listElementalFunctions.ElemFreeGraphicsDevice = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemFreeGraphicsDevice");
     listElementalFunctions.ElemGetGraphicsDeviceInfo = (ElemGraphicsDeviceInfo (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemGetGraphicsDeviceInfo");
-    listElementalFunctions.ElemCreateCommandQueue = (ElemCommandQueue (*)(ElemGraphicsDevice, ElemCommandQueueType, const ElemCommandQueueOptions*))GetElementalFunctionPointer("ElemCreateCommandQueue");
+    listElementalFunctions.ElemCreateCommandQueue = (ElemCommandQueue (*)(ElemGraphicsDevice, ElemCommandQueueType, ElemCommandQueueOptions const *))GetElementalFunctionPointer("ElemCreateCommandQueue");
     listElementalFunctions.ElemFreeCommandQueue = (void (*)(ElemCommandQueue))GetElementalFunctionPointer("ElemFreeCommandQueue");
     listElementalFunctions.ElemResetCommandAllocation = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemResetCommandAllocation");
-    listElementalFunctions.ElemGetCommandList = (ElemCommandList (*)(ElemCommandQueue, const ElemCommandListOptions*))GetElementalFunctionPointer("ElemGetCommandList");
+    listElementalFunctions.ElemGetCommandList = (ElemCommandList (*)(ElemCommandQueue, ElemCommandListOptions const *))GetElementalFunctionPointer("ElemGetCommandList");
     listElementalFunctions.ElemCommitCommandList = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemCommitCommandList");
-    listElementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandList");
-    listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, const ElemExecuteCommandListOptions*))GetElementalFunctionPointer("ElemExecuteCommandLists");
+    listElementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, ElemExecuteCommandListOptions const *))GetElementalFunctionPointer("ElemExecuteCommandList");
+    listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, ElemExecuteCommandListOptions const *))GetElementalFunctionPointer("ElemExecuteCommandLists");
     listElementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetElementalFunctionPointer("ElemWaitForFenceOnCpu");
-    listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, const ElemSwapChainOptions*))GetElementalFunctionPointer("ElemCreateSwapChain");
+    listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, ElemSwapChainOptions const *))GetElementalFunctionPointer("ElemCreateSwapChain");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemSetSwapChainTiming = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemSetSwapChainTiming");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
-    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, const ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
+    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan const))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
-    listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, const ElemGraphicsPipelineStateParameters*))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
+    listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
     listElementalFunctions.ElemFreePipelineState = (void (*)(ElemPipelineState))GetElementalFunctionPointer("ElemFreePipelineState");
     listElementalFunctions.ElemBindPipelineState = (void (*)(ElemCommandList, ElemPipelineState))GetElementalFunctionPointer("ElemBindPipelineState");
-    listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, const ElemDataSpan))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
-    listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, const ElemBeginRenderPassParameters*))GetElementalFunctionPointer("ElemBeginRenderPass");
+    listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, ElemDataSpan const))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
+    listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, ElemBeginRenderPassParameters const *))GetElementalFunctionPointer("ElemBeginRenderPass");
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
-    listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, const ElemViewport*))GetElementalFunctionPointer("ElemSetViewport");
+    listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, ElemViewport const *))GetElementalFunctionPointer("ElemSetViewport");
     listElementalFunctions.ElemSetViewports = (void (*)(ElemCommandList, ElemViewportSpan))GetElementalFunctionPointer("ElemSetViewports");
     listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
-    listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(ElemGetInputStreamOptions*))GetElementalFunctionPointer("ElemGetInputStream");
+    listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(ElemGetInputStreamOptions *))GetElementalFunctionPointer("ElemGetInputStream");
     
 
     functionPointersLoadedElemental = 1;
@@ -294,7 +294,7 @@ static inline ElemSystemInfo ElemGetSystemInfo(void)
     return listElementalFunctions.ElemGetSystemInfo();
 }
 
-static inline int ElemRunApplication(const ElemRunApplicationParameters* parameters)
+static inline int ElemRunApplication(ElemRunApplicationParameters const * parameters)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -342,7 +342,7 @@ static inline void ElemExitApplication(int exitCode)
     listElementalFunctions.ElemExitApplication(exitCode);
 }
 
-static inline ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
+static inline ElemWindow ElemCreateWindow(ElemWindowOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -421,7 +421,7 @@ static inline ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
     return listElementalFunctions.ElemGetWindowRenderSize(window);
 }
 
-static inline void ElemSetWindowTitle(ElemWindow window, const char* title)
+static inline void ElemSetWindowTitle(ElemWindow window, char const * title)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -455,7 +455,7 @@ static inline void ElemSetWindowState(ElemWindow window, ElemWindowState windowS
     listElementalFunctions.ElemSetWindowState(window, windowState);
 }
 
-static inline void ElemSetGraphicsOptions(const ElemGraphicsOptions* options)
+static inline void ElemSetGraphicsOptions(ElemGraphicsOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -503,7 +503,7 @@ static inline ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices(void)
     return listElementalFunctions.ElemGetAvailableGraphicsDevices();
 }
 
-static inline ElemGraphicsDevice ElemCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options)
+static inline ElemGraphicsDevice ElemCreateGraphicsDevice(ElemGraphicsDeviceOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -582,7 +582,7 @@ static inline ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevic
     return listElementalFunctions.ElemGetGraphicsDeviceInfo(graphicsDevice);
 }
 
-static inline ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
+static inline ElemCommandQueue ElemCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, ElemCommandQueueOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -647,7 +647,7 @@ static inline void ElemResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
     listElementalFunctions.ElemResetCommandAllocation(graphicsDevice);
 }
 
-static inline ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
+static inline ElemCommandList ElemGetCommandList(ElemCommandQueue commandQueue, ElemCommandListOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -695,7 +695,7 @@ static inline void ElemCommitCommandList(ElemCommandList commandList)
     listElementalFunctions.ElemCommitCommandList(commandList);
 }
 
-static inline ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, const ElemExecuteCommandListOptions* options)
+static inline ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemCommandList commandList, ElemExecuteCommandListOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -726,7 +726,7 @@ static inline ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, El
     return listElementalFunctions.ElemExecuteCommandList(commandQueue, commandList, options);
 }
 
-static inline ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
+static inline ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, ElemExecuteCommandListOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -774,7 +774,7 @@ static inline void ElemWaitForFenceOnCpu(ElemFence fence)
     listElementalFunctions.ElemWaitForFenceOnCpu(fence);
 }
 
-static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, const ElemSwapChainOptions* options)
+static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, ElemSwapChainOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -887,7 +887,7 @@ static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
     listElementalFunctions.ElemPresentSwapChain(swapChain);
 }
 
-static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, const ElemDataSpan shaderLibraryData)
+static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan const shaderLibraryData)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -935,7 +935,7 @@ static inline void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary)
     listElementalFunctions.ElemFreeShaderLibrary(shaderLibrary);
 }
 
-static inline ElemPipelineState ElemCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters)
+static inline ElemPipelineState ElemCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, ElemGraphicsPipelineStateParameters const * parameters)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1000,7 +1000,7 @@ static inline void ElemBindPipelineState(ElemCommandList commandList, ElemPipeli
     listElementalFunctions.ElemBindPipelineState(commandList, pipelineState);
 }
 
-static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, unsigned int offsetInBytes, const ElemDataSpan data)
+static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, unsigned int offsetInBytes, ElemDataSpan const data)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1017,7 +1017,7 @@ static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, u
     listElementalFunctions.ElemPushPipelineStateConstants(commandList, offsetInBytes, data);
 }
 
-static inline void ElemBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
+static inline void ElemBeginRenderPass(ElemCommandList commandList, ElemBeginRenderPassParameters const * parameters)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1051,7 +1051,7 @@ static inline void ElemEndRenderPass(ElemCommandList commandList)
     listElementalFunctions.ElemEndRenderPass(commandList);
 }
 
-static inline void ElemSetViewport(ElemCommandList commandList, const ElemViewport* viewport)
+static inline void ElemSetViewport(ElemCommandList commandList, ElemViewport const * viewport)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1102,7 +1102,7 @@ static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int th
     listElementalFunctions.ElemDispatchMesh(commandList, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
 
-static inline ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions* options)
+static inline ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {

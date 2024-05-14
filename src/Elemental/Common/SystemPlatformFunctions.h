@@ -40,6 +40,20 @@ SystemPlatformEnvironment* SystemPlatformGetEnvironment(MemoryArena memoryArena)
 SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena);
 
 /**
+ * Retrieves the current high performance counter of the system platform.
+ *
+ * @return The high performance counter.
+ */
+uint64_t SystemPlatformGetHighPerformanceCounter();
+
+/**
+ * Retrieves the current high performance counter frequency of the system platform.
+ *
+ * @return The high performance counter frequency.
+ */
+uint64_t SystemPlatformGetHighPerformanceCounterFrequencyInSeconds();
+
+/**
  * Retrieves the size of the system's memory page.
  * 
  * This function is used to obtain the size of a single page of memory as used by the system's memory management. 

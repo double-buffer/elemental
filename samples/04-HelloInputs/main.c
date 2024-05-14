@@ -1,11 +1,21 @@
 #include "Elemental.h"
+#include <math.h>
 #include "../Common/SampleUtils.h"
 
 typedef struct
 {
+    float X, Y, Z;
+} Vector3;
+
+typedef struct
+{
+    float X, Y, Z, W;
+} Vector4;
+
+typedef struct
+{
+    Vector4 RotationQuaternion;
     float AspectRatio;
-    float RotationX;
-    float RotationY;
 } ShaderParameters;
 
 typedef struct
@@ -29,6 +39,40 @@ typedef struct
     InputState InputState;
     ShaderParameters ShaderParameters;
 } ApplicationPayload;
+
+// TODO: Review all the maths
+Vector4 CreateQuaternion(Vector3 v, float w)
+{
+	Vector4 result;
+    
+	result.X = v.X * sinf(w * 0.5f);
+	result.Y = v.Y * sinf(w * 0.5f);
+	result.Z = v.Z * sinf(w * 0.5f);
+	result.W = cosf(w * 0.5f);
+
+	return result;
+}
+
+Vector3 crossProduct(Vector4 v1, Vector4 v2) {
+    Vector3 result;
+    result.X = v1.Y * v2.Z - v1.Z * v2.Y;
+    result.Y = v1.Z * v2.X - v1.X * v2.Z;
+    result.Z = v1.X * v2.Y - v1.Y * v2.X;
+    return result;
+}
+float dotProduct(Vector4 v1, Vector4 v2) {
+    return v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
+}
+Vector4 qmul(Vector4 q1, Vector4 q2)
+{
+    float x = q2.X * q1.W + q1.X * q2.W + crossProduct(q1, q2).X;
+    float y = q2.Y * q1.W + q1.Y * q2.W + crossProduct(q1, q2).Y;
+    float z = q2.Z * q1.W + q1.Z * q2.W + crossProduct(q1, q2).Z;
+    
+    float w = q1.W * q2.W - dotProduct(q1, q2);
+
+    return (Vector4) { x, y, z, w };
+}
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
 
@@ -55,6 +99,8 @@ void InitSample(void* payload)
         .PixelShaderFunction = "PixelMain",
         .TextureFormats = { .Items = (ElemTextureFormat[]) { swapChainInfo.Format }, .Length = 1 }
     });
+
+    applicationPayload->ShaderParameters.RotationQuaternion = (Vector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
     
     ElemFreeShaderLibrary(shaderLibrary);
     SampleStartFrameMeasurement();
@@ -83,7 +129,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
-        printf("Received an input event: Value=%f\n", inputStream.Events.Items[i].Value);
+        printf("Received an input event: Value=%f (Elapsed: %f)\n", inputStream.Events.Items[i].Value, inputStream.Events.Items[i].ElapsedSeconds);
 
         if (inputStream.Events.Items[i].InputId == ElemInputId_KeyD)
         {
@@ -128,8 +174,11 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
-    applicationPayload->ShaderParameters.RotationX += (applicationPayload->InputState.KeyDownPressed - applicationPayload->InputState.KeyUpPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
-    applicationPayload->ShaderParameters.RotationY += (applicationPayload->InputState.KeyRightPressed - applicationPayload->InputState.KeyLeftPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+    float rotationX = (applicationPayload->InputState.KeyDownPressed - applicationPayload->InputState.KeyUpPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+    float rotationY = (applicationPayload->InputState.KeyRightPressed - applicationPayload->InputState.KeyLeftPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+
+    Vector4 rotationQuaternion = qmul(CreateQuaternion((Vector3){ 1, 0, 0 }, -rotationX), CreateQuaternion((Vector3){ 0, 1, 0 }, -rotationY));
+    applicationPayload->ShaderParameters.RotationQuaternion = qmul(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 

@@ -117,14 +117,14 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         // too much time. And maybe the previous present will not be presented yet.
         if (SUCCEEDED(swapChainData->DeviceObject->GetFrameStatistics(&stats)))
         {
-            syncQPCTime.QuadPart= stats.SyncQPCTime.QuadPart - swapChainData->CreationTimestamp.QuadPart;
+            syncQPCTime.QuadPart= stats.SyncQPCTime.QuadPart - Win32PerformanceCounterStart;
         }
         else 
         {
             LARGE_INTEGER currentTimestamp;
             QueryPerformanceCounter(&currentTimestamp);
 
-            syncQPCTime.QuadPart = currentTimestamp.QuadPart - swapChainData->CreationTimestamp.QuadPart;
+            syncQPCTime.QuadPart = currentTimestamp.QuadPart - Win32PerformanceCounterStart;
         }
 
         double refreshInterval = 1.0 / windowData->MonitorRefreshRate;
@@ -258,7 +258,6 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .WaitHandle = waitHandle,
         .UpdateHandler = updateHandler,
         .UpdatePayload = updatePayload,
-        .CreationTimestamp = creationTimestamp,
         .PreviousTargetPresentationTimestamp = {},
         .Width = width,
         .Height = height,

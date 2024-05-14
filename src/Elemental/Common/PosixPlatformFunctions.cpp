@@ -56,6 +56,19 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena
     return result;
 }
 
+uint64_t SystemPlatformGetHighPerformanceCounter()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return (uint64_t)ts.tv_sec * 1000000000 + (uint64_t)ts.tv_nsec;
+}
+
+uint64_t SystemPlatformGetHighPerformanceCounterFrequencyInSeconds()
+{
+    return 1000000000;
+}
+
 size_t SystemPlatformGetPageSize()
 {
     return sysconf(_SC_PAGESIZE);
