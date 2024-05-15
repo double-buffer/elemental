@@ -2,4 +2,6 @@
 
 #include "Elemental.h"
 
-void ProcessWin32KeyboardInput(ElemWindow window, UINT message, WPARAM wParam, LPARAM lParam);
+void InitWin32Inputs(HWND window);
+void ProcessWin32KeyInput(ElemWindow window, UINT message, WPARAM wParam, LPARAM lParam);
+void ProcessWin32RawInput(ElemWindow window, LPARAM lParam);

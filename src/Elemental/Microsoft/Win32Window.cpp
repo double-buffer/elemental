@@ -59,6 +59,7 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
             return MAKELRESULT(0, MNC_CLOSE);
         }
 
+        // TODO: Don't use the windows events for inputs
         case WM_KEYDOWN:
         case WM_KEYUP:
         {
@@ -67,9 +68,33 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
                 break;
             }
 
-            ProcessWin32KeyboardInput(windowDictionary[window], message, wParam, lParam);
+            ProcessWin32KeyInput(windowDictionary[window], message, wParam, lParam);
             break;
         }
+
+        case WM_INPUT:
+        {
+            if (!SystemDictionaryContainsKey(windowDictionary, window))
+            {
+                break;
+            }
+
+            ProcessWin32RawInput(windowDictionary[window], lParam);
+            break;
+        };
+        
+        /*
+        case WM_MOUSEMOVE:
+        {
+            if (!SystemDictionaryContainsKey(windowDictionary, window))
+            {
+                break;
+            }
+
+            ProcessWin32MouseMove(windowDictionary[window], message, wParam, lParam);
+            break;
+        }*/
+
         case WM_SYSKEYDOWN:
         {
             if (wParam == VK_RETURN)
@@ -294,6 +319,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 
     ElemSetWindowState(handle, windowState);
     RefreshWin32MonitorInfos(handle);
+
+    InitWin32Inputs(window);
 
     return handle;
 }

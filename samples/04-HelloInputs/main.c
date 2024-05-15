@@ -26,6 +26,9 @@ typedef struct
     bool KeyRightPressed;
     bool EscapePressed;
     bool EscapeReleased;
+    bool MouseLeftPressed;
+    float MousePositionXDelta;
+    float MousePositionYDelta;
 } InputState;
 
 typedef struct
@@ -125,11 +128,14 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         applicationPayload->InputState.EscapeReleased = false;
     }
 
+    applicationPayload->InputState.MousePositionXDelta = 0.0f;
+    applicationPayload->InputState.MousePositionYDelta = 0.0f;
+
     //printf("Input Stream Timestamp: %f\n", inputStream.TimestampInSeconds);
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
-        printf("Received an input event: Value=%f (Elapsed: %f)\n", inputStream.Events.Items[i].Value, inputStream.Events.Items[i].ElapsedSeconds);
+        printf("Received an input event %d: Value=%f (Elapsed: %f)\n", inputStream.Events.Items[i].InputId, inputStream.Events.Items[i].Value, inputStream.Events.Items[i].ElapsedSeconds);
 
         if (inputStream.Events.Items[i].InputId == ElemInputId_KeyD)
         {
@@ -151,7 +157,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
             applicationPayload->InputState.KeyUpPressed = inputStream.Events.Items[i].Value;
         }
 
-        if (inputStream.Events.Items[i].InputId == ElemInputId_Escape)
+        if (inputStream.Events.Items[i].InputId == ElemInputId_KeyEscape)
         {
             if (applicationPayload->InputState.EscapePressed && inputStream.Events.Items[i].Value == 0.0f)
             {
@@ -159,6 +165,21 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
             }
 
             applicationPayload->InputState.EscapePressed = inputStream.Events.Items[i].Value;
+        }
+
+        if (inputStream.Events.Items[i].InputId == ElemInputId_MouseLeft)
+        {
+            applicationPayload->InputState.MouseLeftPressed = inputStream.Events.Items[i].Value;
+        }
+        
+        if (inputStream.Events.Items[i].InputId == ElemInputId_MouseAxisX)
+        {
+            applicationPayload->InputState.MousePositionXDelta = inputStream.Events.Items[i].Value;
+        }
+        
+        if (inputStream.Events.Items[i].InputId == ElemInputId_MouseAxisY)
+        {
+            applicationPayload->InputState.MousePositionYDelta = inputStream.Events.Items[i].Value;
         }
     }
 }
@@ -174,11 +195,25 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
-    float rotationX = (applicationPayload->InputState.KeyDownPressed - applicationPayload->InputState.KeyUpPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
-    float rotationY = (applicationPayload->InputState.KeyRightPressed - applicationPayload->InputState.KeyLeftPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+    float rotationX = 0.0f;
+    float rotationY = 0.0f;
 
-    Vector4 rotationQuaternion = qmul(CreateQuaternion((Vector3){ 1, 0, 0 }, -rotationX), CreateQuaternion((Vector3){ 0, 1, 0 }, -rotationY));
-    applicationPayload->ShaderParameters.RotationQuaternion = qmul(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
+    if (applicationPayload->InputState.MouseLeftPressed)
+    {
+        rotationX = applicationPayload->InputState.MousePositionYDelta * 2.5f * updateParameters->DeltaTimeInSeconds;
+        rotationY = applicationPayload->InputState.MousePositionXDelta * 2.5f * updateParameters->DeltaTimeInSeconds;
+    }
+    else
+    {
+        rotationX = (applicationPayload->InputState.KeyDownPressed - applicationPayload->InputState.KeyUpPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+        rotationY = (applicationPayload->InputState.KeyRightPressed - applicationPayload->InputState.KeyLeftPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+    }
+
+    if (rotationX || rotationY)
+    {
+        Vector4 rotationQuaternion = qmul(CreateQuaternion((Vector3){ 1, 0, 0 }, -rotationX), CreateQuaternion((Vector3){ 0, 1, 0 }, -rotationY));
+        applicationPayload->ShaderParameters.RotationQuaternion = qmul(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
+    }
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
