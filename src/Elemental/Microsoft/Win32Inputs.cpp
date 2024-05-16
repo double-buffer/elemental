@@ -1,8 +1,12 @@
 #include "Win32Inputs.h"
 #include "Win32Application.h"
 #include "Inputs/Inputs.h"
+#include "SystemDictionary.h"
 #include "SystemFunctions.h"
+#include "SystemLogging.h"
 #include "SystemPlatformFunctions.h"
+
+SystemDictionary<HANDLE, ElemInputDevice> win32InputDeviceDictionary;
 
 void InitWin32Inputs(HWND window)
 {
@@ -13,19 +17,19 @@ void InitWin32Inputs(HWND window)
         {
             .usUsagePage = HID_USAGE_PAGE_GENERIC,
             .usUsage = HID_USAGE_GENERIC_MOUSE,
-            .dwFlags = 0, // RIDEV_DEVNOTIFY ?
+            .dwFlags = RIDEV_DEVNOTIFY,
             .hwndTarget = window
         },
         {
             .usUsagePage = HID_USAGE_PAGE_GENERIC,
             .usUsage = HID_USAGE_GENERIC_KEYBOARD,
-            .dwFlags = 0, // RIDEV_DEVNOTIFY ?
+            .dwFlags = RIDEV_DEVNOTIFY,
             .hwndTarget = window
         },
         {
             .usUsagePage = HID_USAGE_PAGE_GENERIC,
             .usUsage = HID_USAGE_GENERIC_GAMEPAD,
-            .dwFlags = 0, // RIDEV_DEVNOTIFY ?
+            .dwFlags = RIDEV_DEVNOTIFY,
             .hwndTarget = window
         }
     };
@@ -34,6 +38,8 @@ void InitWin32Inputs(HWND window)
     {
         SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Cannot init RawInput.", ARRAYSIZE(devices));
     }
+
+    win32InputDeviceDictionary = SystemCreateDictionary<HANDLE, ElemInputDevice>(ApplicationMemoryArena, MAX_INPUT_DEVICES);
 }
 
 ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
@@ -138,46 +144,159 @@ ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
     };
 }
 
-ElemInputId GetWin32InputIdFromMouseEvent(UINT message)
+void ProcessWin32RawInputKeyboard(ElemWindow window, ElemInputDevice inputDevice, RAWKEYBOARD* keyboardData, double elapsedSeconds)
 {
-    switch (message)
-    {
-        case WM_LBUTTONDOWN: 
-        case WM_LBUTTONUP: 
-            return ElemInputId_MouseLeft;
-        //case VK_RBUTTON: return ElemInputId_MouseRight;
-        //case VK_MBUTTON: return ElemInputId_MouseMiddle;
-        //WM_XBUTTONDOWN:
-            
-        //case VK_XBUTTON1: return ElemInputId_MouseExtraButton1;
-        //case VK_XBUTTON2: return ElemInputId_MouseExtraButton2;
-        default: return ElemInputId_Unknown;
-    }
-}
-
-bool IsKeyPressed(UINT message)
-{
-    return message == WM_KEYDOWN ||
-           message == WM_LBUTTONDOWN ||
-           message == WM_RBUTTONDOWN ||
-           message == WM_MBUTTONDOWN ||
-           message == WM_XBUTTONDOWN;
-}
-
-void ProcessWin32KeyInput(ElemWindow window, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - Win32PerformanceCounterStart) / Win32PerformanceCounterFrequencyInSeconds;
-
     ElemInputEvent event =
     {
         .Window = window,
-        .InputId = (message == WM_KEYDOWN || message == WM_KEYUP) ? GetWin32InputIdFromKeyCode(wParam) : GetWin32InputIdFromMouseEvent(message),
+        .InputDevice = inputDevice,
+        .InputId = GetWin32InputIdFromKeyCode(keyboardData->VKey),
         .InputType = ElemInputType_Digital,
-        .Value = IsKeyPressed(message) ? 1.0f : 0.0f,
+        .Value = keyboardData->Message == WM_KEYDOWN ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
     };
 
     AddInputEvent(event);
+}
+
+void ProcessWin32RawInputMouse(ElemWindow window, ElemInputDevice inputDevice, RAWMOUSE* mouseData, double elapsedSeconds)
+{
+    // TODO: Handle absolute coordinates if the flag is set!
+    // TODO: For the absolute coordinates if we have only delta. Maybe we can get the current cursor postion on the window and create other events
+    // for the absolute coordinates. This way we can keep the InputEvent struct light
+
+    int deltaX = mouseData->lLastX;
+    int deltaY = mouseData->lLastY;
+
+    if (deltaX != 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisX,
+            .InputType = ElemInputType_Delta,
+            .Value = (float)deltaX,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaY != 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisY,
+            .InputType = ElemInputType_Delta,
+            .Value = (float)deltaY,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_BUTTON_1_DOWN)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseLeft,
+            .InputType = ElemInputType_Digital,
+            .Value = 1.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_BUTTON_1_UP)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseLeft,
+            .InputType = ElemInputType_Digital,
+            .Value = 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+}
+
+typedef enum : uint32_t 
+{
+    HidGamepadVendor_Microsoft = 0x045E,
+    HidGamepadVendor_Sony = 0x054C
+} HidGamepadVendor;
+
+typedef enum : uint32_t 
+{
+    HidGamepadProduct_XboxOneWirelessOldDriver = 0x02E0,
+    HidGamepadProduct_XboxOneUsb = 0x02FF,
+    HidGamepadProduct_XboxOneWireless = 0x02FD,
+    HidGamepadProduct_DualShock4OldDriver = 0x5C4,
+    HidGamepadProduct_DualShock4 = 0x9cc
+} HidGamepadProduct;
+
+typedef PackedStruct
+{
+    uint8_t Padding;
+    uint16_t LeftStickX;
+    uint16_t LeftStickY;
+    uint16_t RightStickX;
+    uint16_t RightStickY;
+    uint16_t Triggers;
+    uint16_t Buttons;
+    uint8_t Dpad;
+} XboxOneWirelessOldDriverGamepadReport;
+
+// TODO: Handle device removal
+ElemInputDevice AddWin32RawInputDevice(RAWINPUT* rawInputData)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Creating Input device");
+
+        UINT bufferSize = 0;
+        GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, nullptr, &bufferSize);
+
+        auto rawInputDeviceInfo = (RID_DEVICE_INFO*)SystemPushArray<uint8_t>(stackMemoryArena, bufferSize).Pointer;
+    rawInputDeviceInfo->cbSize = sizeof(RID_DEVICE_INFO);
+    if (GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, rawInputDeviceInfo, &bufferSize) == -1) {
+            SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Error");
+    }
+    // TODO: Fill additional data based on the device type
+    InputDeviceData deviceData =
+    {
+        .PlatformHandle = rawInputData->header.hDevice,
+        .InputDeviceType = ElemInputDeviceType_Unknown
+    };
+
+    InputDeviceDataFull deviceDataFull =
+    {
+    };
+
+    // TODO: Fill additional infos
+    if (rawInputData->header.dwType == RIM_TYPEMOUSE)
+    {
+        deviceData.InputDeviceType = ElemInputDeviceType_Mouse;
+    }
+    else if (rawInputData->header.dwType == RIM_TYPEKEYBOARD)
+    {
+        deviceData.InputDeviceType = ElemInputDeviceType_Keyboard;
+    }
+    else if (rawInputData->header.dwType == RIM_TYPEHID)
+    {
+        // TODO: Extract the check in a function
+        if (!(rawInputDeviceInfo->hid.dwVendorId == HidGamepadVendor_Microsoft && rawInputDeviceInfo->hid.dwProductId == HidGamepadProduct_XboxOneUsb))
+        {
+            SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Unknown hid device");
+            return ELEM_HANDLE_NULL;
+        }
+        
+        deviceData.InputDeviceType = ElemInputDeviceType_Gamepad;
+        deviceData.HidVendorId = rawInputDeviceInfo->hid.dwVendorId;
+        deviceData.HidProductId = rawInputDeviceInfo->hid.dwProductId;
+    }
+
+    auto handle = AddInputDevice(&deviceData, &deviceDataFull);
+    SystemAddDictionaryEntry(win32InputDeviceDictionary, rawInputData->header.hDevice, handle);
+
+    return handle;
 }
 
 void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
@@ -189,75 +308,46 @@ void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
     UINT rawInputDataSize;
     AssertIfFailed(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &rawInputDataSize, sizeof(RAWINPUTHEADER)));
 
-    auto data = SystemPushArray<uint8_t>(stackMemoryArena, rawInputDataSize);
-    AssertIfFailed(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, data.Pointer, &rawInputDataSize, sizeof(RAWINPUTHEADER)));
+    auto rawInputData = (RAWINPUT*)SystemPushArray<uint8_t>(stackMemoryArena, rawInputDataSize).Pointer;
+    AssertIfFailed(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, rawInputData, &rawInputDataSize, sizeof(RAWINPUTHEADER)));
 
-    auto rawInputData = (RAWINPUT*)data.Pointer;
+    if (!rawInputData->header.hDevice)
+    {
+        return;
+    }
+
+    ElemInputDevice inputDevice;
+
+    if (!SystemDictionaryContainsKey(win32InputDeviceDictionary, rawInputData->header.hDevice))
+    {
+        inputDevice = AddWin32RawInputDevice(rawInputData);
+    }
+    else
+    {
+        inputDevice = *SystemGetDictionaryValue(win32InputDeviceDictionary, rawInputData->header.hDevice);
+    }
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
 
     // TODO: Handle other mouse buttons and maybe the whole keyboard too
 
     // TODO: Split into multiple functions
-    if (rawInputData->header.dwType == RIM_TYPEMOUSE) 
+    if (inputDeviceData->InputDeviceType == ElemInputDeviceType_Keyboard)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "RawInput Mouse");
-        // TODO: Handle absolute coordinates if the flag is set!
-        // TODO: For the absolute coordinates if we have only delta. Maybe we can get the current cursor postion on the window and create other events
-        // for the absolute coordinates. This way we can keep the InputEvent struct light
-
-        int deltaX = rawInputData->data.mouse.lLastX;
-        int deltaY = rawInputData->data.mouse.lLastY;
-
-
-        if (deltaX != 0)
-        {
-            AddInputEvent({
-                .Window = window,
-                .InputId = ElemInputId_MouseAxisX,
-                .InputType = ElemInputType_AbsoluteScreen, // TODO: Change enum to relative
-                .Value = (float)deltaX,
-                .ElapsedSeconds = elapsedSeconds
-            });
-        }
-
-        if (deltaY != 0)
-        {
-            AddInputEvent({
-                .Window = window,
-                .InputId = ElemInputId_MouseAxisY,
-                .InputType = ElemInputType_AbsoluteScreen,
-                .Value = (float)deltaY,
-                .ElapsedSeconds = elapsedSeconds
-            });
-        }
-
-        if (rawInputData->data.mouse.ulButtons & RI_MOUSE_BUTTON_1_DOWN)
-        {
-            AddInputEvent({
-                .Window = window,
-                .InputId = ElemInputId_MouseLeft,
-                .InputType = ElemInputType_Digital,
-                .Value = 1.0f,
-                .ElapsedSeconds = elapsedSeconds
-            });
-        }
-
-        if (rawInputData->data.mouse.ulButtons & RI_MOUSE_BUTTON_1_UP)
-        {
-            AddInputEvent({
-                .Window = window,
-                .InputId = ElemInputId_MouseLeft,
-                .InputType = ElemInputType_Digital,
-                .Value = 0.0f,
-                .ElapsedSeconds = elapsedSeconds
-            });
-        }
+        ProcessWin32RawInputKeyboard(window, inputDevice, &rawInputData->data.keyboard, elapsedSeconds);
     }
-    else if (rawInputData->header.dwType == RIM_TYPEKEYBOARD)
+    else if (inputDeviceData->InputDeviceType == ElemInputDeviceType_Mouse) 
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "RawInput Keyboard %d", rawInputData->data.keyboard.VKey);
+        ProcessWin32RawInputMouse(window, inputDevice, &rawInputData->data.mouse, elapsedSeconds);
     }
-    else if (rawInputData->header.dwType == RIM_TYPEHID)
+    else if (inputDeviceData->InputDeviceType == ElemInputDeviceType_Gamepad)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "RawInput HID");
+        // TODO: Extract that to a common function
+        if (inputDeviceData->HidVendorId == HidGamepadVendor_Microsoft && inputDeviceData->HidProductId == HidGamepadProduct_XboxOneUsb)
+        {
+            auto xboxReport = (XboxOneWirelessOldDriverGamepadReport*)rawInputData->data.hid.bRawData;
+            SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "RawInput HID: %d", xboxReport->Dpad);
+        }
     }
 }

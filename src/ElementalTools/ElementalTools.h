@@ -187,6 +187,8 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
  */
 ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
 
+// TODO: Can we compile multiple source files into one library?
+
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader
 #include "ElementalToolsLoader.c"

@@ -135,51 +135,53 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
-        printf("Received an input event %d: Value=%f (Elapsed: %f)\n", inputStream.Events.Items[i].InputId, inputStream.Events.Items[i].Value, inputStream.Events.Items[i].ElapsedSeconds);
+        ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
 
-        if (inputStream.Events.Items[i].InputId == ElemInputId_KeyD)
+        printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
+
+        if (inputEvent->InputId == ElemInputId_KeyD)
         {
-            applicationPayload->InputState.KeyRightPressed = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.KeyRightPressed = inputEvent->Value;
         }
 
-        if (inputStream.Events.Items[i].InputId == ElemInputId_KeyQ)
+        if (inputEvent->InputId == ElemInputId_KeyQ)
         {
-            applicationPayload->InputState.KeyLeftPressed = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.KeyLeftPressed = inputEvent->Value;
         }
 
-        if (inputStream.Events.Items[i].InputId == ElemInputId_KeyS)
+        if (inputEvent->InputId == ElemInputId_KeyS)
         {
-            applicationPayload->InputState.KeyDownPressed = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.KeyDownPressed = inputEvent->Value;
         }
 
-        if (inputStream.Events.Items[i].InputId == ElemInputId_KeyZ)
+        if (inputEvent->InputId == ElemInputId_KeyZ)
         {
-            applicationPayload->InputState.KeyUpPressed = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.KeyUpPressed = inputEvent->Value;
         }
 
-        if (inputStream.Events.Items[i].InputId == ElemInputId_KeyEscape)
+        if (inputEvent->InputId == ElemInputId_KeyEscape)
         {
-            if (applicationPayload->InputState.EscapePressed && inputStream.Events.Items[i].Value == 0.0f)
+            if (applicationPayload->InputState.EscapePressed && inputEvent->Value == 0.0f)
             {
                 applicationPayload->InputState.EscapeReleased = true;
             }
 
-            applicationPayload->InputState.EscapePressed = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.EscapePressed = inputEvent->Value;
         }
 
-        if (inputStream.Events.Items[i].InputId == ElemInputId_MouseLeft)
+        if (inputEvent->InputId == ElemInputId_MouseLeft)
         {
-            applicationPayload->InputState.MouseLeftPressed = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.MouseLeftPressed = inputEvent->Value;
         }
         
-        if (inputStream.Events.Items[i].InputId == ElemInputId_MouseAxisX)
+        if (inputEvent->InputId == ElemInputId_MouseAxisX)
         {
-            applicationPayload->InputState.MousePositionXDelta = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.MousePositionXDelta = inputEvent->Value;
         }
         
-        if (inputStream.Events.Items[i].InputId == ElemInputId_MouseAxisY)
+        if (inputEvent->InputId == ElemInputId_MouseAxisY)
         {
-            applicationPayload->InputState.MousePositionYDelta = inputStream.Events.Items[i].Value;
+            applicationPayload->InputState.MousePositionYDelta = inputEvent->Value;
         }
     }
 }

@@ -59,19 +59,6 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
             return MAKELRESULT(0, MNC_CLOSE);
         }
 
-        // TODO: Don't use the windows events for inputs
-        case WM_KEYDOWN:
-        case WM_KEYUP:
-        {
-            if (!SystemDictionaryContainsKey(windowDictionary, window))
-            {
-                break;
-            }
-
-            ProcessWin32KeyInput(windowDictionary[window], message, wParam, lParam);
-            break;
-        }
-
         case WM_INPUT:
         {
             if (!SystemDictionaryContainsKey(windowDictionary, window))
@@ -83,18 +70,6 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
             break;
         };
         
-        /*
-        case WM_MOUSEMOVE:
-        {
-            if (!SystemDictionaryContainsKey(windowDictionary, window))
-            {
-                break;
-            }
-
-            ProcessWin32MouseMove(windowDictionary[window], message, wParam, lParam);
-            break;
-        }*/
-
         case WM_SYSKEYDOWN:
         {
             if (wParam == VK_RETURN)

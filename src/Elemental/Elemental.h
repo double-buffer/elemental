@@ -848,13 +848,23 @@ ElemAPI void ElemDispatchMesh(ElemCommandList commandList, uint32_t threadGroupC
 // ##Module_Inputs##
 //--------------------------------------------------------------------------------
 
+typedef ElemHandle ElemInputDevice;
+
+typedef enum
+{
+    ElemInputDeviceType_Unknown,
+    ElemInputDeviceType_Keyboard,
+    ElemInputDeviceType_Mouse,
+    ElemInputDeviceType_Gamepad,
+} ElemInputDeviceType;
+
 // TODO: Assign values to enum
 // TODO: Review the enums to see if it still ok at the end of the implementation
 typedef enum
 {
     ElemInputType_Digital,
     ElemInputType_Analog,
-    ElemInputType_AbsoluteScreen,
+    ElemInputType_Delta,
 } ElemInputType;
 
 // TODO: Keyboard prefix with key every keys
@@ -966,7 +976,13 @@ typedef enum
 
 typedef struct
 {
+ // TODO: 
+} ElemHidInputDeviceInfo;
+
+typedef struct
+{
     ElemWindow Window;
+    ElemInputDevice InputDevice;
     ElemInputId InputId;
     ElemInputType InputType;
     float Value;
@@ -991,6 +1007,11 @@ typedef struct
 } ElemGetInputStreamOptions;
 
 ElemAPI ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions* options);
+
+// TODO: GetCursorPosition
+// TODO: HideCursor
+// TODO: GetInputDeviceInfo
+// TODO: GetInputDevices
 
 #ifdef UseLoader
 #ifndef ElementalLoader
