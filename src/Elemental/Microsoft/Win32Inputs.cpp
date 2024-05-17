@@ -1,6 +1,7 @@
 #include "Win32Inputs.h"
 #include "Win32Application.h"
 #include "Inputs/Inputs.h"
+#include "Inputs/HidDevices.h"
 #include "SystemDictionary.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -10,8 +11,6 @@ SystemDictionary<HANDLE, ElemInputDevice> win32InputDeviceDictionary;
 
 void InitWin32Inputs(HWND window)
 {
-    // TODO: To Review
-
     RAWINPUTDEVICE devices[] =
     {
         {
@@ -146,119 +145,254 @@ ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
 
 void ProcessWin32RawInputKeyboard(ElemWindow window, ElemInputDevice inputDevice, RAWKEYBOARD* keyboardData, double elapsedSeconds)
 {
-    ElemInputEvent event =
-    {
+    AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
         .InputId = GetWin32InputIdFromKeyCode(keyboardData->VKey),
         .InputType = ElemInputType_Digital,
         .Value = keyboardData->Message == WM_KEYDOWN ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
-    };
-
-    AddInputEvent(event);
+    });
 }
 
 void ProcessWin32RawInputMouse(ElemWindow window, ElemInputDevice inputDevice, RAWMOUSE* mouseData, double elapsedSeconds)
 {
-    // TODO: Handle absolute coordinates if the flag is set!
-    // TODO: For the absolute coordinates if we have only delta. Maybe we can get the current cursor postion on the window and create other events
-    // for the absolute coordinates. This way we can keep the InputEvent struct light
+    if (mouseData->usFlags != MOUSE_MOVE_RELATIVE)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Mouse position other than relative is not supported for the moment.");
+        return;
+    }
 
     int deltaX = mouseData->lLastX;
     int deltaY = mouseData->lLastY;
 
-    if (deltaX != 0)
+    // TODO: Automatically insert a delta 0?
+    if (deltaX < 0)
     {
         AddInputEvent({
             .Window = window,
             .InputDevice = inputDevice,
-            .InputId = ElemInputId_MouseAxisX,
+            .InputId = ElemInputId_MouseAxisXNegative,
+            .InputType = ElemInputType_Delta,
+            .Value = -(float)deltaX,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaX > 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisXPositive,
             .InputType = ElemInputType_Delta,
             .Value = (float)deltaX,
             .ElapsedSeconds = elapsedSeconds
         });
     }
 
-    if (deltaY != 0)
+    if (deltaY < 0)
     {
         AddInputEvent({
             .Window = window,
             .InputDevice = inputDevice,
-            .InputId = ElemInputId_MouseAxisY,
+            .InputId = ElemInputId_MouseAxisYNegative,
+            .InputType = ElemInputType_Delta,
+            .Value = -(float)deltaY,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaY > 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisYPositive,
             .InputType = ElemInputType_Delta,
             .Value = (float)deltaY,
             .ElapsedSeconds = elapsedSeconds
         });
     }
 
-    if (mouseData->ulButtons & RI_MOUSE_BUTTON_1_DOWN)
+    if (mouseData->ulButtons & RI_MOUSE_LEFT_BUTTON_DOWN)
     {
         AddInputEvent({
             .Window = window,
             .InputDevice = inputDevice,
-            .InputId = ElemInputId_MouseLeft,
+            .InputId = ElemInputId_MouseLeftButton,
             .InputType = ElemInputType_Digital,
             .Value = 1.0f,
             .ElapsedSeconds = elapsedSeconds
         });
     }
 
-    if (mouseData->ulButtons & RI_MOUSE_BUTTON_1_UP)
+    if (mouseData->ulButtons & RI_MOUSE_LEFT_BUTTON_UP)
     {
         AddInputEvent({
             .Window = window,
             .InputDevice = inputDevice,
-            .InputId = ElemInputId_MouseLeft,
+            .InputId = ElemInputId_MouseLeftButton,
             .InputType = ElemInputType_Digital,
             .Value = 0.0f,
             .ElapsedSeconds = elapsedSeconds
         });
     }
+
+    if (mouseData->ulButtons & RI_MOUSE_RIGHT_BUTTON_DOWN)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseRightButton,
+            .InputType = ElemInputType_Digital,
+            .Value = 1.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_RIGHT_BUTTON_UP)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseRightButton,
+            .InputType = ElemInputType_Digital,
+            .Value = 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_MIDDLE_BUTTON_DOWN)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseMiddleButton,
+            .InputType = ElemInputType_Digital,
+            .Value = 1.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_MIDDLE_BUTTON_UP)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseMiddleButton,
+            .InputType = ElemInputType_Digital,
+            .Value = 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_BUTTON_4_DOWN)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseExtraButton1,
+            .InputType = ElemInputType_Digital,
+            .Value = 1.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_BUTTON_4_UP)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseExtraButton1,
+            .InputType = ElemInputType_Digital,
+            .Value = 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_BUTTON_5_DOWN)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseExtraButton2,
+            .InputType = ElemInputType_Digital,
+            .Value = 1.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_BUTTON_5_UP)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseExtraButton2,
+            .InputType = ElemInputType_Digital,
+            .Value = 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_WHEEL)
+    {
+        auto wheelDelta = (float)(short)mouseData->usButtonData;
+
+        if (wheelDelta < 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseWheelNegative,
+                .InputType = ElemInputType_Delta,
+                .Value = -wheelDelta / WHEEL_DELTA,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+
+        if (wheelDelta > 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseWheelPositive,
+                .InputType = ElemInputType_Delta,
+                .Value = wheelDelta / WHEEL_DELTA,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+    }
+
+    if (mouseData->ulButtons & RI_MOUSE_HWHEEL)
+    {
+        auto wheelDelta = (float)(short)mouseData->usButtonData;
+
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseHorizontalWheel,
+            .InputType = ElemInputType_Delta,
+            .Value = wheelDelta / WHEEL_DELTA,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
 }
-
-typedef enum : uint32_t 
-{
-    HidGamepadVendor_Microsoft = 0x045E,
-    HidGamepadVendor_Sony = 0x054C
-} HidGamepadVendor;
-
-typedef enum : uint32_t 
-{
-    HidGamepadProduct_XboxOneWirelessOldDriver = 0x02E0,
-    HidGamepadProduct_XboxOneUsb = 0x02FF,
-    HidGamepadProduct_XboxOneWireless = 0x02FD,
-    HidGamepadProduct_DualShock4OldDriver = 0x5C4,
-    HidGamepadProduct_DualShock4 = 0x9cc
-} HidGamepadProduct;
-
-typedef PackedStruct
-{
-    uint8_t Padding;
-    uint16_t LeftStickX;
-    uint16_t LeftStickY;
-    uint16_t RightStickX;
-    uint16_t RightStickY;
-    uint16_t Triggers;
-    uint16_t Buttons;
-    uint8_t Dpad;
-} XboxOneWirelessOldDriverGamepadReport;
 
 // TODO: Handle device removal
 ElemInputDevice AddWin32RawInputDevice(RAWINPUT* rawInputData)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
+    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Create Input device.");
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Creating Input device");
+    uint32_t rawInputDeviceInfoSize;
+    AssertIfFailed(GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, nullptr, &rawInputDeviceInfoSize));
 
-        UINT bufferSize = 0;
-        GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, nullptr, &bufferSize);
-
-        auto rawInputDeviceInfo = (RID_DEVICE_INFO*)SystemPushArray<uint8_t>(stackMemoryArena, bufferSize).Pointer;
+    auto rawInputDeviceInfo = (RID_DEVICE_INFO*)SystemPushArray<uint8_t>(stackMemoryArena, rawInputDeviceInfoSize).Pointer;
     rawInputDeviceInfo->cbSize = sizeof(RID_DEVICE_INFO);
-    if (GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, rawInputDeviceInfo, &bufferSize) == -1) {
-            SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Error");
-    }
+
+    AssertIfFailed(GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, rawInputDeviceInfo, &rawInputDeviceInfoSize)); 
+
     // TODO: Fill additional data based on the device type
     InputDeviceData deviceData =
     {
@@ -281,8 +415,7 @@ ElemInputDevice AddWin32RawInputDevice(RAWINPUT* rawInputData)
     }
     else if (rawInputData->header.dwType == RIM_TYPEHID)
     {
-        // TODO: Extract the check in a function
-        if (!(rawInputDeviceInfo->hid.dwVendorId == HidGamepadVendor_Microsoft && rawInputDeviceInfo->hid.dwProductId == HidGamepadProduct_XboxOneUsb))
+        if (!IsHidDeviceSupported(rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId))
         {
             SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Unknown hid device");
             return ELEM_HANDLE_NULL;
@@ -299,13 +432,16 @@ ElemInputDevice AddWin32RawInputDevice(RAWINPUT* rawInputData)
     return handle;
 }
 
+// TODO: Available Devices
+// GetRawInputDeviceList 
+
 void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - Win32PerformanceCounterStart) / Win32PerformanceCounterFrequencyInSeconds;
 
-    UINT rawInputDataSize;
+    uint32_t rawInputDataSize;
     AssertIfFailed(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &rawInputDataSize, sizeof(RAWINPUTHEADER)));
 
     auto rawInputData = (RAWINPUT*)SystemPushArray<uint8_t>(stackMemoryArena, rawInputDataSize).Pointer;
@@ -330,9 +466,6 @@ void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
     auto inputDeviceData = GetInputDeviceData(inputDevice);
     SystemAssert(inputDeviceData);
 
-    // TODO: Handle other mouse buttons and maybe the whole keyboard too
-
-    // TODO: Split into multiple functions
     if (inputDeviceData->InputDeviceType == ElemInputDeviceType_Keyboard)
     {
         ProcessWin32RawInputKeyboard(window, inputDevice, &rawInputData->data.keyboard, elapsedSeconds);
@@ -343,11 +476,6 @@ void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
     }
     else if (inputDeviceData->InputDeviceType == ElemInputDeviceType_Gamepad)
     {
-        // TODO: Extract that to a common function
-        if (inputDeviceData->HidVendorId == HidGamepadVendor_Microsoft && inputDeviceData->HidProductId == HidGamepadProduct_XboxOneUsb)
-        {
-            auto xboxReport = (XboxOneWirelessOldDriverGamepadReport*)rawInputData->data.hid.bRawData;
-            SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "RawInput HID: %d", xboxReport->Dpad);
-        }
+        ProcessHidDeviceData(window, inputDevice, ReadOnlySpan<uint8_t>(rawInputData->data.hid.bRawData, rawInputData->data.hid.dwSizeHid), elapsedSeconds);
     }
 }

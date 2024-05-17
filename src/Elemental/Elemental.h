@@ -471,6 +471,8 @@ typedef struct
  */
 typedef struct
 {
+    // TODO: Do we need that? This was foreseen for metal because SharedEvent may be slower
+    // But it would be great to avoid this flag.
     // If set to true, CPU can wait on the fence.
     bool FenceAwaitableOnCpu;
     // Fences that the execution should wait on before starting.
@@ -965,13 +967,23 @@ typedef enum
     ElemInputId_KeyRightControl,
     ElemInputId_KeyLeftAlt,
     ElemInputId_KeyRightAlt,
-    ElemInputId_MouseLeft,
-    ElemInputId_MouseRight,
-    ElemInputId_MouseMiddle,
+    ElemInputId_MouseLeftButton,
+    ElemInputId_MouseRightButton,
+    ElemInputId_MouseMiddleButton,
     ElemInputId_MouseExtraButton1,
     ElemInputId_MouseExtraButton2,
-    ElemInputId_MouseAxisX,
-    ElemInputId_MouseAxisY,
+    ElemInputId_MouseAxisXNegative,
+    ElemInputId_MouseAxisXPositive,
+    ElemInputId_MouseAxisYNegative,
+    ElemInputId_MouseAxisYPositive,
+    ElemInputId_MouseWheelNegative,
+    ElemInputId_MouseWheelPositive,
+    ElemInputId_MouseHorizontalWheel,
+    ElemInputId_GamepadLeftStickXNegative,
+    ElemInputId_GamepadLeftStickXPositive,
+    ElemInputId_GamepadLeftStickYNegative,
+    ElemInputId_GamepadLeftStickYPositive,
+    ElemInputID_GamepadButton1,
 } ElemInputId;
 
 typedef struct
@@ -998,7 +1010,6 @@ typedef struct
 typedef struct
 {
     ElemInputEventSpan Events;
-    double TimestampInSeconds;
 } ElemInputStream;
 
 typedef struct

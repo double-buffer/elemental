@@ -1,17 +1,13 @@
 struct ShaderParameters
 {
     float4 RotationQuaternion;
+    float Zoom;
     float AspectRatio;
+    uint32_t TriangleColor;
 };
 
 [[vk::push_constant]]
 ShaderParameters parameters : register(b0);
-
-struct Vertex
-{
-    float3 Position;
-    float4 Color;
-};
 
 struct VertexOutput
 {
@@ -19,11 +15,17 @@ struct VertexOutput
     float4 Color: TEXCOORD0;
 };
 
-static Vertex triangleVertices[] =
+static float3 triangleVertices[] =
 {
-    { float3(-0.5, 0.5, 0.0), float4(1.0, 0.0, 0.0, 1.0) },
-    { float3(0.5, 0.5, 0.0), float4(0.0, 1.0, 0.0, 1.0) },
-    { float3(-0.5, -0.5, 0.0), float4(0.0, 0.0, 1.0, 1.0) }
+    float3(-0.5, 0.5, 0.0),
+    float3(0.5, 0.5, 0.0),
+    float3(-0.5, -0.5, 0.0)
+};
+
+static float4 Colors[] =
+{
+    float4(1.0, 0.0, 0.0, 1.0), float4(0.0, 1.0, 0.0, 1.0), float4(0.0, 0.0, 1.0, 1.0),
+    float4(1.0, 1.0, 0.0, 1.0), float4(0.0, 1.0, 1.0, 1.0), float4(1.0, 0.0, 1.0, 1.0)
 };
 
 float4x4 TransformMatrix(float4 quaternion, float3 translation)
@@ -77,7 +79,7 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
 
     if (groupThreadId < meshVertexCount)
     {
-        float cameraZDistance = parameters.AspectRatio >= 0.75 ? -2.0 : -4.0;
+        float cameraZDistance = (parameters.AspectRatio >= 0.75 ? -2.0 : -4.0) + parameters.Zoom;
 
         float4x4 worldMatrix = TransformMatrix(parameters.RotationQuaternion, float3(0.0, 0.0, 0.0));
         float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, cameraZDistance), float3(0, 0, 0), float3(0, 1, 0));
@@ -85,8 +87,8 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
 
         float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
 
-        vertices[groupThreadId].Position = mul(float4(triangleVertices[groupThreadId].Position, 1), worldViewProjectionMatrix);
-        vertices[groupThreadId].Color = triangleVertices[groupThreadId].Color;
+        vertices[groupThreadId].Position = mul(float4(triangleVertices[groupThreadId], 1), worldViewProjectionMatrix);
+        vertices[groupThreadId].Color = Colors[(parameters.TriangleColor % 2) * 3 + groupThreadId];
     }
 
     if (groupThreadId == 0)

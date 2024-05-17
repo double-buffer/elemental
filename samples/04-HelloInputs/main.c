@@ -15,20 +15,31 @@ typedef struct
 typedef struct
 {
     Vector4 RotationQuaternion;
+    float Zoom;
     float AspectRatio;
+    uint32_t TriangeColor;
 } ShaderParameters;
 
+// TODO: Rename this to InputActions
 typedef struct
 {
-    bool KeyUpPressed;
-    bool KeyDownPressed; 
-    bool KeyLeftPressed;
-    bool KeyRightPressed;
-    bool EscapePressed;
-    bool EscapeReleased;
-    bool MouseLeftPressed;
-    float MousePositionXDelta;
-    float MousePositionYDelta;
+    float RotateLeft;
+    float RotateRight;
+    float RotateUp;
+    float RotateDown;
+
+    float TouchAction;
+    float TouchRotateLeft;
+    float TouchRotateRight;
+    float TouchRotateUp;
+    float TouchRotateDown;
+
+    float ZoomIn;
+    float ZoomOut;
+    float ChangeColorAction;
+
+    float EscapePressed;
+    float EscapeReleased;
 } InputState;
 
 typedef struct
@@ -119,8 +130,17 @@ void FreeSample(void* payload)
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 }
 
+void UpdateInputValue(ElemInputId inputId, const ElemInputEvent* inputEvent, float* inputValue)
+{
+    if (inputEvent->InputId == inputId)
+    {
+        *inputValue = inputEvent->Value;
+    }
+}
+
 void UpdateInputs(ApplicationPayload* applicationPayload)
 {
+    InputState* inputState = &applicationPayload->InputState;
     ElemInputStream inputStream = ElemGetInputStream(NULL);
 
     if (!applicationPayload->InputState.EscapePressed && applicationPayload->InputState.EscapeReleased)
@@ -128,36 +148,44 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         applicationPayload->InputState.EscapeReleased = false;
     }
 
-    applicationPayload->InputState.MousePositionXDelta = 0.0f;
-    applicationPayload->InputState.MousePositionYDelta = 0.0f;
-
-    //printf("Input Stream Timestamp: %f\n", inputStream.TimestampInSeconds);
-
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
         ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
 
-        printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
-
-        if (inputEvent->InputId == ElemInputId_KeyD)
+        if (inputEvent->InputType != ElemInputType_Delta)
         {
-            applicationPayload->InputState.KeyRightPressed = inputEvent->Value;
+            printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
         }
 
-        if (inputEvent->InputId == ElemInputId_KeyQ)
-        {
-            applicationPayload->InputState.KeyLeftPressed = inputEvent->Value;
-        }
+        // TODO: Have a way to configure multiple keys for one event in one shot
+        UpdateInputValue(ElemInputId_KeyQ, inputEvent, &inputState->RotateLeft);
+        UpdateInputValue(ElemInputId_GamepadLeftStickXNegative, inputEvent, &inputState->RotateLeft);
 
-        if (inputEvent->InputId == ElemInputId_KeyS)
-        {
-            applicationPayload->InputState.KeyDownPressed = inputEvent->Value;
-        }
+        UpdateInputValue(ElemInputId_KeyD, inputEvent, &inputState->RotateRight);
+        UpdateInputValue(ElemInputId_GamepadLeftStickXPositive, inputEvent, &inputState->RotateRight);
 
-        if (inputEvent->InputId == ElemInputId_KeyZ)
-        {
-            applicationPayload->InputState.KeyUpPressed = inputEvent->Value;
-        }
+        UpdateInputValue(ElemInputId_KeyZ, inputEvent, &inputState->RotateUp);
+        UpdateInputValue(ElemInputId_GamepadLeftStickYNegative, inputEvent, &inputState->RotateUp);
+
+        UpdateInputValue(ElemInputId_KeyS, inputEvent, &inputState->RotateDown);
+        UpdateInputValue(ElemInputId_GamepadLeftStickYPositive, inputEvent, &inputState->RotateDown);
+
+        UpdateInputValue(ElemInputId_MouseLeftButton, inputEvent, &inputState->TouchAction);
+        UpdateInputValue(ElemInputId_MouseAxisXNegative, inputEvent, &inputState->TouchRotateLeft);
+        UpdateInputValue(ElemInputId_MouseAxisXPositive, inputEvent, &inputState->TouchRotateRight);
+        UpdateInputValue(ElemInputId_MouseAxisYNegative, inputEvent, &inputState->TouchRotateUp);
+        UpdateInputValue(ElemInputId_MouseAxisYPositive, inputEvent, &inputState->TouchRotateDown);
+
+        // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
+        UpdateInputValue(ElemInputId_KeyW, inputEvent, &inputState->ZoomIn);
+        UpdateInputValue(ElemInputId_MouseWheelPositive, inputEvent, &inputState->ZoomIn);
+
+        UpdateInputValue(ElemInputId_KeyX, inputEvent, &inputState->ZoomOut);
+        UpdateInputValue(ElemInputId_MouseWheelNegative, inputEvent, &inputState->ZoomOut);
+
+        UpdateInputValue(ElemInputId_KeySpace, inputEvent, &inputState->ChangeColorAction);
+        UpdateInputValue(ElemInputId_MouseMiddleButton, inputEvent, &inputState->ChangeColorAction);
+        UpdateInputValue(ElemInputID_GamepadButton1, inputEvent, &inputState->ChangeColorAction);
 
         if (inputEvent->InputId == ElemInputId_KeyEscape)
         {
@@ -167,21 +195,6 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
             }
 
             applicationPayload->InputState.EscapePressed = inputEvent->Value;
-        }
-
-        if (inputEvent->InputId == ElemInputId_MouseLeft)
-        {
-            applicationPayload->InputState.MouseLeftPressed = inputEvent->Value;
-        }
-        
-        if (inputEvent->InputId == ElemInputId_MouseAxisX)
-        {
-            applicationPayload->InputState.MousePositionXDelta = inputEvent->Value;
-        }
-        
-        if (inputEvent->InputId == ElemInputId_MouseAxisY)
-        {
-            applicationPayload->InputState.MousePositionYDelta = inputEvent->Value;
         }
     }
 }
@@ -197,25 +210,32 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
-    float rotationX = 0.0f;
-    float rotationY = 0.0f;
+    // TODO: Use an acceleration?
+    float rotationXDelta = 0.0f;
+    float rotationYDelta = 0.0f;
 
-    if (applicationPayload->InputState.MouseLeftPressed)
+    // TODO: Can we add options to normalize the speed we need for different path?
+    if (applicationPayload->InputState.TouchAction)
     {
-        rotationX = applicationPayload->InputState.MousePositionYDelta * 2.5f * updateParameters->DeltaTimeInSeconds;
-        rotationY = applicationPayload->InputState.MousePositionXDelta * 2.5f * updateParameters->DeltaTimeInSeconds;
+        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 2.5f * updateParameters->DeltaTimeInSeconds;
+        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 2.5f * updateParameters->DeltaTimeInSeconds;
     }
     else
     {
-        rotationX = (applicationPayload->InputState.KeyDownPressed - applicationPayload->InputState.KeyUpPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
-        rotationY = (applicationPayload->InputState.KeyRightPressed - applicationPayload->InputState.KeyLeftPressed) * 2.5f * updateParameters->DeltaTimeInSeconds;
+        rotationXDelta = (applicationPayload->InputState.RotateUp - applicationPayload->InputState.RotateDown) * 5.0f * updateParameters->DeltaTimeInSeconds;
+        rotationYDelta = (applicationPayload->InputState.RotateLeft - applicationPayload->InputState.RotateRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
     }
 
-    if (rotationX || rotationY)
+    if (rotationXDelta || rotationYDelta)
     {
-        Vector4 rotationQuaternion = qmul(CreateQuaternion((Vector3){ 1, 0, 0 }, -rotationX), CreateQuaternion((Vector3){ 0, 1, 0 }, -rotationY));
+        Vector4 rotationQuaternion = qmul(CreateQuaternion((Vector3){ 1, 0, 0 }, rotationXDelta), CreateQuaternion((Vector3){ 0, 1, 0 }, rotationYDelta));
         applicationPayload->ShaderParameters.RotationQuaternion = qmul(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
+
+    // TODO: Z rotation
+
+    applicationPayload->ShaderParameters.Zoom += (applicationPayload->InputState.ZoomIn - applicationPayload->InputState.ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds;
+    applicationPayload->ShaderParameters.TriangeColor = applicationPayload->InputState.ChangeColorAction;
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
