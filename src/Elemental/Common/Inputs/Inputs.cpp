@@ -1,5 +1,6 @@
 #include "Inputs.h"
 #include "SystemDataPool.h"
+#include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 #include "SystemPlatformFunctions.h"
@@ -14,6 +15,9 @@ uint32_t currentDeltaInputsToResetIndex;
 uint32_t currentDeltaInputsToResetWriteIndex;
 uint32_t previousDeltaInputsToResetWriteIndex;
 
+Span<ElemInputDevice> inputDevices;
+uint32_t currentInputDeviceIndex;
+
 SystemDataPool<InputDeviceData, InputDeviceDataFull> inputDevicePool;
 
 void InitInputsMemory()
@@ -23,6 +27,8 @@ void InitInputsMemory()
         inputsMemoryArena = SystemAllocateMemoryArena();
         inputEvents = SystemPushArray<ElemInputEvent>(inputsMemoryArena, MAX_INPUT_EVENTS * 2);
         deltaInputsToReset = SystemPushArrayZero<ElemInputEvent>(inputsMemoryArena, MAX_INPUT_EVENTS * 2);
+
+        inputDevices = SystemPushArrayZero<ElemInputDevice>(inputsMemoryArena, MAX_INPUT_DEVICES);
         inputDevicePool = SystemCreateDataPool<InputDeviceData, InputDeviceDataFull>(inputsMemoryArena, MAX_INPUT_DEVICES);
 
         currentInputEventsIndex = 0;
@@ -31,6 +37,8 @@ void InitInputsMemory()
         currentDeltaInputsToResetIndex = 0;
         currentDeltaInputsToResetWriteIndex = 0;
         previousDeltaInputsToResetWriteIndex = 0;
+
+        currentInputDeviceIndex = 0;
     }
 }
 
@@ -51,16 +59,34 @@ ElemInputDevice AddInputDevice(InputDeviceData* deviceData, InputDeviceDataFull*
     auto handle = SystemAddDataPoolItem(inputDevicePool, *deviceData);
     SystemAddDataPoolItemFull(inputDevicePool, handle, *deviceDataFull);
 
+    inputDevices[currentInputDeviceIndex++] = handle;
+
     return handle;
 }
 
-void AddInputEvent(ElemInputEvent inputEvent)
+void RemoveInputDevice(ElemInputDevice inputDevice)
+{
+    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Device Removed %d", inputDevice);
+
+    SystemRemoveDataPoolItem(inputDevicePool, inputDevice);
+
+    for (uint32_t i = 0; i < MAX_INPUT_DEVICES; i++)
+    {
+        if (inputDevices[i] == inputDevice)
+        {
+            inputDevices[i] = ELEM_HANDLE_NULL;
+            break;
+        }
+    }
+}
+
+void AddInputEvent(ElemInputEvent inputEvent, bool needReset)
 {
     InitInputsMemory();
 
     // TODO: Check boundaries
 
-    if (inputEvent.InputType == ElemInputType_Delta)
+    if (inputEvent.InputType == ElemInputType_Delta || needReset)
     {
         auto previousIndex = (currentDeltaInputsToResetIndex + 1) % 2;
         auto previousDeltaToReset = &deltaInputsToReset[previousIndex * MAX_INPUT_EVENTS];
@@ -77,19 +103,78 @@ void AddInputEvent(ElemInputEvent inputEvent)
         deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS + currentDeltaInputsToResetWriteIndex++] = inputEvent;
     }
 
-
-    // TODO: If event is relative register an automatic reset if event is not there next time
-
+    // TODO: Copy 
     inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
 }
 
-ElemAPI ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions* options)
+ElemAPI ElemInputDeviceInfoSpan ElemGetInputDevices()
+{
+    InitInputsMemory();
+    
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto result = SystemPushArray<ElemInputDeviceInfo>(stackMemoryArena, currentInputDeviceIndex);
+    auto currentResultIndex = 0u;
+
+    for (uint32_t i = 0; i < MAX_INPUT_DEVICES; i++)
+    {
+        if (inputDevices[i] != ELEM_HANDLE_NULL)
+        {
+            auto inputDeviceData = GetInputDeviceData(inputDevices[i]);
+            SystemAssert(inputDeviceData);
+
+            auto inputDeviceDataFull = GetInputDeviceDataFull(inputDevices[i]);
+            SystemAssert(inputDeviceDataFull);
+
+            result[currentResultIndex++] =
+            {
+                .Handle = inputDevices[i],
+                .DeviceType = inputDeviceData->InputDeviceType,
+                .MouseNumberOfButtons = inputDeviceDataFull->MouseNumberOfButtons,
+                .MouseSampleRate = inputDeviceDataFull->MouseSampleRate,
+                .KeyboardType = inputDeviceDataFull->KeyboardType,
+                .KeyboardNumberOfKeys = inputDeviceDataFull->KeyboardNumberOfKeys,
+                .GamepadVendorId = inputDeviceData->HidVendorId,
+                .GamepadProductId = inputDeviceData->HidProductId,
+                .GamepadVersion = inputDeviceDataFull->GamepadVersion
+            };
+        }
+    }
+
+    return 
+    {
+        .Items = result.Pointer,
+        .Length = (uint32_t)result.Length
+    };
+}
+
+ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)
+{
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    auto inputDeviceDataFull = GetInputDeviceDataFull(inputDevice);
+    SystemAssert(inputDeviceDataFull);
+
+    return
+    {
+        .Handle = inputDevice,
+        .DeviceType = inputDeviceData->InputDeviceType,
+        .MouseNumberOfButtons = inputDeviceDataFull->MouseNumberOfButtons,
+        .MouseSampleRate = inputDeviceDataFull->MouseSampleRate,
+        .KeyboardType = inputDeviceDataFull->KeyboardType,
+        .KeyboardNumberOfKeys = inputDeviceDataFull->KeyboardNumberOfKeys,
+        .GamepadVendorId = inputDeviceData->HidVendorId,
+        .GamepadProductId = inputDeviceData->HidProductId,
+        .GamepadVersion = inputDeviceDataFull->GamepadVersion
+    };
+}
+
+ElemAPI ElemInputStream ElemGetInputStream()
 {
     InitInputsMemory();
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    // TODO: Reset previous deltas
     auto previousIndex = (currentDeltaInputsToResetIndex + 1) % 2;
     auto previousDeltaToReset = &deltaInputsToReset[previousIndex * MAX_INPUT_EVENTS];
 

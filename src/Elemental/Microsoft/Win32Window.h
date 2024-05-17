@@ -14,6 +14,7 @@ struct Win32WindowDataFull
     DWORD WindowStyle;
     DWORD WindowExStyle;
     HMONITOR Monitor;
+    bool IsCursorHidden;
 };
 
 Win32WindowData* GetWin32WindowData(ElemWindow window);

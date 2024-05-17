@@ -111,6 +111,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     }
 
     // TODO: For buttons we need to keep track of old report to see if there was a change
+    // Maybe we can do the same as with delta inputs!
     if (xboxReport->Buttons & 0x01) 
     {
         AddInputEvent({
@@ -119,6 +120,17 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
             .InputId = ElemInputID_GamepadButton1,
             .InputType = ElemInputType_Digital,
             .Value = 1.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+    else
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputID_GamepadButton1,
+            .InputType = ElemInputType_Digital,
+            .Value = 0.0f,
             .ElapsedSeconds = elapsedSeconds
         });
     }

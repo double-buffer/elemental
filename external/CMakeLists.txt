@@ -119,7 +119,7 @@ endif()
 #=======================================================================
 
 if(WIN32)
-    set(DIRECT3D12_VERSION "1.613.1")
+    set(DIRECT3D12_VERSION "1.614.0")
 
     add_library(Direct3D12 INTERFACE)
     
@@ -131,7 +131,7 @@ if(WIN32)
 
     function(copy_direct3d12_to_target target)
         # TODO: To Fix
-        set(DIRECT3D12_VERSION "1.613.1")
+        set(DIRECT3D12_VERSION "1.614.0")
         file(GLOB DIRECT3D12_DLLS 
              "${CMAKE_BINARY_DIR}/external/packages/Microsoft.Direct3D.D3D12_${DIRECT3D12_VERSION}/build/native/bin/x64/*.dll")
         foreach(DLL ${DIRECT3D12_DLLS})

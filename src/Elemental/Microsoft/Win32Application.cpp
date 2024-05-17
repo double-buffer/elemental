@@ -130,3 +130,4 @@ ElemAPI void ElemExitApplication(int32_t exitCode)
 {
     PostQuitMessage(exitCode);
 }
+

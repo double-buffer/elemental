@@ -72,3 +72,16 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
 }
+
+ElemAPI void ElemShowWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI void ElemHideWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window)
+{
+    return {};
+}

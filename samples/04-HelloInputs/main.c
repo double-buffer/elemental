@@ -37,6 +37,8 @@ typedef struct
     float ZoomIn;
     float ZoomOut;
     float ChangeColorAction;
+    float HideCursorAction;
+    float ShowCursorAction;
 
     float EscapePressed;
     float EscapeReleased;
@@ -117,6 +119,27 @@ void InitSample(void* payload)
     applicationPayload->ShaderParameters.RotationQuaternion = (Vector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
     
     ElemFreeShaderLibrary(shaderLibrary);
+
+    ElemInputDeviceInfoSpan inputDevices = ElemGetInputDevices();
+
+    for (uint32_t i = 0; i < inputDevices.Length; i++)
+    {
+        ElemInputDeviceInfo* inputDeviceInfo = &inputDevices.Items[i];
+
+        if (inputDeviceInfo->DeviceType == ElemInputDeviceType_Keyboard)
+        {
+            printf("Keyboard: Type=%d, NumKeys=%d\n", inputDeviceInfo->KeyboardType, inputDeviceInfo->KeyboardNumberOfKeys);
+        }
+        else if (inputDeviceInfo->DeviceType == ElemInputDeviceType_Mouse)
+        {
+            printf("Mouse: SampleRate=%d, NumButtons=%d\n", inputDeviceInfo->MouseSampleRate, inputDeviceInfo->MouseNumberOfButtons);
+        }
+        else if (inputDeviceInfo->DeviceType == ElemInputDeviceType_Gamepad)
+        {
+            printf("Gamepad:, Vendor=%d, ProductId=%d, Version=%d\n", inputDeviceInfo->GamepadVendorId, inputDeviceInfo->GamepadProductId, inputDeviceInfo->GamepadVersion);
+        }
+    }
+
     SampleStartFrameMeasurement();
 }
 
@@ -141,7 +164,7 @@ void UpdateInputValue(ElemInputId inputId, const ElemInputEvent* inputEvent, flo
 void UpdateInputs(ApplicationPayload* applicationPayload)
 {
     InputState* inputState = &applicationPayload->InputState;
-    ElemInputStream inputStream = ElemGetInputStream(NULL);
+    ElemInputStream inputStream = ElemGetInputStream();
 
     if (!applicationPayload->InputState.EscapePressed && applicationPayload->InputState.EscapeReleased)
     {
@@ -155,6 +178,12 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         if (inputEvent->InputType != ElemInputType_Delta)
         {
             printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
+        }
+
+        if (inputEvent->InputId == ElemInputId_KeyTab)
+        {
+            ElemInputDeviceInfo deviceInfo = ElemGetInputDeviceInfo(inputEvent->InputDevice);
+            printf("Device info: %d\n", deviceInfo.KeyboardNumberOfKeys);
         }
 
         // TODO: Have a way to configure multiple keys for one event in one shot
@@ -187,6 +216,9 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         UpdateInputValue(ElemInputId_MouseMiddleButton, inputEvent, &inputState->ChangeColorAction);
         UpdateInputValue(ElemInputID_GamepadButton1, inputEvent, &inputState->ChangeColorAction);
 
+        UpdateInputValue(ElemInputId_KeyF1, inputEvent, &inputState->HideCursorAction);
+        UpdateInputValue(ElemInputId_KeyF2, inputEvent, &inputState->ShowCursorAction);
+
         if (inputEvent->InputId == ElemInputId_KeyEscape)
         {
             if (applicationPayload->InputState.EscapePressed && inputEvent->Value == 0.0f)
@@ -209,6 +241,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     {
         ElemExitApplication(0);
     }
+
+    //ElemWindowCursorPosition cursorPosition = ElemGetWindowCursorPosition(applicationPayload->Window);
+    //printf("Cursor Position: %u, %u\n", cursorPosition.X, cursorPosition.Y);
 
     // TODO: Use an acceleration?
     float rotationXDelta = 0.0f;
@@ -236,6 +271,16 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     applicationPayload->ShaderParameters.Zoom += (applicationPayload->InputState.ZoomIn - applicationPayload->InputState.ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds;
     applicationPayload->ShaderParameters.TriangeColor = applicationPayload->InputState.ChangeColorAction;
+
+    if (applicationPayload->InputState.HideCursorAction)
+    {
+        ElemHideWindowCursor(applicationPayload->Window);
+    }
+
+    if (applicationPayload->InputState.ShowCursorAction)
+    {
+        ElemShowWindowCursor(applicationPayload->Window);
+    }
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 

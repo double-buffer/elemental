@@ -207,3 +207,16 @@ void MacOSWindowDelegate::windowWillClose(NS::Notification* pNotification)
 
     windowData->IsClosed = true;
 }
+
+ElemAPI void ElemShowWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI void ElemHideWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window)
+{
+    return {};
+}

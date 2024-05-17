@@ -32,6 +32,9 @@ typedef struct ElementalFunctions
     ElemWindowSize (*ElemGetWindowRenderSize)(ElemWindow);
     void (*ElemSetWindowTitle)(ElemWindow, char const *);
     void (*ElemSetWindowState)(ElemWindow, ElemWindowState);
+    void (*ElemShowWindowCursor)(ElemWindow);
+    void (*ElemHideWindowCursor)(ElemWindow);
+    ElemWindowCursorPosition (*ElemGetWindowCursorPosition)(ElemWindow);
     void (*ElemSetGraphicsOptions)(ElemGraphicsOptions const *);
     ElemGraphicsDeviceInfoSpan (*ElemGetAvailableGraphicsDevices)(void);
     ElemGraphicsDevice (*ElemCreateGraphicsDevice)(ElemGraphicsDeviceOptions const *);
@@ -61,7 +64,9 @@ typedef struct ElementalFunctions
     void (*ElemSetViewport)(ElemCommandList, ElemViewport const *);
     void (*ElemSetViewports)(ElemCommandList, ElemViewportSpan);
     void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
-    ElemInputStream (*ElemGetInputStream)(ElemGetInputStreamOptions *);
+    ElemInputDeviceInfoSpan (*ElemGetInputDevices)(void);
+    ElemInputDeviceInfo (*ElemGetInputDeviceInfo)(ElemInputDevice);
+    ElemInputStream (*ElemGetInputStream)(void);
     
 } ElementalFunctions;
 
@@ -123,6 +128,9 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetWindowRenderSize = (ElemWindowSize (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowRenderSize");
     listElementalFunctions.ElemSetWindowTitle = (void (*)(ElemWindow, char const *))GetElementalFunctionPointer("ElemSetWindowTitle");
     listElementalFunctions.ElemSetWindowState = (void (*)(ElemWindow, ElemWindowState))GetElementalFunctionPointer("ElemSetWindowState");
+    listElementalFunctions.ElemShowWindowCursor = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemShowWindowCursor");
+    listElementalFunctions.ElemHideWindowCursor = (void (*)(ElemWindow))GetElementalFunctionPointer("ElemHideWindowCursor");
+    listElementalFunctions.ElemGetWindowCursorPosition = (ElemWindowCursorPosition (*)(ElemWindow))GetElementalFunctionPointer("ElemGetWindowCursorPosition");
     listElementalFunctions.ElemSetGraphicsOptions = (void (*)(ElemGraphicsOptions const *))GetElementalFunctionPointer("ElemSetGraphicsOptions");
     listElementalFunctions.ElemGetAvailableGraphicsDevices = (ElemGraphicsDeviceInfoSpan (*)(void))GetElementalFunctionPointer("ElemGetAvailableGraphicsDevices");
     listElementalFunctions.ElemCreateGraphicsDevice = (ElemGraphicsDevice (*)(ElemGraphicsDeviceOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsDevice");
@@ -152,7 +160,9 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, ElemViewport const *))GetElementalFunctionPointer("ElemSetViewport");
     listElementalFunctions.ElemSetViewports = (void (*)(ElemCommandList, ElemViewportSpan))GetElementalFunctionPointer("ElemSetViewports");
     listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
-    listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(ElemGetInputStreamOptions *))GetElementalFunctionPointer("ElemGetInputStream");
+    listElementalFunctions.ElemGetInputDevices = (ElemInputDeviceInfoSpan (*)(void))GetElementalFunctionPointer("ElemGetInputDevices");
+    listElementalFunctions.ElemGetInputDeviceInfo = (ElemInputDeviceInfo (*)(ElemInputDevice))GetElementalFunctionPointer("ElemGetInputDeviceInfo");
+    listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(void))GetElementalFunctionPointer("ElemGetInputStream");
     
 
     functionPointersLoadedElemental = 1;
@@ -453,6 +463,71 @@ static inline void ElemSetWindowState(ElemWindow window, ElemWindowState windowS
     }
 
     listElementalFunctions.ElemSetWindowState(window, windowState);
+}
+
+static inline void ElemShowWindowCursor(ElemWindow window)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemShowWindowCursor) 
+    {
+        assert(listElementalFunctions.ElemShowWindowCursor);
+        return;
+    }
+
+    listElementalFunctions.ElemShowWindowCursor(window);
+}
+
+static inline void ElemHideWindowCursor(ElemWindow window)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemHideWindowCursor) 
+    {
+        assert(listElementalFunctions.ElemHideWindowCursor);
+        return;
+    }
+
+    listElementalFunctions.ElemHideWindowCursor(window);
+}
+
+static inline ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemWindowCursorPosition result = {};
+        #else
+        ElemWindowCursorPosition result = (ElemWindowCursorPosition){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetWindowCursorPosition) 
+    {
+        assert(listElementalFunctions.ElemGetWindowCursorPosition);
+
+        #ifdef __cplusplus
+        ElemWindowCursorPosition result = {};
+        #else
+        ElemWindowCursorPosition result = (ElemWindowCursorPosition){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetWindowCursorPosition(window);
 }
 
 static inline void ElemSetGraphicsOptions(ElemGraphicsOptions const * options)
@@ -1102,7 +1177,69 @@ static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int th
     listElementalFunctions.ElemDispatchMesh(commandList, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
 
-static inline ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions * options)
+static inline ElemInputDeviceInfoSpan ElemGetInputDevices(void)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemInputDeviceInfoSpan result = {};
+        #else
+        ElemInputDeviceInfoSpan result = (ElemInputDeviceInfoSpan){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetInputDevices) 
+    {
+        assert(listElementalFunctions.ElemGetInputDevices);
+
+        #ifdef __cplusplus
+        ElemInputDeviceInfoSpan result = {};
+        #else
+        ElemInputDeviceInfoSpan result = (ElemInputDeviceInfoSpan){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetInputDevices();
+}
+
+static inline ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemInputDeviceInfo result = {};
+        #else
+        ElemInputDeviceInfo result = (ElemInputDeviceInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetInputDeviceInfo) 
+    {
+        assert(listElementalFunctions.ElemGetInputDeviceInfo);
+
+        #ifdef __cplusplus
+        ElemInputDeviceInfo result = {};
+        #else
+        ElemInputDeviceInfo result = (ElemInputDeviceInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetInputDeviceInfo(inputDevice);
+}
+
+static inline ElemInputStream ElemGetInputStream(void)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1130,5 +1267,5 @@ static inline ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions * opt
         return result;
     }
 
-    return listElementalFunctions.ElemGetInputStream(options);
+    return listElementalFunctions.ElemGetInputStream();
 }

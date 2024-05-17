@@ -4,7 +4,7 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-#define D3D12SDK_VERSION 613
+#define D3D12SDK_VERSION 614
 #define D3D12SDK_PATH ".\\"
 #define DIRECTX12_MAX_RTVS 1024u
 
@@ -258,7 +258,7 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     rootSignatureDesc.Desc_1_1.pParameters = rootParameters;
     rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
     rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
-    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;// TODO: To activate later D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
     ComPtr<ID3DBlob> serializedRootSignature;
     AssertIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, serializedRootSignature.GetAddressOf(), nullptr));
