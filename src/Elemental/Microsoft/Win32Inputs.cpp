@@ -9,6 +9,71 @@
 
 SystemDictionary<HANDLE, ElemInputDevice> win32InputDeviceDictionary;
 
+ElemInputDevice AddWin32RawInputDevice(HANDLE device, DWORD type)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    uint32_t rawInputDeviceInfoSize;
+    AssertIfFailed(GetRawInputDeviceInfo(device, RIDI_DEVICEINFO, nullptr, &rawInputDeviceInfoSize));
+
+    auto rawInputDeviceInfo = (RID_DEVICE_INFO*)SystemPushArray<uint8_t>(stackMemoryArena, rawInputDeviceInfoSize).Pointer;
+    rawInputDeviceInfo->cbSize = sizeof(RID_DEVICE_INFO);
+
+    AssertIfFailed(GetRawInputDeviceInfo(device, RIDI_DEVICEINFO, rawInputDeviceInfo, &rawInputDeviceInfoSize)); 
+
+    InputDeviceData deviceData =
+    {
+        .PlatformHandle = device,
+        .InputDeviceType = ElemInputDeviceType_Unknown
+    };
+
+    InputDeviceDataFull deviceDataFull = {};
+
+    if (type == RIM_TYPEMOUSE)
+    {
+        deviceData.InputDeviceType = ElemInputDeviceType_Mouse;
+        deviceDataFull.MouseNumberOfButtons = rawInputDeviceInfo->mouse.dwNumberOfButtons;
+        deviceDataFull.MouseSampleRate = rawInputDeviceInfo->mouse.dwSampleRate;
+    }
+    else if (type == RIM_TYPEKEYBOARD)
+    {
+        deviceData.InputDeviceType = ElemInputDeviceType_Keyboard;
+        deviceDataFull.KeyboardNumberOfKeys = rawInputDeviceInfo->keyboard.dwNumberOfKeysTotal;
+
+        switch (rawInputDeviceInfo->keyboard.dwType)
+        {
+            case 0x7:
+                deviceDataFull.KeyboardType = ElemKeyboardType_Japanese;
+                break;
+
+            case 0x8:
+                deviceDataFull.KeyboardType = ElemKeyboardType_Korean;
+                break;
+
+            default:
+                deviceDataFull.KeyboardType = ElemKeyboardType_Normal;
+        }
+    }
+    else if (type == RIM_TYPEHID)
+    {
+        if (!IsHidDeviceSupported(rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId))
+        {
+            return ELEM_HANDLE_NULL;
+        }
+        
+        deviceData.InputDeviceType = ElemInputDeviceType_Gamepad;
+        deviceData.HidVendorId = rawInputDeviceInfo->hid.dwVendorId;
+        deviceData.HidProductId = rawInputDeviceInfo->hid.dwProductId;
+        deviceDataFull.GamepadVersion = rawInputDeviceInfo->hid.dwVersionNumber;
+    }
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Create Input device.");
+    auto handle = AddInputDevice(&deviceData, &deviceDataFull);
+    SystemAddDictionaryEntry(win32InputDeviceDictionary, device, handle);
+
+    return handle;
+}
+
 void InitWin32Inputs(HWND window)
 {
     RAWINPUTDEVICE devices[] =
@@ -39,6 +104,27 @@ void InitWin32Inputs(HWND window)
     }
 
     win32InputDeviceDictionary = SystemCreateDictionary<HANDLE, ElemInputDevice>(ApplicationMemoryArena, MAX_INPUT_DEVICES);
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    uint32_t devicesListLength;
+    AssertIfFailed(GetRawInputDeviceList(nullptr, &devicesListLength, sizeof(RAWINPUTDEVICELIST)));
+
+    auto devicesList = SystemPushArray<RAWINPUTDEVICELIST>(stackMemoryArena, devicesListLength);
+    AssertIfFailed(GetRawInputDeviceList(devicesList.Pointer, &devicesListLength, sizeof(RAWINPUTDEVICELIST)));
+    
+    for (uint32_t i = 0; i < devicesListLength; i++)
+    {
+        auto device = devicesList[i];
+
+        if (device.dwType == RIM_TYPEMOUSE || device.dwType == RIM_TYPEKEYBOARD || device.dwType == RIM_TYPEHID)
+        {
+            if (!SystemDictionaryContainsKey(win32InputDeviceDictionary, device.hDevice))
+            {
+                AddWin32RawInputDevice(device.hDevice, device.dwType);
+            }
+        }
+    }
 }
 
 ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
@@ -145,6 +231,8 @@ ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
 
 void ProcessWin32RawInputKeyboard(ElemWindow window, ElemInputDevice inputDevice, RAWKEYBOARD* keyboardData, double elapsedSeconds)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
@@ -166,7 +254,6 @@ void ProcessWin32RawInputMouse(ElemWindow window, ElemInputDevice inputDevice, R
     int deltaX = mouseData->lLastX;
     int deltaY = mouseData->lLastY;
 
-    // TODO: Automatically insert a delta 0?
     if (deltaX < 0)
     {
         AddInputEvent({
@@ -368,72 +455,40 @@ void ProcessWin32RawInputMouse(ElemWindow window, ElemInputDevice inputDevice, R
     {
         auto wheelDelta = (float)(short)mouseData->usButtonData;
 
-        AddInputEvent({
-            .Window = window,
-            .InputDevice = inputDevice,
-            .InputId = ElemInputId_MouseHorizontalWheel,
-            .InputType = ElemInputType_Delta,
-            .Value = wheelDelta / WHEEL_DELTA,
-            .ElapsedSeconds = elapsedSeconds
-        });
-    }
-}
-
-// TODO: Handle device removal
-ElemInputDevice AddWin32RawInputDevice(RAWINPUT* rawInputData)
-{
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Create Input device.");
-
-    uint32_t rawInputDeviceInfoSize;
-    AssertIfFailed(GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, nullptr, &rawInputDeviceInfoSize));
-
-    auto rawInputDeviceInfo = (RID_DEVICE_INFO*)SystemPushArray<uint8_t>(stackMemoryArena, rawInputDeviceInfoSize).Pointer;
-    rawInputDeviceInfo->cbSize = sizeof(RID_DEVICE_INFO);
-
-    AssertIfFailed(GetRawInputDeviceInfo(rawInputData->header.hDevice, RIDI_DEVICEINFO, rawInputDeviceInfo, &rawInputDeviceInfoSize)); 
-
-    // TODO: Fill additional data based on the device type
-    InputDeviceData deviceData =
-    {
-        .PlatformHandle = rawInputData->header.hDevice,
-        .InputDeviceType = ElemInputDeviceType_Unknown
-    };
-
-    InputDeviceDataFull deviceDataFull =
-    {
-    };
-
-    // TODO: Fill additional infos
-    if (rawInputData->header.dwType == RIM_TYPEMOUSE)
-    {
-        deviceData.InputDeviceType = ElemInputDeviceType_Mouse;
-    }
-    else if (rawInputData->header.dwType == RIM_TYPEKEYBOARD)
-    {
-        deviceData.InputDeviceType = ElemInputDeviceType_Keyboard;
-    }
-    else if (rawInputData->header.dwType == RIM_TYPEHID)
-    {
-        if (!IsHidDeviceSupported(rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId))
+        if (wheelDelta < 0.0f)
         {
-            SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Unknown hid device");
-            return ELEM_HANDLE_NULL;
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseHorizontalWheelNegative,
+                .InputType = ElemInputType_Delta,
+                .Value = -wheelDelta / WHEEL_DELTA,
+                .ElapsedSeconds = elapsedSeconds
+            });
         }
-        
-        deviceData.InputDeviceType = ElemInputDeviceType_Gamepad;
-        deviceData.HidVendorId = rawInputDeviceInfo->hid.dwVendorId;
-        deviceData.HidProductId = rawInputDeviceInfo->hid.dwProductId;
+
+        if (wheelDelta > 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseHorizontalWheelPositive,
+                .InputType = ElemInputType_Delta,
+                .Value = wheelDelta / WHEEL_DELTA,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
     }
-
-    auto handle = AddInputDevice(&deviceData, &deviceDataFull);
-    SystemAddDictionaryEntry(win32InputDeviceDictionary, rawInputData->header.hDevice, handle);
-
-    return handle;
 }
 
-// TODO: Available Devices
-// GetRawInputDeviceList 
+void RemoveWin32InputDevice(HANDLE rawInputDevice)
+{
+    if (SystemDictionaryContainsKey(win32InputDeviceDictionary, rawInputDevice))
+    {
+        auto inputDevice = *SystemGetDictionaryValue(win32InputDeviceDictionary, rawInputDevice);
+        RemoveInputDevice(inputDevice);
+    }
+}
 
 void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
 {
@@ -456,7 +511,7 @@ void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
 
     if (!SystemDictionaryContainsKey(win32InputDeviceDictionary, rawInputData->header.hDevice))
     {
-        inputDevice = AddWin32RawInputDevice(rawInputData);
+        inputDevice = AddWin32RawInputDevice(rawInputData->header.hDevice, rawInputData->header.dwType);
     }
     else
     {

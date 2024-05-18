@@ -279,3 +279,16 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
         gtk_window_minimize(GTK_WINDOW(windowData->GtkWindow));
     }
 }
+
+ElemAPI void ElemShowWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI void ElemHideWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window)
+{
+    return {};
+}

@@ -184,6 +184,13 @@ typedef struct
     ElemWindowState WindowState;
 } ElemWindowSize;
 
+// TODO: Comments
+typedef struct
+{
+    uint32_t X;
+    uint32_t Y;
+} ElemWindowCursorPosition;
+
 /**
  * Defines a function pointer type for log handling.
  *
@@ -261,6 +268,11 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
  * @param windowState New state for the window.
  */
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
+
+// TODO: Comments
+ElemAPI void ElemShowWindowCursor(ElemWindow window);
+ElemAPI void ElemHideWindowCursor(ElemWindow window);
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window);
 
 //--------------------------------------------------------------------------------
 // ##Module_Graphics##
@@ -385,6 +397,8 @@ typedef struct
  */
 typedef struct
 {
+    // TODO: Add ElemGraphicsDevice Handle
+
     // Name of the graphics device.
     const char* DeviceName;
     // API used by the graphics device.
@@ -978,7 +992,8 @@ typedef enum
     ElemInputId_MouseAxisYPositive,
     ElemInputId_MouseWheelNegative,
     ElemInputId_MouseWheelPositive,
-    ElemInputId_MouseHorizontalWheel,
+    ElemInputId_MouseHorizontalWheelNegative,
+    ElemInputId_MouseHorizontalWheelPositive,
     ElemInputId_GamepadLeftStickXNegative,
     ElemInputId_GamepadLeftStickXPositive,
     ElemInputId_GamepadLeftStickYNegative,
@@ -986,10 +1001,31 @@ typedef enum
     ElemInputID_GamepadButton1,
 } ElemInputId;
 
+typedef enum 
+{
+    ElemKeyboardType_Normal,
+    ElemKeyboardType_Japanese,
+    ElemKeyboardType_Korean
+} ElemKeyboardType;
+
 typedef struct
 {
- // TODO: 
-} ElemHidInputDeviceInfo;
+    ElemInputDevice Handle;
+    ElemInputDeviceType DeviceType;
+    uint32_t MouseNumberOfButtons;
+    uint32_t MouseSampleRate;
+    ElemKeyboardType KeyboardType;
+    uint32_t KeyboardNumberOfKeys;
+    uint32_t GamepadVendorId;
+    uint32_t GamepadProductId;
+    uint32_t GamepadVersion;
+} ElemInputDeviceInfo;
+
+typedef struct
+{
+    ElemInputDeviceInfo* Items;
+    uint32_t Length;
+} ElemInputDeviceInfoSpan;
 
 typedef struct
 {
@@ -1012,17 +1048,9 @@ typedef struct
     ElemInputEventSpan Events;
 } ElemInputStream;
 
-typedef struct
-{
-    // TODO: Not sure to keep options in this function
-} ElemGetInputStreamOptions;
-
-ElemAPI ElemInputStream ElemGetInputStream(ElemGetInputStreamOptions* options);
-
-// TODO: GetCursorPosition
-// TODO: HideCursor
-// TODO: GetInputDeviceInfo
-// TODO: GetInputDevices
+ElemAPI ElemInputDeviceInfoSpan ElemGetInputDevices(void);
+ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice);
+ElemAPI ElemInputStream ElemGetInputStream(void);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

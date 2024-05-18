@@ -15,11 +15,17 @@ struct InputDeviceData
 
 struct InputDeviceDataFull
 {
-    uint32_t reserved;
+    uint32_t MouseNumberOfButtons;
+    uint32_t MouseSampleRate;
+    ElemKeyboardType KeyboardType;
+    uint32_t KeyboardNumberOfKeys;
+    uint32_t GamepadVersion;
 };
 
 InputDeviceData* GetInputDeviceData(ElemInputDevice inputDevice);
 InputDeviceDataFull* GetInputDeviceDataFull(ElemInputDevice inputDevice);
 
 ElemInputDevice AddInputDevice(InputDeviceData* deviceData, InputDeviceDataFull* deviceDataFull);
-void AddInputEvent(ElemInputEvent inputEvent);
+void RemoveInputDevice(ElemInputDevice inputDevice);
+
+void AddInputEvent(ElemInputEvent inputEvent, bool needReset = false);

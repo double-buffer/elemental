@@ -69,6 +69,15 @@ LRESULT CALLBACK WindowCallBack(HWND window, UINT message, WPARAM wParam, LPARAM
             ProcessWin32RawInput(windowDictionary[window], lParam);
             break;
         };
+
+        case WM_INPUT_DEVICE_CHANGE:
+        {
+            if (wParam == GIDC_REMOVAL)
+            {
+                RemoveWin32InputDevice((HANDLE)lParam);
+            }
+            break;
+        };
         
         case WM_SYSKEYDOWN:
         {
@@ -302,6 +311,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
 
 ElemAPI void ElemFreeWindow(ElemWindow window)
 {
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
     auto windowData = GetWin32WindowData(window);
 
     if (windowData == ELEM_HANDLE_NULL)
@@ -322,6 +333,8 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
 
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 {
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
     
@@ -369,6 +382,8 @@ ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 
 ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
 {
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
@@ -380,6 +395,8 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
 
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
     auto windowData = GetWin32WindowData(window);
     SystemAssert(windowData);
 
@@ -430,4 +447,60 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
             ShowWindow(windowData->WindowHandle, SW_SHOWMINIMIZED);
         }
     }
+}
+
+ElemAPI void ElemShowWindowCursor(ElemWindow window)
+{
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
+    auto windowDataFull = GetWin32WindowDataFull(window);
+    SystemAssert(windowDataFull);
+
+    if (windowDataFull->IsCursorHidden)
+    {
+        ShowCursor(true);
+        windowDataFull->IsCursorHidden = false;
+    }
+}
+
+ElemAPI void ElemHideWindowCursor(ElemWindow window)
+{
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
+    auto windowDataFull = GetWin32WindowDataFull(window);
+    SystemAssert(windowDataFull);
+
+    if (!windowDataFull->IsCursorHidden)
+    {
+        ShowCursor(false);
+        windowDataFull->IsCursorHidden = true;
+    }
+}
+
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window)
+{
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
+    auto windowData = GetWin32WindowData(window);
+    SystemAssert(windowData);
+
+    POINT result;
+
+    if (GetCursorPos(&result)) 
+    {
+        if (ScreenToClient(windowData->WindowHandle, &result)) 
+        {
+            RECT clientRect;
+
+            if (GetClientRect(windowData->WindowHandle, &clientRect)) 
+            {
+                result.x = SystemMax(0L, SystemMin(result.x, clientRect.right - 1));
+                result.y = SystemMax(0L, SystemMin(result.y, clientRect.bottom - 1));
+            }
+
+            return { (uint32_t)result.x, (uint32_t)result.y };
+        }
+    }
+
+    return { 0, 0 };
 }
