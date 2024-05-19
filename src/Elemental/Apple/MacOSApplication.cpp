@@ -4,7 +4,6 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 #include "SystemPlatformFunctions.h"
-#include "GameController/GameController.h"
 
 MemoryArena ApplicationMemoryArena;
 bool ApplicationExited = false;

@@ -35,6 +35,7 @@ class CustomView: UIView {
     }
 }
 #else
+import GameController
 class CustomView: NSView {
     var metalDisplayLink: CAMetalDisplayLink!
 
@@ -50,8 +51,22 @@ class CustomView: NSView {
         
         let refreshRate = NSScreen.main!.maximumFramesPerSecond;
         self.metalDisplayLink.preferredFrameRateRange = CAFrameRateRange(minimum: Float(refreshRate), maximum: Float(refreshRate), __preferred: Float(refreshRate))
-    }
+/*
+        NotificationCenter.default.addObserver(forName: Notification.Name.init(rawValue: "GCKeyboardDidConnectNotification"), object: nil, queue: nil) {
+            (note) in
+            guard let _keyboard = note.object as? GCKeyboard else {
+                return
+            }
 
+            print("swift keyboard")
+            
+            // Register callbacks
+            _keyboard.keyboardInput?.keyChangedHandler = {
+                (keyboardInput, controllerButton, key, isPressed) in
+                    print("Key pressed \(isPressed)")
+                }
+        }*/
+    }
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }

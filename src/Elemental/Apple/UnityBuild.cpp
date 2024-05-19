@@ -8,6 +8,8 @@
 #include "UIKitWindow.cpp"
 #endif
 
+#include "Inputs.cpp"
+
 #include "Graphics/MetalGraphicsDevice.cpp"
 #include "Graphics/MetalCommandList.cpp"
 #include "Graphics/MetalSwapChain.cpp"

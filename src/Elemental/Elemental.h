@@ -1008,6 +1008,9 @@ typedef enum
     ElemKeyboardType_Korean
 } ElemKeyboardType;
 
+// TODO: Add a kind of player index?
+// TODO: Add an identifier because if the game wants to save a config
+// it can be useful
 typedef struct
 {
     ElemInputDevice Handle;
@@ -1048,6 +1051,8 @@ typedef struct
     ElemInputEventSpan Events;
 } ElemInputStream;
 
+// TODO: Do we need this function? On some platforms we cannot get the full list of input devices at load time
+// Maybe we should just keep the GetDeviceInfo function
 ElemAPI ElemInputDeviceInfoSpan ElemGetInputDevices(void);
 ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice);
 ElemAPI ElemInputStream ElemGetInputStream(void);

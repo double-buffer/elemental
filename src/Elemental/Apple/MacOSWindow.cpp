@@ -1,5 +1,6 @@
 #include "MacOSWindow.h"
 #include "MacOSApplication.h"
+#include "Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 
@@ -86,6 +87,7 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     });
 
     ElemSetWindowState(handle, windowState);
+    InitInputs(handle);
     
     return handle;
 }

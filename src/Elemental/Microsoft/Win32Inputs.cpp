@@ -231,8 +231,6 @@ ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
 
 void ProcessWin32RawInputKeyboard(ElemWindow window, ElemInputDevice inputDevice, RAWKEYBOARD* keyboardData, double elapsedSeconds)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
