@@ -127,6 +127,7 @@ void InitWin32Inputs(HWND window)
     }
 }
 
+// TODO: We should use US layout all the time
 ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
 {
     switch (wParam)

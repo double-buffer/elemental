@@ -24,7 +24,6 @@
 #include "Graphics/Rendering.cpp"
 
 #include "Inputs/Inputs.cpp"
-#include "Inputs/HidDevices.cpp"
 
 #include "PosixPlatformFunctions.cpp"
 #include "SystemPlatformFunctions.cpp"

@@ -33,9 +33,41 @@ class CustomView: UIView {
       
         self.metalDisplayLink.add(to: RunLoop.current, forMode: RunLoop.Mode.commonModes)
     }
+
+    // TODO: Pass funtion pointers
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let location = touch.location(in: self)
+            print("Touch began at \(location)")
+            // Handle touch began
+        }
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let location = touch.location(in: self)
+            print("Touch moved to \(location)")
+            // Handle touch moved
+        }
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let location = touch.location(in: self)
+            print("Touch ended at \(location)")
+            // Handle touch ended
+        }
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let location = touch.location(in: self)
+            print("Touch cancelled at \(location)")
+            // Handle touch cancelled
+        }
+    }
 }
 #else
-import GameController
 class CustomView: NSView {
     var metalDisplayLink: CAMetalDisplayLink!
 
@@ -51,24 +83,17 @@ class CustomView: NSView {
         
         let refreshRate = NSScreen.main!.maximumFramesPerSecond;
         self.metalDisplayLink.preferredFrameRateRange = CAFrameRateRange(minimum: Float(refreshRate), maximum: Float(refreshRate), __preferred: Float(refreshRate))
-/*
-        NotificationCenter.default.addObserver(forName: Notification.Name.init(rawValue: "GCKeyboardDidConnectNotification"), object: nil, queue: nil) {
-            (note) in
-            guard let _keyboard = note.object as? GCKeyboard else {
-                return
-            }
-
-            print("swift keyboard")
-            
-            // Register callbacks
-            _keyboard.keyboardInput?.keyChangedHandler = {
-                (keyboardInput, controllerButton, key, isPressed) in
-                    print("Key pressed \(isPressed)")
-                }
-        }*/
     }
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.command) {
+            return false
+        }
+
+        return true
     }
 
     override func viewDidMoveToWindow() {
@@ -77,6 +102,10 @@ class CustomView: NSView {
         // TODO: Handle on MacOS the case where a window is closed or change screen
         // TODO: Handle minimized
         self.metalDisplayLink.add(to: RunLoop.current, forMode: RunLoop.Mode.common)
+    }
+
+    override var acceptsFirstResponder: Bool {
+        return true
     }
 }
 #endif

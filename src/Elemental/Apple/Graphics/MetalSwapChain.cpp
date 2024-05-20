@@ -248,6 +248,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
     #endif
     if (_updateHandler)
     {
+        // TODO: If delta time is above a thresold, take the delta time based on target FPS
         auto deltaTime = update->targetPresentationTimestamp() - swapChainData->PreviousTargetPresentationTimestamp;
         swapChainData->PreviousTargetPresentationTimestamp = update->targetPresentationTimestamp();
 

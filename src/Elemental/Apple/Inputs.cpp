@@ -3,6 +3,7 @@
 #include "SystemDictionary.h"
 #include "SystemLogging.h"
 #include "SystemFunctions.h"
+#include "SystemPlatformFunctions.h"
 
 #if defined(TARGET_OS_OSX) && TARGET_OS_OSX
 #include "MacOSApplication.h"
@@ -14,6 +15,11 @@ SystemDictionary<GC::Device*, ElemInputDevice> appleInputDeviceDictionary;
 
 ElemInputDevice AddAppleInputDevice(GC::Device* device, ElemInputDeviceType deviceType)
 {
+    if (SystemDictionaryContainsKey(appleInputDeviceDictionary, device))
+    {
+        return *SystemGetDictionaryValue(appleInputDeviceDictionary, device);
+    }
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     InputDeviceData deviceData =
@@ -69,9 +75,9 @@ ElemInputDevice AddAppleInputDevice(GC::Device* device, ElemInputDeviceType devi
     return handle;
 }
 
+// TODO: Review key code mapping
 ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "KeyCode: %d", keyCode);
     switch (keyCode)
     {
         case GC::KeyCode::Zero: return ElemInputId_Key0;
@@ -126,6 +132,7 @@ ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
         case GC::KeyCode::Home: return ElemInputId_KeyHome;
         case GC::KeyCode::LeftArrow: return ElemInputId_KeyLeft;
         case GC::KeyCode::UpArrow: return ElemInputId_KeyUp;
+        // TODO: Problem with right arrow?
         case GC::KeyCode::RightArrow: return ElemInputId_KeyRight;
         case GC::KeyCode::DownArrow: return ElemInputId_KeyDown;
         case GC::KeyCode::KeypadEnter: return ElemInputId_KeyExecute;
@@ -172,25 +179,10 @@ ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
     }
 }
 
-void KeyboardHandler(GC::KeyboardInput* keyboardInput, GC::ControllerButtonInput* controllerButton, GC::KeyCode keyCode, bool isPressed)
+void KeyboardHandler(ElemWindow window, GC::KeyboardInput* keyboardInput, GC::ControllerButtonInput* controllerButton, GC::KeyCode keyCode, bool isPressed)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Handler OK! %d", isPressed);
-
-    //auto stackMemoryArena = SystemGetStackMemoryArena();
-
-    //auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - Win32PerformanceCounterStart) / Win32PerformanceCounterFrequencyInSeconds;
-
-    // TODO: Extract that to a separate function
-    ElemInputDevice inputDevice;
-
-    if (!SystemDictionaryContainsKey(appleInputDeviceDictionary, keyboardInput->device()))
-    {
-        inputDevice = AddAppleInputDevice(keyboardInput->device(), ElemInputDeviceType_Keyboard);
-    }
-    else
-    {
-        inputDevice = *SystemGetDictionaryValue(appleInputDeviceDictionary, keyboardInput->device());
-    }
+    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
+    auto inputDevice = AddAppleInputDevice(keyboardInput->device(), ElemInputDeviceType_Keyboard);
 
     auto inputDeviceData = GetInputDeviceData(inputDevice);
     SystemAssert(inputDeviceData);
@@ -198,20 +190,164 @@ void KeyboardHandler(GC::KeyboardInput* keyboardInput, GC::ControllerButtonInput
     // TODO: We need to find a way to handle key repeats!
 
     AddInputEvent({
-        .Window = 1,//window, // TODO: 
+        .Window = window,
         .InputDevice = inputDevice,
         .InputId = GetAppleInputIdFromKeyCode(keyCode),
         .InputType = ElemInputType_Digital,
         .Value = isPressed ? 1.0f : 0.0f,
-        .ElapsedSeconds = 0.0//elapsedSeconds // TODO:
+        .ElapsedSeconds = elapsedSeconds
     });
+}
+
+void MouseMoveHandler(ElemWindow window, GC::MouseInput* mouse, float deltaX, float deltaY)
+{
+    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
+    auto inputDevice = AddAppleInputDevice(mouse->device(), ElemInputDeviceType_Mouse);
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    if (deltaX < 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisXNegative,
+            .InputType = ElemInputType_Delta,
+            .Value = -(float)deltaX,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaX > 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisXPositive,
+            .InputType = ElemInputType_Delta,
+            .Value = (float)deltaX,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaY < 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisYNegative,
+            .InputType = ElemInputType_Delta,
+            .Value = (float)deltaY,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaY > 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_MouseAxisYPositive,
+            .InputType = ElemInputType_Delta,
+            .Value = -(float)deltaY,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+}
+    
+void ButtonHandler(ElemWindow window, ElemInputId inputId, GC::Device* device, GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+{
+    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
+    auto inputDevice = AddAppleInputDevice(device, ElemInputDeviceType_Mouse);
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    AddInputEvent({
+        .Window = window,
+        .InputDevice = inputDevice,
+        .InputId = inputId,
+        .InputType = ElemInputType_Digital,
+        .Value = isPressed ? 1.0f : 0.0f,
+        .ElapsedSeconds = elapsedSeconds
+    });
+}
+
+enum AppleGamepadDirection
+{
+    LeftStick,
+    RightStick,
+    Dpad
+};
+
+// TODO: Keep track of old value because otherwise we send multiple 0
+
+void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection, GC::Device* device, GC::ControllerDirectionPad* directionPad, float xValue, float yValue)
+{
+    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
+    auto inputDevice = AddAppleInputDevice(device, ElemInputDeviceType_Mouse);
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    if (gamepadDirection == AppleGamepadDirection::LeftStick)
+    {
+        if (xValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadLeftStickXPositive,
+                .InputType = ElemInputType_Digital,
+                .Value = xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (xValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadLeftStickXNegative,
+                .InputType = ElemInputType_Digital,
+                .Value = -xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadLeftStickYPositive,
+                .InputType = ElemInputType_Digital,
+                .Value = yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadLeftStickYNegative,
+                .InputType = ElemInputType_Digital,
+                .Value = -yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+    }
 }
 
 // TODO: We need to lock the cursort in fullscreen for ipad and iphone
 // See: https://developer.apple.com/wwdc20/10617
 
-// TODO: Compute correct timestamp like in Win32
-// TODO: Deactivate beep sound
+// TODO: Support gamepads remap function of apple. Maybe we can manage gamepad custom with HID
+// And check the mappings if any?
 
 void InitInputs(ElemWindow window)
 {
@@ -220,8 +356,88 @@ void InitInputs(ElemWindow window)
     NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCKeyboardDidConnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
     {
         auto keyboard = (GC::Keyboard*)notification->object();
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test %s", keyboard->keyboardInput()->device()->productCategory()->utf8String());
+        keyboard->keyboardInput()->setKeyChangedHandler(^(GC::KeyboardInput* keyboardInput, GC::ControllerButtonInput* controllerButton, GC::KeyCode keyCode, bool isPressed)
+        {
+            KeyboardHandler(window, keyboardInput, controllerButton, keyCode, isPressed);
+        });
+    });
 
-        keyboard->keyboardInput()->setKeyChangedHandler(KeyboardHandler);
+    NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCMouseDidConnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
+    {
+        auto mouse = (GC::Mouse*)notification->object();
+        auto mouseInput = mouse->mouseInput();
+
+        mouseInput->setMouseMovedHandler(^(GC::MouseInput* mouse, float deltaX, float deltaY)
+        {
+            MouseMoveHandler(window, mouse, deltaX, deltaY);
+        });
+
+        mouseInput->leftButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputId_MouseLeftButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+        });
+        
+         mouseInput->middleButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputId_MouseMiddleButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+        });
+
+        mouseInput->rightButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputId_MouseRightButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+        });
+
+        auto mouseExtraButtons = mouseInput->auxiliaryButtons();
+
+        if (mouseExtraButtons)
+        {
+            for (uint32_t i = 0; i < mouseExtraButtons->count() && i < 2; i++)
+            {
+                ((GC::ControllerButtonInput*)mouseExtraButtons->object(i))->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+                {
+                    // TODO: Check the with other platforms if the extra buttons are in the same order
+                    ButtonHandler(window, i == 0 ? ElemInputId_MouseExtraButton1 : ElemInputId_MouseExtraButton2, mouseInput->device(), controllerButtonInput, value, isPressed);
+                });
+            }
+        }
+
+        // TODO: Mouse wheel
+    });
+
+    NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCControllerDidConnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
+    {
+        auto controller = (GC::Controller*)notification->object();
+        auto extendedGamepad = controller->extendedGamepad();
+
+        if (!extendedGamepad)
+        {
+            SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Gamepad not supported on MacOS.");
+            return;
+        }
+
+        extendedGamepad->buttonA()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadButtonA, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->buttonB()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadButtonB, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->buttonX()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadButtonX, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->buttonY()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadButtonY, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->leftThumbstick()->setValueChangedHandler(^(GC::ControllerDirectionPad* directionPad, float xValue, float yValue)
+        {
+            DirectionHandler(window, AppleGamepadDirection::LeftStick, extendedGamepad->device(), directionPad, xValue, yValue);
+        });
     });
 }

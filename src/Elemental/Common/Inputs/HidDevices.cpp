@@ -97,7 +97,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
             .ElapsedSeconds = elapsedSeconds
         });
     }
-
+    // TODO: check if the value is inversed!!
     if (leftStickY >= 0)
     {
         AddInputEvent({
@@ -117,7 +117,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
         AddInputEvent({
             .Window = window,
             .InputDevice = inputDevice,
-            .InputId = ElemInputID_GamepadButton1,
+            .InputId = ElemInputID_GamepadButtonA,
             .InputType = ElemInputType_Digital,
             .Value = 1.0f,
             .ElapsedSeconds = elapsedSeconds
@@ -128,7 +128,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
         AddInputEvent({
             .Window = window,
             .InputDevice = inputDevice,
-            .InputId = ElemInputID_GamepadButton1,
+            .InputId = ElemInputID_GamepadButtonA,
             .InputType = ElemInputType_Digital,
             .Value = 0.0f,
             .ElapsedSeconds = elapsedSeconds

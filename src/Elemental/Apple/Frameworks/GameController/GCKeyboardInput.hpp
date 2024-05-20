@@ -1,34 +1,9 @@
-/*
- *
- * Copyright 2020-2021 Apple Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-
-//-------------------------------------------------------------------------------------------------------------------------------------------------------------
-//
-// AppKit/NSApplication.hpp
-//
-//-------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 #pragma once
-
-//-------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #include <Foundation/Foundation.hpp>
 #include "GameControllerPrivate.hpp"
 #include "GCPhysicalInputProfile.hpp"
+#include "GCControllerButtonInput.hpp"
 #include <functional>
 
 namespace GC
@@ -171,14 +146,6 @@ namespace GC
 		RightGui,
 	};
 
-    class ControllerElement : public NS::Referencing<ControllerElement>
-    {
-    };
-
-    class ControllerButtonInput : public NS::Referencing<ControllerButtonInput, ControllerElement>
-    {
-    };
-
     class KeyboardInput;
 
     using KeyChangedHandlerBlock = void(^)(KeyboardInput*, ControllerButtonInput*, long, bool);
@@ -189,10 +156,6 @@ namespace GC
 		public:
             void setKeyChangedHandler(KeyChangedHandlerBlock handler);
             void setKeyChangedHandler(const KeyChangedHandlerFunction& handler);
-
-
-            //void keyChangedHandler(GC::KeyChangedHandlerBlock handle);
-            //void    keyChangedHandler(const KeyChangedHandlerFunction& handle);
 	};
 
 }
@@ -211,14 +174,3 @@ _NS_INLINE void GC::KeyboardInput::setKeyChangedHandler(const KeyChangedHandlerF
         blockHandler(keyboardInput, controllerButtonInput, keyCode, isPressed);
     });
 }
-/*
-_NS_INLINE void GC::KeyboardInput::keyChangedHandler( const KeyChangedHandlerFunction& handle )
-{
-    __block KeyChangedHandlerFunction blockFunction = handle;
-
-    keyChangedHandler(^(class GC::KeyboardInput *keyboard, GC::ControllerButtonInput *key, GC::KeyCode keyCode, BOOL pressed) 
-    { 
-        printf("Test\n");
-        blockFunction(keyboard, key, keyCode, pressed); 
-    });
-}*/

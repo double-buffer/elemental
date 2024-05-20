@@ -39,21 +39,25 @@ namespace GC::Private::Class
 
 namespace GC::Private::Selector
 {
-    _GC_PRIVATE_DEF_SEL( controllers,
-                            "controllers" );
-
-    _GC_PRIVATE_DEF_SEL( coalescedKeyboard,
-                            "coalescedKeyboard" );
-
-    _GC_PRIVATE_DEF_SEL( keyboardInput,
-                            "keyboardInput" );
-
-    _GC_PRIVATE_DEF_SEL( setKeyChangedHandler_,
-                            "setKeyChangedHandler:" );
-    
-    _GC_PRIVATE_DEF_SEL( productCategory,
-                                "productCategory" );
-
-    _GC_PRIVATE_DEF_SEL( device,
-                                "device" );
+    _GC_PRIVATE_DEF_SEL(controllers, "controllers");
+    _GC_PRIVATE_DEF_SEL(coalescedKeyboard, "coalescedKeyboard");
+    _GC_PRIVATE_DEF_SEL(keyboardInput, "keyboardInput");
+    _GC_PRIVATE_DEF_SEL(mouseInput, "mouseInput");
+    _GC_PRIVATE_DEF_SEL(setKeyChangedHandler_, "setKeyChangedHandler:");
+    _GC_PRIVATE_DEF_SEL(productCategory, "productCategory");
+    _GC_PRIVATE_DEF_SEL(device, "device");
+    _GC_PRIVATE_DEF_SEL(setMouseMovedHandler_, "setMouseMovedHandler:");
+    _GC_PRIVATE_DEF_SEL(leftButton, "leftButton");
+    _GC_PRIVATE_DEF_SEL(middleButton, "middleButton");
+    _GC_PRIVATE_DEF_SEL(rightButton, "rightButton");
+    _GC_PRIVATE_DEF_SEL(auxiliaryButtons, "auxiliaryButtons");
+    _GC_PRIVATE_DEF_SEL(setValueChangedHandler_, "setValueChangedHandler:");
+    _GC_PRIVATE_DEF_SEL(setValueDidChangeHandler_, "setValueDidChangeHandler:");
+    _GC_PRIVATE_DEF_SEL(physicalInputProfile, "physicalInputProfile");
+    _GC_PRIVATE_DEF_SEL(extendedGamepad, "extendedGamepad");
+    _GC_PRIVATE_DEF_SEL(buttonA, "buttonA");
+    _GC_PRIVATE_DEF_SEL(buttonB, "buttonB");
+    _GC_PRIVATE_DEF_SEL(buttonX, "buttonX");
+    _GC_PRIVATE_DEF_SEL(buttonY, "buttonY");
+    _GC_PRIVATE_DEF_SEL(leftThumbstick, "leftThumbstick");
 }

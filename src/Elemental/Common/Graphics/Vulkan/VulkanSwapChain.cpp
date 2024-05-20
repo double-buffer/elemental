@@ -185,6 +185,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     }
     
     // TODO: Compute timing information
+    // TODO: If delta time is above a thresold, take the delta time based on target FPS
     auto deltaTime = 1.0f / windowData->MonitorRefreshRate;
 
     ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);

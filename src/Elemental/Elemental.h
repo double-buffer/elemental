@@ -998,7 +998,10 @@ typedef enum
     ElemInputId_GamepadLeftStickXPositive,
     ElemInputId_GamepadLeftStickYNegative,
     ElemInputId_GamepadLeftStickYPositive,
-    ElemInputID_GamepadButton1,
+    ElemInputID_GamepadButtonA,
+    ElemInputID_GamepadButtonB,
+    ElemInputID_GamepadButtonX,
+    ElemInputID_GamepadButtonY,
 } ElemInputId;
 
 typedef enum 
@@ -1009,8 +1012,7 @@ typedef enum
 } ElemKeyboardType;
 
 // TODO: Add a kind of player index?
-// TODO: Add an identifier because if the game wants to save a config
-// it can be useful
+
 typedef struct
 {
     ElemInputDevice Handle;

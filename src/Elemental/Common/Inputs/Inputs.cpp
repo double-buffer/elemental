@@ -103,7 +103,7 @@ void AddInputEvent(ElemInputEvent inputEvent, bool needReset)
         deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS + currentDeltaInputsToResetWriteIndex++] = inputEvent;
     }
 
-    // TODO: Copy 
+    // TODO: Thread safe !
     inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
 }
 

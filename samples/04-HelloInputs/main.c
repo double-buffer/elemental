@@ -187,17 +187,17 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         }
 
         // TODO: Have a way to configure multiple keys for one event in one shot
-        UpdateInputValue(ElemInputId_KeyQ, inputEvent, &inputState->RotateLeft);
+        UpdateInputValue(ElemInputId_KeyA, inputEvent, &inputState->RotateLeft);
         UpdateInputValue(ElemInputId_GamepadLeftStickXNegative, inputEvent, &inputState->RotateLeft);
 
         UpdateInputValue(ElemInputId_KeyD, inputEvent, &inputState->RotateRight);
         UpdateInputValue(ElemInputId_GamepadLeftStickXPositive, inputEvent, &inputState->RotateRight);
 
-        UpdateInputValue(ElemInputId_KeyZ, inputEvent, &inputState->RotateUp);
-        UpdateInputValue(ElemInputId_GamepadLeftStickYNegative, inputEvent, &inputState->RotateUp);
+        UpdateInputValue(ElemInputId_KeyW, inputEvent, &inputState->RotateUp);
+        UpdateInputValue(ElemInputId_GamepadLeftStickYPositive, inputEvent, &inputState->RotateUp);
 
         UpdateInputValue(ElemInputId_KeyS, inputEvent, &inputState->RotateDown);
-        UpdateInputValue(ElemInputId_GamepadLeftStickYPositive, inputEvent, &inputState->RotateDown);
+        UpdateInputValue(ElemInputId_GamepadLeftStickYNegative, inputEvent, &inputState->RotateDown);
 
         UpdateInputValue(ElemInputId_MouseLeftButton, inputEvent, &inputState->TouchAction);
         UpdateInputValue(ElemInputId_MouseAxisXNegative, inputEvent, &inputState->TouchRotateLeft);
@@ -206,7 +206,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         UpdateInputValue(ElemInputId_MouseAxisYPositive, inputEvent, &inputState->TouchRotateDown);
 
         // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
-        UpdateInputValue(ElemInputId_KeyW, inputEvent, &inputState->ZoomIn);
+        UpdateInputValue(ElemInputId_KeyZ, inputEvent, &inputState->ZoomIn);
         UpdateInputValue(ElemInputId_MouseWheelPositive, inputEvent, &inputState->ZoomIn);
 
         UpdateInputValue(ElemInputId_KeyX, inputEvent, &inputState->ZoomOut);
@@ -214,7 +214,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
 
         UpdateInputValue(ElemInputId_KeySpace, inputEvent, &inputState->ChangeColorAction);
         UpdateInputValue(ElemInputId_MouseMiddleButton, inputEvent, &inputState->ChangeColorAction);
-        UpdateInputValue(ElemInputID_GamepadButton1, inputEvent, &inputState->ChangeColorAction);
+        UpdateInputValue(ElemInputID_GamepadButtonA, inputEvent, &inputState->ChangeColorAction);
 
         UpdateInputValue(ElemInputId_KeyF1, inputEvent, &inputState->HideCursorAction);
         UpdateInputValue(ElemInputId_KeyF2, inputEvent, &inputState->ShowCursorAction);

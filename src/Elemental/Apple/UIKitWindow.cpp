@@ -1,5 +1,6 @@
 #include "UIKitWindow.h"
 #include "UIKitApplication.h"
+#include "Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 
@@ -32,6 +33,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
         .WindowHandle = windowHandle,
         .ViewController = viewController
     }); 
+    
+    InitInputs(handle);
     
     return handle;
 }
