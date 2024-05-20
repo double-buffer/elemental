@@ -84,7 +84,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
         });
     }
 
-    float leftStickY = NormalizeInputValueSigned(xboxReport->LeftStickY, 65535);
+    float leftStickY = -NormalizeInputValueSigned(xboxReport->LeftStickY, 65535);
     
     if (leftStickY <= 0)
     {

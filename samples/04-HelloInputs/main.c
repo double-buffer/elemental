@@ -212,7 +212,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         UpdateInputValue(ElemInputId_KeyX, inputEvent, &inputState->ZoomOut);
         UpdateInputValue(ElemInputId_MouseWheelNegative, inputEvent, &inputState->ZoomOut);
 
-        UpdateInputValue(ElemInputId_KeySpace, inputEvent, &inputState->ChangeColorAction);
+        UpdateInputValue(ElemInputId_KeySpacebar, inputEvent, &inputState->ChangeColorAction);
         UpdateInputValue(ElemInputId_MouseMiddleButton, inputEvent, &inputState->ChangeColorAction);
         UpdateInputValue(ElemInputID_GamepadButtonA, inputEvent, &inputState->ChangeColorAction);
 
@@ -252,8 +252,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // TODO: Can we add options to normalize the speed we need for different path?
     if (applicationPayload->InputState.TouchAction)
     {
-        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 2.5f * updateParameters->DeltaTimeInSeconds;
-        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 2.5f * updateParameters->DeltaTimeInSeconds;
+        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 1.5f * updateParameters->DeltaTimeInSeconds;
+        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 1.5f * updateParameters->DeltaTimeInSeconds;
     }
     else
     {

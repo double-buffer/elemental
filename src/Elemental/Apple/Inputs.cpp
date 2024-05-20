@@ -349,6 +349,8 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
 // TODO: Support gamepads remap function of apple. Maybe we can manage gamepad custom with HID
 // And check the mappings if any?
 
+// TODO: Implement disconnect!!!!! Otherwise on IOS if we loose connection it uses the old ID
+
 void InitInputs(ElemWindow window)
 {
     appleInputDeviceDictionary = SystemCreateDictionary<GC::Device*, ElemInputDevice>(ApplicationMemoryArena, MAX_INPUT_DEVICES);

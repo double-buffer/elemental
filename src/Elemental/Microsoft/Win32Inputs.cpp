@@ -127,115 +127,131 @@ void InitWin32Inputs(HWND window)
     }
 }
 
-// TODO: We should use US layout all the time
-ElemInputId GetWin32InputIdFromKeyCode(WPARAM wParam)
+ElemInputId GetWin32InputIdFromMakeCode(WPARAM wParam)
 {
     switch (wParam)
     {
-        case '0': return ElemInputId_Key0;
-        case '1': return ElemInputId_Key1;
-        case '2': return ElemInputId_Key2;
-        case '3': return ElemInputId_Key3;
-        case '4': return ElemInputId_Key4;
-        case '5': return ElemInputId_Key5;
-        case '6': return ElemInputId_Key6;
-        case '7': return ElemInputId_Key7;
-        case '8': return ElemInputId_Key8;
-        case '9': return ElemInputId_Key9;
-        case 'A': return ElemInputId_KeyA;
-        case 'B': return ElemInputId_KeyB;
-        case 'C': return ElemInputId_KeyC;
-        case 'D': return ElemInputId_KeyD;
-        case 'E': return ElemInputId_KeyE;
-        case 'F': return ElemInputId_KeyF;
-        case 'G': return ElemInputId_KeyG;
-        case 'H': return ElemInputId_KeyH;
-        case 'I': return ElemInputId_KeyI;
-        case 'J': return ElemInputId_KeyJ;
-        case 'K': return ElemInputId_KeyK;
-        case 'L': return ElemInputId_KeyL;
-        case 'M': return ElemInputId_KeyM;
-        case 'N': return ElemInputId_KeyN;
-        case 'O': return ElemInputId_KeyO;
-        case 'P': return ElemInputId_KeyP;
-        case 'Q': return ElemInputId_KeyQ;
-        case 'R': return ElemInputId_KeyR;
-        case 'S': return ElemInputId_KeyS;
-        case 'T': return ElemInputId_KeyT;
-        case 'U': return ElemInputId_KeyU;
-        case 'V': return ElemInputId_KeyV;
-        case 'W': return ElemInputId_KeyW;
-        case 'X': return ElemInputId_KeyX;
-        case 'Y': return ElemInputId_KeyY;
-        case 'Z': return ElemInputId_KeyZ;
-        case VK_BACK: return ElemInputId_KeyBack;
-        case VK_TAB: return ElemInputId_KeyTab;
-        case VK_CLEAR: return ElemInputId_KeyClear;
-        case VK_RETURN: return ElemInputId_KeyReturn;
-        case VK_CONTROL: return ElemInputId_KeyControl;
-        case VK_APPS: return ElemInputId_KeyMenu;
-        case VK_PAUSE: return ElemInputId_KeyPause;
-        case VK_CAPITAL: return ElemInputId_KeyCapsLock;
-        case VK_ESCAPE: return ElemInputId_KeyEscape;
-        case VK_SPACE: return ElemInputId_KeySpace;
-        case VK_PRIOR: return ElemInputId_KeyPageUp;
-        case VK_NEXT: return ElemInputId_KeyPageDown;
-        case VK_END: return ElemInputId_KeyEnd;
-        case VK_HOME: return ElemInputId_KeyHome;
-        case VK_LEFT: return ElemInputId_KeyLeft;
-        case VK_UP: return ElemInputId_KeyUp;
-        case VK_RIGHT: return ElemInputId_KeyRight;
-        case VK_DOWN: return ElemInputId_KeyDown;
-        case VK_EXECUTE: return ElemInputId_KeyExecute;
-        case VK_SNAPSHOT: return ElemInputId_KeyPrintScreen;
-        case VK_INSERT: return ElemInputId_KeyInsert;
-        case VK_DELETE: return ElemInputId_KeyDelete;
-        case VK_LWIN: return ElemInputId_KeyLeftSystemButton;
-        case VK_RWIN: return ElemInputId_KeyRightSystemButton;
-        case VK_NUMPAD0: return ElemInputId_KeyNumpad0;
-        case VK_NUMPAD1: return ElemInputId_KeyNumpad1;
-        case VK_NUMPAD2: return ElemInputId_KeyNumpad2;
-        case VK_NUMPAD3: return ElemInputId_KeyNumpad3;
-        case VK_NUMPAD4: return ElemInputId_KeyNumpad4;
-        case VK_NUMPAD5: return ElemInputId_KeyNumpad5;
-        case VK_NUMPAD6: return ElemInputId_KeyNumpad6;
-        case VK_NUMPAD7: return ElemInputId_KeyNumpad7;
-        case VK_NUMPAD8: return ElemInputId_KeyNumpad8;
-        case VK_NUMPAD9: return ElemInputId_KeyNumpad9;
-        case VK_MULTIPLY: return ElemInputId_KeyMultiply;
-        case VK_ADD: return ElemInputId_KeyAdd;
-        case VK_SEPARATOR: return ElemInputId_KeySeparator;
-        case VK_SUBTRACT: return ElemInputId_KeySubtract;
-        case VK_DECIMAL: return ElemInputId_KeyDecimal;
-        case VK_DIVIDE: return ElemInputId_KeyDivide;
-        case VK_F1: return ElemInputId_KeyF1;
-        case VK_F2: return ElemInputId_KeyF2;
-        case VK_F3: return ElemInputId_KeyF3;
-        case VK_F4: return ElemInputId_KeyF4;
-        case VK_F5: return ElemInputId_KeyF5;
-        case VK_F6: return ElemInputId_KeyF6;
-        case VK_F7: return ElemInputId_KeyF7;
-        case VK_F8: return ElemInputId_KeyF8;
-        case VK_F9: return ElemInputId_KeyF9;
-        case VK_F10: return ElemInputId_KeyF10;
-        case VK_F11: return ElemInputId_KeyF11;
-        case VK_F12: return ElemInputId_KeyF12;
-        case VK_LSHIFT: return ElemInputId_KeyLeftShift;
-        case VK_RSHIFT: return ElemInputId_KeyRightShift;
-        case VK_LCONTROL: return ElemInputId_KeyLeftControl;
-        case VK_RCONTROL: return ElemInputId_KeyRightControl;
-        case VK_LMENU: return ElemInputId_KeyLeftAlt;
-        case VK_RMENU: return ElemInputId_KeyRightAlt;
+        case Win32Scancode_KeyTilde: return ElemInputId_KeyTilde;
+        case Win32Scancode_Key1: return ElemInputId_Key1;
+        case Win32Scancode_Key2: return ElemInputId_Key2;
+        case Win32Scancode_Key3: return ElemInputId_Key3;
+        case Win32Scancode_Key4: return ElemInputId_Key4;
+        case Win32Scancode_Key5: return ElemInputId_Key5;
+        case Win32Scancode_Key6: return ElemInputId_Key6;
+        case Win32Scancode_Key7: return ElemInputId_Key7;
+        case Win32Scancode_Key8: return ElemInputId_Key8;
+        case Win32Scancode_Key9: return ElemInputId_Key9;
+        case Win32Scancode_Key0: return ElemInputId_Key0;
+        case Win32Scancode_KeyDash: return ElemInputId_KeyDash;
+        case Win32Scancode_KeyEquals: return ElemInputId_KeyEquals;
+        case Win32Scancode_KeyBackspace: return ElemInputId_KeyBackspace;
+        case Win32Scancode_KeyTab: return ElemInputId_KeyTab;
+        case Win32Scancode_KeyQ: return ElemInputId_KeyQ;
+        case Win32Scancode_KeyW: return ElemInputId_KeyW;
+        case Win32Scancode_KeyE: return ElemInputId_KeyE;
+        case Win32Scancode_KeyR: return ElemInputId_KeyR;
+        case Win32Scancode_KeyT: return ElemInputId_KeyT;
+        case Win32Scancode_KeyY: return ElemInputId_KeyY;
+        case Win32Scancode_KeyU: return ElemInputId_KeyU;
+        case Win32Scancode_KeyI: return ElemInputId_KeyI;
+        case Win32Scancode_KeyO: return ElemInputId_KeyO;
+        case Win32Scancode_KeyP: return ElemInputId_KeyP;
+        case Win32Scancode_KeyLeftBrace: return ElemInputId_KeyLeftBrace;
+        case Win32Scancode_KeyRightBrace: return ElemInputId_KeyRightBrace;
+        case Win32Scancode_KeyBackSlash: return ElemInputId_KeyBackSlash;
+        case Win32Scancode_KeyCapsLock: return ElemInputId_KeyCapsLock;
+        case Win32Scancode_KeyA: return ElemInputId_KeyA;
+        case Win32Scancode_KeyS: return ElemInputId_KeyS;
+        case Win32Scancode_KeyD: return ElemInputId_KeyD;
+        case Win32Scancode_KeyF: return ElemInputId_KeyF;
+        case Win32Scancode_KeyG: return ElemInputId_KeyG;
+        case Win32Scancode_KeyH: return ElemInputId_KeyH;
+        case Win32Scancode_KeyJ: return ElemInputId_KeyJ;
+        case Win32Scancode_KeyK: return ElemInputId_KeyK;
+        case Win32Scancode_KeyL: return ElemInputId_KeyL;
+        case Win32Scancode_KeySemiColon: return ElemInputId_KeySemiColon;
+        case Win32Scancode_KeyApostrophe: return ElemInputId_KeyApostrophe;
+        case Win32Scancode_KeyEnter: return ElemInputId_KeyEnter;
+        case Win32Scancode_KeyLeftShift: return ElemInputId_KeyLeftShift;
+        case Win32Scancode_KeyZ: return ElemInputId_KeyZ;
+        case Win32Scancode_KeyX: return ElemInputId_KeyX;
+        case Win32Scancode_KeyC: return ElemInputId_KeyC;
+        case Win32Scancode_KeyV: return ElemInputId_KeyV;
+        case Win32Scancode_KeyB: return ElemInputId_KeyB;
+        case Win32Scancode_KeyN: return ElemInputId_KeyN;
+        case Win32Scancode_KeyM: return ElemInputId_KeyM;
+        case Win32Scancode_KeyComma: return ElemInputId_KeyComma;
+        case Win32Scancode_KeyPeriod: return ElemInputId_KeyPeriod;
+        case Win32Scancode_KeyQuestionMark: return ElemInputId_KeyQuestionMark;
+        case Win32Scancode_KeyRightShift: return ElemInputId_KeyRightShift;
+        case Win32Scancode_KeyLeftControl: return ElemInputId_KeyLeftControl;
+        case Win32Scancode_KeyLeftAlt: return ElemInputId_KeyLeftAlt;
+        case Win32Scancode_KeySpacebar: return ElemInputId_KeySpacebar;
+        case Win32Scancode_KeyRightAlt: return ElemInputId_KeyRightAlt;
+        case Win32Scancode_KeyRightControl: return ElemInputId_KeyRightControl;
+        case Win32Scancode_KeyInsert: return ElemInputId_KeyInsert;
+        case Win32Scancode_KeyDelete: return ElemInputId_KeyDelete;
+        case Win32Scancode_KeyLeftArrow: return ElemInputId_KeyLeftArrow;
+        case Win32Scancode_KeyHome: return ElemInputId_KeyHome;
+        case Win32Scancode_KeyEnd: return ElemInputId_KeyEnd;
+        case Win32Scancode_KeyUpArrow: return ElemInputId_KeyUpArrow;
+        case Win32Scancode_KeyDownArrow: return ElemInputId_KeyDownArrow;
+        case Win32Scancode_KeyPageUp: return ElemInputId_KeyPageUp;
+        case Win32Scancode_KeyPageDown: return ElemInputId_KeyPageDown;
+        case Win32Scancode_KeyRightArrow: return ElemInputId_KeyRightArrow;
+        case Win32Scancode_KeyNumpadLock: return ElemInputId_KeyNumpadLock;
+        case Win32Scancode_KeyNumpad7: return ElemInputId_KeyNumpad7;
+        case Win32Scancode_KeyNumpad4: return ElemInputId_KeyNumpad4;
+        case Win32Scancode_KeyNumpad1: return ElemInputId_KeyNumpad1;
+        case Win32Scancode_KeyNumpadDivide: return ElemInputId_KeyNumpadDivide;
+        case Win32Scancode_KeyNumpad8: return ElemInputId_KeyNumpad8;
+        case Win32Scancode_KeyNumpad5: return ElemInputId_KeyNumpad5;
+        case Win32Scancode_KeyNumpad2: return ElemInputId_KeyNumpad2;
+        case Win32Scancode_KeyNumpad0: return ElemInputId_KeyNumpad0;
+        case Win32Scancode_KeyNumpadMultiply: return ElemInputId_KeyNumpadMultiply;
+        case Win32Scancode_KeyNumpad9: return ElemInputId_KeyNumpad9;
+        case Win32Scancode_KeyNumpad6: return ElemInputId_KeyNumpad6;
+        case Win32Scancode_KeyNumpad3: return ElemInputId_KeyNumpad3;
+        case Win32Scancode_KeyNumpadSeparator: return ElemInputId_KeyNumpadSeparator;
+        case Win32Scancode_KeyNumpadMinus: return ElemInputId_KeyNumpadMinus;
+        case Win32Scancode_KeyNumpadAdd: return ElemInputId_KeyNumpadAdd;
+        case Win32Scancode_KeyNumpadEnter: return ElemInputId_KeyNumpadEnter;
+        case Win32Scancode_KeyEscape: return ElemInputId_KeyEscape;
+        case Win32Scancode_KeyF1: return ElemInputId_KeyF1;
+        case Win32Scancode_KeyF2: return ElemInputId_KeyF2;
+        case Win32Scancode_KeyF3: return ElemInputId_KeyF3;
+        case Win32Scancode_KeyF4: return ElemInputId_KeyF4;
+        case Win32Scancode_KeyF5: return ElemInputId_KeyF5;
+        case Win32Scancode_KeyF6: return ElemInputId_KeyF6;
+        case Win32Scancode_KeyF7: return ElemInputId_KeyF7;
+        case Win32Scancode_KeyF8: return ElemInputId_KeyF8;
+        case Win32Scancode_KeyF9: return ElemInputId_KeyF9;
+        case Win32Scancode_KeyF10: return ElemInputId_KeyF10;
+        case Win32Scancode_KeyF11: return ElemInputId_KeyF11;
+        case Win32Scancode_KeyF12: return ElemInputId_KeyF12;
+        case Win32Scancode_KeyPrintScreen: return ElemInputId_KeyPrintScreen;
+        case Win32Scancode_KeyScrollLock: return ElemInputId_KeyScrollLock;
+        case Win32Scancode_KeyPause: return ElemInputId_KeyPause;
+        case Win32Scancode_KeyLeftSystem: return ElemInputId_KeyLeftSystem;
+        case Win32Scancode_KeyRightSystem: return ElemInputId_KeyRightSystem;
+        case Win32Scancode_KeyApp: return ElemInputId_KeyApp;
         default: return ElemInputId_Unknown;
     };
 }
 
 void ProcessWin32RawInputKeyboard(ElemWindow window, ElemInputDevice inputDevice, RAWKEYBOARD* keyboardData, double elapsedSeconds)
 {
+    USHORT makeCode = keyboardData->MakeCode;
+
+    if (keyboardData->Flags & RI_KEY_E0)
+    {
+        makeCode |= 0xE000; // Prefix with 0xE0 for extended keys
+    }
+
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = GetWin32InputIdFromKeyCode(keyboardData->VKey),
+        .InputId = GetWin32InputIdFromMakeCode(makeCode),
         .InputType = ElemInputType_Digital,
         .Value = keyboardData->Message == WM_KEYDOWN ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
