@@ -55,7 +55,7 @@ enum Win32Scancode
     Win32Scancode_KeyM = 0x0032,
     Win32Scancode_KeyComma = 0x0033,
     Win32Scancode_KeyPeriod = 0x0034,
-    Win32Scancode_KeyQuestionMark = 0x0035,
+    Win32Scancode_KeySlash = 0x0035,
     Win32Scancode_KeyRightShift = 0x0036,
     Win32Scancode_KeyLeftControl = 0x001D,
     Win32Scancode_KeyLeftAlt = 0x0038,

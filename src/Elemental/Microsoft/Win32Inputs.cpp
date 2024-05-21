@@ -32,27 +32,10 @@ ElemInputDevice AddWin32RawInputDevice(HANDLE device, DWORD type)
     if (type == RIM_TYPEMOUSE)
     {
         deviceData.InputDeviceType = ElemInputDeviceType_Mouse;
-        deviceDataFull.MouseNumberOfButtons = rawInputDeviceInfo->mouse.dwNumberOfButtons;
-        deviceDataFull.MouseSampleRate = rawInputDeviceInfo->mouse.dwSampleRate;
     }
     else if (type == RIM_TYPEKEYBOARD)
     {
         deviceData.InputDeviceType = ElemInputDeviceType_Keyboard;
-        deviceDataFull.KeyboardNumberOfKeys = rawInputDeviceInfo->keyboard.dwNumberOfKeysTotal;
-
-        switch (rawInputDeviceInfo->keyboard.dwType)
-        {
-            case 0x7:
-                deviceDataFull.KeyboardType = ElemKeyboardType_Japanese;
-                break;
-
-            case 0x8:
-                deviceDataFull.KeyboardType = ElemKeyboardType_Korean;
-                break;
-
-            default:
-                deviceDataFull.KeyboardType = ElemKeyboardType_Normal;
-        }
     }
     else if (type == RIM_TYPEHID)
     {
@@ -64,7 +47,6 @@ ElemInputDevice AddWin32RawInputDevice(HANDLE device, DWORD type)
         deviceData.InputDeviceType = ElemInputDeviceType_Gamepad;
         deviceData.HidVendorId = rawInputDeviceInfo->hid.dwVendorId;
         deviceData.HidProductId = rawInputDeviceInfo->hid.dwProductId;
-        deviceDataFull.GamepadVersion = rawInputDeviceInfo->hid.dwVersionNumber;
     }
 
     SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Create Input device.");
@@ -182,7 +164,7 @@ ElemInputId GetWin32InputIdFromMakeCode(WPARAM wParam)
         case Win32Scancode_KeyM: return ElemInputId_KeyM;
         case Win32Scancode_KeyComma: return ElemInputId_KeyComma;
         case Win32Scancode_KeyPeriod: return ElemInputId_KeyPeriod;
-        case Win32Scancode_KeyQuestionMark: return ElemInputId_KeyQuestionMark;
+        case Win32Scancode_KeySlash: return ElemInputId_KeySlash;
         case Win32Scancode_KeyRightShift: return ElemInputId_KeyRightShift;
         case Win32Scancode_KeyLeftControl: return ElemInputId_KeyLeftControl;
         case Win32Scancode_KeyLeftAlt: return ElemInputId_KeyLeftAlt;
