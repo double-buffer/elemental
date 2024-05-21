@@ -51,6 +51,7 @@ namespace GC::Private::Selector
     _GC_PRIVATE_DEF_SEL(middleButton, "middleButton");
     _GC_PRIVATE_DEF_SEL(rightButton, "rightButton");
     _GC_PRIVATE_DEF_SEL(auxiliaryButtons, "auxiliaryButtons");
+    _GC_PRIVATE_DEF_SEL(scroll, "scroll");
     _GC_PRIVATE_DEF_SEL(setValueChangedHandler_, "setValueChangedHandler:");
     _GC_PRIVATE_DEF_SEL(setValueDidChangeHandler_, "setValueDidChangeHandler:");
     _GC_PRIVATE_DEF_SEL(physicalInputProfile, "physicalInputProfile");
@@ -59,5 +60,16 @@ namespace GC::Private::Selector
     _GC_PRIVATE_DEF_SEL(buttonB, "buttonB");
     _GC_PRIVATE_DEF_SEL(buttonX, "buttonX");
     _GC_PRIVATE_DEF_SEL(buttonY, "buttonY");
+    _GC_PRIVATE_DEF_SEL(buttonMenu, "buttonMenu");
+    _GC_PRIVATE_DEF_SEL(buttonOptions, "buttonOptions");
+    _GC_PRIVATE_DEF_SEL(buttonHome, "buttonHome");
+    _GC_PRIVATE_DEF_SEL(leftShoulder, "leftShoulder");
+    _GC_PRIVATE_DEF_SEL(rightShoulder, "rightShoulder");
+    _GC_PRIVATE_DEF_SEL(leftTrigger, "leftTrigger");
+    _GC_PRIVATE_DEF_SEL(rightTrigger, "rightTrigger");
     _GC_PRIVATE_DEF_SEL(leftThumbstick, "leftThumbstick");
+    _GC_PRIVATE_DEF_SEL(leftThumbstickButton, "leftThumbstickButton");
+    _GC_PRIVATE_DEF_SEL(rightThumbstick, "rightThumbstick");
+    _GC_PRIVATE_DEF_SEL(rightThumbstickButton, "rightThumbstickButton");
+    _GC_PRIVATE_DEF_SEL(dpad, "dpad");
 }

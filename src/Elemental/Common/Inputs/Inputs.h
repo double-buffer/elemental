@@ -15,11 +15,7 @@ struct InputDeviceData
 
 struct InputDeviceDataFull
 {
-    uint32_t MouseNumberOfButtons;
-    uint32_t MouseSampleRate;
-    ElemKeyboardType KeyboardType;
-    uint32_t KeyboardNumberOfKeys;
-    uint32_t GamepadVersion;
+    uint32_t reserved;
 };
 
 InputDeviceData* GetInputDeviceData(ElemInputDevice inputDevice);

@@ -1006,22 +1006,32 @@ typedef enum
     ElemInputId_MouseWheelPositive,
     ElemInputId_MouseHorizontalWheelNegative,
     ElemInputId_MouseHorizontalWheelPositive,
-    ElemInputId_GamepadLeftStickXNegative,
-    ElemInputId_GamepadLeftStickXPositive,
-    ElemInputId_GamepadLeftStickYNegative,
-    ElemInputId_GamepadLeftStickYPositive,
     ElemInputID_GamepadButtonA,
     ElemInputID_GamepadButtonB,
     ElemInputID_GamepadButtonX,
     ElemInputID_GamepadButtonY,
+    ElemInputID_GamepadButtonMenu,
+    ElemInputID_GamepadButtonOptions,
+    ElemInputID_GamepadButtonHome,
+    ElemInputID_GamepadLeftShoulder,
+    ElemInputID_GamepadRightShoulder,
+    ElemInputID_GamepadLeftTrigger,
+    ElemInputID_GamepadRightTrigger,
+    ElemInputId_GamepadLeftStickXNegative,
+    ElemInputId_GamepadLeftStickXPositive,
+    ElemInputId_GamepadLeftStickYNegative,
+    ElemInputId_GamepadLeftStickYPositive,
+    ElemInputId_GamepadLeftStickButton,
+    ElemInputId_GamepadRightStickXNegative,
+    ElemInputId_GamepadRightStickXPositive,
+    ElemInputId_GamepadRightStickYNegative,
+    ElemInputId_GamepadRightStickYPositive,
+    ElemInputId_GamepadRightStickButton,
+    ElemInputId_GamepadDpadUp,
+    ElemInputId_GamepadDpadRight,
+    ElemInputId_GamepadDpadDown,
+    ElemInputId_GamepadDpadLeft,
 } ElemInputId;
-
-typedef enum 
-{
-    ElemKeyboardType_Normal,
-    ElemKeyboardType_Japanese,
-    ElemKeyboardType_Korean
-} ElemKeyboardType;
 
 // TODO: Add a kind of player index? (Is it necessary, if we have the device id, the client code could determine its player)
 
@@ -1029,13 +1039,6 @@ typedef struct
 {
     ElemInputDevice Handle;
     ElemInputDeviceType DeviceType;
-    uint32_t MouseNumberOfButtons;
-    uint32_t MouseSampleRate;
-    ElemKeyboardType KeyboardType;
-    uint32_t KeyboardNumberOfKeys;
-    uint32_t GamepadVendorId;
-    uint32_t GamepadProductId;
-    uint32_t GamepadVersion;
 } ElemInputDeviceInfo;
 
 typedef struct
@@ -1065,9 +1068,6 @@ typedef struct
     ElemInputEventSpan Events;
 } ElemInputStream;
 
-// TODO: Do we need this function? On some platforms we cannot get the full list of input devices at load time
-// Maybe we should just keep the GetDeviceInfo function
-ElemAPI ElemInputDeviceInfoSpan ElemGetInputDevices(void);
 ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice);
 ElemAPI ElemInputStream ElemGetInputStream(void);
 

@@ -6,7 +6,8 @@ enum AppleGamepadDirection
 {
     LeftStick,
     RightStick,
-    Dpad
+    Dpad,
+    MouseWheel
 };
 
 void InitInputs(ElemWindow window);

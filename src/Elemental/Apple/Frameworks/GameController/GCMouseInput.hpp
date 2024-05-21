@@ -19,6 +19,7 @@ namespace GC
             ControllerButtonInput* middleButton();
             ControllerButtonInput* rightButton();
             NS::Array* auxiliaryButtons();
+            ControllerDirectionPad* scroll();
 
             void setMouseMovedHandler(MouseMovedHandlerBlock handler);
             void setMouseMovedHandler(const MouseMovedHandlerFunction& handler);
@@ -44,6 +45,11 @@ _NS_INLINE GC::ControllerButtonInput* GC::MouseInput::rightButton()
 _NS_INLINE NS::Array* GC::MouseInput::auxiliaryButtons()
 {
 	return Object::sendMessage<NS::Array*>(this, _GC_PRIVATE_SEL(auxiliaryButtons));
+}
+
+_NS_INLINE GC::ControllerDirectionPad* GC::MouseInput::scroll()
+{
+	return Object::sendMessage<GC::ControllerDirectionPad*>(this, _GC_PRIVATE_SEL(scroll));
 }
 
 _NS_INLINE void GC::MouseInput::setMouseMovedHandler(MouseMovedHandlerBlock handler)

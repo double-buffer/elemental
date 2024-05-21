@@ -107,46 +107,6 @@ void AddInputEvent(ElemInputEvent inputEvent, bool needReset)
     inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
 }
 
-ElemAPI ElemInputDeviceInfoSpan ElemGetInputDevices()
-{
-    InitInputsMemory();
-    
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto result = SystemPushArray<ElemInputDeviceInfo>(stackMemoryArena, currentInputDeviceIndex);
-    auto currentResultIndex = 0u;
-
-    for (uint32_t i = 0; i < MAX_INPUT_DEVICES; i++)
-    {
-        if (inputDevices[i] != ELEM_HANDLE_NULL)
-        {
-            auto inputDeviceData = GetInputDeviceData(inputDevices[i]);
-            SystemAssert(inputDeviceData);
-
-            auto inputDeviceDataFull = GetInputDeviceDataFull(inputDevices[i]);
-            SystemAssert(inputDeviceDataFull);
-
-            result[currentResultIndex++] =
-            {
-                .Handle = inputDevices[i],
-                .DeviceType = inputDeviceData->InputDeviceType,
-                .MouseNumberOfButtons = inputDeviceDataFull->MouseNumberOfButtons,
-                .MouseSampleRate = inputDeviceDataFull->MouseSampleRate,
-                .KeyboardType = inputDeviceDataFull->KeyboardType,
-                .KeyboardNumberOfKeys = inputDeviceDataFull->KeyboardNumberOfKeys,
-                .GamepadVendorId = inputDeviceData->HidVendorId,
-                .GamepadProductId = inputDeviceData->HidProductId,
-                .GamepadVersion = inputDeviceDataFull->GamepadVersion
-            };
-        }
-    }
-
-    return 
-    {
-        .Items = result.Pointer,
-        .Length = (uint32_t)result.Length
-    };
-}
-
 ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)
 {
     auto inputDeviceData = GetInputDeviceData(inputDevice);
@@ -159,13 +119,6 @@ ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)
     {
         .Handle = inputDevice,
         .DeviceType = inputDeviceData->InputDeviceType,
-        .MouseNumberOfButtons = inputDeviceDataFull->MouseNumberOfButtons,
-        .MouseSampleRate = inputDeviceDataFull->MouseSampleRate,
-        .KeyboardType = inputDeviceDataFull->KeyboardType,
-        .KeyboardNumberOfKeys = inputDeviceDataFull->KeyboardNumberOfKeys,
-        .GamepadVendorId = inputDeviceData->HidVendorId,
-        .GamepadProductId = inputDeviceData->HidProductId,
-        .GamepadVersion = inputDeviceDataFull->GamepadVersion
     };
 }
 

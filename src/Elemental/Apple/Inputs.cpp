@@ -29,44 +29,6 @@ ElemInputDevice AddAppleInputDevice(GC::Device* device, ElemInputDeviceType devi
     };
 
     InputDeviceDataFull deviceDataFull = {};
-/*
-    if (device->productCategory() == RIM_TYPEMOUSE)
-    {
-        deviceData.InputDeviceType = ElemInputDeviceType_Mouse;
-        deviceDataFull.MouseNumberOfButtons = rawInputDeviceInfo->mouse.dwNumberOfButtons;
-        deviceDataFull.MouseSampleRate = rawInputDeviceInfo->mouse.dwSampleRate;
-    }
-    else if (type == RIM_TYPEKEYBOARD)
-    {
-        deviceData.InputDeviceType = ElemInputDeviceType_Keyboard;
-        deviceDataFull.KeyboardNumberOfKeys = rawInputDeviceInfo->keyboard.dwNumberOfKeysTotal;
-
-        switch (rawInputDeviceInfo->keyboard.dwType)
-        {
-            case 0x7:
-                deviceDataFull.KeyboardType = ElemKeyboardType_Japanese;
-                break;
-
-            case 0x8:
-                deviceDataFull.KeyboardType = ElemKeyboardType_Korean;
-                break;
-
-            default:
-                deviceDataFull.KeyboardType = ElemKeyboardType_Normal;
-        }
-    }
-    else if (type == RIM_TYPEHID)
-    {
-        if (!IsHidDeviceSupported(rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId))
-        {
-            return ELEM_HANDLE_NULL;
-        }
-        
-        deviceData.InputDeviceType = ElemInputDeviceType_Gamepad;
-        deviceData.HidVendorId = rawInputDeviceInfo->hid.dwVendorId;
-        deviceData.HidProductId = rawInputDeviceInfo->hid.dwProductId;
-        deviceDataFull.GamepadVersion = rawInputDeviceInfo->hid.dwVersionNumber;
-    }*/
 
     SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Create Input device.");
     auto handle = AddInputDevice(&deviceData, &deviceDataFull);
@@ -281,13 +243,15 @@ void ButtonHandler(ElemWindow window, ElemInputId inputId, GC::Device* device, G
 
     auto inputDeviceData = GetInputDeviceData(inputDevice);
     SystemAssert(inputDeviceData);
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Button");
 
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
         .InputId = inputId,
         .InputType = ElemInputType_Digital,
-        .Value = isPressed ? 1.0f : 0.0f,
+        .Value = value,
         .ElapsedSeconds = elapsedSeconds
     });
 }
@@ -310,7 +274,7 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .Window = window,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_GamepadLeftStickXPositive,
-                .InputType = ElemInputType_Digital,
+                .InputType = ElemInputType_Analog,
                 .Value = xValue,
                 .ElapsedSeconds = elapsedSeconds
             });
@@ -322,7 +286,7 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .Window = window,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_GamepadLeftStickXNegative,
-                .InputType = ElemInputType_Digital,
+                .InputType = ElemInputType_Analog,
                 .Value = -xValue,
                 .ElapsedSeconds = elapsedSeconds
             });
@@ -334,7 +298,7 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .Window = window,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_GamepadLeftStickYPositive,
-                .InputType = ElemInputType_Digital,
+                .InputType = ElemInputType_Analog,
                 .Value = yValue,
                 .ElapsedSeconds = elapsedSeconds
             });
@@ -346,12 +310,163 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .Window = window,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_GamepadLeftStickYNegative,
+                .InputType = ElemInputType_Analog,
+                .Value = -yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+    }
+    else if (gamepadDirection == AppleGamepadDirection::RightStick)
+    {
+        if (xValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadRightStickXPositive,
+                .InputType = ElemInputType_Analog,
+                .Value = xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (xValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadRightStickXNegative,
+                .InputType = ElemInputType_Analog,
+                .Value = -xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadRightStickYPositive,
+                .InputType = ElemInputType_Analog,
+                .Value = yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadRightStickYNegative,
+                .InputType = ElemInputType_Analog,
+                .Value = -yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+    }
+    else if (gamepadDirection == AppleGamepadDirection::Dpad)
+    {
+        if (xValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadDpadRight,
+                .InputType = ElemInputType_Digital,
+                .Value = xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (xValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadDpadLeft,
+                .InputType = ElemInputType_Digital,
+                .Value = -xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadDpadUp,
+                .InputType = ElemInputType_Digital,
+                .Value = yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_GamepadDpadDown,
                 .InputType = ElemInputType_Digital,
                 .Value = -yValue,
                 .ElapsedSeconds = elapsedSeconds
             });
         }
     }
+    else if (gamepadDirection == AppleGamepadDirection::MouseWheel)
+    {
+        if (xValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseHorizontalWheelPositive,
+                .InputType = ElemInputType_Delta,
+                .Value = xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (xValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseHorizontalWheelNegative,
+                .InputType = ElemInputType_Delta,
+                .Value = -xValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue >= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseWheelPositive,
+                .InputType = ElemInputType_Delta,
+                .Value = yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+        
+        if (yValue <= 0.0f)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_MouseWheelNegative,
+                .InputType = ElemInputType_Delta,
+                .Value = -yValue,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+    }
+
 }
 
 // TODO: We need to lock the cursort in fullscreen for ipad and iphone
@@ -416,6 +531,11 @@ void InitInputs(ElemWindow window)
             }
         });
 
+        mouseInput->scroll()->setValueChangedHandler(^(GC::ControllerDirectionPad* directionPad, float xValue, float yValue)
+        {
+            DirectionHandler(window, AppleGamepadDirection::MouseWheel, mouseInput->device(), directionPad, xValue, yValue);
+        });
+
         auto mouseExtraButtons = mouseInput->auxiliaryButtons();
 
         if (mouseExtraButtons)
@@ -434,8 +554,6 @@ void InitInputs(ElemWindow window)
                 });
             }
         }
-
-        // TODO: Mouse wheel
     });
 
     NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCMouseDidDisconnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
@@ -475,9 +593,64 @@ void InitInputs(ElemWindow window)
             ButtonHandler(window, ElemInputID_GamepadButtonY, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
+        extendedGamepad->buttonMenu()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadButtonMenu, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->buttonOptions()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadButtonOptions, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->buttonHome()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadButtonHome, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->leftShoulder()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadLeftShoulder, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->rightShoulder()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadRightShoulder, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->leftTrigger()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadLeftTrigger, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->rightTrigger()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputID_GamepadRightTrigger, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
         extendedGamepad->leftThumbstick()->setValueChangedHandler(^(GC::ControllerDirectionPad* directionPad, float xValue, float yValue)
         {
             DirectionHandler(window, AppleGamepadDirection::LeftStick, extendedGamepad->device(), directionPad, xValue, yValue);
+        });
+
+        extendedGamepad->leftThumbstickButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputId_GamepadLeftStickButton, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->rightThumbstick()->setValueChangedHandler(^(GC::ControllerDirectionPad* directionPad, float xValue, float yValue)
+        {
+            DirectionHandler(window, AppleGamepadDirection::RightStick, extendedGamepad->device(), directionPad, xValue, yValue);
+        });
+
+        extendedGamepad->rightThumbstickButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        {
+            ButtonHandler(window, ElemInputId_GamepadRightStickButton, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+        });
+
+        extendedGamepad->dpad()->setValueChangedHandler(^(GC::ControllerDirectionPad* directionPad, float xValue, float yValue)
+        {
+            DirectionHandler(window, AppleGamepadDirection::Dpad, extendedGamepad->device(), directionPad, xValue, yValue);
         });
     });
 
