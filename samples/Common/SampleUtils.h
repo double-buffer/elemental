@@ -261,6 +261,7 @@ typedef struct
 {
     double FrameTimeInSeconds;
     uint32_t Fps;
+    bool NewData;
 } SampleFrameMeasurement;
 
 double globalSampleFrameCpuAverage = 0.0;
@@ -281,6 +282,7 @@ void SampleStartFrameMeasurement(void)
 
 SampleFrameMeasurement SampleEndFrameMeasurement(void)
 {
+    bool newData = globalSampleFpsCounter == 0;
     globalSampleFpsCounter++;
 
     double endTime = SampleGetTimerValueInMS();
@@ -291,11 +293,13 @@ SampleFrameMeasurement SampleEndFrameMeasurement(void)
         globalSampleCurrentFpsCounter = globalSampleFpsCounter - 1; 
         globalSampleFpsCounter = 1;
         globalSampleFpsTimerStart = SampleGetTimerValueInMS();
+        newData = true;
     }
 
     return (SampleFrameMeasurement)
     {
         .FrameTimeInSeconds = globalSampleFrameCpuAverage / 1000.0,
-        .Fps = globalSampleCurrentFpsCounter
+        .Fps = globalSampleCurrentFpsCounter,
+        .NewData = newData
     };
 }

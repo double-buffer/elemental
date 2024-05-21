@@ -76,6 +76,7 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
 }
 
+// TODO: on ipad
 ElemAPI void ElemShowWindowCursor(ElemWindow window)
 {
 }

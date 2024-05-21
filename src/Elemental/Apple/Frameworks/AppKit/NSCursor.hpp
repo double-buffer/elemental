@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
+
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
-// AppKit/AppKit.hpp
+// AppKit/NSEvent.hpp
 //
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -25,15 +26,25 @@
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#include <Foundation/Foundation.hpp>
+#include <Foundation/NSPrivate.hpp>
 #include "AppKitPrivate.hpp"
-#include "NSEvent.hpp"
-#include "NSScreen.hpp"
-#include "NSApplication.hpp"
-#include "NSRunningApplication.hpp"
-#include "NSWindow.hpp"
-#include "NSMenu.hpp"
-#include "NSMenuItem.hpp"
-#include "NSCursor.hpp"
 
-//-------------------------------------------------------------------------------------------------------------------------------------------------------------
+namespace NS 
+{
+    class Cursor : public Referencing<Cursor> 
+    {
+    public:
+        static void hide();
+        static void unhide();
+    };
+        
+    _NS_INLINE void Cursor::hide()
+    {
+        Object::sendMessage<void>(_APPKIT_PRIVATE_CLS(NSCursor), _APPKIT_PRIVATE_SEL(hide));
+    }
+
+    _NS_INLINE void Cursor::unhide()
+    {
+        Object::sendMessage<void>(_APPKIT_PRIVATE_CLS(NSCursor), _APPKIT_PRIVATE_SEL(unhide));
+    }
+}

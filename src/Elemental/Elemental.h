@@ -167,6 +167,8 @@ typedef struct
     uint32_t Height;
     // Initial state of the window.
     ElemWindowState WindowState;
+    // True if the cursor should be hidden.
+    bool IsCursorHidden;
 } ElemWindowOptions;
 
 /**
@@ -270,6 +272,7 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
 
 // TODO: Comments
+// TODO: Make sure the coordinates are consistent accross all platforms
 ElemAPI void ElemShowWindowCursor(ElemWindow window);
 ElemAPI void ElemHideWindowCursor(ElemWindow window);
 ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window);
@@ -937,7 +940,7 @@ typedef enum
     ElemInputId_KeyM,
     ElemInputId_KeyComma,
     ElemInputId_KeyPeriod,
-    ElemInputId_KeyQuestionMark,
+    ElemInputId_KeySlash,
     ElemInputId_KeyRightShift,
     ElemInputId_KeyLeftControl,
     ElemInputId_KeyLeftAlt,
@@ -1020,7 +1023,7 @@ typedef enum
     ElemKeyboardType_Korean
 } ElemKeyboardType;
 
-// TODO: Add a kind of player index?
+// TODO: Add a kind of player index? (Is it necessary, if we have the device id, the client code could determine its player)
 
 typedef struct
 {

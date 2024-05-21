@@ -30,6 +30,8 @@ void MetalFreeTexture(ElemTexture texture)
 {
     auto textureData = GetMetalTextureData(texture);
     SystemAssert(textureData);
+
+    SystemRemoveDataPoolItem(metalTexturePool, texture);
 }
 
 ElemTexture CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture)

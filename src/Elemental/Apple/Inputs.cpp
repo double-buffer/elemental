@@ -75,12 +75,21 @@ ElemInputDevice AddAppleInputDevice(GC::Device* device, ElemInputDeviceType devi
     return handle;
 }
 
-// TODO: Review key code mapping
+void RemoveAppleInputDevice(GC::Device* device)
+{
+    if (SystemDictionaryContainsKey(appleInputDeviceDictionary, device))
+    {
+        auto inputDevice = *SystemGetDictionaryValue(appleInputDeviceDictionary, device);
+        RemoveInputDevice(inputDevice);
+        SystemRemoveDictionaryEntry(appleInputDeviceDictionary, device);
+    }
+}
+
 ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
 {
     switch (keyCode)
     {
-        case GC::KeyCode::Zero: return ElemInputId_Key0;
+        case GC::KeyCode::GraveAccentAndTilde: return ElemInputId_KeyTilde;
         case GC::KeyCode::One: return ElemInputId_Key1;
         case GC::KeyCode::Two: return ElemInputId_Key2;
         case GC::KeyCode::Three: return ElemInputId_Key3;
@@ -90,73 +99,82 @@ ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
         case GC::KeyCode::Seven: return ElemInputId_Key7;
         case GC::KeyCode::Eight: return ElemInputId_Key8;
         case GC::KeyCode::Nine: return ElemInputId_Key9;
-        case GC::KeyCode::KeyA: return ElemInputId_KeyA;
-        case GC::KeyCode::KeyB: return ElemInputId_KeyB;
-        case GC::KeyCode::KeyC: return ElemInputId_KeyC;
-        case GC::KeyCode::KeyD: return ElemInputId_KeyD;
+        case GC::KeyCode::Zero: return ElemInputId_Key0;
+        case GC::KeyCode::Hyphen: return ElemInputId_KeyDash;
+        case GC::KeyCode::EqualSign: return ElemInputId_KeyEquals;
+        case GC::KeyCode::DeleteOrBackspace: return ElemInputId_KeyBackspace;
+        case GC::KeyCode::Tab: return ElemInputId_KeyTab;
+        case GC::KeyCode::KeyQ: return ElemInputId_KeyQ;
+        case GC::KeyCode::KeyW: return ElemInputId_KeyW;
         case GC::KeyCode::KeyE: return ElemInputId_KeyE;
+        case GC::KeyCode::KeyR: return ElemInputId_KeyR;
+        case GC::KeyCode::KeyT: return ElemInputId_KeyT;
+        case GC::KeyCode::KeyY: return ElemInputId_KeyY;
+        case GC::KeyCode::KeyU: return ElemInputId_KeyU;
+        case GC::KeyCode::KeyI: return ElemInputId_KeyI;
+        case GC::KeyCode::KeyO: return ElemInputId_KeyO;
+        case GC::KeyCode::KeyP: return ElemInputId_KeyP;
+        case GC::KeyCode::OpenBracket: return ElemInputId_KeyLeftBrace;
+        case GC::KeyCode::CloseBracket: return ElemInputId_KeyRightBrace;
+        case GC::KeyCode::Backslash: return ElemInputId_KeyBackSlash;
+        case GC::KeyCode::CapsLock: return ElemInputId_KeyCapsLock;
+        case GC::KeyCode::KeyA: return ElemInputId_KeyA;
+        case GC::KeyCode::KeyS: return ElemInputId_KeyS;
+        case GC::KeyCode::KeyD: return ElemInputId_KeyD;
         case GC::KeyCode::KeyF: return ElemInputId_KeyF;
         case GC::KeyCode::KeyG: return ElemInputId_KeyG;
         case GC::KeyCode::KeyH: return ElemInputId_KeyH;
-        case GC::KeyCode::KeyI: return ElemInputId_KeyI;
         case GC::KeyCode::KeyJ: return ElemInputId_KeyJ;
         case GC::KeyCode::KeyK: return ElemInputId_KeyK;
         case GC::KeyCode::KeyL: return ElemInputId_KeyL;
-        case GC::KeyCode::KeyM: return ElemInputId_KeyM;
-        case GC::KeyCode::KeyN: return ElemInputId_KeyN;
-        case GC::KeyCode::KeyO: return ElemInputId_KeyO;
-        case GC::KeyCode::KeyP: return ElemInputId_KeyP;
-        case GC::KeyCode::KeyQ: return ElemInputId_KeyQ;
-        case GC::KeyCode::KeyR: return ElemInputId_KeyR;
-        case GC::KeyCode::KeyS: return ElemInputId_KeyS;
-        case GC::KeyCode::KeyT: return ElemInputId_KeyT;
-        case GC::KeyCode::KeyU: return ElemInputId_KeyU;
-        case GC::KeyCode::KeyV: return ElemInputId_KeyV;
-        case GC::KeyCode::KeyW: return ElemInputId_KeyW;
-        case GC::KeyCode::KeyX: return ElemInputId_KeyX;
-        case GC::KeyCode::KeyY: return ElemInputId_KeyY;
+        case GC::KeyCode::Semicolon: return ElemInputId_KeySemiColon;
+        case GC::KeyCode::Quote: return ElemInputId_KeyApostrophe;
+        case GC::KeyCode::ReturnOrEnter: return ElemInputId_KeyEnter;
+        case GC::KeyCode::LeftShift: return ElemInputId_KeyLeftShift;
         case GC::KeyCode::KeyZ: return ElemInputId_KeyZ;
-        case GC::KeyCode::DeleteOrBackspace: return ElemInputId_KeyBack;
-        case GC::KeyCode::Tab: return ElemInputId_KeyTab;
-        //case GC::KeyCode::DeleteForward: return ElemInputId_KeyClear;
-        case GC::KeyCode::ReturnOrEnter: return ElemInputId_KeyReturn;
-        //case GC::KeyCode::LeftControl: return ElemInputId_KeyControl;
-        //case GC::KeyCode::Tacb: return ElemInputId_KeyMenu;
-        case GC::KeyCode::Pause: return ElemInputId_KeyPause;
-        case GC::KeyCode::CapsLock: return ElemInputId_KeyCapsLock;
-        case GC::KeyCode::Escape: return ElemInputId_KeyEscape;
-        case GC::KeyCode::Spacebar: return ElemInputId_KeySpace;
-        case GC::KeyCode::PageUp: return ElemInputId_KeyPageUp;
-        case GC::KeyCode::PageDown: return ElemInputId_KeyPageDown;
-        case GC::KeyCode::End: return ElemInputId_KeyEnd;
-        case GC::KeyCode::Home: return ElemInputId_KeyHome;
-        case GC::KeyCode::LeftArrow: return ElemInputId_KeyLeft;
-        case GC::KeyCode::UpArrow: return ElemInputId_KeyUp;
-        // TODO: Problem with right arrow?
-        case GC::KeyCode::RightArrow: return ElemInputId_KeyRight;
-        case GC::KeyCode::DownArrow: return ElemInputId_KeyDown;
-        case GC::KeyCode::KeypadEnter: return ElemInputId_KeyExecute;
-        case GC::KeyCode::PrintScreen: return ElemInputId_KeyPrintScreen;
+        case GC::KeyCode::KeyX: return ElemInputId_KeyX;
+        case GC::KeyCode::KeyC: return ElemInputId_KeyC;
+        case GC::KeyCode::KeyV: return ElemInputId_KeyV;
+        case GC::KeyCode::KeyB: return ElemInputId_KeyB;
+        case GC::KeyCode::KeyN: return ElemInputId_KeyN;
+        case GC::KeyCode::KeyM: return ElemInputId_KeyM;
+        case GC::KeyCode::Comma: return ElemInputId_KeyComma;
+        case GC::KeyCode::Period: return ElemInputId_KeyPeriod;
+        case GC::KeyCode::Slash: return ElemInputId_KeySlash;
+        case GC::KeyCode::RightShift: return ElemInputId_KeyRightShift;
+        case GC::KeyCode::LeftControl: return ElemInputId_KeyLeftControl;
+        case GC::KeyCode::LeftAlt: return ElemInputId_KeyLeftAlt;
+        case GC::KeyCode::Spacebar: return ElemInputId_KeySpacebar;
+        case GC::KeyCode::RightAlt: return ElemInputId_KeyRightAlt;
+        case GC::KeyCode::RightControl: return ElemInputId_KeyRightControl;
         case GC::KeyCode::Insert: return ElemInputId_KeyInsert;
         case GC::KeyCode::DeleteForward: return ElemInputId_KeyDelete;
-        //case GC::KeyCode::LeftGui: return ElemInputId_KeyLeftSystemButton;
-        //case GC::KeyCode::RightGui: return ElemInputId_KeyRightSystemButton;
-        case GC::KeyCode::Keypad0: return ElemInputId_KeyNumpad0;
-        case GC::KeyCode::Keypad1: return ElemInputId_KeyNumpad1;
-        case GC::KeyCode::Keypad2: return ElemInputId_KeyNumpad2;
-        case GC::KeyCode::Keypad3: return ElemInputId_KeyNumpad3;
-        case GC::KeyCode::Keypad4: return ElemInputId_KeyNumpad4;
-        case GC::KeyCode::Keypad5: return ElemInputId_KeyNumpad5;
-        case GC::KeyCode::Keypad6: return ElemInputId_KeyNumpad6;
+        case GC::KeyCode::LeftArrow: return ElemInputId_KeyLeftArrow;
+        case GC::KeyCode::Home: return ElemInputId_KeyHome;
+        case GC::KeyCode::End: return ElemInputId_KeyEnd;
+        case GC::KeyCode::UpArrow: return ElemInputId_KeyUpArrow;
+        case GC::KeyCode::DownArrow: return ElemInputId_KeyDownArrow;
+        case GC::KeyCode::PageUp: return ElemInputId_KeyPageUp;
+        case GC::KeyCode::PageDown: return ElemInputId_KeyPageDown;
+        case GC::KeyCode::RightArrow: return ElemInputId_KeyRightArrow;
+        case GC::KeyCode::KeypadNumLock: return ElemInputId_KeyNumpadLock;
         case GC::KeyCode::Keypad7: return ElemInputId_KeyNumpad7;
+        case GC::KeyCode::Keypad4: return ElemInputId_KeyNumpad4;
+        case GC::KeyCode::Keypad1: return ElemInputId_KeyNumpad1;
+        case GC::KeyCode::KeypadSlash: return ElemInputId_KeyNumpadDivide;
         case GC::KeyCode::Keypad8: return ElemInputId_KeyNumpad8;
+        case GC::KeyCode::Keypad5: return ElemInputId_KeyNumpad5;
+        case GC::KeyCode::Keypad2: return ElemInputId_KeyNumpad2;
+        case GC::KeyCode::Keypad0: return ElemInputId_KeyNumpad0;
+        case GC::KeyCode::KeypadAsterisk: return ElemInputId_KeyNumpadMultiply;
         case GC::KeyCode::Keypad9: return ElemInputId_KeyNumpad9;
-        case GC::KeyCode::KeypadAsterisk: return ElemInputId_KeyMultiply;
-        case GC::KeyCode::KeypadPlus: return ElemInputId_KeyAdd;
-        //case GC::KeyCode::KeypadHyphen: return ElemInputId_KeySeparator;
-        //case GC::KeyCode::KeypadHyphen: return ElemInputId_KeySubtract;
-        case GC::KeyCode::KeypadPeriod: return ElemInputId_KeyDecimal;
-        case GC::KeyCode::KeypadSlash: return ElemInputId_KeyDivide;
+        case GC::KeyCode::Keypad6: return ElemInputId_KeyNumpad6;
+        case GC::KeyCode::Keypad3: return ElemInputId_KeyNumpad3;
+        case GC::KeyCode::KeypadPeriod: return ElemInputId_KeyNumpadSeparator;
+        case GC::KeyCode::KeypadHyphen: return ElemInputId_KeyNumpadMinus;
+        case GC::KeyCode::KeypadPlus: return ElemInputId_KeyNumpadAdd;
+        case GC::KeyCode::KeypadEnter: return ElemInputId_KeyNumpadEnter;
+        case GC::KeyCode::Escape: return ElemInputId_KeyEscape;
         case GC::KeyCode::F1: return ElemInputId_KeyF1;
         case GC::KeyCode::F2: return ElemInputId_KeyF2;
         case GC::KeyCode::F3: return ElemInputId_KeyF3;
@@ -169,12 +187,12 @@ ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
         case GC::KeyCode::F10: return ElemInputId_KeyF10;
         case GC::KeyCode::F11: return ElemInputId_KeyF11;
         case GC::KeyCode::F12: return ElemInputId_KeyF12;
-        case GC::KeyCode::LeftShift: return ElemInputId_KeyLeftShift;
-        case GC::KeyCode::RightShift: return ElemInputId_KeyRightShift;
-        case GC::KeyCode::LeftControl: return ElemInputId_KeyLeftControl;
-        case GC::KeyCode::RightControl: return ElemInputId_KeyRightControl;
-        case GC::KeyCode::LeftAlt: return ElemInputId_KeyLeftAlt;
-        case GC::KeyCode::RightAlt: return ElemInputId_KeyRightAlt;
+        case GC::KeyCode::PrintScreen: return ElemInputId_KeyPrintScreen;
+        case GC::KeyCode::ScrollLock: return ElemInputId_KeyScrollLock;
+        case GC::KeyCode::Pause: return ElemInputId_KeyPause;
+        case GC::KeyCode::LeftGui: return ElemInputId_KeyLeftSystem;
+        case GC::KeyCode::RightGui: return ElemInputId_KeyRightSystem;
+        case GC::KeyCode::Application: return ElemInputId_KeyApp;
         default: return ElemInputId_Unknown;
     }
 }
@@ -274,13 +292,6 @@ void ButtonHandler(ElemWindow window, ElemInputId inputId, GC::Device* device, G
     });
 }
 
-enum AppleGamepadDirection
-{
-    LeftStick,
-    RightStick,
-    Dpad
-};
-
 // TODO: Keep track of old value because otherwise we send multiple 0
 
 void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection, GC::Device* device, GC::ControllerDirectionPad* directionPad, float xValue, float yValue)
@@ -346,11 +357,6 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
 // TODO: We need to lock the cursort in fullscreen for ipad and iphone
 // See: https://developer.apple.com/wwdc20/10617
 
-// TODO: Support gamepads remap function of apple. Maybe we can manage gamepad custom with HID
-// And check the mappings if any?
-
-// TODO: Implement disconnect!!!!! Otherwise on IOS if we loose connection it uses the old ID
-
 void InitInputs(ElemWindow window)
 {
     appleInputDeviceDictionary = SystemCreateDictionary<GC::Device*, ElemInputDevice>(ApplicationMemoryArena, MAX_INPUT_DEVICES);
@@ -362,6 +368,12 @@ void InitInputs(ElemWindow window)
         {
             KeyboardHandler(window, keyboardInput, controllerButton, keyCode, isPressed);
         });
+    });
+
+    NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCKeyboardDidDisconnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
+    {
+        auto keyboard = (GC::Keyboard*)notification->object();
+        RemoveAppleInputDevice(keyboard->keyboardInput()->device());
     });
 
     NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCMouseDidConnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
@@ -376,17 +388,32 @@ void InitInputs(ElemWindow window)
 
         mouseInput->leftButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputId_MouseLeftButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+            auto cursorPosition = ElemGetWindowCursorPosition(window);
+
+            if ((cursorPosition.X > 0 && cursorPosition.Y > 0) || !isPressed)
+            {
+                ButtonHandler(window, ElemInputId_MouseLeftButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+            }
         });
         
-         mouseInput->middleButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
+        mouseInput->middleButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputId_MouseMiddleButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+            auto cursorPosition = ElemGetWindowCursorPosition(window);
+
+            if ((cursorPosition.X > 0 && cursorPosition.Y > 0) || !isPressed)
+            {
+                ButtonHandler(window, ElemInputId_MouseMiddleButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+            }
         });
 
         mouseInput->rightButton()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputId_MouseRightButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+            auto cursorPosition = ElemGetWindowCursorPosition(window);
+
+            if ((cursorPosition.X > 0 && cursorPosition.Y > 0) || !isPressed)
+            {
+                ButtonHandler(window, ElemInputId_MouseRightButton, mouseInput->device(), controllerButtonInput, value, isPressed);
+            }
         });
 
         auto mouseExtraButtons = mouseInput->auxiliaryButtons();
@@ -397,13 +424,24 @@ void InitInputs(ElemWindow window)
             {
                 ((GC::ControllerButtonInput*)mouseExtraButtons->object(i))->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
                 {
-                    // TODO: Check the with other platforms if the extra buttons are in the same order
-                    ButtonHandler(window, i == 0 ? ElemInputId_MouseExtraButton1 : ElemInputId_MouseExtraButton2, mouseInput->device(), controllerButtonInput, value, isPressed);
+                    auto cursorPosition = ElemGetWindowCursorPosition(window);
+
+                    if ((cursorPosition.X > 0 && cursorPosition.Y > 0) || !isPressed)
+                    {
+                        // TODO: Check the with other platforms if the extra buttons are in the same order
+                        ButtonHandler(window, i == 0 ? ElemInputId_MouseExtraButton1 : ElemInputId_MouseExtraButton2, mouseInput->device(), controllerButtonInput, value, isPressed);
+                    }
                 });
             }
         }
 
         // TODO: Mouse wheel
+    });
+
+    NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCMouseDidDisconnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
+    {
+        auto mouse = (GC::Mouse*)notification->object();
+        RemoveAppleInputDevice(mouse->mouseInput()->device());
     });
 
     NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCControllerDidConnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
@@ -413,7 +451,7 @@ void InitInputs(ElemWindow window)
 
         if (!extendedGamepad)
         {
-            SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Gamepad not supported on MacOS.");
+            SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Gamepad not supported.");
             return;
         }
 
@@ -441,5 +479,11 @@ void InitInputs(ElemWindow window)
         {
             DirectionHandler(window, AppleGamepadDirection::LeftStick, extendedGamepad->device(), directionPad, xValue, yValue);
         });
+    });
+
+    NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCControllerDidDisconnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
+    {
+        auto controller = (GC::Controller*)notification->object();
+        RemoveAppleInputDevice(controller->physicalInputProfile()->device());
     });
 }

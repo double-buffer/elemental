@@ -211,6 +211,7 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     auto height = 720;
     auto title = "Elemental Window";
     auto windowState = ElemWindowState_Normal;
+    auto isCursorHidden = false;
 
     if (options != nullptr)
     {
@@ -232,6 +233,11 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
         if (options->WindowState != 0)
         {
             windowState = options->WindowState;
+        }
+
+        if (options->IsCursorHidden)
+        {
+            isCursorHidden = options->IsCursorHidden;
         }
     }
 
@@ -302,8 +308,13 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     SystemAddDictionaryEntry(windowDictionary, window, handle);
 
     ElemSetWindowState(handle, windowState);
-    RefreshWin32MonitorInfos(handle);
 
+    if (isCursorHidden)
+    {
+        ElemHideWindowCursor(handle);
+    }
+
+    RefreshWin32MonitorInfos(handle);
     InitWin32Inputs(window);
 
     return handle;

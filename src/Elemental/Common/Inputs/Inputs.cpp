@@ -182,8 +182,6 @@ ElemAPI ElemInputStream ElemGetInputStream()
     {
         if (previousDeltaToReset[i].InputId != ElemInputId_Unknown)
         {
-            SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Reset Delta Input for %d", previousDeltaToReset[i].InputId);
-
             auto inputEvent = previousDeltaToReset[i];
             inputEvent.Value = 0.0f;
             inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
@@ -199,7 +197,7 @@ ElemAPI ElemInputStream ElemGetInputStream()
     previousDeltaInputsToResetWriteIndex = currentDeltaInputsToResetWriteIndex;
     currentDeltaInputsToResetWriteIndex = 0; 
 
-    SystemPlatformClearMemory(&deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS], sizeof(ElemInputId) * MAX_INPUT_EVENTS);
+    SystemPlatformClearMemory(&deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS], sizeof(ElemInputEvent) * MAX_INPUT_EVENTS);
 
     return 
     {

@@ -96,6 +96,7 @@ void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
+    //applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .IsCursorHidden = true });
     applicationPayload->Window = ElemCreateWindow(NULL);
 
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
@@ -234,6 +235,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
 
     UpdateInputs(applicationPayload);
 
@@ -252,8 +254,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // TODO: Can we add options to normalize the speed we need for different path?
     if (applicationPayload->InputState.TouchAction)
     {
-        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 1.5f * updateParameters->DeltaTimeInSeconds;
-        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 1.5f * updateParameters->DeltaTimeInSeconds;
+        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 2.0f * updateParameters->DeltaTimeInSeconds;
+        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
     }
     else
     {
@@ -311,9 +313,10 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
-    SampleSetWindowTitle(applicationPayload->Window, "HelloInputs", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
-
-    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
+    if (frameMeasurement.NewData)
+    {
+        SampleSetWindowTitle(applicationPayload->Window, "HelloInputs", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
+    }
     
     SampleStartFrameMeasurement();
 }

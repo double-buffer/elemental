@@ -270,7 +270,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             return;
         }
 
-        auto backBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::TransferPtr(swapChainData->BackBufferDrawable->texture()), true);
+        auto backBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
         ElemSwapChainUpdateParameters updateParameters = 
         {
