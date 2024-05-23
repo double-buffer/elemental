@@ -164,9 +164,6 @@ void KeyboardHandler(ElemWindow window, GC::KeyboardInput* keyboardInput, GC::Co
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
     auto inputDevice = AddAppleInputDevice(keyboardInput->device(), ElemInputDeviceType_Keyboard);
 
-    auto inputDeviceData = GetInputDeviceData(inputDevice);
-    SystemAssert(inputDeviceData);
-
     // TODO: We need to find a way to handle key repeats!
 
     AddInputEvent({
@@ -183,9 +180,6 @@ void MouseMoveHandler(ElemWindow window, GC::MouseInput* mouse, float deltaX, fl
 {
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
     auto inputDevice = AddAppleInputDevice(mouse->device(), ElemInputDeviceType_Mouse);
-
-    auto inputDeviceData = GetInputDeviceData(inputDevice);
-    SystemAssert(inputDeviceData);
 
     if (deltaX < 0)
     {
@@ -241,9 +235,6 @@ void ButtonHandler(ElemWindow window, ElemInputId inputId, GC::Device* device, G
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
     auto inputDevice = AddAppleInputDevice(device, ElemInputDeviceType_Mouse);
 
-    auto inputDeviceData = GetInputDeviceData(inputDevice);
-    SystemAssert(inputDeviceData);
-    
     SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Button");
 
     AddInputEvent({
@@ -262,9 +253,6 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
 {
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
     auto inputDevice = AddAppleInputDevice(device, ElemInputDeviceType_Mouse);
-
-    auto inputDeviceData = GetInputDeviceData(inputDevice);
-    SystemAssert(inputDeviceData);
 
     if (gamepadDirection == AppleGamepadDirection::LeftStick)
     {

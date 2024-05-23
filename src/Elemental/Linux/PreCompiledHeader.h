@@ -13,10 +13,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <gio/gio.h>
-#include <gtk/gtk.h>
-#include <gdk/wayland/gdkwayland.h>
+#include <linux/input-event-codes.h>
+
 #include <wayland-client.h>
+#include <relative-pointer-unstable-v1-client-protocol.h>
+#include <xdg-shell-protocol.h>
 
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)

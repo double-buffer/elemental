@@ -113,11 +113,72 @@ elseif(NOT BUILD_FOR_IOS)
     get_github_release("double-buffer/shader-compilers-bin" ${SPIRV_CROSS_VERSION} "macos_spirv-cross_*_arm64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/spirv-cross/")
     target_link_directories(spirv-cross INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/spirv-cross/lib/)
 endif()
+
+#=======================================================================
+# Linux Wayland
+#=======================================================================
+if(LINUX)
+    add_library(Wayland INTERFACE)
+
+    find_package(PkgConfig REQUIRED)
+
+    pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-protocols)
+
+    target_include_directories(Wayland INTERFACE ${WAYLAND_INCLUDE_DIRS})
+    target_link_directories(Wayland INTERFACE ${WAYLAND_LIBRARY_DIRS})
+    target_compile_options(Wayland INTERFACE ${WAYLAND_CFLAGS_OTHER})
+    target_link_libraries(Wayland INTERFACE ${WAYLAND_LIBRARIES})
+
+    # Set protocol directories
+    set(STABLE_PROTOCOLS_DIR "/usr/share/wayland-protocols/stable")
+    set(UNSTABLE_PROTOCOLS_DIR "/usr/share/wayland-protocols/unstable")
+    set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+    file(MAKE_DIRECTORY ${GENERATED_DIR})
+
+    # Generate stable xdg-shell protocol files
+    add_custom_command(
+        OUTPUT ${GENERATED_DIR}/xdg-shell-protocol.c ${GENERATED_DIR}/xdg-shell-protocol.h
+        COMMAND wayland-scanner private-code ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml ${GENERATED_DIR}/xdg-shell-protocol.c
+        COMMAND wayland-scanner client-header ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml ${GENERATED_DIR}/xdg-shell-protocol.h
+        DEPENDS ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml
+        COMMENT "Generating stable xdg-shell protocol files"
+    )
+
+    # Generate relative-pointer protocol files
+    add_custom_command(
+        OUTPUT ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
+        COMMAND wayland-scanner client-header ${UNSTABLE_PROTOCOLS_DIR}/relative-pointer/relative-pointer-unstable-v1.xml ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h
+        COMMAND wayland-scanner code ${UNSTABLE_PROTOCOLS_DIR}/relative-pointer/relative-pointer-unstable-v1.xml ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
+        DEPENDS ${UNSTABLE_PROTOCOLS_DIR}/relative-pointer/relative-pointer-unstable-v1.xml
+        COMMENT "Generating relative-pointer protocol files"
+    )
+
+    # Generate pointer-constraints protocol files
+    add_custom_command(
+        OUTPUT ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
+        COMMAND wayland-scanner client-header ${UNSTABLE_PROTOCOLS_DIR}/pointer-constraints/pointer-constraints-unstable-v1.xml ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h
+        COMMAND wayland-scanner code ${UNSTABLE_PROTOCOLS_DIR}/pointer-constraints/pointer-constraints-unstable-v1.xml ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
+        DEPENDS ${UNSTABLE_PROTOCOLS_DIR}/pointer-constraints/pointer-constraints-unstable-v1.xml
+        COMMENT "Generating pointer-constraints protocol files"
+    )
+
+    add_custom_target(generate-protocol-files ALL
+        DEPENDS 
+        ${GENERATED_DIR}/xdg-shell-protocol.c 
+        ${GENERATED_DIR}/xdg-shell-protocol.h
+        ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h 
+        ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
+        ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h 
+        ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
+    )
+
+    target_include_directories(Wayland INTERFACE ${GENERATED_DIR})
+    add_dependencies(Wayland generate-protocol-files)
+endif()
     
 #=======================================================================
 # Direct3D12 Runtime
 #=======================================================================
-
 if(WIN32)
     set(DIRECT3D12_VERSION "1.614.0")
 

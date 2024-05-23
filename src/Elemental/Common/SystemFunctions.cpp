@@ -286,6 +286,16 @@ int64_t SystemFindSubString(ReadOnlySpan<char> source, ReadOnlySpan<char> subStr
                 result = i;
             }
         }
+        else 
+        {
+            result = -1;
+            foundCurrentIndex = 0;
+        }
+    }
+
+    if (foundCurrentIndex >= subString.Length)
+    {
+        return result;
     }
 
     return -1;
