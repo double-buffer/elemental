@@ -2,7 +2,6 @@
 #include "WaylandApplication.h"
 #include "WaylandWindow.h"
 #include "Inputs/Inputs.h"
-#include "Inputs/HidDevices.h"
 #include "SystemDictionary.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"

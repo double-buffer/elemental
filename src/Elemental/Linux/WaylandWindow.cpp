@@ -1,6 +1,7 @@
 #include "WaylandWindow.h"
 #include "WaylandApplication.h"
 #include "WaylandInputs.h"
+#include "HidrawInputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -131,6 +132,7 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
    
     ElemSetWindowState(handle, windowState);
     InitWaylandInputs(handle);
+    InitHidrawInputs(handle);
     return handle;
 }
 

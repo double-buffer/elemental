@@ -122,7 +122,7 @@ if(LINUX)
 
     find_package(PkgConfig REQUIRED)
 
-    pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-cursor wayland-protocols libdecor-0)
+    pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-cursor wayland-protocols libudev libdecor-0)
 
     target_include_directories(Wayland INTERFACE ${WAYLAND_INCLUDE_DIRS})
     target_link_directories(Wayland INTERFACE ${WAYLAND_LIBRARY_DIRS})

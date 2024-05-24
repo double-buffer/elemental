@@ -1,6 +1,7 @@
 #include "WaylandApplication.cpp"
 #include "WaylandWindow.cpp"
 #include "WaylandInputs.cpp"
+#include "HidrawInputs.cpp"
 #include <relative-pointer-unstable-v1-client-protocol.c>
 #include <xdg-shell-protocol.c>
 

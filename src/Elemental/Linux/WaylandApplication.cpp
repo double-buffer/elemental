@@ -106,6 +106,8 @@ void WaylandLibdecorErrorHandler(libdecor* context, libdecor_error error, const 
 
 void WaylandRegistryHandler(void* data, wl_registry* registry, uint32_t id, const char* interface, uint32_t version) 
 {
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Wayland Registry: %d, %s, %d", id, interface, version);
+
     if (SystemFindSubString(interface, wl_compositor_interface.name) != -1) 
     {
         WaylandCompositor = (wl_compositor*)wl_registry_bind(registry, id, &wl_compositor_interface, version);
@@ -169,7 +171,6 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
     SystemAssert(WaylandCompositor);
     SystemAssert(WaylandOutput);
     SystemAssert(WaylandShm);
-
 
     WaylandLibdecor = libdecor_new(WaylandDisplay, &WaylandLibdecorListener);
 
