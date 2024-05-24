@@ -25,3 +25,4 @@ ElemInputDevice AddInputDevice(InputDeviceData* deviceData, InputDeviceDataFull*
 void RemoveInputDevice(ElemInputDevice inputDevice);
 
 void AddInputEvent(ElemInputEvent inputEvent, bool needReset = false);
+void ResetInputsFrame();

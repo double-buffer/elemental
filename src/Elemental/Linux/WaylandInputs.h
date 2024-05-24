@@ -2,6 +2,8 @@
 
 #include "Elemental.h"
 
+extern wl_pointer* WaylandPointer;
+
 void InitWaylandInputs(ElemWindow window);
 
 void WaylandKeyboardKeymapHandler(void* data, wl_keyboard* keyboard, uint32_t format, int32_t fd, uint32_t size) {}
@@ -21,9 +23,9 @@ const wl_keyboard_listener WaylandKeyboardListener =
     .repeat_info = WaylandKeyboardRepeatInfoHandler
 };
 
-void WaylandPointerEnterHandler(void* data, wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t sx, wl_fixed_t sy) {}
-void WaylandPointerLeaveHandler(void* data, wl_pointer* pointer, uint32_t serial, wl_surface* surface) {}
-void WaylandPointerMotionHandler(void* data, wl_pointer* pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {}
+void WaylandPointerEnterHandler(void* data, wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t sx, wl_fixed_t sy);
+void WaylandPointerLeaveHandler(void* data, wl_pointer* pointer, uint32_t serial, wl_surface* surface);
+void WaylandPointerMotionHandler(void* data, wl_pointer* pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy);
 void WaylandPointerButtonHandler(void* data, wl_pointer* pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state);
 void WaylandPointerAxisHandler(void* data, wl_pointer* pointer, uint32_t time, uint32_t axis, wl_fixed_t value);
 void WaylandPointerFrameHandler(void* data, wl_pointer* pointer) {}

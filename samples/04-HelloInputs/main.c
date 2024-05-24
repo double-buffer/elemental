@@ -99,7 +99,7 @@ void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    //applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .IsCursorHidden = true });
+    //applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .IsCursorHidden = true, .WindowState = ElemWindowState_FullScreen });
     applicationPayload->Window = ElemCreateWindow(NULL);
 
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });

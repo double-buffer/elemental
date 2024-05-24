@@ -122,11 +122,9 @@ ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)
     };
 }
 
-ElemAPI ElemInputStream ElemGetInputStream()
+void ResetInputsFrame()
 {
     InitInputsMemory();
-
-    auto stackMemoryArena = SystemGetStackMemoryArena();
 
     auto previousIndex = (currentDeltaInputsToResetIndex + 1) % 2;
     auto previousDeltaToReset = &deltaInputsToReset[previousIndex * MAX_INPUT_EVENTS];
@@ -141,8 +139,6 @@ ElemAPI ElemInputStream ElemGetInputStream()
         }
     }
 
-    auto eventSpan = inputEvents.Slice(currentInputEventsIndex * MAX_INPUT_EVENTS, currentInputEventsWriteIndex);
-
     currentInputEventsIndex = (currentInputEventsIndex + 1) % 2;
     currentInputEventsWriteIndex = 0;
 
@@ -151,6 +147,13 @@ ElemAPI ElemInputStream ElemGetInputStream()
     currentDeltaInputsToResetWriteIndex = 0; 
 
     SystemPlatformClearMemory(&deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS], sizeof(ElemInputEvent) * MAX_INPUT_EVENTS);
+}
+
+ElemAPI ElemInputStream ElemGetInputStream()
+{
+    InitInputsMemory();
+
+    auto eventSpan = inputEvents.Slice(currentInputEventsIndex * MAX_INPUT_EVENTS, currentInputEventsWriteIndex);
 
     return 
     {

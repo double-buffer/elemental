@@ -16,8 +16,9 @@
 #include <linux/input-event-codes.h>
 
 #include <wayland-client.h>
+#include <wayland-cursor.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
-#include <xdg-shell-protocol.h>
+#include <libdecor.h>
 
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)

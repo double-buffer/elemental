@@ -2,6 +2,7 @@
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
 #include "VulkanTexture.h"
+#include "Inputs/Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -85,6 +86,7 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
         compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     }
 
+    // TODO: We have still some errors sometimes (Suboptimal)
     swapChainCreateInfo->imageArrayLayers = 1;
     swapChainCreateInfo->imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapChainCreateInfo->imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -212,6 +214,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     };
     
     swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
+    ResetInputsFrame();
 /*
     if (!swapChainData->PresentCalled)
     {

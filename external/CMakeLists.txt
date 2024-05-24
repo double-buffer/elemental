@@ -122,7 +122,7 @@ if(LINUX)
 
     find_package(PkgConfig REQUIRED)
 
-    pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-protocols)
+    pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-cursor wayland-protocols libdecor-0)
 
     target_include_directories(Wayland INTERFACE ${WAYLAND_INCLUDE_DIRS})
     target_link_directories(Wayland INTERFACE ${WAYLAND_LIBRARY_DIRS})
@@ -134,15 +134,6 @@ if(LINUX)
     set(UNSTABLE_PROTOCOLS_DIR "/usr/share/wayland-protocols/unstable")
     set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
     file(MAKE_DIRECTORY ${GENERATED_DIR})
-
-    # Generate stable xdg-shell protocol files
-    add_custom_command(
-        OUTPUT ${GENERATED_DIR}/xdg-shell-protocol.c ${GENERATED_DIR}/xdg-shell-protocol.h
-        COMMAND wayland-scanner private-code ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml ${GENERATED_DIR}/xdg-shell-protocol.c
-        COMMAND wayland-scanner client-header ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml ${GENERATED_DIR}/xdg-shell-protocol.h
-        DEPENDS ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml
-        COMMENT "Generating stable xdg-shell protocol files"
-    )
 
     # Generate relative-pointer protocol files
     add_custom_command(
@@ -164,8 +155,6 @@ if(LINUX)
 
     add_custom_target(generate-protocol-files ALL
         DEPENDS 
-        ${GENERATED_DIR}/xdg-shell-protocol.c 
-        ${GENERATED_DIR}/xdg-shell-protocol.h
         ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h 
         ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
         ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h 

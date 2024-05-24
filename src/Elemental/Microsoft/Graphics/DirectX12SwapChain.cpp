@@ -2,6 +2,7 @@
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
 #include "DirectX12Texture.h"
+#include "Inputs/Inputs.h"
 #include "../Win32Application.h"
 #include "../Win32Window.h"
 #include "SystemDataPool.h"
@@ -159,6 +160,7 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         };
         
         swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
+        ResetInputsFrame();
 
         if (!swapChainData->PresentCalled)
         {

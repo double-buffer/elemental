@@ -1,5 +1,6 @@
 #include "WaylandInputs.h"
 #include "WaylandApplication.h"
+#include "WaylandWindow.h"
 #include "Inputs/Inputs.h"
 #include "Inputs/HidDevices.h"
 #include "SystemDictionary.h"
@@ -11,7 +12,7 @@ SystemDictionary<void*, ElemInputDevice> waylandInputDeviceDictionary;
 
 wl_seat* waylandSeat = nullptr;
 wl_keyboard* waylandKeyboard = nullptr;
-wl_pointer* waylandPointer = nullptr;
+wl_pointer* WaylandPointer = nullptr;
 zwp_relative_pointer_manager_v1* waylandRelativePointerManager = nullptr;
 zwp_relative_pointer_v1* waylandRelativePointer = nullptr;
 
@@ -178,23 +179,77 @@ void WaylandKeyboardKeyHandler(void* data, wl_keyboard* keyboard, uint32_t seria
     }
 }
 
+wl_surface* WaylandCurrentPointerSurface = nullptr;
+
+void WaylandUpdateCursor(ElemWindow window, wl_pointer* pointer, uint32_t serial)
+{
+    auto windowData = GetWaylandWindowData(window);
+    SystemAssert(windowData);
+
+    auto windowDataFull = GetWaylandWindowDataFull(window);
+    SystemAssert(windowDataFull);
+
+    if (windowData->WaylandSurface == WaylandCurrentPointerSurface)
+    {
+        if (!windowDataFull->IsCursorHidden)
+        {
+            WaylandSetDefaultCursor(pointer, serial);
+        }
+        else
+        {
+            wl_pointer_set_cursor(pointer, serial, nullptr, 0, 0);
+        } 
+    }
+    else 
+    {
+        WaylandSetDefaultCursor(pointer, serial);
+    }
+}
+
+
+void WaylandPointerEnterHandler(void* data, wl_pointer* pointer, uint32_t serial, wl_surface* surface, wl_fixed_t sx, wl_fixed_t sy)
+{
+    WaylandCurrentPointerSurface = surface;
+    WaylandUpdateCursor((ElemWindow)data, pointer, serial);
+}
+
+void WaylandPointerLeaveHandler(void* data, wl_pointer* pointer, uint32_t serial, wl_surface* surface)
+{
+    WaylandCurrentPointerSurface = nullptr;
+}
+
+void WaylandPointerMotionHandler(void* data, wl_pointer* pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy) 
+{
+    WaylandUpdateCursor((ElemWindow)data, pointer, 0);
+
+    auto windowData = GetWaylandWindowData((ElemWindow)data);
+    SystemAssert(windowData);
+
+    windowData->SurfaceCursorPositionX = (uint32_t)wl_fixed_to_double(sx);
+    windowData->SurfaceCursorPositionY = (uint32_t)wl_fixed_to_double(sy);
+}
+
 void WaylandPointerButtonHandler(void* data, wl_pointer* pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Pointer button");
-
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - WaylandPerformanceCounterStart) / WaylandPerformanceCounterFrequencyInSeconds;
     auto inputDevice = AddWaylandInputDevice((void*)pointer, ElemInputDeviceType_Mouse);
 
-    // TODO: Check the order of the extra buttons
-    
-    AddInputEvent({
-        .Window = (ElemWindow)data,
-        .InputDevice = inputDevice,
-        .InputId = GetWaylandInputIdFromKeyCode(button),
-        .InputType = ElemInputType_Digital,
-        .Value = state == WL_POINTER_BUTTON_STATE_PRESSED ? 1.0f : 0.0f,
-        .ElapsedSeconds = elapsedSeconds
-    });
+    auto windowData = GetWaylandWindowData((ElemWindow)data);
+    SystemAssert(windowData);
+
+    if ((state == WL_POINTER_BUTTON_STATE_PRESSED && windowData->WaylandSurface == WaylandCurrentPointerSurface) || state != WL_POINTER_BUTTON_STATE_PRESSED)
+    {
+        // TODO: Check the order of the extra buttons
+        
+        AddInputEvent({
+            .Window = (ElemWindow)data,
+            .InputDevice = inputDevice,
+            .InputId = GetWaylandInputIdFromKeyCode(button),
+            .InputType = ElemInputType_Digital,
+            .Value = state == WL_POINTER_BUTTON_STATE_PRESSED ? 1.0f : 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
 }
 
 void WaylandPointerAxisHandler(void* data, wl_pointer* pointer, uint32_t time, uint32_t axis, wl_fixed_t value)
@@ -208,7 +263,7 @@ void WaylandRelativePointerMotionHandler(void* data, zwp_relative_pointer_v1* po
 {
     auto window = (ElemWindow)data;
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - WaylandPerformanceCounterStart) / WaylandPerformanceCounterFrequencyInSeconds;
-    auto inputDevice = AddWaylandInputDevice((void*)waylandPointer, ElemInputDeviceType_Mouse);
+    auto inputDevice = AddWaylandInputDevice((void*)WaylandPointer, ElemInputDeviceType_Mouse);
 
     int32_t deltaX = wl_fixed_to_double(dx);
     int32_t deltaY = wl_fixed_to_double(dy);
@@ -270,14 +325,14 @@ void WaylandSeatCapabilitiesHandler(void* data, wl_seat* seat, uint32_t capabili
         wl_keyboard_add_listener(waylandKeyboard, &WaylandKeyboardListener, data);
     }
 
-    if ((capabilities & WL_SEAT_CAPABILITY_POINTER) && !waylandPointer) 
+    if ((capabilities & WL_SEAT_CAPABILITY_POINTER) && !WaylandPointer) 
     {
-        waylandPointer = wl_seat_get_pointer(seat);
-        wl_pointer_add_listener(waylandPointer, &WaylandPointerListener, data);
+        WaylandPointer = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener(WaylandPointer, &WaylandPointerListener, data);
 
         if (waylandRelativePointerManager) 
         {
-            waylandRelativePointer = zwp_relative_pointer_manager_v1_get_relative_pointer(waylandRelativePointerManager, waylandPointer);
+            waylandRelativePointer = zwp_relative_pointer_manager_v1_get_relative_pointer(waylandRelativePointerManager, WaylandPointer);
             zwp_relative_pointer_v1_add_listener(waylandRelativePointer, &WaylandRelativePointerListener, data);
         }
     }

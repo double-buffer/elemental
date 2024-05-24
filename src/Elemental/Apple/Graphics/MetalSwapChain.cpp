@@ -2,6 +2,7 @@
 #include "MetalCommandList.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalTexture.h"
+#include "Inputs/Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -281,6 +282,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         };
 
         _updateHandler(&updateParameters, _updatePayload);
+        ResetInputsFrame();
 
         if (!swapChainData->PresentCalled)
         {
