@@ -1,5 +1,6 @@
 #include "MacOSWindow.h"
 #include "MacOSApplication.h"
+#include "Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 
@@ -31,6 +32,7 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     auto width = 1280;
     auto height = 720;
     auto windowState = ElemWindowState_Normal;
+    auto isCursorHidden = false;
 
     if (options != nullptr)
     {
@@ -52,6 +54,11 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
         if (options->WindowState != 0)
         {
             windowState = options->WindowState;
+        }
+
+        if (options->IsCursorHidden)
+        {
+            isCursorHidden = options->IsCursorHidden;
         }
     }
 
@@ -80,12 +87,16 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
     windowHandle->setDelegate(windowDelegate);
 
     SystemAddDataPoolItemFull(windowDataPool, handle, {
-        .Width = (uint32_t)width,
-        .Height = (uint32_t)height,
-        .UIScale = 1.0f
     });
 
     ElemSetWindowState(handle, windowState);
+
+    if (isCursorHidden)
+    {
+        ElemHideWindowCursor(handle);
+    }
+
+    InitInputs(handle);
     
     return handle;
 }
@@ -206,4 +217,57 @@ void MacOSWindowDelegate::windowWillClose(NS::Notification* pNotification)
     }
 
     windowData->IsClosed = true;
+}
+
+ElemAPI void ElemShowWindowCursor(ElemWindow window)
+{
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
+    auto windowDataFull = GetMacOSWindowDataFull(window);
+    SystemAssert(windowDataFull);
+
+    if (windowDataFull->IsCursorHidden)
+    {
+        NS::Cursor::unhide();
+        windowDataFull->IsCursorHidden = false;
+    }
+}
+
+ElemAPI void ElemHideWindowCursor(ElemWindow window)
+{
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
+    auto windowDataFull = GetMacOSWindowDataFull(window);
+    SystemAssert(windowDataFull);
+
+    if (!windowDataFull->IsCursorHidden)
+    {
+        NS::Cursor::hide();
+        windowDataFull->IsCursorHidden = true;
+    }
+}
+
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window)
+{
+    SystemAssert(window != ELEM_HANDLE_NULL);
+
+    auto windowData = GetMacOSWindowData(window);
+    SystemAssert(windowData);
+
+    auto result = NS::Event::mouseLocation();
+    result = windowData->WindowHandle->convertPointFromScreen(result);
+
+    auto screen = windowData->WindowHandle->screen();
+    auto mainScreenScaling = screen ? screen->backingScaleFactor() : 1.0f;
+    auto clientRect = windowData->WindowHandle->contentView()->frame().size;
+    result.x *= mainScreenScaling;
+    result.y *= mainScreenScaling;
+
+    auto clientMaxX = (long)(clientRect.width * mainScreenScaling) - 1;
+    auto clientMaxY = (long)(clientRect.height * mainScreenScaling) - 1;
+
+    result.x = SystemMax(0L, SystemMin((long)result.x, clientMaxX));
+    result.y = clientMaxY - SystemMax(0L, SystemMin((long)result.y, clientMaxY));
+  
+    return { (uint32_t)result.x, (uint32_t)result.y };
 }

@@ -185,7 +185,7 @@ void FormatMemorySize(uint64_t bytes, char* outputBuffer, size_t bufferSize)
 {
     const char* suffixes[] = { "B", "KB", "MB", "GB", "TB" }; // Extend if more are needed
     double size = bytes;
-    int i = 0;
+    size_t i = 0;
 
     while (size >= 1024 && i < sizeof(suffixes)/sizeof(suffixes[0]) - 1) 
     {
@@ -261,6 +261,7 @@ typedef struct
 {
     double FrameTimeInSeconds;
     uint32_t Fps;
+    bool NewData;
 } SampleFrameMeasurement;
 
 double globalSampleFrameCpuAverage = 0.0;
@@ -281,6 +282,7 @@ void SampleStartFrameMeasurement(void)
 
 SampleFrameMeasurement SampleEndFrameMeasurement(void)
 {
+    bool newData = globalSampleFpsCounter == 0;
     globalSampleFpsCounter++;
 
     double endTime = SampleGetTimerValueInMS();
@@ -291,11 +293,13 @@ SampleFrameMeasurement SampleEndFrameMeasurement(void)
         globalSampleCurrentFpsCounter = globalSampleFpsCounter - 1; 
         globalSampleFpsCounter = 1;
         globalSampleFpsTimerStart = SampleGetTimerValueInMS();
+        newData = true;
     }
 
     return (SampleFrameMeasurement)
     {
         .FrameTimeInSeconds = globalSampleFrameCpuAverage / 1000.0,
-        .Fps = globalSampleCurrentFpsCounter
+        .Fps = globalSampleCurrentFpsCounter,
+        .NewData = newData
     };
 }

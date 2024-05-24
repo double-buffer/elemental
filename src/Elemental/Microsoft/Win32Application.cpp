@@ -10,6 +10,9 @@ MemoryArena ApplicationMemoryArena;
 Span<Win32RunLoopHandler> Win32RunLoopHandlers;
 uint32_t Win32CurrentRunLoopIndex;
 
+uint64_t Win32PerformanceCounterStart;
+uint64_t Win32PerformanceCounterFrequencyInSeconds;
+
 void InitWin32ApplicationMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
@@ -22,6 +25,9 @@ void InitWin32ApplicationMemory()
         #ifdef _DEBUG
         SystemLogDebugMessage(ElemLogMessageCategory_Application, "Debug Mode.");
         #endif
+
+        Win32PerformanceCounterStart = SystemPlatformGetHighPerformanceCounter();
+        Win32PerformanceCounterFrequencyInSeconds = SystemPlatformGetHighPerformanceCounterFrequencyInSeconds();
     }
 }
 
@@ -124,3 +130,4 @@ ElemAPI void ElemExitApplication(int32_t exitCode)
 {
     PostQuitMessage(exitCode);
 }
+

@@ -14,5 +14,8 @@ struct Win32RunLoopHandler
     uint32_t NextIndex;
 };
 
+extern uint64_t Win32PerformanceCounterStart;
+extern uint64_t Win32PerformanceCounterFrequencyInSeconds;
+
 void AddWin32RunLoopHandler(Win32RunLoopHandler handler);
 void RemoveWin32RunLoopHandler(Win32RunLoopHandler handler);

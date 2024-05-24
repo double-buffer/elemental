@@ -35,6 +35,22 @@ SystemPlatformDateTime* SystemPlatformGetCurrentDateTime(MemoryArena memoryArena
     return result;
 }
 
+uint64_t SystemPlatformGetHighPerformanceCounter()
+{
+    uint64_t result;
+    QueryPerformanceCounter((LARGE_INTEGER*) &result);
+
+    return result;
+}
+
+uint64_t SystemPlatformGetHighPerformanceCounterFrequencyInSeconds()
+{
+    uint64_t result;
+    QueryPerformanceFrequency((LARGE_INTEGER*) &result);
+
+    return result;
+}
+
 size_t SystemPlatformGetPageSize()
 {
     SYSTEM_INFO systemInfo;

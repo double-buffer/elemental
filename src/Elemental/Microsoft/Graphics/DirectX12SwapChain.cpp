@@ -2,6 +2,7 @@
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
 #include "DirectX12Texture.h"
+#include "Inputs/Inputs.h"
 #include "../Win32Application.h"
 #include "../Win32Window.h"
 #include "SystemDataPool.h"
@@ -117,14 +118,14 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         // too much time. And maybe the previous present will not be presented yet.
         if (SUCCEEDED(swapChainData->DeviceObject->GetFrameStatistics(&stats)))
         {
-            syncQPCTime.QuadPart= stats.SyncQPCTime.QuadPart - swapChainData->CreationTimestamp.QuadPart;
+            syncQPCTime.QuadPart= stats.SyncQPCTime.QuadPart - Win32PerformanceCounterStart;
         }
         else 
         {
-            LARGE_INTEGER currentTimeStamp;
-            QueryPerformanceCounter(&currentTimeStamp);
+            LARGE_INTEGER currentTimestamp;
+            QueryPerformanceCounter(&currentTimestamp);
 
-            syncQPCTime.QuadPart = currentTimeStamp.QuadPart - swapChainData->CreationTimestamp.QuadPart;
+            syncQPCTime.QuadPart = currentTimestamp.QuadPart - Win32PerformanceCounterStart;
         }
 
         double refreshInterval = 1.0 / windowData->MonitorRefreshRate;
@@ -133,8 +134,9 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         LARGE_INTEGER nextVSyncQPCTime;
         nextVSyncQPCTime.QuadPart = syncQPCTime.QuadPart + (LONGLONG)intervalTicks;
 
-        double nextPresentTimeStampInSeconds = nextVSyncQPCTime.QuadPart / ticksPerSecond;
+        double nextPresentTimestampInSeconds = nextVSyncQPCTime.QuadPart / ticksPerSecond;
 
+        // TODO: If delta time is above a thresold, take the delta time based on target FPS
         auto deltaTime = (nextVSyncQPCTime.QuadPart - swapChainData->PreviousTargetPresentationTimestamp.QuadPart) / ticksPerSecond;
         swapChainData->PreviousTargetPresentationTimestamp = nextVSyncQPCTime;
         // END TIMING CALCULATION
@@ -154,10 +156,11 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
             .SwapChainInfo = DirectX12GetSwapChainInfo(handle),
             .BackBufferTexture = backBufferTexture,
             .DeltaTimeInSeconds = deltaTime,
-            .NextPresentTimeStampInSeconds = nextPresentTimeStampInSeconds
+            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds
         };
         
         swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
+        ResetInputsFrame();
 
         if (!swapChainData->PresentCalled)
         {
@@ -258,7 +261,6 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .WaitHandle = waitHandle,
         .UpdateHandler = updateHandler,
         .UpdatePayload = updatePayload,
-        .CreationTimestamp = creationTimestamp,
         .PreviousTargetPresentationTimestamp = {},
         .Width = width,
         .Height = height,

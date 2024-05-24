@@ -161,6 +161,8 @@ _APPKIT_PRIVATE_DEF_SEL(otherEventWithType_location_modifierFlags_timestamp_wind
 
 class Event : public Referencing<Event> {
 public:
+    static CGPoint mouseLocation();
+
     static _NS_INLINE Event * otherEventWithType(EventType type,
                                                  CGPoint location,
                                                  EventModifierFlags flags,
@@ -171,6 +173,11 @@ public:
                                                  Integer d1,
                                                  Integer d2);
 };
+    
+_NS_INLINE CGPoint Event::mouseLocation()
+{
+    return Object::sendMessage<CGPoint>(_APPKIT_PRIVATE_CLS(NSEvent), _APPKIT_PRIVATE_SEL(mouseLocation));
+}
 
 _NS_INLINE Event * Event::otherEventWithType(EventType type,
                                              CGPoint location,

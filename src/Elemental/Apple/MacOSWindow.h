@@ -22,10 +22,8 @@ struct MacOSWindowData
 
 struct MacOSWindowDataFull
 {
-    // TODO: Do we need that?
-    uint32_t Width;
-    uint32_t Height;
-    float_t UIScale;
+    bool IsCursorHidden;
+    uint32_t reserved;
 };
 
 MacOSWindowData* GetMacOSWindowData(ElemWindow window);

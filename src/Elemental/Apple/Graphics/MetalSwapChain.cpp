@@ -2,6 +2,7 @@
 #include "MetalCommandList.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalTexture.h"
+#include "Inputs/Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -248,10 +249,11 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
     #endif
     if (_updateHandler)
     {
+        // TODO: If delta time is above a thresold, take the delta time based on target FPS
         auto deltaTime = update->targetPresentationTimestamp() - swapChainData->PreviousTargetPresentationTimestamp;
         swapChainData->PreviousTargetPresentationTimestamp = update->targetPresentationTimestamp();
 
-        auto nextPresentTimeStampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
+        auto nextPresentTimestampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
 
         auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
@@ -269,17 +271,18 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             return;
         }
 
-        auto backBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::TransferPtr(swapChainData->BackBufferDrawable->texture()), true);
+        auto backBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
         ElemSwapChainUpdateParameters updateParameters = 
         {
             .SwapChainInfo = MetalGetSwapChainInfo(_swapChain),
             .BackBufferTexture = backBufferTexture,
             .DeltaTimeInSeconds = deltaTime,
-            .NextPresentTimeStampInSeconds = nextPresentTimeStampInSeconds
+            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds
         };
 
         _updateHandler(&updateParameters, _updatePayload);
+        ResetInputsFrame();
 
         if (!swapChainData->PresentCalled)
         {

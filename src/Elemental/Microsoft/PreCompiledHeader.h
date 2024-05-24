@@ -6,6 +6,7 @@
 
 #include <ShellScalingAPI.h>
 #include <Windows.h>
+#include <windowsx.h>
 #include <dwmapi.h>
 #include <Uxtheme.h>
 

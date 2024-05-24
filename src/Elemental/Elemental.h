@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------
 // Elemental Library
-// Version: 1.0.0-dev3
+// Version: 1.0.0-dev4
 //
 // MIT License
 //
@@ -36,7 +36,7 @@
 #define UseLoader
 #endif
 
-#define ELEM_VERSION_LABEL "1.0.0-dev3"
+#define ELEM_VERSION_LABEL "1.0.0-dev4"
 
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
@@ -167,6 +167,8 @@ typedef struct
     uint32_t Height;
     // Initial state of the window.
     ElemWindowState WindowState;
+    // True if the cursor should be hidden.
+    bool IsCursorHidden;
 } ElemWindowOptions;
 
 /**
@@ -183,6 +185,13 @@ typedef struct
     // Current state of the window.
     ElemWindowState WindowState;
 } ElemWindowSize;
+
+// TODO: Comments
+typedef struct
+{
+    uint32_t X;
+    uint32_t Y;
+} ElemWindowCursorPosition;
 
 /**
  * Defines a function pointer type for log handling.
@@ -261,6 +270,12 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
  * @param windowState New state for the window.
  */
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
+
+// TODO: Comments
+// TODO: Make sure the coordinates are consistent accross all platforms
+ElemAPI void ElemShowWindowCursor(ElemWindow window);
+ElemAPI void ElemHideWindowCursor(ElemWindow window);
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window);
 
 //--------------------------------------------------------------------------------
 // ##Module_Graphics##
@@ -385,6 +400,8 @@ typedef struct
  */
 typedef struct
 {
+    // TODO: Add ElemGraphicsDevice Handle
+
     // Name of the graphics device.
     const char* DeviceName;
     // API used by the graphics device.
@@ -471,6 +488,8 @@ typedef struct
  */
 typedef struct
 {
+    // TODO: Do we need that? This was foreseen for metal because SharedEvent may be slower
+    // But it would be great to avoid this flag.
     // If set to true, CPU can wait on the fence.
     bool FenceAwaitableOnCpu;
     // Fences that the execution should wait on before starting.
@@ -519,7 +538,7 @@ typedef struct
     // Time since the last frame was presented, in seconds.
     double DeltaTimeInSeconds; 
     // Timestamp for when the next frame is expected to be presented, in seconds.
-    double NextPresentTimeStampInSeconds;
+    double NextPresentTimestampInSeconds;
 } ElemSwapChainUpdateParameters;
 
 /**
@@ -843,6 +862,214 @@ ElemAPI void ElemSetViewports(ElemCommandList commandList, ElemViewportSpan view
  * @param threadGroupCountZ The number of thread groups in the Z dimension.
  */
 ElemAPI void ElemDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
+
+//--------------------------------------------------------------------------------
+// ##Module_Inputs##
+//--------------------------------------------------------------------------------
+
+typedef ElemHandle ElemInputDevice;
+
+typedef enum
+{
+    ElemInputDeviceType_Unknown,
+    ElemInputDeviceType_Keyboard,
+    ElemInputDeviceType_Mouse,
+    ElemInputDeviceType_Gamepad,
+} ElemInputDeviceType;
+
+// TODO: Assign values to enum
+// TODO: Review the enums to see if it still ok at the end of the implementation
+typedef enum
+{
+    ElemInputType_Digital,
+    ElemInputType_Analog,
+    ElemInputType_Delta,
+} ElemInputType;
+
+typedef enum
+{
+    ElemInputId_Unknown,
+    ElemInputId_KeyTilde,
+    ElemInputId_Key1,
+    ElemInputId_Key2,
+    ElemInputId_Key3,
+    ElemInputId_Key4,
+    ElemInputId_Key5,
+    ElemInputId_Key6,
+    ElemInputId_Key7,
+    ElemInputId_Key8,
+    ElemInputId_Key9,
+    ElemInputId_Key0,
+    ElemInputId_KeyDash,
+    ElemInputId_KeyEquals,
+    ElemInputId_KeyBackspace,
+    ElemInputId_KeyTab,
+    ElemInputId_KeyQ,
+    ElemInputId_KeyW,
+    ElemInputId_KeyE,
+    ElemInputId_KeyR,
+    ElemInputId_KeyT,
+    ElemInputId_KeyY,
+    ElemInputId_KeyU,
+    ElemInputId_KeyI,
+    ElemInputId_KeyO,
+    ElemInputId_KeyP,
+    ElemInputId_KeyLeftBrace,
+    ElemInputId_KeyRightBrace,
+    ElemInputId_KeyBackSlash,
+    ElemInputId_KeyCapsLock,
+    ElemInputId_KeyA,
+    ElemInputId_KeyS,
+    ElemInputId_KeyD,
+    ElemInputId_KeyF,
+    ElemInputId_KeyG,
+    ElemInputId_KeyH,
+    ElemInputId_KeyJ,
+    ElemInputId_KeyK,
+    ElemInputId_KeyL,
+    ElemInputId_KeySemiColon,
+    ElemInputId_KeyApostrophe,
+    ElemInputId_KeyEnter,
+    ElemInputId_KeyLeftShift,
+    ElemInputId_KeyZ,
+    ElemInputId_KeyX,
+    ElemInputId_KeyC,
+    ElemInputId_KeyV,
+    ElemInputId_KeyB,
+    ElemInputId_KeyN,
+    ElemInputId_KeyM,
+    ElemInputId_KeyComma,
+    ElemInputId_KeyPeriod,
+    ElemInputId_KeySlash,
+    ElemInputId_KeyRightShift,
+    ElemInputId_KeyLeftControl,
+    ElemInputId_KeyLeftAlt,
+    ElemInputId_KeySpacebar,
+    ElemInputId_KeyRightAlt,
+    ElemInputId_KeyRightControl,
+    ElemInputId_KeyInsert,
+    ElemInputId_KeyDelete,
+    ElemInputId_KeyLeftArrow,
+    ElemInputId_KeyHome,
+    ElemInputId_KeyEnd,
+    ElemInputId_KeyUpArrow,
+    ElemInputId_KeyDownArrow,
+    ElemInputId_KeyPageUp,
+    ElemInputId_KeyPageDown,
+    ElemInputId_KeyRightArrow,
+    ElemInputId_KeyNumpadLock,
+    ElemInputId_KeyNumpad7,
+    ElemInputId_KeyNumpad4,
+    ElemInputId_KeyNumpad1,
+    ElemInputId_KeyNumpadDivide,
+    ElemInputId_KeyNumpad8,
+    ElemInputId_KeyNumpad5,
+    ElemInputId_KeyNumpad2,
+    ElemInputId_KeyNumpad0,
+    ElemInputId_KeyNumpadMultiply,
+    ElemInputId_KeyNumpad9,
+    ElemInputId_KeyNumpad6,
+    ElemInputId_KeyNumpad3,
+    ElemInputId_KeyNumpadSeparator,
+    ElemInputId_KeyNumpadMinus,
+    ElemInputId_KeyNumpadAdd,
+    ElemInputId_KeyNumpadEnter,
+    ElemInputId_KeyEscape,
+    ElemInputId_KeyF1,
+    ElemInputId_KeyF2,
+    ElemInputId_KeyF3,
+    ElemInputId_KeyF4,
+    ElemInputId_KeyF5,
+    ElemInputId_KeyF6,
+    ElemInputId_KeyF7,
+    ElemInputId_KeyF8,
+    ElemInputId_KeyF9,
+    ElemInputId_KeyF10,
+    ElemInputId_KeyF11,
+    ElemInputId_KeyF12,
+    ElemInputId_KeyPrintScreen,
+    ElemInputId_KeyScrollLock,
+    ElemInputId_KeyPause,
+    ElemInputId_KeyLeftSystem,
+    ElemInputId_KeyRightSystem,
+    ElemInputId_KeyApp,
+    ElemInputId_MouseLeftButton,
+    ElemInputId_MouseRightButton,
+    ElemInputId_MouseMiddleButton,
+    ElemInputId_MouseExtraButton1,
+    ElemInputId_MouseExtraButton2,
+    ElemInputId_MouseAxisXNegative,
+    ElemInputId_MouseAxisXPositive,
+    ElemInputId_MouseAxisYNegative,
+    ElemInputId_MouseAxisYPositive,
+    ElemInputId_MouseWheelNegative,
+    ElemInputId_MouseWheelPositive,
+    ElemInputId_MouseHorizontalWheelNegative,
+    ElemInputId_MouseHorizontalWheelPositive,
+    ElemInputID_GamepadButtonA,
+    ElemInputID_GamepadButtonB,
+    ElemInputID_GamepadButtonX,
+    ElemInputID_GamepadButtonY,
+    ElemInputID_GamepadButtonMenu,
+    ElemInputID_GamepadButtonOptions,
+    ElemInputID_GamepadButtonHome,
+    ElemInputID_GamepadLeftShoulder,
+    ElemInputID_GamepadRightShoulder,
+    ElemInputID_GamepadLeftTrigger,
+    ElemInputID_GamepadRightTrigger,
+    ElemInputId_GamepadLeftStickXNegative,
+    ElemInputId_GamepadLeftStickXPositive,
+    ElemInputId_GamepadLeftStickYNegative,
+    ElemInputId_GamepadLeftStickYPositive,
+    ElemInputId_GamepadLeftStickButton,
+    ElemInputId_GamepadRightStickXNegative,
+    ElemInputId_GamepadRightStickXPositive,
+    ElemInputId_GamepadRightStickYNegative,
+    ElemInputId_GamepadRightStickYPositive,
+    ElemInputId_GamepadRightStickButton,
+    ElemInputId_GamepadDpadUp,
+    ElemInputId_GamepadDpadRight,
+    ElemInputId_GamepadDpadDown,
+    ElemInputId_GamepadDpadLeft,
+} ElemInputId;
+
+// TODO: Add a kind of player index? (Is it necessary, if we have the device id, the client code could determine its player)
+
+typedef struct
+{
+    ElemInputDevice Handle;
+    ElemInputDeviceType DeviceType;
+} ElemInputDeviceInfo;
+
+typedef struct
+{
+    ElemInputDeviceInfo* Items;
+    uint32_t Length;
+} ElemInputDeviceInfoSpan;
+
+typedef struct
+{
+    ElemWindow Window;
+    ElemInputDevice InputDevice;
+    ElemInputId InputId;
+    ElemInputType InputType;
+    float Value;
+    double ElapsedSeconds;
+} ElemInputEvent;
+
+typedef struct
+{
+    ElemInputEvent* Items;
+    uint32_t Length;
+} ElemInputEventSpan;
+
+typedef struct
+{
+    ElemInputEventSpan Events;
+} ElemInputStream;
+
+ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice);
+ElemAPI ElemInputStream ElemGetInputStream(void);
 
 #ifdef UseLoader
 #ifndef ElementalLoader

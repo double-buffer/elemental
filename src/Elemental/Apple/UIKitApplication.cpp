@@ -6,6 +6,9 @@
 
 MemoryArena ApplicationMemoryArena;
 
+uint64_t ApplePerformanceCounterStart;
+uint64_t ApplePerformanceCounterFrequencyInSeconds;
+
 void InitApplicationMemory()
 {
     if (ApplicationMemoryArena.Storage == nullptr)
@@ -17,6 +20,9 @@ void InitApplicationMemory()
         #ifdef _DEBUG
         SystemLogDebugMessage(ElemLogMessageCategory_Application, "Debug Mode");
         #endif
+
+        ApplePerformanceCounterStart = SystemPlatformGetHighPerformanceCounter();
+        ApplePerformanceCounterFrequencyInSeconds = SystemPlatformGetHighPerformanceCounterFrequencyInSeconds();
     }
 }
 

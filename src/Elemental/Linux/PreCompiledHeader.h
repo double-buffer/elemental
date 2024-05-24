@@ -2,21 +2,33 @@
 
 #include <xxh3.h>
 
+// TODO: Review headers
+#include <stdio.h>
+#include <dirent.h>
 #include <dlfcn.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
-#include <gio/gio.h>
-#include <gtk/gtk.h>
-#include <gdk/wayland/gdkwayland.h>
+#include <linux/input-event-codes.h>
+#include <linux/hidraw.h>
+#include <libudev.h>
+
 #include <wayland-client.h>
+#include <wayland-cursor.h>
+#include <relative-pointer-unstable-v1-client-protocol.h>
+#include <libdecor.h>
+
 
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)

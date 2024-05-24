@@ -1,5 +1,6 @@
 #include "UIKitWindow.h"
 #include "UIKitApplication.h"
+#include "Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 
@@ -32,6 +33,8 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options)
         .WindowHandle = windowHandle,
         .ViewController = viewController
     }); 
+    
+    InitInputs(handle);
     
     return handle;
 }
@@ -71,4 +74,18 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title)
 
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState)
 {
+}
+
+// TODO: on ipad
+ElemAPI void ElemShowWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI void ElemHideWindowCursor(ElemWindow window)
+{
+}
+
+ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window)
+{
+    return {};
 }

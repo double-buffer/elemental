@@ -28,14 +28,7 @@ elseif(LINUX)
     target_precompile_headers(SystemFunctionsTests PRIVATE ../../src/Elemental/Linux/PreCompiledHeader.h)
     target_compile_options(SystemFunctionsTests PRIVATE -fms-extensions)
 
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GTK4 REQUIRED gtk4)
-
-    target_include_directories(SystemFunctionsTests PRIVATE ${GTK4_INCLUDE_DIRS})
-    target_link_directories(SystemFunctionsTests PRIVATE ${GTK4_LIBRARY_DIRS})
-    target_compile_options(SystemFunctionsTests PRIVATE ${GTK4_CFLAGS_OTHER})
-    target_link_libraries(SystemFunctionsTests PRIVATE ${GTK4_LIBRARIES})
-
+    target_link_libraries(SystemFunctionsTests PRIVATE Wayland)
 endif()
 
 configure_project_package(SystemFunctionsTests "tests")

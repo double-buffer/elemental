@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------
 // Elemental Tools Library
-// Version: 1.0.0-dev3
+// Version: 1.0.0-dev4
 //
 // MIT License
 //
@@ -186,6 +186,8 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
  * @return The result of the compilation, including any binaries and messages.
  */
 ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
+
+// TODO: Can we compile multiple source files into one library?
 
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader

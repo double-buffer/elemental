@@ -2,6 +2,7 @@
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
 #include "VulkanTexture.h"
+#include "Inputs/Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -10,7 +11,8 @@
 #include "../Elemental/Microsoft/Win32Application.h"
 #include "../Elemental/Microsoft/Win32Window.h"
 #else
-#include "../Elemental/Linux/GtkWindow.h"
+#include "../Elemental/Linux/WaylandApplication.h"
+#include "../Elemental/Linux/WaylandWindow.h"
 #endif
 
 #define VULKAN_MAX_SWAPCHAINS 10u
@@ -84,6 +86,7 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
         compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     }
 
+    // TODO: We have still some errors sometimes (Suboptimal)
     swapChainCreateInfo->imageArrayLayers = 1;
     swapChainCreateInfo->imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapChainCreateInfo->imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -158,7 +161,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     #ifdef _WIN32
     auto windowData = GetWin32WindowData(swapChainData->Window);
     #elif __linux__
-    auto windowData = GetGtkWindowData(swapChainData->Window);
+    auto windowData = GetWaylandWindowData(swapChainData->Window);
     #endif
 
     SystemAssert(windowData);
@@ -185,6 +188,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     }
     
     // TODO: Compute timing information
+    // TODO: If delta time is above a thresold, take the delta time based on target FPS
     auto deltaTime = 1.0f / windowData->MonitorRefreshRate;
 
     ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);
@@ -206,10 +210,11 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
         .SwapChainInfo = VulkanGetSwapChainInfo(handle),
         .BackBufferTexture = backBufferTexture,
         .DeltaTimeInSeconds = deltaTime,
-        .NextPresentTimeStampInSeconds = 1.0f//nextPresentTimeStampInSeconds
+        .NextPresentTimestampInSeconds = 1.0f//nextPresentTimestampInSeconds
     };
     
     swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
+    ResetInputsFrame();
 /*
     if (!swapChainData->PresentCalled)
     {
@@ -229,26 +234,29 @@ struct WaylandCallbackParameters
 
 void RegisterWaylandFrameCallback(WaylandCallbackParameters* parameters);
 
-// BUG: Sometimes we have a crash if we exit the program at the wrong time
 static void WaylandFrameCallback(void* data, wl_callback* callback, uint32_t time) 
 {
     auto parameters = (WaylandCallbackParameters*)data;
 
-    auto windowData = GetGtkWindowData(parameters->Window);
-    if (windowData->IsClosed)
-{
-        ElemExitApplication(0);
-        return;
-    }
 
     // TODO: investigate frame time
     // See: https://gitlab.gnome.org/GNOME/gtk/-/blob/main/gdk/wayland/gdksurface-wayland.c
     //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wayland callback: %u", time);
 
     CheckVulkanAvailableSwapChain(parameters->SwapChain);
+    
+    auto windowData = GetWaylandWindowData(parameters->Window);
 
-    wl_callback_destroy(callback);
-    RegisterWaylandFrameCallback(parameters);
+    if (windowData->IsClosed)
+    {
+        ElemExitApplication(0);
+        return;
+    }
+    else
+    {
+        wl_callback_destroy(callback);
+        RegisterWaylandFrameCallback(parameters);
+    }
 }
 
 static wl_callback_listener frame_listener = { WaylandFrameCallback };
@@ -293,14 +301,12 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     VkSurfaceKHR windowSurface;
     AssertIfFailed(vkCreateWin32SurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
     #else
-    auto windowData = GetGtkWindowData(window);
+    auto windowData = GetWaylandWindowData(window);
     SystemAssert(windowData);
     
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = { VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR };
     surfaceCreateInfo.display = windowData->WaylandDisplay;
     surfaceCreateInfo.surface = windowData->WaylandSurface;
-
-    gdk_display_sync(windowData->GdkDisplay);
 
     VkSurfaceKHR windowSurface;
     AssertIfFailed(vkCreateWaylandSurfaceKHR(VulkanInstance, &surfaceCreateInfo, nullptr, &windowSurface));
@@ -403,10 +409,12 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     #ifdef _WIN32
     AddWin32RunLoopHandler(CheckVulkanAvailableSwapChain, handle);
     #elif __linux__
+    AddWaylandInitHandler(CheckVulkanAvailableSwapChain, handle);
+
     auto waylandCallbackParameters = SystemPushStruct<WaylandCallbackParameters>(VulkanGraphicsMemoryArena);
     waylandCallbackParameters->SwapChain = handle;
     waylandCallbackParameters->Window = window;
-    waylandCallbackParameters->WaylandSurface = windowData->WaylandSurfaceParent;
+    waylandCallbackParameters->WaylandSurface = windowData->WaylandSurface;
 
     RegisterWaylandFrameCallback(waylandCallbackParameters);
     #endif

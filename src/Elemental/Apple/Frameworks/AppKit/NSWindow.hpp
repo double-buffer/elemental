@@ -63,6 +63,8 @@ namespace NS
 			bool				zoomed();
 			void				zoom(const Object* sender);
 
+            CGPoint             convertPointFromScreen(CGPoint point);
+
 			void				close();
 	};
 
@@ -160,6 +162,11 @@ _NS_INLINE bool NS::Window::zoomed()
 _NS_INLINE void NS::Window::zoom( const Object* pSender )
 {
 	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( zoom_ ), pSender );
+}
+            
+_NS_INLINE CGPoint NS::Window::convertPointFromScreen(CGPoint point)
+{
+	return Object::sendMessage< CGPoint >( this, _APPKIT_PRIVATE_SEL( convertPointFromScreen_ ), point );
 }
 
 _NS_INLINE void NS::Window::close()

@@ -18,5 +18,8 @@ class MacOSApplicationDelegate : public NS::ApplicationDelegate
         const ElemRunApplicationParameters* _runParameters;
 };
 
+extern uint64_t ApplePerformanceCounterStart;
+extern uint64_t ApplePerformanceCounterFrequencyInSeconds;
+
 extern MemoryArena ApplicationMemoryArena;
 extern bool ApplicationExited;

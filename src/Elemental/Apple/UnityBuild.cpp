@@ -8,6 +8,8 @@
 #include "UIKitWindow.cpp"
 #endif
 
+#include "Inputs.cpp"
+
 #include "Graphics/MetalGraphicsDevice.cpp"
 #include "Graphics/MetalCommandList.cpp"
 #include "Graphics/MetalSwapChain.cpp"
@@ -20,6 +22,8 @@
 #include "Graphics/SwapChain.cpp"
 #include "Graphics/Shader.cpp"
 #include "Graphics/Rendering.cpp"
+
+#include "Inputs/Inputs.cpp"
 
 #include "PosixPlatformFunctions.cpp"
 #include "SystemPlatformFunctions.cpp"

@@ -5,9 +5,9 @@ target_compile_options(Elemental PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-nullabil
 target_compile_options(Elemental PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-c11-extensions>)
 
 if(BUILD_FOR_IOS)
-    target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework QuartzCore" "SHELL:-framework Foundation" "SHELL:-framework UIKit" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
+    target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework QuartzCore" "SHELL:-framework Foundation" "SHELL:-framework UIKit" "SHELL:-framework CoreGraphics" "SHELL:-framework GameController" "SHELL:-framework IOKit")
 else()
-    target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework QuartzCore" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework IOKit")
+    target_link_options(Elemental PRIVATE "SHELL:-framework Metal" "SHELL:-framework QuartzCore" "SHELL:-framework Foundation" "SHELL:-framework Cocoa" "SHELL:-framework CoreGraphics" "SHELL:-framework GameController" "SHELL:-framework IOKit")
 endif()
 
 set(ELEMENTAL_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Elemental.framework" PARENT_SCOPE)

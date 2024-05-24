@@ -71,6 +71,7 @@ _APPKIT_PRIVATE_DEF_CLS( NSWindow );
 _APPKIT_PRIVATE_DEF_CLS( NSMenu );
 _APPKIT_PRIVATE_DEF_CLS( NSMenuItem );
 _APPKIT_PRIVATE_DEF_CLS( NSEvent );
+_APPKIT_PRIVATE_DEF_CLS( NSCursor );
 
 } // Class
 
@@ -252,6 +253,21 @@ _APPKIT_PRIVATE_DEF_SEL( setWantsLayer_,
 
 _APPKIT_PRIVATE_DEF_SEL( setLayer_,
 						"setLayer:" );
+
+_APPKIT_PRIVATE_DEF_SEL( mouseLocation,
+						"mouseLocation" );
+
+_APPKIT_PRIVATE_DEF_SEL( convertPointFromScreen_,
+						"convertPointFromScreen:" );
+
+_APPKIT_PRIVATE_DEF_SEL( convertPoint_fromView_,
+						"convertPoint:fromView:" );	
+
+_APPKIT_PRIVATE_DEF_SEL( hide,
+						"hide" );
+
+_APPKIT_PRIVATE_DEF_SEL( unhide,
+						"unhide" );
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
