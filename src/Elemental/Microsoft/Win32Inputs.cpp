@@ -515,6 +515,12 @@ void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
         inputDevice = *SystemGetDictionaryValue(win32InputDeviceDictionary, rawInputData->header.hDevice);
     }
 
+    if (inputDevice == ELEM_HANDLE_NULL)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Input device is not supported.");
+        return;
+    }
+
     auto inputDeviceData = GetInputDeviceData(inputDevice);
     SystemAssert(inputDeviceData);
 
