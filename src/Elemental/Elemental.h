@@ -1031,6 +1031,11 @@ typedef enum
     ElemInputId_GamepadDpadRight,
     ElemInputId_GamepadDpadDown,
     ElemInputId_GamepadDpadLeft,
+    ElemInputId_Touch,
+    ElemInputId_TouchXNegative,
+    ElemInputId_TouchXPositive,
+    ElemInputId_TouchYNegative,
+    ElemInputId_TouchYPositive,
 } ElemInputId;
 
 typedef struct

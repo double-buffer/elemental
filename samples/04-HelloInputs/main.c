@@ -1,3 +1,4 @@
+#include <math.h>
 #include "Elemental.h"
 #include "SampleUtils.h"
 #include "SampleMath.h"
@@ -132,7 +133,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
     {
         ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
 
-        if (inputEvent->InputType != ElemInputType_Delta)
+        //if (inputEvent->InputType != ElemInputType_Delta)
         {
             printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
         }
@@ -162,6 +163,10 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         UpdateInputValue(ElemInputId_MouseAxisXPositive, inputEvent, &inputState->TouchRotateRight);
         UpdateInputValue(ElemInputId_MouseAxisYNegative, inputEvent, &inputState->TouchRotateUp);
         UpdateInputValue(ElemInputId_MouseAxisYPositive, inputEvent, &inputState->TouchRotateDown);
+        UpdateInputValue(ElemInputId_TouchXNegative, inputEvent, &inputState->TouchRotateLeft);
+        UpdateInputValue(ElemInputId_TouchXPositive, inputEvent, &inputState->TouchRotateRight);
+        UpdateInputValue(ElemInputId_TouchYNegative, inputEvent, &inputState->TouchRotateUp);
+        UpdateInputValue(ElemInputId_TouchYPositive, inputEvent, &inputState->TouchRotateDown);
 
         // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
         UpdateInputValue(ElemInputId_KeyZ, inputEvent, &inputState->ZoomIn);
@@ -191,6 +196,16 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         }
 
         if (inputEvent->InputId == ElemInputId_MouseLeftButton)
+        {
+            if (applicationPayload->InputState.TouchAction && inputEvent->Value == 0.0f)
+            {
+                applicationPayload->InputState.TouchActionReleased = true;
+            }
+
+            applicationPayload->InputState.TouchAction = inputEvent->Value;
+        }
+
+        if (inputEvent->InputId == ElemInputId_Touch)
         {
             if (applicationPayload->InputState.TouchAction && inputEvent->Value == 0.0f)
             {
@@ -254,6 +269,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     float rotationYDelta = 0.0f;
     float rotationZDelta = 0.0f;
 
+    // TODO: On macbook pro we need to prioritize the mouse over the touchpad but keep touch into account
+
     // TODO: Can we add options to normalize the speed we need for different path?
     if (applicationPayload->InputState.TouchAction)
     {
@@ -278,7 +295,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             if (xDirection || yDirection)
             {
                 currentSpeed += acceleration * updateParameters->DeltaTimeInSeconds;
-                currentSpeed = min(currentSpeed, speed);
+                currentSpeed = fminf(currentSpeed, speed);
             }
             else
             {
@@ -321,7 +338,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     if (MagnitudeSquaredV3(rotationTouch) > 0)
     {
-        printf("Touch Speed = %f, %f, %f (%f)\n", rotationTouch.X, rotationTouch.Y, rotationTouch.Z, MagnitudeV3(rotationTouch));
+        //printf("Touch Speed = %f, %f, %f (%f)\n", rotationTouch.X, rotationTouch.Y, rotationTouch.Z, MagnitudeV3(rotationTouch));
         rotationXDelta += rotationTouch.X;
         rotationYDelta += rotationTouch.Y;
         rotationZDelta += rotationTouch.Z;
@@ -334,6 +351,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             rotationTouch = (Vector3){};
         }
     }
+        
+    //printf("Rotation Delta = %f, %f, %f, (%f)\n", rotationXDelta, rotationYDelta, rotationZDelta, applicationPayload->InputState.TouchRotateUp);
 
     if (rotationXDelta || rotationYDelta || rotationZDelta)
     {

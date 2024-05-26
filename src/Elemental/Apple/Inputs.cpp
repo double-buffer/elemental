@@ -454,10 +454,77 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
             });
         }
     }
-
 }
 
-// TODO: We need to lock the cursort in fullscreen for ipad and iphone
+void TouchHandler(ElemWindow window, uint32_t fingerIndex, float x, float y, float deltaX, float deltaY, uint32_t state)
+{
+    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
+    //auto inputDevice = AddAppleInputDevice(device, ElemInputDeviceType_Mouse);
+    auto inputDevice = 66u;
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test touch: deltaX=%f, deltaY=%f, state=%d (finger index: %d, x=%f, y=%f)", deltaX, deltaY, state, fingerIndex, x, y);
+
+    if (state == 0 || state == 2)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = ElemInputId_Touch,
+            .InputType = ElemInputType_Digital,
+            .Value = state == 0 ? 1.0f : 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+        if (deltaX < 0)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_TouchXNegative,
+                .InputType = ElemInputType_Delta,
+                .Value = -(float)deltaX,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+
+        if (deltaX > 0)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_TouchXPositive,
+                .InputType = ElemInputType_Delta,
+                .Value = (float)deltaX,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+
+        if (deltaY < 0)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_TouchYNegative,
+                .InputType = ElemInputType_Delta,
+                .Value = (float)deltaY,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+
+        if (deltaY > 0)
+        {
+            AddInputEvent({
+                .Window = window,
+                .InputDevice = inputDevice,
+                .InputId = ElemInputId_TouchYPositive,
+                .InputType = ElemInputType_Delta,
+                .Value = -(float)deltaY,
+                .ElapsedSeconds = elapsedSeconds
+            });
+        }
+}
+
+// TODO: We need to lock the cursor in fullscreen for ipad and iphone
 // See: https://developer.apple.com/wwdc20/10617
 
 void InitInputs(ElemWindow window)

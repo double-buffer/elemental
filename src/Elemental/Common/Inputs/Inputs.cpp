@@ -95,6 +95,7 @@ void AddInputEvent(ElemInputEvent inputEvent, bool needReset)
         {
             if (previousDeltaToReset[i].InputId == inputEvent.InputId)
             {
+            SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Remove Reset %d", inputEvent.InputId);
                 previousDeltaToReset[i].InputId = ElemInputId_Unknown;
                 break;
             }
@@ -126,6 +127,14 @@ void ResetInputsFrame()
 {
     InitInputsMemory();
 
+    currentInputEventsIndex = (currentInputEventsIndex + 1) % 2;
+    currentInputEventsWriteIndex = 0;
+
+    currentDeltaInputsToResetIndex = (currentDeltaInputsToResetIndex + 1) % 2;
+    previousDeltaInputsToResetWriteIndex = currentDeltaInputsToResetWriteIndex;
+    currentDeltaInputsToResetWriteIndex = 0; 
+
+    SystemPlatformClearMemory(&deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS], sizeof(ElemInputEvent) * MAX_INPUT_EVENTS);
     auto previousIndex = (currentDeltaInputsToResetIndex + 1) % 2;
     auto previousDeltaToReset = &deltaInputsToReset[previousIndex * MAX_INPUT_EVENTS];
 
@@ -136,17 +145,9 @@ void ResetInputsFrame()
             auto inputEvent = previousDeltaToReset[i];
             inputEvent.Value = 0.0f;
             inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
+            SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Reset %d", inputEvent.InputId);
         }
     }
-
-    currentInputEventsIndex = (currentInputEventsIndex + 1) % 2;
-    currentInputEventsWriteIndex = 0;
-
-    currentDeltaInputsToResetIndex = (currentDeltaInputsToResetIndex + 1) % 2;
-    previousDeltaInputsToResetWriteIndex = currentDeltaInputsToResetWriteIndex;
-    currentDeltaInputsToResetWriteIndex = 0; 
-
-    SystemPlatformClearMemory(&deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS], sizeof(ElemInputEvent) * MAX_INPUT_EVENTS);
 }
 
 ElemAPI ElemInputStream ElemGetInputStream()

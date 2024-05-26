@@ -27,7 +27,7 @@ typedef union
     struct
     {
         Vector3 XYZ;
-    };
+    }; 
 } Vector4;
 
 Vector2 InverseV2(Vector2 v)
