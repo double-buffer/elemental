@@ -133,7 +133,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
     {
         ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
 
-        //if (inputEvent->InputType != ElemInputType_Delta)
+        if (inputEvent->InputType != ElemInputType_Delta)
         {
             printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
         }
@@ -240,7 +240,7 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
 Vector3 rotationTouch = { };
 float rotationTouchDecreaseSpeed = 0.001f;
 float rotationTouchMaxSpeed = 0.3f;
-bool useAcceleration = false;
+bool useAcceleration = true;
 float currentSpeed = 0.0f;
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
@@ -264,7 +264,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     //ElemWindowCursorPosition cursorPosition = ElemGetWindowCursorPosition(applicationPayload->Window);
     //printf("Cursor Position: %u, %u\n", cursorPosition.X, cursorPosition.Y);
 
-    // TODO: Use an acceleration?
+    // TODO: Use an acceleration? (only for linear motions! Touch motion or mouse are already accelerated by the user :))
     float rotationXDelta = 0.0f;
     float rotationYDelta = 0.0f;
     float rotationZDelta = 0.0f;
@@ -292,6 +292,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
         else
         {
+            rotationXDelta = 0.5f * acceleration * xDirection * pow2f(updateParameters->DeltaTimeInSeconds) + xDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
+            rotationYDelta = 0.5f * acceleration * yDirection * pow2f(updateParameters->DeltaTimeInSeconds) + yDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
+
             if (xDirection || yDirection)
             {
                 currentSpeed += acceleration * updateParameters->DeltaTimeInSeconds;
@@ -301,9 +304,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             {
                 currentSpeed = 0.0f;
             }
-
-            rotationXDelta = xDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
-            rotationYDelta = yDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
         }
     }
 

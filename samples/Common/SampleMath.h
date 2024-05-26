@@ -7,6 +7,11 @@
  * on readability and not performance. Don't use it in your production code!
  */
 
+float pow2f(float value)
+{
+    return value * value;
+}
+
 typedef struct
 {
     float X, Y;

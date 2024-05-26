@@ -74,6 +74,7 @@ class CustomView: UIView {
         }
     }
 
+    // Those variables are touch id dependends
     var previousLoc: CGPoint
     var deltaX: CGFloat
     var deltaY: CGFloat
@@ -108,8 +109,9 @@ class CustomView: UIView {
     }
 
     private func normalize(location: CGPoint) -> CGPoint {
-        let normalizedX = location.x / self.bounds.width
-        let normalizedY = location.y / self.bounds.height
+        let maxDimension = max(self.bounds.width, self.bounds.height)
+        let normalizedX = location.x / maxDimension
+        let normalizedY = location.y / maxDimension
         return CGPoint(x: normalizedX, y: normalizedY)
     }
 }
@@ -123,6 +125,8 @@ class CustomView: NSView {
         self.elemWindow = elemWindow
         self.touchHandler = touchHandler
         self.previousLoc = NSPoint(x: 0, y: 0)
+        self.deltaX = 0
+        self.deltaY = 0
         super.init(frame: frame)
 
         self.allowedTouchTypes = [.direct, .indirect]
@@ -190,15 +194,17 @@ class CustomView: NSView {
         return true
     }
 
+    // Those variables are touch id dependends
     var previousLoc: NSPoint
-
+    var deltaX: CGFloat
+    var deltaY: CGFloat
     private func sendTouchEvent(_ fingerIndex: UInt, _ touch: NSTouch) {
   
             // TODO: Location function crash but it seems ok because the normalized position
             // Seems good to compute the deltas
 
         // TODO: Test resting
-        let mul = 1000.0
+        let mul = 500.0
 
         let location = touch.normalizedPosition
         var deltaX = (location.x - previousLoc.x) * mul
@@ -211,8 +217,9 @@ class CustomView: NSView {
             state = 0
             deltaX = 0
             deltaY = 0
-        }
-        else if (touch.phase == .moved) {
+        } else if (touch.phase == .moved || touch.phase == .stationary) {
+            deltaX = (location.x - previousLoc.x) * mul
+            deltaY = (location.y - previousLoc.y) * mul
             state = 1
         } else if (touch.phase == .ended) {
             state = 2
