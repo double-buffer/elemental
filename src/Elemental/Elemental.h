@@ -1033,8 +1033,6 @@ typedef enum
     ElemInputId_GamepadDpadLeft,
 } ElemInputId;
 
-// TODO: Add a kind of player index? (Is it necessary, if we have the device id, the client code could determine its player)
-
 typedef struct
 {
     ElemInputDevice Handle;

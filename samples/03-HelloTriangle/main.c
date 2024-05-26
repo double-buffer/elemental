@@ -1,5 +1,5 @@
 #include "Elemental.h"
-#include "../Common/SampleUtils.h"
+#include "SampleUtils.h"
 
 typedef struct
 {

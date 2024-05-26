@@ -1,16 +1,6 @@
 #include "Elemental.h"
-#include <math.h>
-#include "../Common/SampleUtils.h"
-
-typedef struct
-{
-    float X, Y, Z;
-} Vector3;
-
-typedef struct
-{
-    float X, Y, Z, W;
-} Vector4;
+#include "SampleUtils.h"
+#include "SampleMath.h"
 
 typedef struct
 {
@@ -31,7 +21,9 @@ typedef struct
     float RotateSideRight;
 
     float TouchAction;
+    float TouchActionReleased;
     float TouchRotateSideAction;
+    float TouchRotateSideActionReleased;
     float TouchRotateLeft;
     float TouchRotateRight;
     float TouchRotateUp;
@@ -42,6 +34,8 @@ typedef struct
     float ChangeColorAction;
     float HideCursorAction;
     float ShowCursorAction;
+    float SwitchAcceleration;
+    float SwitchAccelerationReleased;
 
     float EscapePressed;
     float EscapeReleased;
@@ -58,40 +52,6 @@ typedef struct
     InputState InputState;
     ShaderParameters ShaderParameters;
 } ApplicationPayload;
-
-// TODO: Review all the maths
-Vector4 CreateQuaternion(Vector3 v, float w)
-{
-	Vector4 result;
-    
-	result.X = v.X * sinf(w * 0.5f);
-	result.Y = v.Y * sinf(w * 0.5f);
-	result.Z = v.Z * sinf(w * 0.5f);
-	result.W = cosf(w * 0.5f);
-
-	return result;
-}
-
-Vector3 crossProduct(Vector4 v1, Vector4 v2) {
-    Vector3 result;
-    result.X = v1.Y * v2.Z - v1.Z * v2.Y;
-    result.Y = v1.Z * v2.X - v1.X * v2.Z;
-    result.Z = v1.X * v2.Y - v1.Y * v2.X;
-    return result;
-}
-float dotProduct(Vector4 v1, Vector4 v2) {
-    return v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
-}
-Vector4 qmul(Vector4 q1, Vector4 q2)
-{
-    float x = q2.X * q1.W + q1.X * q2.W + crossProduct(q1, q2).X;
-    float y = q2.Y * q1.W + q1.Y * q2.W + crossProduct(q1, q2).Y;
-    float z = q2.Z * q1.W + q1.Z * q2.W + crossProduct(q1, q2).Z;
-    
-    float w = q1.W * q2.W - dotProduct(q1, q2);
-
-    return (Vector4) { x, y, z, w };
-}
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
 
@@ -154,6 +114,20 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         applicationPayload->InputState.EscapeReleased = false;
     }
 
+    if (!applicationPayload->InputState.TouchAction && applicationPayload->InputState.TouchActionReleased)
+    {
+        applicationPayload->InputState.TouchActionReleased = false;
+    }
+
+    if (!applicationPayload->InputState.TouchRotateSideAction && applicationPayload->InputState.TouchRotateSideActionReleased)
+    {
+        applicationPayload->InputState.TouchRotateSideActionReleased = false;
+    }
+    if (!applicationPayload->InputState.SwitchAcceleration && applicationPayload->InputState.SwitchAccelerationReleased)
+    {
+        applicationPayload->InputState.SwitchAccelerationReleased = false;
+    }
+
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
         ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
@@ -182,8 +156,8 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         UpdateInputValue(ElemInputId_KeyE, inputEvent, &inputState->RotateSideRight);
         UpdateInputValue(ElemInputID_GamepadRightTrigger, inputEvent, &inputState->RotateSideRight);
 
-        UpdateInputValue(ElemInputId_MouseLeftButton, inputEvent, &inputState->TouchAction);
-        UpdateInputValue(ElemInputId_MouseRightButton, inputEvent, &inputState->TouchRotateSideAction);
+        //UpdateInputValue(ElemInputId_MouseLeftButton, inputEvent, &inputState->TouchAction);
+        //UpdateInputValue(ElemInputId_MouseRightButton, inputEvent, &inputState->TouchRotateSideAction);
         UpdateInputValue(ElemInputId_MouseAxisXNegative, inputEvent, &inputState->TouchRotateLeft);
         UpdateInputValue(ElemInputId_MouseAxisXPositive, inputEvent, &inputState->TouchRotateRight);
         UpdateInputValue(ElemInputId_MouseAxisYNegative, inputEvent, &inputState->TouchRotateUp);
@@ -215,8 +189,44 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
 
             applicationPayload->InputState.EscapePressed = inputEvent->Value;
         }
+
+        if (inputEvent->InputId == ElemInputId_MouseLeftButton)
+        {
+            if (applicationPayload->InputState.TouchAction && inputEvent->Value == 0.0f)
+            {
+                applicationPayload->InputState.TouchActionReleased = true;
+            }
+
+            applicationPayload->InputState.TouchAction = inputEvent->Value;
+        }
+
+        if (inputEvent->InputId == ElemInputId_MouseRightButton)
+        {
+            if (applicationPayload->InputState.TouchRotateSideAction && inputEvent->Value == 0.0f)
+            {
+                applicationPayload->InputState.TouchRotateSideActionReleased = true;
+            }
+
+            applicationPayload->InputState.TouchRotateSideAction = inputEvent->Value;
+        }
+
+        if (inputEvent->InputId == ElemInputId_KeyF3)
+        {
+            if (applicationPayload->InputState.SwitchAcceleration && inputEvent->Value == 0.0f)
+            {
+                applicationPayload->InputState.SwitchAccelerationReleased = true;
+            }
+
+            applicationPayload->InputState.SwitchAcceleration = inputEvent->Value;
+        }
     }
 }
+
+Vector3 rotationTouch = { };
+float rotationTouchDecreaseSpeed = 0.001f;
+float rotationTouchMaxSpeed = 0.3f;
+bool useAcceleration = false;
+float currentSpeed = 0.0f;
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
@@ -230,6 +240,12 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
+    if (applicationPayload->InputState.SwitchAccelerationReleased)
+    {
+        useAcceleration = !useAcceleration;
+        printf("Acceleration: %d\n", useAcceleration);
+    }
+
     //ElemWindowCursorPosition cursorPosition = ElemGetWindowCursorPosition(applicationPayload->Window);
     //printf("Cursor Position: %u, %u\n", cursorPosition.X, cursorPosition.Y);
 
@@ -241,13 +257,37 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // TODO: Can we add options to normalize the speed we need for different path?
     if (applicationPayload->InputState.TouchAction)
     {
-        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 2.0f * updateParameters->DeltaTimeInSeconds;
-        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
+        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
+        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
     }
     else
     {
-        rotationXDelta = (applicationPayload->InputState.RotateUp - applicationPayload->InputState.RotateDown) * 5.0f * updateParameters->DeltaTimeInSeconds;
-        rotationYDelta = (applicationPayload->InputState.RotateLeft - applicationPayload->InputState.RotateRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
+        float acceleration = 30.0f;
+        float speed = 8.0f;
+
+        float xDirection = (applicationPayload->InputState.RotateUp - applicationPayload->InputState.RotateDown);
+        float yDirection = (applicationPayload->InputState.RotateLeft - applicationPayload->InputState.RotateRight);
+
+        if (!useAcceleration)
+        {
+            rotationXDelta = xDirection * speed * updateParameters->DeltaTimeInSeconds;
+            rotationYDelta = yDirection * speed * updateParameters->DeltaTimeInSeconds;
+        }
+        else
+        {
+            if (xDirection || yDirection)
+            {
+                currentSpeed += acceleration * updateParameters->DeltaTimeInSeconds;
+                currentSpeed = min(currentSpeed, speed);
+            }
+            else
+            {
+                currentSpeed = 0.0f;
+            }
+
+            rotationXDelta = xDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
+            rotationYDelta = yDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
+        }
     }
 
     if (applicationPayload->InputState.TouchRotateSideAction)
@@ -259,10 +299,46 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         rotationZDelta = (applicationPayload->InputState.RotateSideLeft - applicationPayload->InputState.RotateSideRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
     }
 
+    if (applicationPayload->InputState.TouchActionReleased || applicationPayload->InputState.TouchRotateSideActionReleased)
+    {
+
+        if (applicationPayload->InputState.TouchActionReleased)
+        {
+            rotationTouch.X = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
+            rotationTouch.Y = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
+        }
+
+        if (applicationPayload->InputState.TouchRotateSideActionReleased)
+        {
+            rotationTouch.Z = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
+        }
+
+        if (MagnitudeV3(rotationTouch) > rotationTouchMaxSpeed)
+        {
+            rotationTouch = MulScalarV3(NormalizeV3(rotationTouch), rotationTouchMaxSpeed);
+        }
+    }
+
+    if (MagnitudeSquaredV3(rotationTouch) > 0)
+    {
+        printf("Touch Speed = %f, %f, %f (%f)\n", rotationTouch.X, rotationTouch.Y, rotationTouch.Z, MagnitudeV3(rotationTouch));
+        rotationXDelta += rotationTouch.X;
+        rotationYDelta += rotationTouch.Y;
+        rotationZDelta += rotationTouch.Z;
+
+        Vector3 inverse = MulScalarV3(NormalizeV3(InverseV3(rotationTouch)), rotationTouchDecreaseSpeed);
+        rotationTouch = AddV3(rotationTouch, inverse);
+
+        if (MagnitudeV3(rotationTouch) < 0.001f)
+        {
+            rotationTouch = (Vector3){};
+        }
+    }
+
     if (rotationXDelta || rotationYDelta || rotationZDelta)
     {
-        Vector4 rotationQuaternion = qmul(CreateQuaternion((Vector3){ 1, 0, 0 }, rotationXDelta), qmul(CreateQuaternion((Vector3){ 0, 0, 1 }, rotationZDelta), CreateQuaternion((Vector3){ 0, 1, 0 }, rotationYDelta)));
-        applicationPayload->ShaderParameters.RotationQuaternion = qmul(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
+        Vector4 rotationQuaternion = MulQuat(CreateQuaternion((Vector3){ 1, 0, 0 }, rotationXDelta), MulQuat(CreateQuaternion((Vector3){ 0, 0, 1 }, rotationZDelta), CreateQuaternion((Vector3){ 0, 1, 0 }, rotationYDelta)));
+        applicationPayload->ShaderParameters.RotationQuaternion = MulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
 
     applicationPayload->ShaderParameters.Zoom += (applicationPayload->InputState.ZoomIn - applicationPayload->InputState.ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds;

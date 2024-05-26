@@ -95,6 +95,8 @@ if(NOT BUILD_FOR_IOS)
 add_subdirectory(src/ElementalTools)
 endif()
 
+add_subdirectory(samples)
+
 set(SUB_PROJECTS "./tests" "./samples")
 
 foreach(SUB_PROJECT IN LISTS SUB_PROJECTS)

@@ -41,6 +41,7 @@ ElemInputDevice AddWin32RawInputDevice(HANDLE device, DWORD type)
     {
         if (!IsHidDeviceSupported(rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId))
         {
+            SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "HID Input device is not supported. (Vendor: %d, Product: %d)", rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId);
             return ELEM_HANDLE_NULL;
         }
         
@@ -86,27 +87,6 @@ void InitWin32Inputs(HWND window)
     }
 
     win32InputDeviceDictionary = SystemCreateDictionary<HANDLE, ElemInputDevice>(ApplicationMemoryArena, MAX_INPUT_DEVICES);
-
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-
-    uint32_t devicesListLength;
-    AssertIfFailed(GetRawInputDeviceList(nullptr, &devicesListLength, sizeof(RAWINPUTDEVICELIST)));
-
-    auto devicesList = SystemPushArray<RAWINPUTDEVICELIST>(stackMemoryArena, devicesListLength);
-    AssertIfFailed(GetRawInputDeviceList(devicesList.Pointer, &devicesListLength, sizeof(RAWINPUTDEVICELIST)));
-    
-    for (uint32_t i = 0; i < devicesListLength; i++)
-    {
-        auto device = devicesList[i];
-
-        if (device.dwType == RIM_TYPEMOUSE || device.dwType == RIM_TYPEKEYBOARD || device.dwType == RIM_TYPEHID)
-        {
-            if (!SystemDictionaryContainsKey(win32InputDeviceDictionary, device.hDevice))
-            {
-                AddWin32RawInputDevice(device.hDevice, device.dwType);
-            }
-        }
-    }
 }
 
 ElemInputId GetWin32InputIdFromMakeCode(WPARAM wParam)
@@ -517,7 +497,6 @@ void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
 
     if (inputDevice == ELEM_HANDLE_NULL)
     {
-        SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Input device is not supported.");
         return;
     }
 
