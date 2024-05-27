@@ -35,6 +35,8 @@ typedef union
     }; 
 } Vector4;
 
+#define V3Zero (Vector3) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f }
+
 Vector2 InverseV2(Vector2 v)
 {
 	Vector2 result;
@@ -122,6 +124,17 @@ Vector3 MulScalarV3(Vector3 v, float scalar)
 	result.X = v.X * scalar;
 	result.Y = v.Y * scalar;
 	result.Z = v.Z * scalar;
+
+	return result;
+}
+
+Vector3 MulV3(Vector3 v1, Vector3 v2)
+{
+	Vector3 result;
+
+	result.X = v1.X * v2.X;
+	result.Y = v1.Y * v2.Y;
+	result.Z = v1.Z * v2.Z;
 
 	return result;
 }

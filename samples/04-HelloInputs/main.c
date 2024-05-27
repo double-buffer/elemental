@@ -5,15 +5,6 @@
 
 typedef struct
 {
-    Vector4 RotationQuaternion;
-    float Zoom;
-    float AspectRatio;
-    uint32_t TriangeColor;
-} ShaderParameters;
-
-// TODO: Rename this to InputActions
-typedef struct
-{
     float RotateLeft;
     float RotateRight;
     float RotateUp;
@@ -21,10 +12,10 @@ typedef struct
     float RotateSideLeft;
     float RotateSideRight;
 
-    float TouchAction;
-    float TouchActionReleased;
-    float TouchRotateSideAction;
-    float TouchRotateSideActionReleased;
+    float Touch;
+    float TouchReleased;
+    float TouchRotateSide;
+    float TouchRotateSideReleased;
     float TouchRotateLeft;
     float TouchRotateRight;
     float TouchRotateUp;
@@ -32,15 +23,21 @@ typedef struct
 
     float ZoomIn;
     float ZoomOut;
-    float ChangeColorAction;
-    float HideCursorAction;
-    float ShowCursorAction;
-    float SwitchAcceleration;
-    float SwitchAccelerationReleased;
+    float ChangeColor;
+    float HideCursor;
+    float ShowCursor;
 
-    float EscapePressed;
-    float EscapeReleased;
-} InputState;
+    float SwitchAcceleration;
+    float ExitApp;
+} InputActions;
+
+typedef struct
+{
+    Vector4 RotationQuaternion;
+    float Zoom;
+    float AspectRatio;
+    uint32_t TriangeColor;
+} ShaderParameters;
 
 typedef struct
 {
@@ -50,7 +47,7 @@ typedef struct
     ElemCommandQueue CommandQueue;
     ElemSwapChain SwapChain;
     ElemPipelineState GraphicsPipeline;
-    InputState InputState;
+    InputActions InputActions;
     ShaderParameters ShaderParameters;
 } ApplicationPayload;
 
@@ -96,6 +93,13 @@ void FreeSample(void* payload)
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 }
+void UpdateInputValueNegate(ElemInputId inputId, const ElemInputEvent* inputEvent, float* inputValue)
+{
+    if (inputEvent->InputId == inputId)
+    {
+        *inputValue = !inputEvent->Value;
+    }
+}
 
 void UpdateInputValue(ElemInputId inputId, const ElemInputEvent* inputEvent, float* inputValue)
 {
@@ -105,29 +109,14 @@ void UpdateInputValue(ElemInputId inputId, const ElemInputEvent* inputEvent, flo
     }
 }
 
-void UpdateInputs(ApplicationPayload* applicationPayload)
+void UpdateInputs(InputActions* inputActions)
 {
-    InputState* inputState = &applicationPayload->InputState;
     ElemInputStream inputStream = ElemGetInputStream();
 
-    if (!applicationPayload->InputState.EscapePressed && applicationPayload->InputState.EscapeReleased)
-    {
-        applicationPayload->InputState.EscapeReleased = false;
-    }
-
-    if (!applicationPayload->InputState.TouchAction && applicationPayload->InputState.TouchActionReleased)
-    {
-        applicationPayload->InputState.TouchActionReleased = false;
-    }
-
-    if (!applicationPayload->InputState.TouchRotateSideAction && applicationPayload->InputState.TouchRotateSideActionReleased)
-    {
-        applicationPayload->InputState.TouchRotateSideActionReleased = false;
-    }
-    if (!applicationPayload->InputState.SwitchAcceleration && applicationPayload->InputState.SwitchAccelerationReleased)
-    {
-        applicationPayload->InputState.SwitchAccelerationReleased = false;
-    }
+    inputActions->ExitApp = false;
+    inputActions->TouchReleased = false;
+    inputActions->TouchRotateSideReleased = false;
+    inputActions->SwitchAcceleration = false;
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
@@ -139,101 +128,56 @@ void UpdateInputs(ApplicationPayload* applicationPayload)
         }
 
         // TODO: Have a way to configure multiple keys for one event in one shot
-        UpdateInputValue(ElemInputId_KeyA, inputEvent, &inputState->RotateLeft);
-        UpdateInputValue(ElemInputId_GamepadLeftStickXNegative, inputEvent, &inputState->RotateLeft);
+        UpdateInputValue(ElemInputId_KeyA, inputEvent, &inputActions->RotateLeft);
+        UpdateInputValue(ElemInputId_GamepadLeftStickXNegative, inputEvent, &inputActions->RotateLeft);
 
-        UpdateInputValue(ElemInputId_KeyD, inputEvent, &inputState->RotateRight);
-        UpdateInputValue(ElemInputId_GamepadLeftStickXPositive, inputEvent, &inputState->RotateRight);
+        UpdateInputValue(ElemInputId_KeyD, inputEvent, &inputActions->RotateRight);
+        UpdateInputValue(ElemInputId_GamepadLeftStickXPositive, inputEvent, &inputActions->RotateRight);
 
-        UpdateInputValue(ElemInputId_KeyW, inputEvent, &inputState->RotateUp);
-        UpdateInputValue(ElemInputId_GamepadLeftStickYPositive, inputEvent, &inputState->RotateUp);
+        UpdateInputValue(ElemInputId_KeyW, inputEvent, &inputActions->RotateUp);
+        UpdateInputValue(ElemInputId_GamepadLeftStickYPositive, inputEvent, &inputActions->RotateUp);
 
-        UpdateInputValue(ElemInputId_KeyS, inputEvent, &inputState->RotateDown);
-        UpdateInputValue(ElemInputId_GamepadLeftStickYNegative, inputEvent, &inputState->RotateDown);
+        UpdateInputValue(ElemInputId_KeyS, inputEvent, &inputActions->RotateDown);
+        UpdateInputValue(ElemInputId_GamepadLeftStickYNegative, inputEvent, &inputActions->RotateDown);
 
-        UpdateInputValue(ElemInputId_KeyQ, inputEvent, &inputState->RotateSideLeft);
-        UpdateInputValue(ElemInputID_GamepadLeftTrigger, inputEvent, &inputState->RotateSideLeft);
+        UpdateInputValue(ElemInputId_KeyQ, inputEvent, &inputActions->RotateSideLeft);
+        UpdateInputValue(ElemInputID_GamepadLeftTrigger, inputEvent, &inputActions->RotateSideLeft);
 
-        UpdateInputValue(ElemInputId_KeyE, inputEvent, &inputState->RotateSideRight);
-        UpdateInputValue(ElemInputID_GamepadRightTrigger, inputEvent, &inputState->RotateSideRight);
+        UpdateInputValue(ElemInputId_KeyE, inputEvent, &inputActions->RotateSideRight);
+        UpdateInputValue(ElemInputID_GamepadRightTrigger, inputEvent, &inputActions->RotateSideRight);
 
-        //UpdateInputValue(ElemInputId_MouseLeftButton, inputEvent, &inputState->TouchAction);
-        //UpdateInputValue(ElemInputId_MouseRightButton, inputEvent, &inputState->TouchRotateSideAction);
-        UpdateInputValue(ElemInputId_MouseAxisXNegative, inputEvent, &inputState->TouchRotateLeft);
-        UpdateInputValue(ElemInputId_MouseAxisXPositive, inputEvent, &inputState->TouchRotateRight);
-        UpdateInputValue(ElemInputId_MouseAxisYNegative, inputEvent, &inputState->TouchRotateUp);
-        UpdateInputValue(ElemInputId_MouseAxisYPositive, inputEvent, &inputState->TouchRotateDown);
-        UpdateInputValue(ElemInputId_TouchXNegative, inputEvent, &inputState->TouchRotateLeft);
-        UpdateInputValue(ElemInputId_TouchXPositive, inputEvent, &inputState->TouchRotateRight);
-        UpdateInputValue(ElemInputId_TouchYNegative, inputEvent, &inputState->TouchRotateUp);
-        UpdateInputValue(ElemInputId_TouchYPositive, inputEvent, &inputState->TouchRotateDown);
+        UpdateInputValue(ElemInputId_MouseLeftButton, inputEvent, &inputActions->Touch);
+        UpdateInputValue(ElemInputId_MouseRightButton, inputEvent, &inputActions->TouchRotateSide);
+        UpdateInputValue(ElemInputId_MouseAxisXNegative, inputEvent, &inputActions->TouchRotateLeft);
+        UpdateInputValue(ElemInputId_MouseAxisXPositive, inputEvent, &inputActions->TouchRotateRight);
+        UpdateInputValue(ElemInputId_MouseAxisYNegative, inputEvent, &inputActions->TouchRotateUp);
+        UpdateInputValue(ElemInputId_MouseAxisYPositive, inputEvent, &inputActions->TouchRotateDown);
+        UpdateInputValue(ElemInputId_TouchXNegative, inputEvent, &inputActions->TouchRotateLeft);
+        UpdateInputValue(ElemInputId_TouchXPositive, inputEvent, &inputActions->TouchRotateRight);
+        UpdateInputValue(ElemInputId_TouchYNegative, inputEvent, &inputActions->TouchRotateUp);
+        UpdateInputValue(ElemInputId_TouchYPositive, inputEvent, &inputActions->TouchRotateDown);
 
         // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
-        UpdateInputValue(ElemInputId_KeyZ, inputEvent, &inputState->ZoomIn);
-        UpdateInputValue(ElemInputID_GamepadRightShoulder, inputEvent, &inputState->ZoomIn);
-        UpdateInputValue(ElemInputId_MouseWheelPositive, inputEvent, &inputState->ZoomIn);
+        UpdateInputValue(ElemInputId_KeyZ, inputEvent, &inputActions->ZoomIn);
+        UpdateInputValue(ElemInputID_GamepadRightShoulder, inputEvent, &inputActions->ZoomIn);
+        UpdateInputValue(ElemInputId_MouseWheelPositive, inputEvent, &inputActions->ZoomIn);
 
-        UpdateInputValue(ElemInputId_KeyX, inputEvent, &inputState->ZoomOut);
-        UpdateInputValue(ElemInputID_GamepadLeftShoulder, inputEvent, &inputState->ZoomOut);
-        UpdateInputValue(ElemInputId_MouseWheelNegative, inputEvent, &inputState->ZoomOut);
+        UpdateInputValue(ElemInputId_KeyX, inputEvent, &inputActions->ZoomOut);
+        UpdateInputValue(ElemInputID_GamepadLeftShoulder, inputEvent, &inputActions->ZoomOut);
+        UpdateInputValue(ElemInputId_MouseWheelNegative, inputEvent, &inputActions->ZoomOut);
 
-        UpdateInputValue(ElemInputId_KeySpacebar, inputEvent, &inputState->ChangeColorAction);
-        UpdateInputValue(ElemInputId_MouseMiddleButton, inputEvent, &inputState->ChangeColorAction);
-        UpdateInputValue(ElemInputID_GamepadButtonA, inputEvent, &inputState->ChangeColorAction);
-        UpdateInputValue(ElemInputId_GamepadLeftStickButton, inputEvent, &inputState->ChangeColorAction);
+        UpdateInputValue(ElemInputId_KeySpacebar, inputEvent, &inputActions->ChangeColor);
+        UpdateInputValue(ElemInputId_MouseMiddleButton, inputEvent, &inputActions->ChangeColor);
+        UpdateInputValue(ElemInputID_GamepadButtonA, inputEvent, &inputActions->ChangeColor);
+        UpdateInputValue(ElemInputId_GamepadLeftStickButton, inputEvent, &inputActions->ChangeColor);
 
-        UpdateInputValue(ElemInputId_KeyF1, inputEvent, &inputState->HideCursorAction);
-        UpdateInputValue(ElemInputId_KeyF2, inputEvent, &inputState->ShowCursorAction);
-
-        if (inputEvent->InputId == ElemInputId_KeyEscape)
-        {
-            if (applicationPayload->InputState.EscapePressed && inputEvent->Value == 0.0f)
-            {
-                applicationPayload->InputState.EscapeReleased = true;
-            }
-
-            applicationPayload->InputState.EscapePressed = inputEvent->Value;
-        }
-
-        if (inputEvent->InputId == ElemInputId_MouseLeftButton)
-        {
-            if (applicationPayload->InputState.TouchAction && inputEvent->Value == 0.0f)
-            {
-                applicationPayload->InputState.TouchActionReleased = true;
-            }
-
-            applicationPayload->InputState.TouchAction = inputEvent->Value;
-        }
-
-        if (inputEvent->InputId == ElemInputId_Touch)
-        {
-            if (applicationPayload->InputState.TouchAction && inputEvent->Value == 0.0f)
-            {
-                applicationPayload->InputState.TouchActionReleased = true;
-            }
-
-            applicationPayload->InputState.TouchAction = inputEvent->Value;
-        }
-
-        if (inputEvent->InputId == ElemInputId_MouseRightButton)
-        {
-            if (applicationPayload->InputState.TouchRotateSideAction && inputEvent->Value == 0.0f)
-            {
-                applicationPayload->InputState.TouchRotateSideActionReleased = true;
-            }
-
-            applicationPayload->InputState.TouchRotateSideAction = inputEvent->Value;
-        }
-
-        if (inputEvent->InputId == ElemInputId_KeyF3)
-        {
-            if (applicationPayload->InputState.SwitchAcceleration && inputEvent->Value == 0.0f)
-            {
-                applicationPayload->InputState.SwitchAccelerationReleased = true;
-            }
-
-            applicationPayload->InputState.SwitchAcceleration = inputEvent->Value;
-        }
+        UpdateInputValue(ElemInputId_KeyF1, inputEvent, &inputActions->HideCursor);
+        UpdateInputValue(ElemInputId_KeyF2, inputEvent, &inputActions->ShowCursor);
+        UpdateInputValueNegate(ElemInputId_KeyF3, inputEvent, &inputActions->SwitchAcceleration);
+        UpdateInputValueNegate(ElemInputId_KeyEscape, inputEvent, &inputActions->ExitApp);
+        UpdateInputValueNegate(ElemInputId_MouseLeftButton, inputEvent, &inputActions->TouchReleased);
+        UpdateInputValueNegate(ElemInputId_MouseRightButton, inputEvent, &inputActions->TouchRotateSideReleased);
+        UpdateInputValueNegate(ElemInputId_Touch, inputEvent, &inputActions->TouchReleased);
     }
 }
 
@@ -241,21 +185,22 @@ Vector3 rotationTouch = { };
 float rotationTouchDecreaseSpeed = 0.001f;
 float rotationTouchMaxSpeed = 0.3f;
 bool useAcceleration = true;
-float currentSpeed = 0.0f;
+Vector3 currentRotationSpeed = V3Zero;
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
 
-    UpdateInputs(applicationPayload);
+    InputActions* inputActions = &applicationPayload->InputActions;
+    UpdateInputs(inputActions);
 
-    if (applicationPayload->InputState.EscapeReleased)
+    if (inputActions->ExitApp)
     {
         ElemExitApplication(0);
     }
 
-    if (applicationPayload->InputState.SwitchAccelerationReleased)
+    if (inputActions->SwitchAcceleration)
     {
         useAcceleration = !useAcceleration;
         printf("Acceleration: %d\n", useAcceleration);
@@ -265,69 +210,65 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     //printf("Cursor Position: %u, %u\n", cursorPosition.X, cursorPosition.Y);
 
     // TODO: Use an acceleration? (only for linear motions! Touch motion or mouse are already accelerated by the user :))
-    float rotationXDelta = 0.0f;
-    float rotationYDelta = 0.0f;
-    float rotationZDelta = 0.0f;
+    Vector3 rotationDelta = V3Zero; 
 
     // TODO: On macbook pro we need to prioritize the mouse over the touchpad but keep touch into account
 
     // TODO: Can we add options to normalize the speed we need for different path?
-    if (applicationPayload->InputState.TouchAction)
+    if (inputActions->Touch)
     {
-        rotationXDelta = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
-        rotationYDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
+        rotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
+        rotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
+
+        // TODO: We should only zero the X and Y component!
+        rotationTouch = V3Zero;
     }
     else
     {
-        float acceleration = 30.0f;
-        float speed = 8.0f;
-
-        float xDirection = (applicationPayload->InputState.RotateUp - applicationPayload->InputState.RotateDown);
-        float yDirection = (applicationPayload->InputState.RotateLeft - applicationPayload->InputState.RotateRight);
+        Vector3 direction = NormalizeV3((Vector3) 
+        { 
+            .X = (inputActions->RotateUp - inputActions->RotateDown),
+            .Y = (inputActions->RotateLeft - inputActions->RotateRight),
+            .Z = 0.0f
+        });
 
         if (!useAcceleration)
         {
-            rotationXDelta = xDirection * speed * updateParameters->DeltaTimeInSeconds;
-            rotationYDelta = yDirection * speed * updateParameters->DeltaTimeInSeconds;
+            rotationDelta = MulScalarV3(direction, 8.0f * updateParameters->DeltaTimeInSeconds);
         }
         else
         {
-            rotationXDelta = 0.5f * acceleration * xDirection * pow2f(updateParameters->DeltaTimeInSeconds) + xDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
-            rotationYDelta = 0.5f * acceleration * yDirection * pow2f(updateParameters->DeltaTimeInSeconds) + yDirection * currentSpeed * updateParameters->DeltaTimeInSeconds;
+            // TODO: The friction here is what we do for the touch. So maybe we can take the same code but with different constants?
+            Vector3 acceleration = AddV3(MulScalarV3(direction, 500.0f), MulScalarV3(InverseV3(currentRotationSpeed), 60));
 
-            if (xDirection || yDirection)
-            {
-                currentSpeed += acceleration * updateParameters->DeltaTimeInSeconds;
-                currentSpeed = fminf(currentSpeed, speed);
-            }
-            else
-            {
-                currentSpeed = 0.0f;
-            }
+            rotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(updateParameters->DeltaTimeInSeconds)), MulScalarV3(currentRotationSpeed, updateParameters->DeltaTimeInSeconds));
+            currentRotationSpeed = AddV3(MulScalarV3(acceleration, updateParameters->DeltaTimeInSeconds), currentRotationSpeed);
+
+            printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
         }
     }
 
-    if (applicationPayload->InputState.TouchRotateSideAction)
+    if (inputActions->TouchRotateSide)
     {
-        rotationZDelta = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
+        rotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
     }
     else
     {
-        rotationZDelta = (applicationPayload->InputState.RotateSideLeft - applicationPayload->InputState.RotateSideRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
+        rotationDelta.Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
     }
 
-    if (applicationPayload->InputState.TouchActionReleased || applicationPayload->InputState.TouchRotateSideActionReleased)
+    if (inputActions->TouchReleased || inputActions->TouchRotateSideReleased)
     {
 
-        if (applicationPayload->InputState.TouchActionReleased)
+        if (inputActions->TouchReleased)
         {
-            rotationTouch.X = (applicationPayload->InputState.TouchRotateUp - applicationPayload->InputState.TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
-            rotationTouch.Y = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
+            rotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
+            rotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
         }
 
-        if (applicationPayload->InputState.TouchRotateSideActionReleased)
+        if (inputActions->TouchRotateSideReleased)
         {
-            rotationTouch.Z = (applicationPayload->InputState.TouchRotateLeft - applicationPayload->InputState.TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
+            rotationTouch.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
         }
 
         if (MagnitudeV3(rotationTouch) > rotationTouchMaxSpeed)
@@ -339,9 +280,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     if (MagnitudeSquaredV3(rotationTouch) > 0)
     {
         //printf("Touch Speed = %f, %f, %f (%f)\n", rotationTouch.X, rotationTouch.Y, rotationTouch.Z, MagnitudeV3(rotationTouch));
-        rotationXDelta += rotationTouch.X;
-        rotationYDelta += rotationTouch.Y;
-        rotationZDelta += rotationTouch.Z;
+        rotationDelta = AddV3(rotationDelta, rotationTouch);
 
         Vector3 inverse = MulScalarV3(NormalizeV3(InverseV3(rotationTouch)), rotationTouchDecreaseSpeed);
         rotationTouch = AddV3(rotationTouch, inverse);
@@ -352,23 +291,23 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     }
         
-    //printf("Rotation Delta = %f, %f, %f, (%f)\n", rotationXDelta, rotationYDelta, rotationZDelta, applicationPayload->InputState.TouchRotateUp);
+    //printf("Rotation Delta = %f, %f, %f, (%f)\n", rotationXDelta, rotationYDelta, rotationZDelta, inputActions->TouchRotateUp);
 
-    if (rotationXDelta || rotationYDelta || rotationZDelta)
+    if (MagnitudeSquaredV3(rotationDelta))
     {
-        Vector4 rotationQuaternion = MulQuat(CreateQuaternion((Vector3){ 1, 0, 0 }, rotationXDelta), MulQuat(CreateQuaternion((Vector3){ 0, 0, 1 }, rotationZDelta), CreateQuaternion((Vector3){ 0, 1, 0 }, rotationYDelta)));
+        Vector4 rotationQuaternion = MulQuat(CreateQuaternion((Vector3){ 1, 0, 0 }, rotationDelta.X), MulQuat(CreateQuaternion((Vector3){ 0, 0, 1 }, rotationDelta.Z), CreateQuaternion((Vector3){ 0, 1, 0 }, rotationDelta.Y)));
         applicationPayload->ShaderParameters.RotationQuaternion = MulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
 
-    applicationPayload->ShaderParameters.Zoom += (applicationPayload->InputState.ZoomIn - applicationPayload->InputState.ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds;
-    applicationPayload->ShaderParameters.TriangeColor = applicationPayload->InputState.ChangeColorAction;
+    applicationPayload->ShaderParameters.Zoom += (inputActions->ZoomIn - inputActions->ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds;
+    applicationPayload->ShaderParameters.TriangeColor = inputActions->ChangeColor;
 
-    if (applicationPayload->InputState.HideCursorAction)
+    if (inputActions->HideCursor)
     {
         ElemHideWindowCursor(applicationPayload->Window);
     }
 
-    if (applicationPayload->InputState.ShowCursorAction)
+    if (inputActions->ShowCursor)
     {
         ElemShowWindowCursor(applicationPayload->Window);
     }
