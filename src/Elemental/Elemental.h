@@ -875,6 +875,7 @@ typedef enum
     ElemInputDeviceType_Keyboard = 1,
     ElemInputDeviceType_Mouse = 2,
     ElemInputDeviceType_Gamepad = 3,
+    ElemInputDeviceType_Touch= 4,
 } ElemInputDeviceType;
 
 typedef enum
@@ -882,6 +883,7 @@ typedef enum
     ElemInputType_Digital = 0,
     ElemInputType_Analog = 1,
     ElemInputType_Delta = 2,
+    ElemInputType_Absolute = 3
 } ElemInputType;
 
 typedef enum
@@ -1034,6 +1036,8 @@ typedef enum
     ElemInputId_TouchXPositive = 145,
     ElemInputId_TouchYNegative = 146,
     ElemInputId_TouchYPositive = 147,
+    ElemInputId_TouchXPosition = 148,
+    ElemInputId_TouchYPosition = 149
 } ElemInputId;
 
 typedef struct
@@ -1052,11 +1056,11 @@ typedef struct
 {
     ElemWindow Window;
     ElemInputDevice InputDevice;
+    uint32_t InputDeviceTypeIndex;
     ElemInputId InputId;
     ElemInputType InputType;
     float Value;
     double ElapsedSeconds;
-    // bool Released;
 } ElemInputEvent;
 
 typedef struct

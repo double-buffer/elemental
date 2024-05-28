@@ -57,6 +57,16 @@ Vector2 AddV2(Vector2 v1, Vector2 v2)
 	return result;
 }
 
+Vector2 SubstractV2(Vector2 v1, Vector2 v2)
+{
+    Vector2 result;
+
+    result.X = v1.X - v2.X;
+    result.Y = v1.Y - v2.Y;
+    
+    return result;
+}
+
 Vector2 MulScalarV2(Vector2 v, float scalar)
 {
 	Vector2 result;

@@ -1,24 +1,124 @@
 #if canImport(UIKit)
 import UIKit
+typealias Touch = UITouch
+typealias View = UIView
 #else
 import Cocoa
+typealias Touch = NSTouch
+typealias View = NSView
 #endif
 
 import QuartzCore
+struct TouchData {
+    var previousLoc: CGPoint
+    var deltaLocation: CGPoint
+    var index: Int
+}
+
+public class TouchEventManager {
+    let view: View
+    let touchHandler: TouchHandlerPointer
+    let elemWindow: UInt
+    var touchData: [AnyHashable: TouchData] = [:]
+    var touchOrder: [UInt64] = []
+
+    init(_ view: View, _ touchHandler: TouchHandlerPointer, _ elemWindow : UInt) {
+        self.view = view
+        self.elemWindow = elemWindow
+        self.touchHandler = touchHandler
+    }
+
+    func sendTouchEvent(_ touch: Touch) {
+        // TODO: Support pencils for ipad
+        // TODO: Test resting
+
+        let touchHash: AnyHashable
+        #if canImport(UIKit)
+        touchHash = touch.hash
+        #else
+         touchHash = touch.identity as! AnyHashable
+        #endif
+        
+        let touchKey = UInt64(bitPattern: Int64(touchHash.hashValue))
+
+        let location = normalizeTouchPosition(touch)
+        var state = UInt(0)
+        var previousLoc = CGPoint(x: 0, y: 0)
+        var deltaLocation = CGPoint(x: 0, y: 0)
+
+        if let data = touchData[touchKey] {
+            previousLoc = data.previousLoc
+            deltaLocation = data.deltaLocation
+        }
+
+        var fingerIndex = UInt(0)
+
+        if (touch.phase == .began) {
+            state = 0
+            deltaLocation = CGPoint(x: 0, y: 0)
+
+            if touchData[touchKey] == nil {
+                touchOrder.append(touchKey)
+                let index = touchOrder.count - 1
+                fingerIndex = UInt(index)
+                touchData[touchKey] = TouchData(previousLoc: location, deltaLocation: deltaLocation, index: index)
+            }
+        } else if (touch.phase == .moved || touch.phase == .stationary) {
+            fingerIndex = UInt(touchData[touchKey]?.index ?? 0)
+            deltaLocation.x = (location.x - previousLoc.x)
+            deltaLocation.y = (location.y - previousLoc.y)
+            state = 1
+        } else {
+            state = 2
+            fingerIndex = UInt(touchData[touchKey]?.index ?? 0)
+
+            if (fingerIndex == 0) {
+                touchOrder.removeAll()
+            }
+                
+            touchData.removeValue(forKey: touchKey)
+
+            if let index = touchOrder.firstIndex(of: touchKey) {
+                // Update indices for remaining touches
+                for (i, key) in touchOrder.enumerated() {
+                    //touchData[key]?.index = i
+                }
+            }
+        }
+        
+        // Update the dictionary with the new locations
+        if touchData[touchKey] != nil {
+            touchData[touchKey]?.previousLoc = location
+            touchData[touchKey]?.deltaLocation = deltaLocation
+        }
+
+        // TODO: We need to find a way to compute the position in pixels like the mouse
+        touchHandler(elemWindow, touchKey, fingerIndex, Float(location.x), Float(location.y), Float(deltaLocation.x), Float(deltaLocation.y), state)
+    }
+
+    private func normalizeTouchPosition(_ touch: Touch) -> CGPoint {
+        let mul = 500.0
+        #if canImport(UIKit)
+        let location = touch.location(in: self.view)
+        let maxDimension = max(self.view.bounds.width, self.view.bounds.height)
+        let normalizedX = location.x / maxDimension
+        let normalizedY = location.y / maxDimension
+        return CGPoint(x: normalizedX * mul, y: -normalizedY * mul)
+        #else
+        return CGPoint(x: touch.normalizedPosition.x * mul, y: touch.normalizedPosition.y * mul)
+        #endif
+    }
+}
 
 #if canImport(UIKit)
 class CustomView: UIView {
     var metalDisplayLink: CAMetalDisplayLink!
-    var elemWindow: UInt
-    var touchHandler: TouchHandlerPointer
+    var touchEventManager: TouchEventManager!
 
     init(_ frame: CGRect, frameLatency: Int, _ elemWindow: UInt, _ touchHandler: TouchHandlerPointer) {
-        self.elemWindow = elemWindow
-        self.touchHandler = touchHandler
-        self.previousLoc = CGPoint(x: 0, y: 0)
-        self.deltaX = 0
-        self.deltaY = 0
         super.init(frame: frame)
+        isMultipleTouchEnabled = true
+        self.touchEventManager = TouchEventManager(self, touchHandler, elemWindow)
         self.metalDisplayLink = CAMetalDisplayLink(metalLayer: (self.layer as? CAMetalLayer)!)
     
         let refreshRate = UIScreen.main.maximumFramesPerSecond;
@@ -37,97 +137,40 @@ class CustomView: UIView {
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
-      
         self.metalDisplayLink.add(to: RunLoop.current, forMode: RunLoop.Mode.commonModes)
     }
-
-    // TODO: Pass funtion pointers
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        // TODO: We can get the id of the touch with the pointer ot the touch
         for touch in touches {
-            sendTouchEvent(0, touch) 
-            // TODO: Support pencils for ipad
+            touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            let location = touch.location(in: self)
-            print("Touch moved to \(location)")
-            sendTouchEvent(0, touch) 
+            touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            let location = touch.location(in: self)
-            print("Touch ended at \(location)")
-            sendTouchEvent(0, touch) 
+            touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            let location = touch.location(in: self)
-            print("Touch cancelled at \(location)")
-            sendTouchEvent(0, touch) 
+            touchEventManager.sendTouchEvent(touch) 
         }
-    }
-
-    // Those variables are touch id dependends
-    var previousLoc: CGPoint
-    var deltaX: CGFloat
-    var deltaY: CGFloat
-
-    private func sendTouchEvent(_ fingerIndex: UInt, _ touch: UITouch) {
-  
-            // TODO: Location function crash but it seems ok because the normalized position
-            // Seems good to compute the deltas
-
-        // TODO: Test resting
-        // TODO: Review magic numbers
-        let mul = 500.0
-
-        let location = normalize(location: touch.location(in: self))
-
-        var state = UInt(0)
-
-        if (touch.phase == .began) {
-            state = 0
-            deltaX = 0
-            deltaY = 0
-        } else if (touch.phase == .moved || touch.phase == .stationary) {
-            deltaX = (location.x - previousLoc.x) * mul
-            deltaY = (location.y - previousLoc.y) * mul
-            state = 1
-        } else if (touch.phase == .ended) {
-            state = 2
-        }
-
-        previousLoc = location
-        touchHandler(elemWindow, fingerIndex, Float(location.x), Float(location.y), Float(deltaX), Float(-deltaY), state)
-    }
-
-    private func normalize(location: CGPoint) -> CGPoint {
-        let maxDimension = max(self.bounds.width, self.bounds.height)
-        let normalizedX = location.x / maxDimension
-        let normalizedY = location.y / maxDimension
-        return CGPoint(x: normalizedX, y: normalizedY)
     }
 }
 #else
 class CustomView: NSView {
     var metalDisplayLink: CAMetalDisplayLink!
-    var elemWindow: UInt
-    var touchHandler: TouchHandlerPointer
+    var touchEventManager: TouchEventManager!
 
     init(_ frame: CGRect, frameLatency: Int, _ elemWindow: UInt, _ touchHandler: TouchHandlerPointer) {
-        self.elemWindow = elemWindow
-        self.touchHandler = touchHandler
-        self.previousLoc = NSPoint(x: 0, y: 0)
-        self.deltaX = 0
-        self.deltaY = 0
         super.init(frame: frame)
+        self.touchEventManager = TouchEventManager(self, touchHandler, elemWindow)
 
         self.allowedTouchTypes = [.direct, .indirect]
         //self.wantsRestingTouches = true
@@ -162,70 +205,35 @@ class CustomView: NSView {
     }
 
     override func touchesBegan(with event: NSEvent) {
-        // TODO: We can get the id of the touch with the identity property
         let touches = event.touches(matchingPhase: .began, in: self)
         for touch in touches {
-            sendTouchEvent(0, touch) 
+            touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesMoved(with event: NSEvent) {
         let touches = event.touches(matchingPhase: .moved, in: self)
         for touch in touches {
-            sendTouchEvent(0, touch) 
+            touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesEnded(with event: NSEvent) {
         let touches = event.touches(matchingPhase: .ended, in: self)
         for touch in touches {
-            sendTouchEvent(0, touch) 
+            touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesCancelled(with event: NSEvent) {
         let touches = event.touches(matchingPhase: .cancelled, in: self)
         for touch in touches {
-            sendTouchEvent(0, touch) 
+            touchEventManager.sendTouchEvent(touch) 
         }
     }
 
     override var acceptsFirstResponder: Bool {
         return true
-    }
-
-    // Those variables are touch id dependends
-    var previousLoc: NSPoint
-    var deltaX: CGFloat
-    var deltaY: CGFloat
-    private func sendTouchEvent(_ fingerIndex: UInt, _ touch: NSTouch) {
-  
-            // TODO: Location function crash but it seems ok because the normalized position
-            // Seems good to compute the deltas
-
-        // TODO: Test resting
-        let mul = 500.0
-
-        let location = touch.normalizedPosition
-        var deltaX = (location.x - previousLoc.x) * mul
-        var deltaY = (location.y - previousLoc.y) * mul
-
-        previousLoc = location
-        var state = UInt(0)
-
-        if (touch.phase == .began) {
-            state = 0
-            deltaX = 0
-            deltaY = 0
-        } else if (touch.phase == .moved || touch.phase == .stationary) {
-            deltaX = (location.x - previousLoc.x) * mul
-            deltaY = (location.y - previousLoc.y) * mul
-            state = 1
-        } else if (touch.phase == .ended) {
-            state = 2
-        }
-
-        touchHandler(elemWindow, fingerIndex, Float(location.x), Float(location.y), Float(deltaX), Float(deltaY), state)
     }
 }
 #endif
@@ -236,7 +244,7 @@ public struct MetalViewResult {
     var MetalDisplayLink: UnsafeMutableRawPointer
 }
 
-public typealias TouchHandlerPointer = @convention(c) (UInt, UInt, Float, Float, Float, Float, UInt) -> Void
+public typealias TouchHandlerPointer = @convention(c) (UInt, UInt64, UInt, Float, Float, Float, Float, UInt) -> Void
 
 public func createMetalView(frameLatency: Int, window: UInt, touchHandlerPtr: UnsafeMutableRawPointer) -> MetalViewResult {
     let touchHandler = unsafeBitCast(touchHandlerPtr, to: TouchHandlerPointer.self)

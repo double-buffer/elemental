@@ -95,7 +95,6 @@ void AddInputEvent(ElemInputEvent inputEvent, bool needReset)
         {
             if (previousDeltaToReset[i].InputId == inputEvent.InputId)
             {
-            SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Remove Reset %d", inputEvent.InputId);
                 previousDeltaToReset[i].InputId = ElemInputId_Unknown;
                 break;
             }
@@ -145,7 +144,6 @@ void ResetInputsFrame()
             auto inputEvent = previousDeltaToReset[i];
             inputEvent.Value = 0.0f;
             inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
-            SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Reset %d", inputEvent.InputId);
         }
     }
 }
