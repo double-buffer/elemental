@@ -55,7 +55,7 @@ public interface IApplicationService
     /// </summary>
     /// <param name="window">The window instance.</param>
     /// <param name="title">New title for the window.</param>
-    void SetWindowTitle(Window window, in char title);
+    void SetWindowTitle(Window window, ReadOnlySpan<byte> title);
 
     /// <summary>
     /// Changes the state of a window (e.g., minimize, maximize).

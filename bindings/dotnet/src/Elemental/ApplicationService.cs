@@ -16,9 +16,29 @@ public class ApplicationService : IApplicationService
     /// Retrieves system-related information, such as platform and application path.
     /// </summary>
     /// <returns>A structure containing system information.</returns>
-    public SystemInfo GetSystemInfo()
+    public unsafe SystemInfo GetSystemInfo()
     {
-        return ApplicationServiceInterop.GetSystemInfo();
+        var resultUnsafe = ApplicationServiceInterop.GetSystemInfo();
+
+        var result = new SystemInfo();
+        result.Platform = resultUnsafe.Platform;
+        
+var ApplicationPathCounter = 0;
+var ApplicationPathPointer = (byte*)resultUnsafe.ApplicationPath;
+
+while (ApplicationPathPointer[ApplicationPathCounter] != 0)
+{
+ApplicationPathCounter++;
+}
+
+ApplicationPathCounter++;
+        var ApplicationPathSpan = new ReadOnlySpan<byte>(ApplicationPathPointer, ApplicationPathCounter);
+        var ApplicationPathArray = new byte[ApplicationPathCounter];
+        ApplicationPathSpan.CopyTo(ApplicationPathArray);
+        result.ApplicationPath = ApplicationPathArray;
+        result.SupportMultiWindows = resultUnsafe.SupportMultiWindows;
+
+        return result;
     }
 
     /// <summary>
@@ -26,9 +46,18 @@ public class ApplicationService : IApplicationService
     /// </summary>
     /// <param name="parameters">Configuration and handlers for the application lifecycle.</param>
     /// <returns>Status code indicating success or error.</returns>
-    public int RunApplication(in RunApplicationParameters parameters)
+    public unsafe int RunApplication(in RunApplicationParameters parameters)
     {
-        return ApplicationServiceInterop.RunApplication(parameters);
+        fixed (byte* ApplicationNamePinned = parameters.ApplicationName)
+        {
+            var parametersUnsafe = new RunApplicationParametersUnsafe();
+            parametersUnsafe.ApplicationName = ApplicationNamePinned;
+            parametersUnsafe.InitHandler = parameters.InitHandler;
+            parametersUnsafe.FreeHandler = parameters.FreeHandler;
+            parametersUnsafe.Payload = parameters.Payload;
+
+            return ApplicationServiceInterop.RunApplication(parametersUnsafe);
+        }
     }
 
     /// <summary>
@@ -45,9 +74,19 @@ public class ApplicationService : IApplicationService
     /// </summary>
     /// <param name="options">Configuration options for the window; NULL for defaults.</param>
     /// <returns>A handle to the newly created window.</returns>
-    public Window CreateWindow(in WindowOptions options = default)
+    public unsafe Window CreateWindow(in WindowOptions options = default)
     {
-        return ApplicationServiceInterop.CreateWindow(options);
+        fixed (byte* TitlePinned = options.Title)
+        {
+            var optionsUnsafe = new WindowOptionsUnsafe();
+            optionsUnsafe.Title = TitlePinned;
+            optionsUnsafe.Width = options.Width;
+            optionsUnsafe.Height = options.Height;
+            optionsUnsafe.WindowState = options.WindowState;
+            optionsUnsafe.IsCursorHidden = options.IsCursorHidden;
+
+            return ApplicationServiceInterop.CreateWindow(optionsUnsafe);
+        }
     }
 
     /// <summary>
@@ -74,7 +113,7 @@ public class ApplicationService : IApplicationService
     /// </summary>
     /// <param name="window">The window instance.</param>
     /// <param name="title">New title for the window.</param>
-    public void SetWindowTitle(Window window, in char title)
+    public void SetWindowTitle(Window window, ReadOnlySpan<byte> title)
     {
         ApplicationServiceInterop.SetWindowTitle(window, title);
     }

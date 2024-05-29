@@ -1117,10 +1117,12 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         var typeName = type.GetDisplayName().Replace("Elem", string.Empty);
 
+        Console.WriteLine($"MapType: {typeName}");
+
         return typeName switch
         {
             "Application" => "ElementalApplication",
-            "const char*" => !isUnsafe ? "ReadOnlySpan<byte>" : "byte*",
+            "char const *" => !isUnsafe ? "ReadOnlySpan<byte>" : "byte*",
             "unsigned long long" => "UInt64",
             "unsigned int" => "uint",
             "DataSpan" => !forInterop ? "ReadOnlySpan<byte>" : "SpanUnsafe<byte>", 

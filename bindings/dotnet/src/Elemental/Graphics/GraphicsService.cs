@@ -23,7 +23,20 @@ public class GraphicsService : IGraphicsService
         var result = new GraphicsDeviceInfo[resultUnsafe.Length];
         for (int i = 0; i < resultUnsafe.Length; i++)
         {
-        result[i].DeviceName = ((GraphicsDeviceInfoUnsafe*)resultUnsafe.Items)[i].DeviceName;
+        
+var DeviceNameCounter = 0;
+var DeviceNamePointer = (byte*)((GraphicsDeviceInfoUnsafe*)resultUnsafe.Items)[i].DeviceName;
+
+while (DeviceNamePointer[DeviceNameCounter] != 0)
+{
+DeviceNameCounter++;
+}
+
+DeviceNameCounter++;
+        var DeviceNameSpan = new ReadOnlySpan<byte>(DeviceNamePointer, DeviceNameCounter);
+        var DeviceNameArray = new byte[DeviceNameCounter];
+        DeviceNameSpan.CopyTo(DeviceNameArray);
+        result[i].DeviceName = DeviceNameArray;
         result[i].GraphicsApi = ((GraphicsDeviceInfoUnsafe*)resultUnsafe.Items)[i].GraphicsApi;
         result[i].DeviceId = ((GraphicsDeviceInfoUnsafe*)resultUnsafe.Items)[i].DeviceId;
         result[i].AvailableMemory = ((GraphicsDeviceInfoUnsafe*)resultUnsafe.Items)[i].AvailableMemory;
@@ -56,9 +69,30 @@ public class GraphicsService : IGraphicsService
     /// </summary>
     /// <param name="graphicsDevice">The graphics device to query.</param>
     /// <returns>A structure containing detailed information about the device.</returns>
-    public GraphicsDeviceInfo GetGraphicsDeviceInfo(GraphicsDevice graphicsDevice)
+    public unsafe GraphicsDeviceInfo GetGraphicsDeviceInfo(GraphicsDevice graphicsDevice)
     {
-        return GraphicsServiceInterop.GetGraphicsDeviceInfo(graphicsDevice);
+        var resultUnsafe = GraphicsServiceInterop.GetGraphicsDeviceInfo(graphicsDevice);
+
+        var result = new GraphicsDeviceInfo();
+        
+var DeviceNameCounter = 0;
+var DeviceNamePointer = (byte*)resultUnsafe.DeviceName;
+
+while (DeviceNamePointer[DeviceNameCounter] != 0)
+{
+DeviceNameCounter++;
+}
+
+DeviceNameCounter++;
+        var DeviceNameSpan = new ReadOnlySpan<byte>(DeviceNamePointer, DeviceNameCounter);
+        var DeviceNameArray = new byte[DeviceNameCounter];
+        DeviceNameSpan.CopyTo(DeviceNameArray);
+        result.DeviceName = DeviceNameArray;
+        result.GraphicsApi = resultUnsafe.GraphicsApi;
+        result.DeviceId = resultUnsafe.DeviceId;
+        result.AvailableMemory = resultUnsafe.AvailableMemory;
+
+        return result;
     }
 
     /// <summary>
@@ -68,9 +102,15 @@ public class GraphicsService : IGraphicsService
     /// <param name="type">The type of the command queue, such as graphics or compute.</param>
     /// <param name="options">Additional options for creating the command queue.</param>
     /// <returns>A handle to the newly created command queue.</returns>
-    public CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type, in CommandQueueOptions options = default)
+    public unsafe CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type, in CommandQueueOptions options = default)
     {
-        return GraphicsServiceInterop.CreateCommandQueue(graphicsDevice, type, options);
+        fixed (byte* DebugNamePinned = options.DebugName)
+        {
+            var optionsUnsafe = new CommandQueueOptionsUnsafe();
+            optionsUnsafe.DebugName = DebugNamePinned;
+
+            return GraphicsServiceInterop.CreateCommandQueue(graphicsDevice, type, optionsUnsafe);
+        }
     }
 
     /// <summary>
@@ -97,9 +137,15 @@ public class GraphicsService : IGraphicsService
     /// <param name="commandQueue">The command queue from which to retrieve the command list.</param>
     /// <param name="options">Additional options for creating the command list.</param>
     /// <returns>A handle to the retrieved command list.</returns>
-    public CommandList GetCommandList(CommandQueue commandQueue, in CommandListOptions options = default)
+    public unsafe CommandList GetCommandList(CommandQueue commandQueue, in CommandListOptions options = default)
     {
-        return GraphicsServiceInterop.GetCommandList(commandQueue, options);
+        fixed (byte* DebugNamePinned = options.DebugName)
+        {
+            var optionsUnsafe = new CommandListOptionsUnsafe();
+            optionsUnsafe.DebugName = DebugNamePinned;
+
+            return GraphicsServiceInterop.GetCommandList(commandQueue, optionsUnsafe);
+        }
     }
 
     /// <summary>
@@ -252,16 +298,25 @@ public class GraphicsService : IGraphicsService
     /// <returns>A handle to the newly compiled pipeline state.</returns>
     public unsafe PipelineState CompileGraphicsPipelineState(GraphicsDevice graphicsDevice, in GraphicsPipelineStateParameters parameters)
     {
-        fixed (TextureFormat* TextureFormatsPinned = parameters.TextureFormats)
+        fixed (byte* DebugNamePinned = parameters.DebugName)
         {
-            var parametersUnsafe = new GraphicsPipelineStateParametersUnsafe();
-            parametersUnsafe.DebugName = parameters.DebugName;
-            parametersUnsafe.ShaderLibrary = parameters.ShaderLibrary;
-            parametersUnsafe.MeshShaderFunction = parameters.MeshShaderFunction;
-            parametersUnsafe.PixelShaderFunction = parameters.PixelShaderFunction;
-            parametersUnsafe.TextureFormats = TextureFormatsPinned;
+            fixed (byte* MeshShaderFunctionPinned = parameters.MeshShaderFunction)
+            {
+                fixed (byte* PixelShaderFunctionPinned = parameters.PixelShaderFunction)
+                {
+                    fixed (TextureFormat* TextureFormatsPinned = parameters.TextureFormats)
+                    {
+                        var parametersUnsafe = new GraphicsPipelineStateParametersUnsafe();
+                        parametersUnsafe.DebugName = DebugNamePinned;
+                        parametersUnsafe.ShaderLibrary = parameters.ShaderLibrary;
+                        parametersUnsafe.MeshShaderFunction = MeshShaderFunctionPinned;
+                        parametersUnsafe.PixelShaderFunction = PixelShaderFunctionPinned;
+                        parametersUnsafe.TextureFormats = TextureFormatsPinned;
 
-            return GraphicsServiceInterop.CompileGraphicsPipelineState(graphicsDevice, parametersUnsafe);
+                        return GraphicsServiceInterop.CompileGraphicsPipelineState(graphicsDevice, parametersUnsafe);
+                    }
+                }
+            }
         }
     }
 

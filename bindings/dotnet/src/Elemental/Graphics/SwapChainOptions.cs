@@ -3,12 +3,12 @@ namespace Elemental.Graphics;
 /// <summary>
 /// Options for configuring a swap chain.
 /// </summary>
-public ref struct SwapChainOptions
+public ref struct SwapChainOptions<T>
 {
     /// <summary>
     /// Custom payload for swap chain updates.
     /// </summary>
-    public in void UpdatePayload { get; set; }
+    public T UpdatePayload { get; set; }
 
     /// <summary>
     /// Format of the swap chain.
