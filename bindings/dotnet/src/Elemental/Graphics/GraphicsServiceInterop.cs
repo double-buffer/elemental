@@ -8,7 +8,7 @@ internal static partial class GraphicsServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemGetAvailableGraphicsDevices")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial SpanUnsafe<GraphicsDeviceInfoUnsafe> GetAvailableGraphicsDevices();
+    internal static partial SpanUnsafe<GraphicsDeviceInfo> GetAvailableGraphicsDevices();
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateGraphicsDevice")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -20,11 +20,11 @@ internal static partial class GraphicsServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemGetGraphicsDeviceInfo")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial GraphicsDeviceInfoUnsafe GetGraphicsDeviceInfo(GraphicsDevice graphicsDevice);
+    internal static partial GraphicsDeviceInfo GetGraphicsDeviceInfo(GraphicsDevice graphicsDevice);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateCommandQueue")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type, in CommandQueueOptionsUnsafe options);
+    internal static partial CommandQueue CreateCommandQueue(GraphicsDevice graphicsDevice, CommandQueueType type, in CommandQueueOptions options);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeCommandQueue")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -36,7 +36,7 @@ internal static partial class GraphicsServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemGetCommandList")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial CommandList GetCommandList(CommandQueue commandQueue, in CommandListOptionsUnsafe options);
+    internal static partial CommandList GetCommandList(CommandQueue commandQueue, in CommandListOptions options);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCommitCommandList")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -76,7 +76,7 @@ internal static partial class GraphicsServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateShaderLibrary")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, SpanUnsafe<const Data> shaderLibraryData);
+    internal static partial ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, SpanUnsafe<byte> shaderLibraryData);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeShaderLibrary")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -96,7 +96,7 @@ internal static partial class GraphicsServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemPushPipelineStateConstants")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, SpanUnsafe<const Data> data);
+    internal static partial void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, SpanUnsafe<byte> data);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemBeginRenderPass")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

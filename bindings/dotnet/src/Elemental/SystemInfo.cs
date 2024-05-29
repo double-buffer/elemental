@@ -13,20 +13,10 @@ public record struct SystemInfo
     /// <summary>
     /// Installation path of the application.
     /// </summary>
-    public ReadOnlySpan<byte> ApplicationPath { get; set; }
+    public in char ApplicationPath { get; set; }
 
     /// <summary>
     /// Whether the application supports multiple windows.
     /// </summary>
     public bool SupportMultiWindows { get; set; }
 }
-
-internal unsafe struct SystemInfoUnsafe
-{
-    public Platform Platform { get; set; }
-
-    public byte* ApplicationPath { get; set; }
-
-    public bool SupportMultiWindows { get; set; }
-}
-

@@ -8,7 +8,7 @@ public record struct GraphicsDeviceInfo
     /// <summary>
     /// Name of the graphics device.
     /// </summary>
-    public ReadOnlySpan<byte> DeviceName { get; set; }
+    public in char DeviceName { get; set; }
 
     /// <summary>
     /// API used by the graphics device.
@@ -25,15 +25,3 @@ public record struct GraphicsDeviceInfo
     /// </summary>
     public UInt64 AvailableMemory { get; set; }
 }
-
-internal unsafe struct GraphicsDeviceInfoUnsafe
-{
-    public byte* DeviceName { get; set; }
-
-    public GraphicsApi GraphicsApi { get; set; }
-
-    public UInt64 DeviceId { get; set; }
-
-    public UInt64 AvailableMemory { get; set; }
-}
-

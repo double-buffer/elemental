@@ -8,12 +8,12 @@ public ref struct BeginRenderPassParameters
     /// <summary>
     /// Render targets to be used in the render pass.
     /// </summary>
-    public ReadOnlyMemory<RenderPassRenderTarget> RenderTargets { get; set; }
+    public ReadOnlySpan<RenderPassRenderTarget> RenderTargets { get; set; }
 
     /// <summary>
     /// Viewports to be used in the render pass.
     /// </summary>
-    public ReadOnlyMemory<Viewport> Viewports { get; set; }
+    public ReadOnlySpan<Viewport> Viewports { get; set; }
 }
 
 internal unsafe struct BeginRenderPassParametersUnsafe

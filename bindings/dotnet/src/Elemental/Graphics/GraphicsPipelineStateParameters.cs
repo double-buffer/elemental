@@ -8,7 +8,7 @@ public ref struct GraphicsPipelineStateParameters
     /// <summary>
     /// Optional debug name for the pipeline state.
     /// </summary>
-    public ReadOnlySpan<byte> DebugName { get; set; }
+    public in char DebugName { get; set; }
 
     /// <summary>
     /// Shader library containing the shaders.
@@ -18,28 +18,28 @@ public ref struct GraphicsPipelineStateParameters
     /// <summary>
     /// Function name of the mesh shader in the shader library.
     /// </summary>
-    public ReadOnlySpan<byte> MeshShaderFunction { get; set; }
+    public in char MeshShaderFunction { get; set; }
 
     /// <summary>
     /// Function name of the pixel shader in the shader library.
     /// </summary>
-    public ReadOnlySpan<byte> PixelShaderFunction { get; set; }
+    public in char PixelShaderFunction { get; set; }
 
     /// <summary>
     /// Supported texture formats for the pipeline state.
     /// </summary>
-    public ReadOnlyMemory<TextureFormat> TextureFormats { get; set; }
+    public ReadOnlySpan<TextureFormat> TextureFormats { get; set; }
 }
 
 internal unsafe struct GraphicsPipelineStateParametersUnsafe
 {
-    public byte* DebugName { get; set; }
+    public in char DebugName { get; set; }
 
     public ShaderLibrary ShaderLibrary { get; set; }
 
-    public byte* MeshShaderFunction { get; set; }
+    public in char MeshShaderFunction { get; set; }
 
-    public byte* PixelShaderFunction { get; set; }
+    public in char PixelShaderFunction { get; set; }
 
     public TextureFormat* TextureFormats { get; set; }
 }

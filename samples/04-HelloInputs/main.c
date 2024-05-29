@@ -38,7 +38,6 @@ typedef struct
     float HideCursor;
     float ShowCursor;
 
-    float SwitchAcceleration;
     float ExitApp;
 } InputActions;
 
@@ -129,7 +128,6 @@ void UpdateInputs(InputActions* inputActions)
     inputActions->TouchReleased = false;
     inputActions->Touch2Released = false;
     inputActions->TouchRotateSideReleased = false;
-    inputActions->SwitchAcceleration = false;
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
@@ -170,8 +168,8 @@ void UpdateInputs(InputActions* inputActions)
         UpdateInputValue(ElemInputId_TouchXPositive, 0, inputEvent, &inputActions->TouchRotateRight);
         UpdateInputValue(ElemInputId_TouchYNegative, 0, inputEvent, &inputActions->TouchRotateUp);
         UpdateInputValue(ElemInputId_TouchYPositive, 0, inputEvent, &inputActions->TouchRotateDown);
-        UpdateInputValue(ElemInputId_TouchXPosition, 0, inputEvent, &inputActions->TouchPositionX);
-        UpdateInputValue(ElemInputId_TouchYPosition, 0, inputEvent, &inputActions->TouchPositionY);
+        UpdateInputValue(ElemInputId_TouchXAbsolutePosition, 0, inputEvent, &inputActions->TouchPositionX);
+        UpdateInputValue(ElemInputId_TouchYAbsolutePosition, 0, inputEvent, &inputActions->TouchPositionY);
 
         UpdateInputValue(ElemInputId_Touch, 1, inputEvent, &inputActions->Touch2);
         UpdateInputValueNegate(ElemInputId_Touch, 1, inputEvent, &inputActions->Touch2Released);
@@ -179,8 +177,8 @@ void UpdateInputs(InputActions* inputActions)
         UpdateInputValue(ElemInputId_TouchXPositive, 1, inputEvent, &inputActions->Touch2RotateRight);
         UpdateInputValue(ElemInputId_TouchYNegative, 1, inputEvent, &inputActions->Touch2RotateUp);
         UpdateInputValue(ElemInputId_TouchYPositive, 1, inputEvent, &inputActions->Touch2RotateDown);
-        UpdateInputValue(ElemInputId_TouchXPosition, 1, inputEvent, &inputActions->Touch2PositionX);
-        UpdateInputValue(ElemInputId_TouchYPosition, 1, inputEvent, &inputActions->Touch2PositionY);
+        UpdateInputValue(ElemInputId_TouchXAbsolutePosition, 1, inputEvent, &inputActions->Touch2PositionX);
+        UpdateInputValue(ElemInputId_TouchYAbsolutePosition, 1, inputEvent, &inputActions->Touch2PositionY);
 
         // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
         UpdateInputValue(ElemInputId_KeyZ, 0, inputEvent, &inputActions->ZoomIn);
@@ -198,7 +196,6 @@ void UpdateInputs(InputActions* inputActions)
 
         UpdateInputValue(ElemInputId_KeyF1, 0, inputEvent, &inputActions->HideCursor);
         UpdateInputValue(ElemInputId_KeyF2, 0, inputEvent, &inputActions->ShowCursor);
-        UpdateInputValueNegate(ElemInputId_KeyF3, 0, inputEvent, &inputActions->SwitchAcceleration);
         UpdateInputValueNegate(ElemInputId_KeyEscape, 0, inputEvent, &inputActions->ExitApp);
         UpdateInputValueNegate(ElemInputId_MouseLeftButton, 0, inputEvent, &inputActions->TouchReleased);
         UpdateInputValueNegate(ElemInputId_MouseRightButton, 0, inputEvent, &inputActions->TouchRotateSideReleased);
@@ -206,15 +203,18 @@ void UpdateInputs(InputActions* inputActions)
     }
 }
 
+// TODO: Put that in payload state
 Vector3 rotationTouch = { };
 float rotationTouchDecreaseSpeed = 0.001f;
 float rotationTouchMaxSpeed = 0.3f;
-bool useAcceleration = true;
 Vector3 currentRotationSpeed = V3Zero;
 float previousDistance = 0.0f;
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
+    // TODO: Double tap (color change)
+    // TODO: Fix z rotation on touch? 
+
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
 
@@ -226,19 +226,10 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
-    if (inputActions->SwitchAcceleration)
-    {
-        useAcceleration = !useAcceleration;
-        printf("Acceleration: %d\n", useAcceleration);
-    }
-
     //ElemWindowCursorPosition cursorPosition = ElemGetWindowCursorPosition(applicationPayload->Window);
     //printf("Cursor Position: %u, %u\n", cursorPosition.X, cursorPosition.Y);
 
-    // TODO: Use an acceleration? (only for linear motions! Touch motion or mouse are already accelerated by the user :))
     Vector3 rotationDelta = V3Zero; 
-
-    // TODO: On macbook pro we need to prioritize the mouse over the touchpad but keep touch into account
 
     // TODO: Can we add options to normalize the speed we need for different path?
     if (inputActions->Touch && !inputActions->Touch2)
@@ -260,20 +251,13 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
         if (MagnitudeSquaredV3(direction))
         {
-            if (!useAcceleration)
-            {
-                rotationDelta = MulScalarV3(direction, 8.0f * updateParameters->DeltaTimeInSeconds);
-            }
-            else
-            {
-                // TODO: The friction here is what we do for the touch. So maybe we can take the same code but with different constants?
-                Vector3 acceleration = AddV3(MulScalarV3(direction, 500.0f), MulScalarV3(InverseV3(currentRotationSpeed), 60));
+            // TODO: The friction here is what we do for the touch. So maybe we can take the same code but with different constants?
+            Vector3 acceleration = AddV3(MulScalarV3(direction, 500.0f), MulScalarV3(InverseV3(currentRotationSpeed), 60));
 
-                rotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(updateParameters->DeltaTimeInSeconds)), MulScalarV3(currentRotationSpeed, updateParameters->DeltaTimeInSeconds));
-                currentRotationSpeed = AddV3(MulScalarV3(acceleration, updateParameters->DeltaTimeInSeconds), currentRotationSpeed);
+            rotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(updateParameters->DeltaTimeInSeconds)), MulScalarV3(currentRotationSpeed, updateParameters->DeltaTimeInSeconds));
+            currentRotationSpeed = AddV3(MulScalarV3(acceleration, updateParameters->DeltaTimeInSeconds), currentRotationSpeed);
 
-                printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
-            }
+            printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
         }
     }
 
@@ -281,6 +265,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     {
         if (inputActions->Touch2)
         {
+            // TODO: For rotation:
+            // https://github.com/TouchScript/TouchScript/blob/master/Source/Assets/TouchScript/Scripts/Gestures/TransformGestures/ScreenTransformGesture.cs
             Vector2 touchDirection = (Vector2){ inputActions->TouchRotateLeft - inputActions->TouchRotateRight, inputActions->TouchRotateUp - inputActions->TouchRotateDown };
             Vector2 touch2Direction = (Vector2){ inputActions->Touch2RotateLeft - inputActions->Touch2RotateRight, inputActions->Touch2RotateUp - inputActions->Touch2RotateDown };
 
@@ -294,6 +280,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
                 printf("Zoom: %f\n", distance > previousDistance ? -1.0f : 1.0f);
 
+                // TODO: Can we compute the strength based on the position?
                 float strength = fmaxf(MagnitudeV2(touchDirection), MagnitudeV2(touch2Direction));
                 applicationPayload->ShaderParameters.Zoom += (distance < previousDistance ? -1.0f : 1.0f) * strength * 10.0f * updateParameters->DeltaTimeInSeconds;
                 previousDistance = distance;

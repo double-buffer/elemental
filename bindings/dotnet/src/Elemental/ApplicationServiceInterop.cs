@@ -10,19 +10,19 @@ internal static partial class ApplicationServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemGetSystemInfo")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial SystemInfoUnsafe GetSystemInfo();
+    internal static partial SystemInfo GetSystemInfo();
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemRunApplication")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial int RunApplication(in RunApplicationParametersUnsafe parameters);
+    internal static partial int RunApplication(in RunApplicationParameters parameters);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemExitApplication")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void ExitApplication();
+    internal static partial void ExitApplication(int exitCode);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateWindow")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial Window CreateWindow(in WindowOptionsUnsafe options);
+    internal static partial Window CreateWindow(in WindowOptions options);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemFreeWindow")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -34,10 +34,22 @@ internal static partial class ApplicationServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemSetWindowTitle")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void SetWindowTitle(Window window, ReadOnlySpan<byte> title);
+    internal static partial void SetWindowTitle(Window window, in char title);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemSetWindowState")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void SetWindowState(Window window, WindowState windowState);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemShowWindowCursor")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void ShowWindowCursor(Window window);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemHideWindowCursor")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void HideWindowCursor(Window window);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemGetWindowCursorPosition")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial WindowCursorPosition GetWindowCursorPosition(Window window);
 
 }

@@ -536,7 +536,7 @@ void TouchHandler(ElemWindow window, void* deviceId, uint32_t fingerIndex, float
             .Window = window,
             .InputDevice = inputDevice,
             .InputDeviceTypeIndex = fingerIndex,
-            .InputId = ElemInputId_TouchXPosition,
+            .InputId = ElemInputId_TouchXAbsolutePosition,
             .InputType = ElemInputType_Absolute,
             .Value = x,
             .ElapsedSeconds = elapsedSeconds
@@ -549,7 +549,7 @@ void TouchHandler(ElemWindow window, void* deviceId, uint32_t fingerIndex, float
             .Window = window,
             .InputDevice = inputDevice,
             .InputDeviceTypeIndex = fingerIndex,
-            .InputId = ElemInputId_TouchYPosition,
+            .InputId = ElemInputId_TouchYAbsolutePosition,
             .InputType = ElemInputType_Absolute,
             .Value = y,
             .ElapsedSeconds = elapsedSeconds

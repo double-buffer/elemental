@@ -8,7 +8,7 @@ public ref struct WindowOptions
     /// <summary>
     /// Title of the window.
     /// </summary>
-    public ReadOnlySpan<byte> Title { get; set; }
+    public in char Title { get; set; }
 
     /// <summary>
     /// Width of the window in pixels.
@@ -24,16 +24,9 @@ public ref struct WindowOptions
     /// Initial state of the window.
     /// </summary>
     public WindowState WindowState { get; set; }
+
+    /// <summary>
+    /// True if the cursor should be hidden.
+    /// </summary>
+    public bool IsCursorHidden { get; set; }
 }
-
-internal unsafe struct WindowOptionsUnsafe
-{
-    public byte* Title { get; set; }
-
-    public uint Width { get; set; }
-
-    public uint Height { get; set; }
-
-    public WindowState WindowState { get; set; }
-}
-

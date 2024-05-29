@@ -790,7 +790,7 @@ ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
  * @param shaderLibraryData The binary data containing the shaders.
  * @return A handle to the newly created shader library.
  */
-ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, const ElemDataSpan shaderLibraryData);
+ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 
 /**
  * Releases resources associated with a shader library.
@@ -825,7 +825,7 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
  * @param offsetInBytes The offset within the constant buffer at which to begin updating constants.
  * @param data The data to be pushed as constants.
  */
-ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, const ElemDataSpan data);
+ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data);
 
 /**
  * Begins a render pass, setting up the rendering targets and viewports for drawing operations.
@@ -1036,8 +1036,8 @@ typedef enum
     ElemInputId_TouchXPositive = 145,
     ElemInputId_TouchYNegative = 146,
     ElemInputId_TouchYPositive = 147,
-    ElemInputId_TouchXPosition = 148,
-    ElemInputId_TouchYPosition = 149
+    ElemInputId_TouchXAbsolutePosition = 148,
+    ElemInputId_TouchYAbsolutePosition = 149
 } ElemInputId;
 
 typedef struct

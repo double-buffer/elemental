@@ -27,7 +27,8 @@ public interface IApplicationService
     /// <summary>
     /// Exits the application, performing necessary cleanup.
     /// </summary>
-    void ExitApplication();
+    /// <param name="exitCode">Exit code of the application.</param>
+    void ExitApplication(int exitCode);
 
     /// <summary>
     /// Creates a window with the specified options or default settings if none are provided.
@@ -54,14 +55,7 @@ public interface IApplicationService
     /// </summary>
     /// <param name="window">The window instance.</param>
     /// <param name="title">New title for the window.</param>
-    void SetWindowTitle(Window window, ReadOnlySpan<byte> title);
-
-    /// <summary>
-    /// Sets a window's title.
-    /// </summary>
-    /// <param name="window">The window instance.</param>
-    /// <param name="title">New title for the window.</param>
-    void SetWindowTitle(Window window, string title);
+    void SetWindowTitle(Window window, in char title);
 
     /// <summary>
     /// Changes the state of a window (e.g., minimize, maximize).
@@ -69,4 +63,14 @@ public interface IApplicationService
     /// <param name="window">The window instance.</param>
     /// <param name="windowState">New state for the window.</param>
     void SetWindowState(Window window, WindowState windowState);
+
+    /// <summary>
+    /// TODO: Comments
+///TODO: Make sure the coordinates are consistent accross all platforms
+    /// </summary>
+    void ShowWindowCursor(Window window);
+
+    void HideWindowCursor(Window window);
+
+    WindowCursorPosition GetWindowCursorPosition(Window window);
 }

@@ -5,7 +5,7 @@ namespace Elemental.Graphics;
 /// </summary>
 [NativeMarshalling(typeof(SwapChainUpdateHandlerMarshaller))]
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void SwapChainUpdateHandler(ReadOnlySpan<byte> updateParameters, ReadOnlySpan<byte> payload);
+public delegate void SwapChainUpdateHandler(SwapChainUpdateParameters updateParameters, ReadOnlySpan<byte> payload);
 
 [CustomMarshaller(typeof(SwapChainUpdateHandler), MarshalMode.ManagedToUnmanagedIn, typeof(SwapChainUpdateHandlerMarshaller))]
 internal static unsafe class SwapChainUpdateHandlerMarshaller
@@ -18,22 +18,12 @@ internal static unsafe class SwapChainUpdateHandlerMarshaller
 
     private static InterceptorEntry? _interceptorEntry;
 
-    private static unsafe void Interceptor(byte* updateParameters, byte* payload)
+    private static unsafe void Interceptor(SwapChainUpdateParameters updateParameters, byte* payload)
     {
-        if (_interceptorEntry == null || function == null || message == null)
+        if (_interceptorEntry == null || updateParameters != null || payload != null)
         {
             return;
         }
-
-        var updateParametersCounter = 0;
-        var updateParametersPointer = (byte*)updateParameters;
-
-        while (updateParametersPointer[updateParametersCounter] != 0)
-        {
-            updateParametersCounter++;
-        }
-
-        updateParametersCounter++;
 
         var payloadCounter = 0;
         var payloadPointer = (byte*)payload;
@@ -45,7 +35,7 @@ internal static unsafe class SwapChainUpdateHandlerMarshaller
 
         payloadCounter++;
 
-        _interceptorEntry.Callback(new ReadOnlySpan<byte>(updateParameters, updateParametersCounter), new ReadOnlySpan<byte>(payload, payloadCounter));
+        _interceptorEntry.Callback(updateParameters, new ReadOnlySpan<byte>(payload, payloadCounter));
     }
 
     public static nint ConvertToUnmanaged(SwapChainUpdateHandler managed)

@@ -88,7 +88,7 @@ public interface IGraphicsService
     /// <param name="commandLists">A span of command lists to be executed.</param>
     /// <param name="options">Additional options controlling execution, such as fence dependencies.</param>
     /// <returns>A fence indicating the completion state of the command lists' execution.</returns>
-    Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlyMemory<CommandList> commandLists, in ExecuteCommandListOptions options = default);
+    Fence ExecuteCommandLists(CommandQueue commandQueue, ReadOnlySpan<CommandList> commandLists, in ExecuteCommandListOptions options = default);
 
     /// <summary>
     /// Waits for a fence to reach its signaled state on the CPU, effectively synchronizing CPU and GPU operations.
@@ -139,7 +139,7 @@ public interface IGraphicsService
     /// <param name="graphicsDevice">The device on which to create the shader library.</param>
     /// <param name="shaderLibraryData">The binary data containing the shaders.</param>
     /// <returns>A handle to the newly created shader library.</returns>
-    ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, ReadOnlyMemory<const Data> shaderLibraryData);
+    ShaderLibrary CreateShaderLibrary(GraphicsDevice graphicsDevice, ReadOnlySpan<byte> shaderLibraryData);
 
     /// <summary>
     /// Releases resources associated with a shader library.
@@ -174,7 +174,7 @@ public interface IGraphicsService
     /// <param name="commandList">The command list through which the constants are pushed.</param>
     /// <param name="offsetInBytes">The offset within the constant buffer at which to begin updating constants.</param>
     /// <param name="data">The data to be pushed as constants.</param>
-    void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, ReadOnlyMemory<const Data> data);
+    void PushPipelineStateConstants(CommandList commandList, uint offsetInBytes, ReadOnlySpan<byte> data);
 
     /// <summary>
     /// Begins a render pass, setting up the rendering targets and viewports for drawing operations.
@@ -201,7 +201,7 @@ public interface IGraphicsService
     /// </summary>
     /// <param name="commandList">The command list on which the viewports are to be set.</param>
     /// <param name="viewports">A span of viewports to be applied.</param>
-    void SetViewports(CommandList commandList, ReadOnlyMemory<Viewport> viewports);
+    void SetViewports(CommandList commandList, ReadOnlySpan<Viewport> viewports);
 
     /// <summary>
     /// Dispatches a mesh shader operation on a command list, specifying the number of thread groups in each dimension.
