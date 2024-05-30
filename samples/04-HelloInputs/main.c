@@ -34,6 +34,9 @@ typedef struct
     float ShowCursor;
 
     float ExitApp;
+
+    uint32_t TouchReleasedCount;
+    double LastTouchReleasedTime;
 } InputActions;
 
 typedef struct
@@ -188,6 +191,26 @@ void UpdateInputs(InputActions* inputActions)
         UpdateInputValueNegate(ElemInputId_KeyEscape, 0, inputEvent, &inputActions->ExitApp);
         UpdateInputValueNegate(ElemInputId_MouseLeftButton, 0, inputEvent, &inputActions->TouchReleased);
         UpdateInputValueNegate(ElemInputId_Touch, 0, inputEvent, &inputActions->TouchReleased);
+
+        if (((inputEvent->InputId == ElemInputId_Touch && inputEvent->InputDeviceTypeIndex == 0) || inputEvent->InputId == ElemInputId_MouseLeftButton) && inputEvent->Value == 0)
+        {
+            if ((inputEvent->ElapsedSeconds - inputActions->LastTouchReleasedTime) > 0.25f)
+            {
+                inputActions->TouchReleasedCount = 1;
+            }
+            else
+            {
+                inputActions->TouchReleasedCount++;
+
+                if (inputActions->TouchReleasedCount > 1)
+                {
+                    inputActions->ChangeColor = !inputActions->ChangeColor;
+                    inputActions->TouchReleasedCount = 0;
+                }
+            }
+
+            inputActions->LastTouchReleasedTime = inputEvent->ElapsedSeconds;
+        }
     }
 }
 
@@ -232,7 +255,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
             if (previousDistance != 0.0f)
             {
-                applicationPayload->ShaderParameters.Zoom += zoom * 10.0f * updateParameters->DeltaTimeInSeconds;
+                applicationPayload->ShaderParameters.Zoom += zoom * 1000.0f * updateParameters->DeltaTimeInSeconds;
             }
 
             float rotation = NormalizeAngle(angle - previousAngle);
@@ -247,16 +270,28 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
         else 
         {
+            rotationTouch = V2Zero;
+            previousDistance = 0.0f;
+            previousAngle = 0.0f;   
+
             rotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
             rotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
         }
     }
     else if (inputActions->TouchRotateSide)
     {
+        rotationTouch = V2Zero;
+        previousDistance = 0.0f;
+        previousAngle = 0.0f;   
+
         rotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
     }
     else if (inputActions->TouchReleased && !inputActions->Touch2)
     {
+        rotationTouch = V2Zero;
+        previousDistance = 0.0f;
+        previousAngle = 0.0f;   
+
         rotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
         rotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
     }
@@ -274,17 +309,11 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             // TODO: The friction here is what we do for the touch. So maybe we can take the same code but with different constants?
             Vector3 acceleration = AddV3(MulScalarV3(direction, 500.0f), MulScalarV3(InverseV3(currentRotationSpeed), 60));
 
+            rotationTouch = V2Zero;
             rotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(updateParameters->DeltaTimeInSeconds)), MulScalarV3(currentRotationSpeed, updateParameters->DeltaTimeInSeconds));
             currentRotationSpeed = AddV3(MulScalarV3(acceleration, updateParameters->DeltaTimeInSeconds), currentRotationSpeed);
             //printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
         }
-    }
-
-    if (MagnitudeSquaredV3(rotationDelta))
-    {
-        rotationTouch = V2Zero;
-        previousDistance = 0.0f;
-        previousAngle = 0.0f;    
     }
 
     if (MagnitudeSquaredV2(rotationTouch) > 0)

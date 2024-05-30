@@ -39,7 +39,7 @@ public class TouchEventManager {
         
         let touchKey = UInt64(bitPattern: Int64(touchHash.hashValue))
 
-        let location = normalizeTouchPosition(touch)
+        let location = normalizeTouchPosition(touch, true)
         var state = UInt(0)
         var previousLoc = CGPoint(x: 0, y: 0)
         var deltaLocation = CGPoint(x: 0, y: 0)
@@ -63,8 +63,8 @@ public class TouchEventManager {
             }
         } else if (touch.phase == .moved || touch.phase == .stationary) {
             fingerIndex = UInt(touchData[touchKey]?.index ?? 0)
-            deltaLocation.x = (location.x - previousLoc.x)
-            deltaLocation.y = (location.y - previousLoc.y)
+            deltaLocation.x = (location.x - previousLoc.x) * 500
+            deltaLocation.y = (location.y - previousLoc.y) * 500
             state = 1
         } else {
             state = 2
@@ -83,22 +83,21 @@ public class TouchEventManager {
             touchData[touchKey]?.deltaLocation = deltaLocation
         }
 
-        // TODO: We need to find a way to compute the position in pixels like the mouse
+        let absoluteLocation = normalizeTouchPosition(touch, false)
+
         // TODO: Device Id should represent the screen or trackpad not the touch!
-        touchHandler(elemWindow, touchKey, fingerIndex, Float(location.x), Float(location.y), Float(deltaLocation.x), Float(deltaLocation.y), state)
+        touchHandler(elemWindow, touchKey, fingerIndex, Float(absoluteLocation.x), Float(absoluteLocation.y), Float(deltaLocation.x), Float(deltaLocation.y), state)
     }
 
-    private func normalizeTouchPosition(_ touch: Touch) -> CGPoint {
-        // TODO: Change that
-        let mul = 500.0
+    private func normalizeTouchPosition(_ touch: Touch, _ applyRatio: Bool) -> CGPoint {
         #if canImport(UIKit)
         let location = touch.location(in: self.view)
         let maxDimension = max(self.view.bounds.width, self.view.bounds.height)
-        let normalizedX = location.x / maxDimension
-        let normalizedY = location.y / maxDimension
-        return CGPoint(x: normalizedX * mul, y: -normalizedY * mul)
+        let normalizedX = location.x / (applyRatio ? maxDimension : self.view.bounds.width)
+        let normalizedY = location.y / (applyRatio ? maxDimension : self.view.bounds.height)
+        return CGPoint(x: normalizedX, y: -normalizedY)
         #else
-        return CGPoint(x: touch.normalizedPosition.x * mul, y: touch.normalizedPosition.y * mul)
+        return CGPoint(x: touch.normalizedPosition.x, y: touch.normalizedPosition.y)
         #endif
     }
 }

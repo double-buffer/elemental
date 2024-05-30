@@ -463,7 +463,7 @@ void TouchHandler(ElemWindow window, void* deviceId, uint32_t fingerIndex, float
 
     // TODO: Do we need to remove the touch device?
 
-    //SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test touch: deltaX=%f, deltaY=%f, state=%d (device: %d, finger index: %d, x=%f, y=%f)", deltaX, deltaY, state, deviceId, fingerIndex, x, y);
+    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test touch: deltaX=%f, deltaY=%f, state=%d (device: %d, finger index: %d, x=%f, y=%f)", deltaX, deltaY, state, deviceId, fingerIndex, x, y);
 
     if (state == 0 || state == 2)
     {
