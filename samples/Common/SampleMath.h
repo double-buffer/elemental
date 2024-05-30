@@ -12,6 +12,18 @@ float pow2f(float value)
     return value * value;
 }
 
+float NormalizeAngle(float angle) 
+{
+    angle = fmod(angle + M_PI, 2 * M_PI);
+
+    if (angle < 0) 
+    {
+        angle += 2 * M_PI;
+    }
+
+    return angle - M_PI;
+}
+
 typedef struct
 {
     float X, Y;
@@ -35,6 +47,7 @@ typedef union
     }; 
 } Vector4;
 
+#define V2Zero (Vector2) { .X = 0.0f, .Y = 0.0f }
 #define V3Zero (Vector3) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f }
 
 Vector2 InverseV2(Vector2 v)

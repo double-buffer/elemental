@@ -14,7 +14,6 @@ typedef struct
 
     float Touch;
     float TouchReleased;
-    float TouchRotateSide;
     float TouchRotateLeft;
     float TouchRotateRight;
     float TouchRotateUp;
@@ -23,13 +22,10 @@ typedef struct
     float TouchPositionY;
 
     float Touch2;
-    float Touch2Released;
-    float Touch2RotateLeft;
-    float Touch2RotateRight;
-    float Touch2RotateUp;
-    float Touch2RotateDown;
     float Touch2PositionX;
     float Touch2PositionY;
+    
+    float TouchRotateSide;
 
     float ZoomIn;
     float ZoomOut;
@@ -125,7 +121,6 @@ void UpdateInputs(InputActions* inputActions)
 
     inputActions->ExitApp = false;
     inputActions->TouchReleased = false;
-    inputActions->Touch2Released = false;
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
@@ -171,11 +166,6 @@ void UpdateInputs(InputActions* inputActions)
         UpdateInputValue(ElemInputId_TouchYAbsolutePosition, 0, inputEvent, &inputActions->TouchPositionY);
 
         UpdateInputValue(ElemInputId_Touch, 1, inputEvent, &inputActions->Touch2);
-        UpdateInputValueNegate(ElemInputId_Touch, 1, inputEvent, &inputActions->Touch2Released);
-        UpdateInputValue(ElemInputId_TouchXNegative, 1, inputEvent, &inputActions->Touch2RotateLeft);
-        UpdateInputValue(ElemInputId_TouchXPositive, 1, inputEvent, &inputActions->Touch2RotateRight);
-        UpdateInputValue(ElemInputId_TouchYNegative, 1, inputEvent, &inputActions->Touch2RotateUp);
-        UpdateInputValue(ElemInputId_TouchYPositive, 1, inputEvent, &inputActions->Touch2RotateDown);
         UpdateInputValue(ElemInputId_TouchXAbsolutePosition, 1, inputEvent, &inputActions->Touch2PositionX);
         UpdateInputValue(ElemInputId_TouchYAbsolutePosition, 1, inputEvent, &inputActions->Touch2PositionY);
 
@@ -202,24 +192,12 @@ void UpdateInputs(InputActions* inputActions)
 }
 
 // TODO: Put that in payload state
-Vector3 rotationTouch = { };
+Vector2 rotationTouch = { };
 float rotationTouchDecreaseSpeed = 0.001f;
 float rotationTouchMaxSpeed = 0.3f;
 Vector3 currentRotationSpeed = V3Zero;
 float previousDistance = 0.0f;
 float previousAngle = 0.0f;
-
-float NormalizeAngle(float angle) 
-{
-    angle = fmod(angle + M_PI, 2 * M_PI);
-
-    if (angle < 0) 
-    {
-        angle += 2 * M_PI;
-    }
-
-    return angle - M_PI;
-}
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
@@ -236,48 +214,51 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
-    //ElemWindowCursorPosition cursorPosition = ElemGetWindowCursorPosition(applicationPayload->Window);
-    //printf("Cursor Position: %u, %u\n", cursorPosition.X, cursorPosition.Y);
-
     Vector3 rotationDelta = V3Zero; 
 
     // TODO: Review constant values
-    if (inputActions->Touch && inputActions->Touch2)
+    if (inputActions->Touch)
     {
-        Vector2 touchPosition = (Vector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
-        Vector2 touchPosition2 = (Vector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
-
-        Vector2 diffVector = SubstractV2(touchPosition, touchPosition2);
-        float distance = MagnitudeV2(diffVector);
-        float angle = atan2(diffVector.X, diffVector.Y);
-
-        float zoom = distance - previousDistance;
-
-        if (previousDistance != 0.0f)
+        if (inputActions->Touch2)
         {
-            //printf("Zoom: %f (cur: %f, prev: %f) (TouchPosition: %f, %f | Touch2: %f %f)\n", zoom, distance, previousDistance, inputActions->TouchPositionX, inputActions->TouchPositionY, inputActions->Touch2PositionX, inputActions->Touch2PositionY);
-            applicationPayload->ShaderParameters.Zoom += zoom * 10.0f * updateParameters->DeltaTimeInSeconds;
+            Vector2 touchPosition = (Vector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
+            Vector2 touchPosition2 = (Vector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
+
+            Vector2 diffVector = SubstractV2(touchPosition, touchPosition2);
+            float distance = MagnitudeV2(diffVector);
+            float angle = atan2(diffVector.X, diffVector.Y);
+
+            float zoom = distance - previousDistance;
+
+            if (previousDistance != 0.0f)
+            {
+                applicationPayload->ShaderParameters.Zoom += zoom * 10.0f * updateParameters->DeltaTimeInSeconds;
+            }
+
+            float rotation = NormalizeAngle(angle - previousAngle);
+
+            if (previousAngle != 0.0f)
+            {
+                rotationDelta.Z = -rotation * 200.0f * updateParameters->DeltaTimeInSeconds;
+            }
+
+            previousDistance = distance;
+            previousAngle = angle;
         }
-
-        float rotation = NormalizeAngle(angle - previousAngle);
-
-        if (previousAngle != 0.0f)
+        else 
         {
-            printf("Rotation: %f (cur: %f, prev: %f)\n", rotation, angle, previousAngle);
-            rotationDelta.Z = -rotation * 200.0f * updateParameters->DeltaTimeInSeconds;
+            rotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
+            rotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
         }
-
-        previousDistance = distance;
-        previousAngle = angle;
     }
-    // TODO: Can we add options to normalize the speed we need for different path?
-    else if (inputActions->Touch && !inputActions->Touch2)
+    else if (inputActions->TouchRotateSide)
     {
-        rotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
-        rotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
-
-        // TODO: We should only zero the X and Y component!
-        rotationTouch = V3Zero;
+        rotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
+    }
+    else if (inputActions->TouchReleased && !inputActions->Touch2)
+    {
+        rotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
+        rotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
     }
     else
     {
@@ -285,7 +266,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         { 
             .X = (inputActions->RotateUp - inputActions->RotateDown),
             .Y = (inputActions->RotateLeft - inputActions->RotateRight),
-            .Z = 0.0f
+            .Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight)
         });
 
         if (MagnitudeSquaredV3(direction))
@@ -295,51 +276,33 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
             rotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(updateParameters->DeltaTimeInSeconds)), MulScalarV3(currentRotationSpeed, updateParameters->DeltaTimeInSeconds));
             currentRotationSpeed = AddV3(MulScalarV3(acceleration, updateParameters->DeltaTimeInSeconds), currentRotationSpeed);
-
-            printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
+            //printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
         }
+    }
 
+    if (MagnitudeSquaredV3(rotationDelta))
+    {
+        rotationTouch = V2Zero;
         previousDistance = 0.0f;
         previousAngle = 0.0f;    
-
-        // TODO: Do we need a separate touch rotate left?
-
-        if (inputActions->TouchRotateSide)
-        {
-            rotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
-        }
-        else
-        {
-            rotationDelta.Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
-        }
     }
 
-    if (inputActions->TouchReleased)
+    if (MagnitudeSquaredV2(rotationTouch) > 0)
     {
-        // TODO: For the moment it is impossible to pull of on iphone because there is small delay between the 2 releases
-        if (inputActions->TouchReleased && !inputActions->Touch2Released)
+        if (MagnitudeV2(rotationTouch) > rotationTouchMaxSpeed)
         {
-            rotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
-            rotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
+            rotationTouch = MulScalarV2(NormalizeV2(rotationTouch), rotationTouchMaxSpeed);
         }
 
-        if (MagnitudeV3(rotationTouch) > rotationTouchMaxSpeed)
-        {
-            rotationTouch = MulScalarV3(NormalizeV3(rotationTouch), rotationTouchMaxSpeed);
-        }
-    }
-
-    if (MagnitudeSquaredV3(rotationTouch) > 0)
-    {
         //printf("Touch Speed = %f, %f, %f (%f)\n", rotationTouch.X, rotationTouch.Y, rotationTouch.Z, MagnitudeV3(rotationTouch));
-        rotationDelta = AddV3(rotationDelta, rotationTouch);
+        rotationDelta = AddV3(rotationDelta, (Vector3){ rotationTouch.X, rotationTouch.Y, 0.0f });
 
-        Vector3 inverse = MulScalarV3(NormalizeV3(InverseV3(rotationTouch)), rotationTouchDecreaseSpeed);
-        rotationTouch = AddV3(rotationTouch, inverse);
+        Vector2 inverse = MulScalarV2(NormalizeV2(InverseV2(rotationTouch)), rotationTouchDecreaseSpeed);
+        rotationTouch = AddV2(rotationTouch, inverse);
 
-        if (MagnitudeV3(rotationTouch) < 0.001f)
+        if (MagnitudeV2(rotationTouch) < 0.001f)
         {
-            rotationTouch = (Vector3){};
+            rotationTouch = V2Zero;
         }
     }
         
