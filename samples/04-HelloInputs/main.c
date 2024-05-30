@@ -7,7 +7,7 @@ typedef enum
 {
     InputActionBindingType_Value,
     InputActionBindingType_Released,
-    InputActionBindingType_DoubleReleased,
+    InputActionBindingType_DoubleReleasedSwitch,
 } InputActionBindingType;
 
 typedef struct
@@ -16,6 +16,8 @@ typedef struct
     InputActionBindingType BindingType;
     uint32_t Index;
     float* ActionValue;
+    uint32_t ReleasedCount;
+    double LastReleasedTime;
 } InputActionBinding;
 
 typedef struct
@@ -49,9 +51,6 @@ typedef struct
     float ShowCursor;
 
     float ExitApp;
-
-    uint32_t TouchReleasedCount;
-    double LastTouchReleasedTime;
 } InputActions;
 
 typedef struct
@@ -147,6 +146,7 @@ void InitInputBindings(ApplicationPayload* applicationPayload)
     RegisterInputActionBinding(applicationPayload, ElemInputId_MouseMiddleButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
     RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadButtonA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
     RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.ChangeColor);
 
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyF1, 0, InputActionBindingType_Value, &applicationPayload->InputActions.HideCursor);
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyF2, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ShowCursor);
@@ -225,41 +225,38 @@ void UpdateInputs(InputActions* inputActions, InputActionBinding* inputActionBin
 
         for (uint32_t j = 0; j < inputActionBindingCount; j++)
         {
-            InputActionBinding binding = inputActionBindings[j];
+            InputActionBinding* binding = &inputActionBindings[j];
 
-            if (binding.BindingType == InputActionBindingType_Value && 
-                inputEvent->InputId == binding.InputId && 
-                inputEvent->InputDeviceTypeIndex == binding.Index)
+            if (inputEvent->InputId == binding->InputId && inputEvent->InputDeviceTypeIndex == binding->Index)
             {
-                *binding.ActionValue = inputEvent->Value;
-            }
-            else if (binding.BindingType == InputActionBindingType_Released && 
-                     inputEvent->InputId == binding.InputId && 
-                     inputEvent->InputDeviceTypeIndex == binding.Index)
-            {
-                *binding.ActionValue = !inputEvent->Value;
-            }
-        }
-
-
-        if (((inputEvent->InputId == ElemInputId_Touch && inputEvent->InputDeviceTypeIndex == 0) || inputEvent->InputId == ElemInputId_MouseLeftButton) && inputEvent->Value == 0)
-        {
-            if ((inputEvent->ElapsedSeconds - inputActions->LastTouchReleasedTime) > 0.25f)
-            {
-                inputActions->TouchReleasedCount = 1;
-            }
-            else
-            {
-                inputActions->TouchReleasedCount++;
-
-                if (inputActions->TouchReleasedCount > 1)
+                if (binding->BindingType == InputActionBindingType_Value)
                 {
-                    inputActions->ChangeColor = !inputActions->ChangeColor;
-                    inputActions->TouchReleasedCount = 0;
+                    *binding->ActionValue = inputEvent->Value;
+                }
+                else if (binding->BindingType == InputActionBindingType_Released)
+                {
+                    *binding->ActionValue = !inputEvent->Value;
+                }
+                else if (binding->BindingType == InputActionBindingType_DoubleReleasedSwitch && inputEvent->Value == 0.0f)
+                {
+                    if ((inputEvent->ElapsedSeconds - binding->LastReleasedTime) > 0.25f)
+                    {
+                        binding->ReleasedCount = 1;
+                    }
+                    else
+                    {
+                        binding->ReleasedCount++;
+
+                        if (binding->ReleasedCount > 1)
+                        {
+                            *binding->ActionValue = !*binding->ActionValue;
+                            binding->ReleasedCount = 0;
+                        }
+                    }
+
+                    binding->LastReleasedTime = inputEvent->ElapsedSeconds;
                 }
             }
-
-            inputActions->LastTouchReleasedTime = inputEvent->ElapsedSeconds;
         }
     }
 }
