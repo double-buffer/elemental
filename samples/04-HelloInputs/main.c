@@ -3,6 +3,21 @@
 #include "SampleUtils.h"
 #include "SampleMath.h"
 
+typedef enum
+{
+    InputActionBindingType_Value,
+    InputActionBindingType_Released,
+    InputActionBindingType_DoubleReleased,
+} InputActionBindingType;
+
+typedef struct
+{
+    ElemInputId InputId;
+    InputActionBindingType BindingType;
+    uint32_t Index;
+    float* ActionValue;
+} InputActionBinding;
+
 typedef struct
 {
     float RotateLeft;
@@ -55,11 +70,92 @@ typedef struct
     ElemCommandQueue CommandQueue;
     ElemSwapChain SwapChain;
     ElemPipelineState GraphicsPipeline;
-    InputActions InputActions;
     ShaderParameters ShaderParameters;
+    InputActions InputActions;
+    InputActionBinding InputActionBindings[255];
+    uint32_t InputActionBindingCount;
 } ApplicationPayload;
-
+    
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
+
+void RegisterInputActionBinding(ApplicationPayload* applicationPayload, ElemInputId inputId, uint32_t index, InputActionBindingType bindingType, float* actionValue)
+{
+    applicationPayload->InputActionBindings[applicationPayload->InputActionBindingCount++] = (InputActionBinding)
+    { 
+        .InputId = inputId, 
+        .BindingType = bindingType,
+        .Index = index,
+        .ActionValue = actionValue
+    };
+}
+
+void InitInputBindings(ApplicationPayload* applicationPayload)
+{
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateLeft);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateLeft);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyD, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateRight);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateRight);
+    
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyW, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateUp);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateUp);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyS, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateDown);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateDown);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyQ, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideLeft);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadLeftTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideLeft);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyE, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideRight);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadRightTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideRight);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.Touch);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 0, InputActionBindingType_Value, &applicationPayload->InputActions.Touch);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseRightButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateSide);
+
+    // TODO: Apply some pre multipliers
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateLeft);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateLeft);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateRight);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateRight);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateUp);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateUp);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateDown);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateDown);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXAbsolutePosition, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchPositionX);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYAbsolutePosition, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchPositionY);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXAbsolutePosition, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2PositionX);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYAbsolutePosition, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2PositionY);
+
+    // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyZ, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadRightShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseWheelPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyX, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadLeftShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseWheelNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeySpacebar, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseMiddleButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadButtonA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyF1, 0, InputActionBindingType_Value, &applicationPayload->InputActions.HideCursor);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyF2, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ShowCursor);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyEscape, 0, InputActionBindingType_Released, &applicationPayload->InputActions.ExitApp);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
+}
 
 void InitSample(void* payload)
 {
@@ -87,6 +183,8 @@ void InitSample(void* payload)
     });
 
     applicationPayload->ShaderParameters.RotationQuaternion = (Vector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
+
+    InitInputBindings(applicationPayload);
     
     ElemFreeShaderLibrary(shaderLibrary);
     SampleStartFrameMeasurement();
@@ -102,28 +200,19 @@ void FreeSample(void* payload)
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 }
 
-void UpdateInputValueNegate(ElemInputId inputId, uint32_t index, const ElemInputEvent* inputEvent, float* inputValue)
-{
-    if (inputEvent->InputId == inputId && inputEvent->InputDeviceTypeIndex == index)
-    {
-        *inputValue = !inputEvent->Value;
-    }
-}
-
-void UpdateInputValue(ElemInputId inputId, uint32_t index, const ElemInputEvent* inputEvent, float* inputValue)
-{
-    if (inputEvent->InputId == inputId && inputEvent->InputDeviceTypeIndex == index)
-    {
-        *inputValue = inputEvent->Value;
-    }
-}
-
-void UpdateInputs(InputActions* inputActions)
+void UpdateInputs(InputActions* inputActions, InputActionBinding* inputActionBindings, uint32_t inputActionBindingCount)
 {
     ElemInputStream inputStream = ElemGetInputStream();
 
-    inputActions->ExitApp = false;
-    inputActions->TouchReleased = false;
+    for (uint32_t i = 0; i < inputActionBindingCount; i++)
+    {
+        InputActionBinding binding = inputActionBindings[i];
+
+        if (binding.BindingType == InputActionBindingType_Released)
+        {
+            *binding.ActionValue = 0.0f;
+        }
+    }
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
@@ -134,63 +223,24 @@ void UpdateInputs(InputActions* inputActions)
             printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
         }
 
-        // TODO: Have a way to configure multiple keys for one event in one shot
-        UpdateInputValue(ElemInputId_KeyA, 0, inputEvent, &inputActions->RotateLeft);
-        UpdateInputValue(ElemInputId_GamepadLeftStickXNegative, 0, inputEvent, &inputActions->RotateLeft);
+        for (uint32_t j = 0; j < inputActionBindingCount; j++)
+        {
+            InputActionBinding binding = inputActionBindings[j];
 
-        UpdateInputValue(ElemInputId_KeyD, 0, inputEvent, &inputActions->RotateRight);
-        UpdateInputValue(ElemInputId_GamepadLeftStickXPositive, 0, inputEvent, &inputActions->RotateRight);
+            if (binding.BindingType == InputActionBindingType_Value && 
+                inputEvent->InputId == binding.InputId && 
+                inputEvent->InputDeviceTypeIndex == binding.Index)
+            {
+                *binding.ActionValue = inputEvent->Value;
+            }
+            else if (binding.BindingType == InputActionBindingType_Released && 
+                     inputEvent->InputId == binding.InputId && 
+                     inputEvent->InputDeviceTypeIndex == binding.Index)
+            {
+                *binding.ActionValue = !inputEvent->Value;
+            }
+        }
 
-        UpdateInputValue(ElemInputId_KeyW, 0, inputEvent, &inputActions->RotateUp);
-        UpdateInputValue(ElemInputId_GamepadLeftStickYPositive, 0, inputEvent, &inputActions->RotateUp);
-
-        UpdateInputValue(ElemInputId_KeyS, 0, inputEvent, &inputActions->RotateDown);
-        UpdateInputValue(ElemInputId_GamepadLeftStickYNegative, 0, inputEvent, &inputActions->RotateDown);
-
-        UpdateInputValue(ElemInputId_KeyQ, 0, inputEvent, &inputActions->RotateSideLeft);
-        UpdateInputValue(ElemInputID_GamepadLeftTrigger, 0, inputEvent, &inputActions->RotateSideLeft);
-
-        UpdateInputValue(ElemInputId_KeyE, 0, inputEvent, &inputActions->RotateSideRight);
-        UpdateInputValue(ElemInputID_GamepadRightTrigger, 0, inputEvent, &inputActions->RotateSideRight);
-
-        UpdateInputValue(ElemInputId_MouseLeftButton, 0, inputEvent, &inputActions->Touch);
-        UpdateInputValue(ElemInputId_Touch, 0, inputEvent, &inputActions->Touch);
-        UpdateInputValue(ElemInputId_MouseRightButton, 0, inputEvent, &inputActions->TouchRotateSide);
-        // TODO: Apply some pre multipliers
-        UpdateInputValue(ElemInputId_MouseAxisXNegative, 0, inputEvent, &inputActions->TouchRotateLeft);
-        UpdateInputValue(ElemInputId_MouseAxisXPositive, 0, inputEvent, &inputActions->TouchRotateRight);
-        UpdateInputValue(ElemInputId_MouseAxisYNegative, 0, inputEvent, &inputActions->TouchRotateUp);
-        UpdateInputValue(ElemInputId_MouseAxisYPositive, 0, inputEvent, &inputActions->TouchRotateDown);
-        UpdateInputValue(ElemInputId_TouchXNegative, 0, inputEvent, &inputActions->TouchRotateLeft);
-        UpdateInputValue(ElemInputId_TouchXPositive, 0, inputEvent, &inputActions->TouchRotateRight);
-        UpdateInputValue(ElemInputId_TouchYNegative, 0, inputEvent, &inputActions->TouchRotateUp);
-        UpdateInputValue(ElemInputId_TouchYPositive, 0, inputEvent, &inputActions->TouchRotateDown);
-        UpdateInputValue(ElemInputId_TouchXAbsolutePosition, 0, inputEvent, &inputActions->TouchPositionX);
-        UpdateInputValue(ElemInputId_TouchYAbsolutePosition, 0, inputEvent, &inputActions->TouchPositionY);
-
-        UpdateInputValue(ElemInputId_Touch, 1, inputEvent, &inputActions->Touch2);
-        UpdateInputValue(ElemInputId_TouchXAbsolutePosition, 1, inputEvent, &inputActions->Touch2PositionX);
-        UpdateInputValue(ElemInputId_TouchYAbsolutePosition, 1, inputEvent, &inputActions->Touch2PositionY);
-
-        // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
-        UpdateInputValue(ElemInputId_KeyZ, 0, inputEvent, &inputActions->ZoomIn);
-        UpdateInputValue(ElemInputID_GamepadRightShoulder, 0, inputEvent, &inputActions->ZoomIn);
-        UpdateInputValue(ElemInputId_MouseWheelPositive, 0, inputEvent, &inputActions->ZoomIn);
-
-        UpdateInputValue(ElemInputId_KeyX, 0, inputEvent, &inputActions->ZoomOut);
-        UpdateInputValue(ElemInputID_GamepadLeftShoulder, 0, inputEvent, &inputActions->ZoomOut);
-        UpdateInputValue(ElemInputId_MouseWheelNegative, 0, inputEvent, &inputActions->ZoomOut);
-
-        UpdateInputValue(ElemInputId_KeySpacebar, 0, inputEvent, &inputActions->ChangeColor);
-        UpdateInputValue(ElemInputId_MouseMiddleButton, 0, inputEvent, &inputActions->ChangeColor);
-        UpdateInputValue(ElemInputID_GamepadButtonA, 0, inputEvent, &inputActions->ChangeColor);
-        UpdateInputValue(ElemInputId_GamepadLeftStickButton, 0, inputEvent, &inputActions->ChangeColor);
-
-        UpdateInputValue(ElemInputId_KeyF1, 0, inputEvent, &inputActions->HideCursor);
-        UpdateInputValue(ElemInputId_KeyF2, 0, inputEvent, &inputActions->ShowCursor);
-        UpdateInputValueNegate(ElemInputId_KeyEscape, 0, inputEvent, &inputActions->ExitApp);
-        UpdateInputValueNegate(ElemInputId_MouseLeftButton, 0, inputEvent, &inputActions->TouchReleased);
-        UpdateInputValueNegate(ElemInputId_Touch, 0, inputEvent, &inputActions->TouchReleased);
 
         if (((inputEvent->InputId == ElemInputId_Touch && inputEvent->InputDeviceTypeIndex == 0) || inputEvent->InputId == ElemInputId_MouseLeftButton) && inputEvent->Value == 0)
         {
@@ -214,10 +264,11 @@ void UpdateInputs(InputActions* inputActions)
     }
 }
 
-// TODO: Put that in payload state
-Vector2 rotationTouch = { };
 float rotationTouchDecreaseSpeed = 0.001f;
 float rotationTouchMaxSpeed = 0.3f;
+
+// TODO: Put that in payload state
+Vector2 rotationTouch = { };
 Vector3 currentRotationSpeed = V3Zero;
 float previousDistance = 0.0f;
 float previousAngle = 0.0f;
@@ -230,7 +281,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
 
     InputActions* inputActions = &applicationPayload->InputActions;
-    UpdateInputs(inputActions);
+    UpdateInputs(inputActions, applicationPayload->InputActionBindings, applicationPayload->InputActionBindingCount);
 
     if (inputActions->ExitApp)
     {

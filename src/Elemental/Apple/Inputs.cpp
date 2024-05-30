@@ -235,8 +235,6 @@ void ButtonHandler(ElemWindow window, ElemInputId inputId, GC::Device* device, G
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
     auto inputDevice = AddAppleInputDevice(device, ElemInputDeviceType_Mouse);
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Button");
-
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
@@ -462,8 +460,7 @@ void TouchHandler(ElemWindow window, void* deviceId, uint32_t fingerIndex, float
     auto inputDevice = AddAppleInputDevice(deviceId, ElemInputDeviceType_Touch);
 
     // TODO: Do we need to remove the touch device?
-
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test touch: deltaX=%f, deltaY=%f, state=%d (device: %d, finger index: %d, x=%f, y=%f)", deltaX, deltaY, state, deviceId, fingerIndex, x, y);
+    //SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test touch: deltaX=%f, deltaY=%f, state=%d (device: %d, finger index: %d, x=%f, y=%f)", deltaX, deltaY, state, deviceId, fingerIndex, x, y);
 
     if (state == 0 || state == 2)
     {
