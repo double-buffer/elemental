@@ -39,12 +39,16 @@
     </Content>-->
   </ItemGroup>   
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildNative)' == 'True'">
-    <!-- <Content Include="$(MSBuildProjectDirectory)/../Elemental/AppleOld/.build/$(Configuration)/libElemental.dylib"> -->
-        <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/$(Configuration)/libElemental.dylib">
-      <TargetPath>Elemental.Native.dylib</TargetPath>
+  <!-- <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildNative)' == 'True'">
+    <Content Include="$(MSBuildProjectDirectory)/../Elemental/AppleOld/.build/$(Configuration)/libElemental.dylib">
+        <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/Elemental.Framework">
+      <TargetPath>Elemental.Framework</TargetPath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>   
+        </ItemGroup>  --> 
+
+<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+     <Exec Command="cp -R $(MSBuildProjectDirectory)/../../../../build/bin/Elemental.Framework $(OutputPath)/" />
+ </Target>
 
 </Project>

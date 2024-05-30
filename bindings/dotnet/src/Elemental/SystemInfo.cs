@@ -3,7 +3,7 @@ namespace Elemental;
 /// <summary>
 /// Contains information about the system, useful for tailoring application behavior.
 /// </summary>
-public record struct SystemInfo
+public ref struct SystemInfo
 {
     /// <summary>
     /// Operating system platform.

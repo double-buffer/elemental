@@ -3,7 +3,7 @@ namespace Elemental;
 /// <summary>
 /// TODO: Comments
 /// </summary>
-public record struct WindowCursorPosition
+public ref struct WindowCursorPosition
 {
     public uint X { get; set; }
 

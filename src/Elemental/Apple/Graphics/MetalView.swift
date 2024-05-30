@@ -30,8 +30,6 @@ public class TouchEventManager {
 
     func sendTouchEvent(_ touch: Touch) {
         // TODO: Support pencils for ipad
-        // TODO: Test resting
-
         let touchHash: AnyHashable
         #if canImport(UIKit)
         touchHash = touch.hash
@@ -77,13 +75,6 @@ public class TouchEventManager {
             }
                 
             touchData.removeValue(forKey: touchKey)
-
-            if let index = touchOrder.firstIndex(of: touchKey) {
-                // Update indices for remaining touches
-                for (i, key) in touchOrder.enumerated() {
-                    //touchData[key]?.index = i
-                }
-            }
         }
         
         // Update the dictionary with the new locations
@@ -93,10 +84,12 @@ public class TouchEventManager {
         }
 
         // TODO: We need to find a way to compute the position in pixels like the mouse
+        // TODO: Device Id should represent the screen or trackpad not the touch!
         touchHandler(elemWindow, touchKey, fingerIndex, Float(location.x), Float(location.y), Float(deltaLocation.x), Float(deltaLocation.y), state)
     }
 
     private func normalizeTouchPosition(_ touch: Touch) -> CGPoint {
+        // TODO: Change that
         let mul = 500.0
         #if canImport(UIKit)
         let location = touch.location(in: self.view)
@@ -139,6 +132,7 @@ class CustomView: UIView {
         super.didMoveToWindow()
         self.metalDisplayLink.add(to: RunLoop.current, forMode: RunLoop.Mode.commonModes)
     }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             touchEventManager.sendTouchEvent(touch) 
@@ -172,8 +166,7 @@ class CustomView: NSView {
         super.init(frame: frame)
         self.touchEventManager = TouchEventManager(self, touchHandler, elemWindow)
 
-        self.allowedTouchTypes = [.direct, .indirect]
-        //self.wantsRestingTouches = true
+        self.allowedTouchTypes = [.indirect]
 
         self.wantsLayer = true
         let metalLayer = CAMetalLayer()

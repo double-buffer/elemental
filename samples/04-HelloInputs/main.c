@@ -15,7 +15,6 @@ typedef struct
     float Touch;
     float TouchReleased;
     float TouchRotateSide;
-    float TouchRotateSideReleased;
     float TouchRotateLeft;
     float TouchRotateRight;
     float TouchRotateUp;
@@ -127,7 +126,6 @@ void UpdateInputs(InputActions* inputActions)
     inputActions->ExitApp = false;
     inputActions->TouchReleased = false;
     inputActions->Touch2Released = false;
-    inputActions->TouchRotateSideReleased = false;
 
     for (uint32_t i = 0; i < inputStream.Events.Length; i++)
     {
@@ -160,6 +158,7 @@ void UpdateInputs(InputActions* inputActions)
         UpdateInputValue(ElemInputId_MouseLeftButton, 0, inputEvent, &inputActions->Touch);
         UpdateInputValue(ElemInputId_Touch, 0, inputEvent, &inputActions->Touch);
         UpdateInputValue(ElemInputId_MouseRightButton, 0, inputEvent, &inputActions->TouchRotateSide);
+        // TODO: Apply some pre multipliers
         UpdateInputValue(ElemInputId_MouseAxisXNegative, 0, inputEvent, &inputActions->TouchRotateLeft);
         UpdateInputValue(ElemInputId_MouseAxisXPositive, 0, inputEvent, &inputActions->TouchRotateRight);
         UpdateInputValue(ElemInputId_MouseAxisYNegative, 0, inputEvent, &inputActions->TouchRotateUp);
@@ -198,7 +197,6 @@ void UpdateInputs(InputActions* inputActions)
         UpdateInputValue(ElemInputId_KeyF2, 0, inputEvent, &inputActions->ShowCursor);
         UpdateInputValueNegate(ElemInputId_KeyEscape, 0, inputEvent, &inputActions->ExitApp);
         UpdateInputValueNegate(ElemInputId_MouseLeftButton, 0, inputEvent, &inputActions->TouchReleased);
-        UpdateInputValueNegate(ElemInputId_MouseRightButton, 0, inputEvent, &inputActions->TouchRotateSideReleased);
         UpdateInputValueNegate(ElemInputId_Touch, 0, inputEvent, &inputActions->TouchReleased);
     }
 }
@@ -209,11 +207,23 @@ float rotationTouchDecreaseSpeed = 0.001f;
 float rotationTouchMaxSpeed = 0.3f;
 Vector3 currentRotationSpeed = V3Zero;
 float previousDistance = 0.0f;
+float previousAngle = 0.0f;
+
+float NormalizeAngle(float angle) 
+{
+    angle = fmod(angle + M_PI, 2 * M_PI);
+
+    if (angle < 0) 
+    {
+        angle += 2 * M_PI;
+    }
+
+    return angle - M_PI;
+}
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     // TODO: Double tap (color change)
-    // TODO: Fix z rotation on touch? 
 
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
@@ -231,8 +241,37 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     Vector3 rotationDelta = V3Zero; 
 
+    // TODO: Review constant values
+    if (inputActions->Touch && inputActions->Touch2)
+    {
+        Vector2 touchPosition = (Vector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
+        Vector2 touchPosition2 = (Vector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
+
+        Vector2 diffVector = SubstractV2(touchPosition, touchPosition2);
+        float distance = MagnitudeV2(diffVector);
+        float angle = atan2(diffVector.X, diffVector.Y);
+
+        float zoom = distance - previousDistance;
+
+        if (previousDistance != 0.0f)
+        {
+            //printf("Zoom: %f (cur: %f, prev: %f) (TouchPosition: %f, %f | Touch2: %f %f)\n", zoom, distance, previousDistance, inputActions->TouchPositionX, inputActions->TouchPositionY, inputActions->Touch2PositionX, inputActions->Touch2PositionY);
+            applicationPayload->ShaderParameters.Zoom += zoom * 10.0f * updateParameters->DeltaTimeInSeconds;
+        }
+
+        float rotation = NormalizeAngle(angle - previousAngle);
+
+        if (previousAngle != 0.0f)
+        {
+            printf("Rotation: %f (cur: %f, prev: %f)\n", rotation, angle, previousAngle);
+            rotationDelta.Z = -rotation * 200.0f * updateParameters->DeltaTimeInSeconds;
+        }
+
+        previousDistance = distance;
+        previousAngle = angle;
+    }
     // TODO: Can we add options to normalize the speed we need for different path?
-    if (inputActions->Touch && !inputActions->Touch2)
+    else if (inputActions->Touch && !inputActions->Touch2)
     {
         rotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
         rotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
@@ -259,59 +298,29 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
             printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
         }
-    }
 
-    if (inputActions->TouchRotateSide || inputActions->Touch2)
-    {
-        if (inputActions->Touch2)
-        {
-            // TODO: For rotation:
-            // https://github.com/TouchScript/TouchScript/blob/master/Source/Assets/TouchScript/Scripts/Gestures/TransformGestures/ScreenTransformGesture.cs
-            Vector2 touchDirection = (Vector2){ inputActions->TouchRotateLeft - inputActions->TouchRotateRight, inputActions->TouchRotateUp - inputActions->TouchRotateDown };
-            Vector2 touch2Direction = (Vector2){ inputActions->Touch2RotateLeft - inputActions->Touch2RotateRight, inputActions->Touch2RotateUp - inputActions->Touch2RotateDown };
+        previousDistance = 0.0f;
+        previousAngle = 0.0f;    
 
-            printf("Dot Product: %f (V1 = %f, %f V2 = %f, %f)\n", DotProductV2(NormalizeV2(touchDirection), NormalizeV2(touch2Direction)), touchDirection.X, touchDirection.Y, touch2Direction.X, touch2Direction.Y); 
+        // TODO: Do we need a separate touch rotate left?
 
-            if (DotProductV2(NormalizeV2(touchDirection), NormalizeV2(touch2Direction)) < -0.10f)
-            {
-                Vector2 touchPosition = (Vector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
-                Vector2 touchPosition2 = (Vector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
-                float distance = MagnitudeV2(SubstractV2(touchPosition, touchPosition2));
-
-                printf("Zoom: %f\n", distance > previousDistance ? -1.0f : 1.0f);
-
-                // TODO: Can we compute the strength based on the position?
-                float strength = fmaxf(MagnitudeV2(touchDirection), MagnitudeV2(touch2Direction));
-                applicationPayload->ShaderParameters.Zoom += (distance < previousDistance ? -1.0f : 1.0f) * strength * 10.0f * updateParameters->DeltaTimeInSeconds;
-                previousDistance = distance;
-            }
-            else
-            {
-                rotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
-            }
-        }
-        else
+        if (inputActions->TouchRotateSide)
         {
             rotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
         }
-    }
-    else
-    {
-        rotationDelta.Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
+        else
+        {
+            rotationDelta.Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 5.0f * updateParameters->DeltaTimeInSeconds;
+        }
     }
 
-    if (inputActions->TouchReleased || inputActions->TouchRotateSideReleased || inputActions->Touch2Released)
+    if (inputActions->TouchReleased)
     {
         // TODO: For the moment it is impossible to pull of on iphone because there is small delay between the 2 releases
         if (inputActions->TouchReleased && !inputActions->Touch2Released)
         {
             rotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
             rotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
-        }
-
-        if (inputActions->TouchRotateSideReleased || inputActions->Touch2Released)
-        {
-            rotationTouch.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
         }
 
         if (MagnitudeV3(rotationTouch) > rotationTouchMaxSpeed)
@@ -334,7 +343,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     }
         
-    //printf("Rotation Delta = %f, %f, %f, (%f)\n", rotationXDelta, rotationYDelta, rotationZDelta, inputActions->TouchRotateUp);
+    //printf("Rotation Delta = %f, %f, %f, (%f)\n", rotationDelta.X, rotationDelta.Y, rotationDelta.Z, inputActions->TouchRotateUp);
 
     if (MagnitudeSquaredV3(rotationDelta))
     {
@@ -342,7 +351,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         applicationPayload->ShaderParameters.RotationQuaternion = MulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
 
-    applicationPayload->ShaderParameters.Zoom += (inputActions->ZoomIn - inputActions->ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds;
+    float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
+    applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, (inputActions->ZoomIn - inputActions->ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds + applicationPayload->ShaderParameters.Zoom);
     applicationPayload->ShaderParameters.TriangeColor = inputActions->ChangeColor;
 
     if (inputActions->HideCursor)

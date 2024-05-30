@@ -22,7 +22,7 @@ public interface IApplicationService
     /// </summary>
     /// <param name="parameters">Configuration and handlers for the application lifecycle.</param>
     /// <returns>Status code indicating success or error.</returns>
-    int RunApplication(in RunApplicationParameters parameters);
+    int RunApplication<T>(in RunApplicationParameters<T> parameters);
 
     /// <summary>
     /// Exits the application, performing necessary cleanup.

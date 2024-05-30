@@ -530,31 +530,25 @@ void TouchHandler(ElemWindow window, void* deviceId, uint32_t fingerIndex, float
         });
     }
 
-    if (deltaX != 0)
-    {
-        AddInputEvent({
-            .Window = window,
-            .InputDevice = inputDevice,
-            .InputDeviceTypeIndex = fingerIndex,
-            .InputId = ElemInputId_TouchXAbsolutePosition,
-            .InputType = ElemInputType_Absolute,
-            .Value = x,
-            .ElapsedSeconds = elapsedSeconds
-        });
-    }
+    AddInputEvent({
+        .Window = window,
+        .InputDevice = inputDevice,
+        .InputDeviceTypeIndex = fingerIndex,
+        .InputId = ElemInputId_TouchXAbsolutePosition,
+        .InputType = ElemInputType_Absolute,
+        .Value = x,
+        .ElapsedSeconds = elapsedSeconds
+    });
 
-    if (deltaY != 0)
-    {
-        AddInputEvent({
-            .Window = window,
-            .InputDevice = inputDevice,
-            .InputDeviceTypeIndex = fingerIndex,
-            .InputId = ElemInputId_TouchYAbsolutePosition,
-            .InputType = ElemInputType_Absolute,
-            .Value = y,
-            .ElapsedSeconds = elapsedSeconds
-        });
-    }
+    AddInputEvent({
+        .Window = window,
+        .InputDevice = inputDevice,
+        .InputDeviceTypeIndex = fingerIndex,
+        .InputId = ElemInputId_TouchYAbsolutePosition,
+        .InputType = ElemInputType_Absolute,
+        .Value = y,
+        .ElapsedSeconds = elapsedSeconds
+    });
 }
 
 // TODO: We need to lock the cursor in fullscreen for ipad and iphone

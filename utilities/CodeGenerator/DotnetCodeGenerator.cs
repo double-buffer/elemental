@@ -631,7 +631,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 
                 var needToDispose = (compilation.FindByName<CppFunction>($"ElemFree{typeName}") != null);
                 
-                stringBuilder.Append($"public readonly record struct {typeName}");
+                stringBuilder.Append($"public readonly ref struct {typeName}");
 
                 if (needToDispose)
                 {
@@ -908,7 +908,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
         else
         {
-            stringBuilder.AppendLine($"public record struct {typeName}");
+            stringBuilder.AppendLine($"public ref struct {typeName}");
         }
 
         stringBuilder.AppendLine("{");
