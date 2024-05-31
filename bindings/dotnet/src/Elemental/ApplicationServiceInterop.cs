@@ -18,7 +18,7 @@ internal static partial class ApplicationServiceInterop
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemExitApplication")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial void ExitApplication();
+    internal static partial void ExitApplication(int exitCode);
 
     [LibraryImport("Elemental.Native", EntryPoint = "ElemCreateWindow")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -39,5 +39,17 @@ internal static partial class ApplicationServiceInterop
     [LibraryImport("Elemental.Native", EntryPoint = "ElemSetWindowState")]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void SetWindowState(Window window, WindowState windowState);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemShowWindowCursor")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void ShowWindowCursor(Window window);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemHideWindowCursor")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void HideWindowCursor(Window window);
+
+    [LibraryImport("Elemental.Native", EntryPoint = "ElemGetWindowCursorPosition")]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial WindowCursorPosition GetWindowCursorPosition(Window window);
 
 }

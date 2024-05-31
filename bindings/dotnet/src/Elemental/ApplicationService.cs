@@ -46,26 +46,30 @@ ApplicationPathCounter++;
     /// </summary>
     /// <param name="parameters">Configuration and handlers for the application lifecycle.</param>
     /// <returns>Status code indicating success or error.</returns>
-    public unsafe int RunApplication(in RunApplicationParameters parameters)
+    public unsafe int RunApplication<T>(in RunApplicationParameters<T> parameters)
     {
         fixed (byte* ApplicationNamePinned = parameters.ApplicationName)
         {
+        fixed (void* payloadPinnedPinned = &parameters.Payload)
+        {
             var parametersUnsafe = new RunApplicationParametersUnsafe();
             parametersUnsafe.ApplicationName = ApplicationNamePinned;
-            parametersUnsafe.InitHandler = parameters.InitHandler;
-            parametersUnsafe.FreeHandler = parameters.FreeHandler;
-            parametersUnsafe.Payload = parameters.Payload;
+            parametersUnsafe.InitHandler = (void*)Marshal.GetFunctionPointerForDelegate(parameters.InitHandler);
+            parametersUnsafe.FreeHandler = (void*)Marshal.GetFunctionPointerForDelegate(parameters.FreeHandler);
+            parametersUnsafe.Payload = payloadPinnedPinned;
 
             return ApplicationServiceInterop.RunApplication(parametersUnsafe);
+        }
         }
     }
 
     /// <summary>
     /// Exits the application, performing necessary cleanup.
     /// </summary>
-    public void ExitApplication()
+    /// <param name="exitCode">Exit code of the application.</param>
+    public void ExitApplication(int exitCode)
     {
-        ApplicationServiceInterop.ExitApplication();
+        ApplicationServiceInterop.ExitApplication(exitCode);
     }
 
     /// <summary>
@@ -82,6 +86,7 @@ ApplicationPathCounter++;
             optionsUnsafe.Width = options.Width;
             optionsUnsafe.Height = options.Height;
             optionsUnsafe.WindowState = options.WindowState;
+            optionsUnsafe.IsCursorHidden = options.IsCursorHidden;
 
             return ApplicationServiceInterop.CreateWindow(optionsUnsafe);
         }
@@ -117,16 +122,6 @@ ApplicationPathCounter++;
     }
 
     /// <summary>
-    /// Sets a window's title.
-    /// </summary>
-    /// <param name="window">The window instance.</param>
-    /// <param name="title">New title for the window.</param>
-    public void SetWindowTitle(Window window, string title)
-    {
-        ApplicationServiceInterop.SetWindowTitle(window, Encoding.UTF8.GetBytes(title));
-    }
-
-    /// <summary>
     /// Changes the state of a window (e.g., minimize, maximize).
     /// </summary>
     /// <param name="window">The window instance.</param>
@@ -134,6 +129,25 @@ ApplicationPathCounter++;
     public void SetWindowState(Window window, WindowState windowState)
     {
         ApplicationServiceInterop.SetWindowState(window, windowState);
+    }
+
+    /// <summary>
+    /// TODO: Comments
+///TODO: Make sure the coordinates are consistent accross all platforms
+    /// </summary>
+    public void ShowWindowCursor(Window window)
+    {
+        ApplicationServiceInterop.ShowWindowCursor(window);
+    }
+
+    public void HideWindowCursor(Window window)
+    {
+        ApplicationServiceInterop.HideWindowCursor(window);
+    }
+
+    public WindowCursorPosition GetWindowCursorPosition(Window window)
+    {
+        return ApplicationServiceInterop.GetWindowCursorPosition(window);
     }
 
 }

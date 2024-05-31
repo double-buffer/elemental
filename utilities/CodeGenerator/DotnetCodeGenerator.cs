@@ -5,13 +5,13 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     [GeneratedRegex(@"##Module_([^#]+)##")]
     private static partial Regex ModuleNameRegex();
 
-    [GeneratedRegex(@"^(\w+\s*\*?)\s*\(\*\)\((.*?)\)\*")]
+    [GeneratedRegex(@"^(\w+\s*\*?)\s*\(\*\)\((.*?)\)\s*\*")]
     private static partial Regex FunctionPointerRegex();
 
-    [GeneratedRegex(@"((?:\bconst\b\s+)?[\w&]+(?:\s*\*+\s*|\s+))(?:(\w+)\s*)\b")]
+    [GeneratedRegex(@"([\w&]+\s+(?:\bconst\b\s+)?(?:\s*\*+\s*|\s+))(?:(\w+)\s*)\b")]
     private static partial Regex FunctionPointerParameterRegex();
 
-    [GeneratedRegex(@"(?:const\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\*")]
+    [GeneratedRegex(@"([A-Za-z_][A-Za-z0-9_]*)\s*(?:const\s+)?\*")]
     private static partial Regex ConstStructPointerRegex();
 
     private const string HandlerMarshallerTemplate = """
@@ -28,7 +28,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
             private static unsafe void Interceptor(##PARAMETERS_DECLARATION##)
             {
-                if (_interceptorEntry == null || function == null || message == null)
+                if (_interceptorEntry == null##PARAMETER_CHECKS##)
                 {
                     return;
                 }
@@ -545,6 +545,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         {
             var functionName = function.Name.Replace("Elem", string.Empty);
 
+            // TODO: Replace with real assembly name
             Indent(stringBuilder);
             stringBuilder.AppendLine($"[LibraryImport(\"Elemental.Native\", EntryPoint = \"{function.Name}\")]");
             
@@ -630,7 +631,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 
                 var needToDispose = (compilation.FindByName<CppFunction>($"ElemFree{typeName}") != null);
                 
-                stringBuilder.Append($"public readonly record struct {typeName}");
+                stringBuilder.Append($"public readonly ref struct {typeName}");
 
                 if (needToDispose)
                 {
@@ -690,11 +691,14 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             GenerateComment(stringBuilder, typeDefType.Comment, 0);
         }
 
+        Console.WriteLine($"Generate Delegate: {canonicalType.GetDisplayName()}");
+
         var needMarshaller = false;
         var result = FunctionPointerRegex().Match(canonicalType.GetDisplayName());
 
         if (result.Success)
         {
+            Console.WriteLine("ok");
             stringBuilder.Append("##MARSHALLER##");
             stringBuilder.AppendLine("[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
             stringBuilder.Append($"public delegate {result.Groups[1].Value.Trim()} {typeName}(");
@@ -704,6 +708,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             var parametersDeclaration = new StringBuilder();
             var parametersValue = new StringBuilder();
             var customBeforeCode = new StringBuilder();
+            var parameterChecks = new StringBuilder();
 
             foreach (Match parameterResult in parameterResults)
             {
@@ -719,7 +724,10 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 }
 
                 var parameterType = "ReadOnlySpan<byte>";
-                var foundType = compilation.FindByName<CppType>(parameterResult.Groups[1].Value.Trim());
+                var nativeParameterType = parameterResult.Groups[1].Value.Replace("const *", "").Trim();
+
+                Console.WriteLine($"Type: '{nativeParameterType}'");
+                var foundType = compilation.FindByName<CppType>(nativeParameterType);
 
                 if (foundType != null)
                 {
@@ -749,6 +757,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 stringBuilder.Append($"{parameterType} {parameterName}");
                 parametersDeclaration.Append($"{MapTypeToUnmanaged(parameterType)} {parameterName}");
                 parametersValue.Append($"{MapValueToUnmanaged(parameterType, parameterName)}");
+                parameterChecks.Append($" || {parameterName} != null");
             }
 
             stringBuilder.AppendLine(");");
@@ -766,6 +775,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 stringBuilder.Replace("##PARAMETERS_DECLARATION##", parametersDeclaration.ToString());
                 stringBuilder.Replace("##PARAMETERS_VALUE##", parametersValue.ToString());
                 stringBuilder.Replace("##CUSTOM_BEFORE_CODE##", customBeforeCode.ToString());
+                stringBuilder.Replace("##PARAMETER_CHECKS##", parameterChecks.ToString());
             }
         }
     }
@@ -868,7 +878,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         var mappedType = MapType(compilation, type);
 
-        if (mappedType.Contains("ReadOnlyMemory") || mappedType.Contains("ReadOnlySpan"))
+        if (mappedType.Contains("ReadOnlySpan"))
         {
             return true;
         }
@@ -898,7 +908,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         }
         else
         {
-            stringBuilder.AppendLine($"public record struct {typeName}");
+            stringBuilder.AppendLine($"public ref struct {typeName}");
         }
 
         stringBuilder.AppendLine("{");
@@ -1107,17 +1117,19 @@ public partial class DotnetCodeGenerator : ICodeGenerator
     {
         var typeName = type.GetDisplayName().Replace("Elem", string.Empty);
 
+        Console.WriteLine($"MapType: {typeName}");
+
         return typeName switch
         {
             "Application" => "ElementalApplication",
-            "const char*" => !isUnsafe ? "ReadOnlySpan<byte>" : "byte*",
+            "char const *" => !isUnsafe ? "ReadOnlySpan<byte>" : "byte*",
             "unsigned long long" => "UInt64",
             "unsigned int" => "uint",
-            "DataSpan" => !forInterop ? "ReadOnlyMemory<byte>" : "SpanUnsafe<byte>", 
+            "DataSpan" => !forInterop ? "ReadOnlySpan<byte>" : "SpanUnsafe<byte>", 
             string value when value.Contains("Span") && isUnsafe => $"{value.Substring(0, value.IndexOf("Span"))}*",
             string value when value.Contains("Span") && forInterop => GetSpanUnsafe(compilation, value.Substring(0, value.IndexOf("Span"))),
             string value when value.Contains("Span") && isReturnValue => $"ReadOnlySpan<{value.Substring(0, value.IndexOf("Span"))}>",
-            string value when value.Contains("Span") => $"ReadOnlyMemory<{value.Substring(0, value.IndexOf("Span"))}>",
+            string value when value.Contains("Span") => $"ReadOnlySpan<{value.Substring(0, value.IndexOf("Span"))}>",
             string value when ConstStructPointerRegex().IsMatch(value) => "in " + ConstStructPointerRegex().Match(value).Groups[1].Value,
             string value when value.Contains("HandlerPtr") => typeName.Replace("Ptr", string.Empty),
             _ => typeName

@@ -11,9 +11,9 @@
 #include "UIKitApplication.h"
 #endif
 
-SystemDictionary<GC::Device*, ElemInputDevice> appleInputDeviceDictionary;
+SystemDictionary<void*, ElemInputDevice> appleInputDeviceDictionary;
 
-ElemInputDevice AddAppleInputDevice(GC::Device* device, ElemInputDeviceType deviceType)
+ElemInputDevice AddAppleInputDevice(void* device, ElemInputDeviceType deviceType)
 {
     if (SystemDictionaryContainsKey(appleInputDeviceDictionary, device))
     {
@@ -37,7 +37,7 @@ ElemInputDevice AddAppleInputDevice(GC::Device* device, ElemInputDeviceType devi
     return handle;
 }
 
-void RemoveAppleInputDevice(GC::Device* device)
+void RemoveAppleInputDevice(void* device)
 {
     if (SystemDictionaryContainsKey(appleInputDeviceDictionary, device))
     {
@@ -234,8 +234,6 @@ void ButtonHandler(ElemWindow window, ElemInputId inputId, GC::Device* device, G
 {
     auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
     auto inputDevice = AddAppleInputDevice(device, ElemInputDeviceType_Mouse);
-
-    SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Button");
 
     AddInputEvent({
         .Window = window,
@@ -454,15 +452,108 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
             });
         }
     }
-
 }
 
-// TODO: We need to lock the cursort in fullscreen for ipad and iphone
+void TouchHandler(ElemWindow window, void* deviceId, uint32_t fingerIndex, float x, float y, float deltaX, float deltaY, uint32_t state)
+{
+    auto elapsedSeconds = (double)(SystemPlatformGetHighPerformanceCounter() - ApplePerformanceCounterStart) / ApplePerformanceCounterFrequencyInSeconds;
+    auto inputDevice = AddAppleInputDevice(deviceId, ElemInputDeviceType_Touch);
+
+    // TODO: Do we need to remove the touch device?
+    //SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test touch: deltaX=%f, deltaY=%f, state=%d (device: %d, finger index: %d, x=%f, y=%f)", deltaX, deltaY, state, deviceId, fingerIndex, x, y);
+
+    if (state == 0 || state == 2)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputDeviceTypeIndex = fingerIndex,
+            .InputId = ElemInputId_Touch,
+            .InputType = ElemInputType_Digital,
+            .Value = state == 0 ? 1.0f : 0.0f,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaX < 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputDeviceTypeIndex = fingerIndex,
+            .InputId = ElemInputId_TouchXNegative,
+            .InputType = ElemInputType_Delta,
+            .Value = -deltaX,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaX > 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputDeviceTypeIndex = fingerIndex,
+            .InputId = ElemInputId_TouchXPositive,
+            .InputType = ElemInputType_Delta,
+            .Value = deltaX,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaY < 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputDeviceTypeIndex = fingerIndex,
+            .InputId = ElemInputId_TouchYNegative,
+            .InputType = ElemInputType_Delta,
+            .Value = deltaY,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    if (deltaY > 0)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputDeviceTypeIndex = fingerIndex,
+            .InputId = ElemInputId_TouchYPositive,
+            .InputType = ElemInputType_Delta,
+            .Value = -deltaY,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+
+    AddInputEvent({
+        .Window = window,
+        .InputDevice = inputDevice,
+        .InputDeviceTypeIndex = fingerIndex,
+        .InputId = ElemInputId_TouchXAbsolutePosition,
+        .InputType = ElemInputType_Absolute,
+        .Value = x,
+        .ElapsedSeconds = elapsedSeconds
+    });
+
+    AddInputEvent({
+        .Window = window,
+        .InputDevice = inputDevice,
+        .InputDeviceTypeIndex = fingerIndex,
+        .InputId = ElemInputId_TouchYAbsolutePosition,
+        .InputType = ElemInputType_Absolute,
+        .Value = y,
+        .ElapsedSeconds = elapsedSeconds
+    });
+}
+
+// TODO: We need to lock the cursor in fullscreen for ipad and iphone
 // See: https://developer.apple.com/wwdc20/10617
 
 void InitInputs(ElemWindow window)
 {
-    appleInputDeviceDictionary = SystemCreateDictionary<GC::Device*, ElemInputDevice>(ApplicationMemoryArena, MAX_INPUT_DEVICES);
+    appleInputDeviceDictionary = SystemCreateDictionary<void*, ElemInputDevice>(ApplicationMemoryArena, MAX_INPUT_DEVICES);
 
     NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCKeyboardDidConnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
     {

@@ -20,7 +20,7 @@ internal static unsafe class ApplicationHandlerMarshaller
 
     private static unsafe void Interceptor(byte* payload)
     {
-        if (_interceptorEntry == null || function == null || message == null)
+        if (_interceptorEntry == null || payload != null)
         {
             return;
         }

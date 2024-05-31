@@ -261,7 +261,7 @@ typedef struct
 {
     double FrameTimeInSeconds;
     uint32_t Fps;
-    bool NewData;
+    bool HasNewData;
 } SampleFrameMeasurement;
 
 double globalSampleFrameCpuAverage = 0.0;
@@ -300,6 +300,6 @@ SampleFrameMeasurement SampleEndFrameMeasurement(void)
     {
         .FrameTimeInSeconds = globalSampleFrameCpuAverage / 1000.0,
         .Fps = globalSampleCurrentFpsCounter,
-        .NewData = newData
+        .HasNewData = newData
     };
 }

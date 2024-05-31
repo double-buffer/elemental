@@ -126,6 +126,14 @@ void ResetInputsFrame()
 {
     InitInputsMemory();
 
+    currentInputEventsIndex = (currentInputEventsIndex + 1) % 2;
+    currentInputEventsWriteIndex = 0;
+
+    currentDeltaInputsToResetIndex = (currentDeltaInputsToResetIndex + 1) % 2;
+    previousDeltaInputsToResetWriteIndex = currentDeltaInputsToResetWriteIndex;
+    currentDeltaInputsToResetWriteIndex = 0; 
+
+    SystemPlatformClearMemory(&deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS], sizeof(ElemInputEvent) * MAX_INPUT_EVENTS);
     auto previousIndex = (currentDeltaInputsToResetIndex + 1) % 2;
     auto previousDeltaToReset = &deltaInputsToReset[previousIndex * MAX_INPUT_EVENTS];
 
@@ -138,15 +146,6 @@ void ResetInputsFrame()
             inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
         }
     }
-
-    currentInputEventsIndex = (currentInputEventsIndex + 1) % 2;
-    currentInputEventsWriteIndex = 0;
-
-    currentDeltaInputsToResetIndex = (currentDeltaInputsToResetIndex + 1) % 2;
-    previousDeltaInputsToResetWriteIndex = currentDeltaInputsToResetWriteIndex;
-    currentDeltaInputsToResetWriteIndex = 0; 
-
-    SystemPlatformClearMemory(&deltaInputsToReset[currentDeltaInputsToResetIndex * MAX_INPUT_EVENTS], sizeof(ElemInputEvent) * MAX_INPUT_EVENTS);
 }
 
 ElemAPI ElemInputStream ElemGetInputStream()

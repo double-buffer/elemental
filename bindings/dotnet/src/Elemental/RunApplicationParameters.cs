@@ -3,7 +3,7 @@ namespace Elemental;
 /// <summary>
 /// Holds parameters for running an application, including initialization and cleanup routines.
 /// </summary>
-public ref struct RunApplicationParameters
+public ref struct RunApplicationParameters<T> 
 {
     /// <summary>
     /// Name of the application.
@@ -23,17 +23,17 @@ public ref struct RunApplicationParameters
     /// <summary>
     /// Custom user data passed to handler functions.
     /// </summary>
-    public in void Payload { get; set; }
+    public ref T Payload;
 }
 
 internal unsafe struct RunApplicationParametersUnsafe
 {
     public byte* ApplicationName { get; set; }
 
-    public ApplicationHandler InitHandler { get; set; }
+    public void* InitHandler { get; set; }
 
-    public ApplicationHandler FreeHandler { get; set; }
+    public void* FreeHandler { get; set; }
 
-    public in void Payload { get; set; }
+    public void* Payload { get; set; }
 }
 

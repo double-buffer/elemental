@@ -3,7 +3,7 @@ namespace Elemental;
 /// <summary>
 /// Contains detailed information about the size and scaling factors of a window's render area.
 /// </summary>
-public record struct WindowSize
+public ref struct WindowSize
 {
     /// <summary>
     /// Width of the window's render area in pixels.

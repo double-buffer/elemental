@@ -24,6 +24,11 @@ public ref struct WindowOptions
     /// Initial state of the window.
     /// </summary>
     public WindowState WindowState { get; set; }
+
+    /// <summary>
+    /// True if the cursor should be hidden.
+    /// </summary>
+    public bool IsCursorHidden { get; set; }
 }
 
 internal unsafe struct WindowOptionsUnsafe
@@ -35,5 +40,7 @@ internal unsafe struct WindowOptionsUnsafe
     public uint Height { get; set; }
 
     public WindowState WindowState { get; set; }
+
+    public bool IsCursorHidden { get; set; }
 }
 

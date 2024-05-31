@@ -3,6 +3,7 @@
 #include "MetalGraphicsDevice.h"
 #include "MetalTexture.h"
 #include "Inputs/Inputs.h"
+#include "../Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -103,7 +104,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     // BUG: Metal Dev Hub doesn't seem to work with the new MetalDisplayLink. see: https://forums.developer.apple.com/forums/thread/743684
     auto metalDisplayLinkHandler = new MetalDisplayLinkHandler(commandQueueDataFull->GraphicsDevice, updateHandler, options->UpdatePayload);
 
-    auto swiftResult = ElementalSwiftLib::createMetalView(frameLatency); 
+    auto swiftResult = ElementalSwiftLib::createMetalView(frameLatency, window, (void*)TouchHandler); 
     auto metalViewResult = (Test*)&swiftResult; 
     auto metalLayer = NS::TransferPtr(metalViewResult->MetalLayer);
 
