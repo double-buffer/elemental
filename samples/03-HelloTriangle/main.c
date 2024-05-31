@@ -96,7 +96,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // Backbuffer
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
-    if (frameMeasurement.NewData)
+    if (frameMeasurement.HasNewData)
     {
         SampleSetWindowTitle(applicationPayload->Window, "HelloTriangle", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
     }

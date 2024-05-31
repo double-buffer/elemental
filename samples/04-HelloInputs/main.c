@@ -3,10 +3,20 @@
 #include "SampleUtils.h"
 #include "SampleMath.h"
 
+#define ROTATION_TOUCH_DECREASE_SPEED 0.001f
+#define ROTATION_TOUCH_SPEED 4.0f
+#define ROTATION_TOUCH_MAX_DELTA 0.3f
+#define ROTATION_MULTITOUCH_SPEED 200.0f
+#define ROTATION_ACCELERATION 500.0f
+#define ROTATION_FRICTION 60.0f
+#define ZOOM_MULTITOUCH_SPEED 1000.0f
+#define ZOOM_SPEED 5.0f
+
 typedef enum
 {
     InputActionBindingType_Value,
     InputActionBindingType_Released,
+    InputActionBindingType_ReleasedSwitch,
     InputActionBindingType_DoubleReleasedSwitch,
 } InputActionBindingType;
 
@@ -28,6 +38,8 @@ typedef struct
     float RotateDown;
     float RotateSideLeft;
     float RotateSideRight;
+    float ZoomIn;
+    float ZoomOut;
 
     float Touch;
     float TouchReleased;
@@ -43,13 +55,8 @@ typedef struct
     float Touch2PositionY;
     
     float TouchRotateSide;
-
-    float ZoomIn;
-    float ZoomOut;
-    float ChangeColor;
-    float HideCursor;
+    float TriangleColor;
     float ShowCursor;
-
     float ExitApp;
 } InputActions;
 
@@ -63,6 +70,16 @@ typedef struct
 
 typedef struct
 {
+    Vector3 RotationDelta;
+    Vector2 RotationTouch;
+    Vector3 CurrentRotationSpeed;
+    float PreviousTouchDistance;
+    float PreviousTouchAngle;
+    float Zoom;
+} GameState;
+
+typedef struct
+{
     bool PreferVulkan;
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
@@ -73,6 +90,7 @@ typedef struct
     InputActions InputActions;
     InputActionBinding InputActionBindings[255];
     uint32_t InputActionBindingCount;
+    GameState GameState;
 } ApplicationPayload;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
@@ -88,80 +106,60 @@ void RegisterInputActionBinding(ApplicationPayload* applicationPayload, ElemInpu
     };
 }
 
-void InitInputBindings(ApplicationPayload* applicationPayload)
+void RegisterInputBindings(ApplicationPayload* applicationPayload)
 {
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateLeft);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateLeft);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyD, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateRight);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateRight);
-    
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyW, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateUp);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateUp);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyS, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateDown);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateDown);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyQ, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideLeft);
-    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadLeftTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideLeft);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_KeyE, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideRight);
-    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadRightTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideRight);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyZ, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyX, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeySpacebar, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyF1, 0, InputActionBindingType_ReleasedSwitch, &applicationPayload->InputActions.ShowCursor);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyEscape, 0, InputActionBindingType_Released, &applicationPayload->InputActions.ExitApp);
 
     RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.Touch);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 0, InputActionBindingType_Value, &applicationPayload->InputActions.Touch);
-
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
     RegisterInputActionBinding(applicationPayload, ElemInputId_MouseRightButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateSide);
-
-    // TODO: Apply some pre multipliers
     RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateLeft);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateLeft);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateRight);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateRight);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateUp);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateUp);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_MouseAxisYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateDown);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateDown);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseWheelPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseWheelNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseMiddleButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
 
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateLeft);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateRight);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateUp);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateDown);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadLeftTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideLeft);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadRightTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideRight);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadLeftShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadRightShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
+    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadButtonA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
+
+    RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 0, InputActionBindingType_Value, &applicationPayload->InputActions.Touch);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateLeft);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateRight);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateUp);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateDown);
     RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXAbsolutePosition, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchPositionX);
     RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYAbsolutePosition, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchPositionY);
-
     RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2);
     RegisterInputActionBinding(applicationPayload, ElemInputId_TouchXAbsolutePosition, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2PositionX);
     RegisterInputActionBinding(applicationPayload, ElemInputId_TouchYAbsolutePosition, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2PositionY);
-
-    // TODO: For mouse wheel we should apply some scaling otherwise it is too slow
-    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyZ, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
-    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadRightShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseWheelPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
-
-    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyX, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
-    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadLeftShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseWheelNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
-
-    RegisterInputActionBinding(applicationPayload, ElemInputId_KeySpacebar, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseMiddleButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
-    RegisterInputActionBinding(applicationPayload, ElemInputID_GamepadButtonA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_GamepadLeftStickButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ChangeColor);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.ChangeColor);
-
-    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyF1, 0, InputActionBindingType_Value, &applicationPayload->InputActions.HideCursor);
-    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyF2, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ShowCursor);
-
-    RegisterInputActionBinding(applicationPayload, ElemInputId_KeyEscape, 0, InputActionBindingType_Released, &applicationPayload->InputActions.ExitApp);
-
-    RegisterInputActionBinding(applicationPayload, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
     RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
+    RegisterInputActionBinding(applicationPayload, ElemInputId_Touch, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
 }
 
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-
-    //applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .IsCursorHidden = true, .WindowState = ElemWindowState_FullScreen });
     applicationPayload->Window = ElemCreateWindow(NULL);
 
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
@@ -183,8 +181,9 @@ void InitSample(void* payload)
     });
 
     applicationPayload->ShaderParameters.RotationQuaternion = (Vector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
+    applicationPayload->InputActions.ShowCursor = true;
 
-    InitInputBindings(applicationPayload);
+    RegisterInputBindings(applicationPayload);
     
     ElemFreeShaderLibrary(shaderLibrary);
     SampleStartFrameMeasurement();
@@ -200,7 +199,7 @@ void FreeSample(void* payload)
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 }
 
-void UpdateInputs(InputActions* inputActions, InputActionBinding* inputActionBindings, uint32_t inputActionBindingCount)
+void UpdateInputActions(InputActions* inputActions, InputActionBinding* inputActionBindings, uint32_t inputActionBindingCount)
 {
     ElemInputStream inputStream = ElemGetInputStream();
 
@@ -218,11 +217,6 @@ void UpdateInputs(InputActions* inputActions, InputActionBinding* inputActionBin
     {
         ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
 
-        if (inputEvent->InputType != ElemInputType_Delta && inputEvent->InputType != ElemInputType_Absolute)
-        {
-            printf("Received an input event %d: Device=%lu, Value=%f (Elapsed: %f)\n", inputEvent->InputId, inputEvent->InputDevice, inputEvent->Value, inputEvent->ElapsedSeconds);
-        }
-
         for (uint32_t j = 0; j < inputActionBindingCount; j++)
         {
             InputActionBinding* binding = &inputActionBindings[j];
@@ -236,6 +230,10 @@ void UpdateInputs(InputActions* inputActions, InputActionBinding* inputActionBin
                 else if (binding->BindingType == InputActionBindingType_Released)
                 {
                     *binding->ActionValue = !inputEvent->Value;
+                }
+                else if (binding->BindingType == InputActionBindingType_ReleasedSwitch && inputEvent->Value == 0.0f)
+                {
+                    *binding->ActionValue = !*binding->ActionValue;
                 }
                 else if (binding->BindingType == InputActionBindingType_DoubleReleasedSwitch && inputEvent->Value == 0.0f)
                 {
@@ -261,33 +259,17 @@ void UpdateInputs(InputActions* inputActions, InputActionBinding* inputActionBin
     }
 }
 
-float rotationTouchDecreaseSpeed = 0.001f;
-float rotationTouchMaxSpeed = 0.3f;
-
-// TODO: Put that in payload state
-Vector2 rotationTouch = { };
-Vector3 currentRotationSpeed = V3Zero;
-float previousDistance = 0.0f;
-float previousAngle = 0.0f;
-
-void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
+void ResetTouchParameters(GameState* gameState) 
 {
-    // TODO: Double tap (color change)
+    gameState->RotationTouch = V2Zero;
+    gameState->PreviousTouchDistance = 0.0f;
+    gameState->PreviousTouchAngle = 0.0f;   
+}
 
-    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
+void UpdateGameState(GameState* gameState, InputActions* inputActions, float deltaTimeInSeconds)
+{
+    gameState->RotationDelta = V3Zero; 
 
-    InputActions* inputActions = &applicationPayload->InputActions;
-    UpdateInputs(inputActions, applicationPayload->InputActionBindings, applicationPayload->InputActionBindingCount);
-
-    if (inputActions->ExitApp)
-    {
-        ElemExitApplication(0);
-    }
-
-    Vector3 rotationDelta = V3Zero; 
-
-    // TODO: Review constant values
     if (inputActions->Touch)
     {
         if (inputActions->Touch2)
@@ -299,49 +281,38 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             float distance = MagnitudeV2(diffVector);
             float angle = atan2(diffVector.X, diffVector.Y);
 
-            float zoom = distance - previousDistance;
-
-            if (previousDistance != 0.0f)
+            if (gameState->PreviousTouchDistance != 0.0f)
             {
-                applicationPayload->ShaderParameters.Zoom += zoom * 1000.0f * updateParameters->DeltaTimeInSeconds;
+                gameState->Zoom += (distance - gameState->PreviousTouchDistance) * ZOOM_MULTITOUCH_SPEED * deltaTimeInSeconds;
             }
 
-            float rotation = NormalizeAngle(angle - previousAngle);
-
-            if (previousAngle != 0.0f)
+            if (gameState->PreviousTouchAngle != 0.0f)
             {
-                rotationDelta.Z = -rotation * 200.0f * updateParameters->DeltaTimeInSeconds;
+                gameState->RotationDelta.Z = -NormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
             }
 
-            previousDistance = distance;
-            previousAngle = angle;
+            gameState->PreviousTouchDistance = distance;
+            gameState->PreviousTouchAngle = angle;
         }
         else 
         {
-            rotationTouch = V2Zero;
-            previousDistance = 0.0f;
-            previousAngle = 0.0f;   
+            ResetTouchParameters(gameState);
 
-            rotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
-            rotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
+            gameState->RotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+            gameState->RotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
         }
     }
     else if (inputActions->TouchRotateSide)
     {
-        rotationTouch = V2Zero;
-        previousDistance = 0.0f;
-        previousAngle = 0.0f;   
-
-        rotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 2.0f * updateParameters->DeltaTimeInSeconds;
+        ResetTouchParameters(gameState);
+        gameState->RotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else if (inputActions->TouchReleased && !inputActions->Touch2)
     {
-        rotationTouch = V2Zero;
-        previousDistance = 0.0f;
-        previousAngle = 0.0f;   
+        ResetTouchParameters(gameState);
 
-        rotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * 4.0f * updateParameters->DeltaTimeInSeconds;
-        rotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * 4.0f * updateParameters->DeltaTimeInSeconds;
+        gameState->RotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+        gameState->RotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else
     {
@@ -354,56 +325,69 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
         if (MagnitudeSquaredV3(direction))
         {
-            // TODO: The friction here is what we do for the touch. So maybe we can take the same code but with different constants?
-            Vector3 acceleration = AddV3(MulScalarV3(direction, 500.0f), MulScalarV3(InverseV3(currentRotationSpeed), 60));
+            Vector3 acceleration = AddV3(MulScalarV3(direction, ROTATION_ACCELERATION), MulScalarV3(InverseV3(gameState->CurrentRotationSpeed), ROTATION_FRICTION));
 
-            rotationTouch = V2Zero;
-            rotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(updateParameters->DeltaTimeInSeconds)), MulScalarV3(currentRotationSpeed, updateParameters->DeltaTimeInSeconds));
-            currentRotationSpeed = AddV3(MulScalarV3(acceleration, updateParameters->DeltaTimeInSeconds), currentRotationSpeed);
-            //printf("Current Speed: %f %f %f\n", currentRotationSpeed.X, currentRotationSpeed.Y, currentRotationSpeed.Z);
+            ResetTouchParameters(gameState);
+            gameState->RotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(deltaTimeInSeconds)), MulScalarV3(gameState->CurrentRotationSpeed, deltaTimeInSeconds));
+            gameState->CurrentRotationSpeed = AddV3(MulScalarV3(acceleration, deltaTimeInSeconds), gameState->CurrentRotationSpeed);
         }
     }
 
-    if (MagnitudeSquaredV2(rotationTouch) > 0)
+    if (MagnitudeSquaredV2(gameState->RotationTouch) > 0)
     {
-        if (MagnitudeV2(rotationTouch) > rotationTouchMaxSpeed)
+        if (MagnitudeV2(gameState->RotationTouch) > ROTATION_TOUCH_MAX_DELTA)
         {
-            rotationTouch = MulScalarV2(NormalizeV2(rotationTouch), rotationTouchMaxSpeed);
+            gameState->RotationTouch = MulScalarV2(NormalizeV2(gameState->RotationTouch), ROTATION_TOUCH_MAX_DELTA);
         }
 
-        //printf("Touch Speed = %f, %f, %f (%f)\n", rotationTouch.X, rotationTouch.Y, rotationTouch.Z, MagnitudeV3(rotationTouch));
-        rotationDelta = AddV3(rotationDelta, (Vector3){ rotationTouch.X, rotationTouch.Y, 0.0f });
+        gameState->RotationDelta = AddV3(gameState->RotationDelta, (Vector3){ gameState->RotationTouch.X, gameState->RotationTouch.Y, 0.0f });
 
-        Vector2 inverse = MulScalarV2(NormalizeV2(InverseV2(rotationTouch)), rotationTouchDecreaseSpeed);
-        rotationTouch = AddV2(rotationTouch, inverse);
+        Vector2 inverse = MulScalarV2(NormalizeV2(InverseV2(gameState->RotationTouch)), ROTATION_TOUCH_DECREASE_SPEED);
+        gameState->RotationTouch = AddV2(gameState->RotationTouch, inverse);
 
-        if (MagnitudeV2(rotationTouch) < 0.001f)
+        if (MagnitudeV2(gameState->RotationTouch) < 0.001f)
         {
-            rotationTouch = V2Zero;
+            ResetTouchParameters(gameState);
         }
     }
-        
-    //printf("Rotation Delta = %f, %f, %f, (%f)\n", rotationDelta.X, rotationDelta.Y, rotationDelta.Z, inputActions->TouchRotateUp);
 
-    if (MagnitudeSquaredV3(rotationDelta))
+    gameState->Zoom += (inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
+}
+
+void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
+{
+    ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
+
+    InputActions* inputActions = &applicationPayload->InputActions;
+    UpdateInputActions(inputActions, applicationPayload->InputActionBindings, applicationPayload->InputActionBindingCount);
+
+    if (inputActions->ExitApp)
     {
-        Vector4 rotationQuaternion = MulQuat(CreateQuaternion((Vector3){ 1, 0, 0 }, rotationDelta.X), MulQuat(CreateQuaternion((Vector3){ 0, 0, 1 }, rotationDelta.Z), CreateQuaternion((Vector3){ 0, 1, 0 }, rotationDelta.Y)));
-        applicationPayload->ShaderParameters.RotationQuaternion = MulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
-    }
-
-    float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
-    applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, (inputActions->ZoomIn - inputActions->ZoomOut) * 5.0f * updateParameters->DeltaTimeInSeconds + applicationPayload->ShaderParameters.Zoom);
-    applicationPayload->ShaderParameters.TriangeColor = inputActions->ChangeColor;
-
-    if (inputActions->HideCursor)
-    {
-        ElemHideWindowCursor(applicationPayload->Window);
+        ElemExitApplication(0);
     }
 
     if (inputActions->ShowCursor)
     {
         ElemShowWindowCursor(applicationPayload->Window);
     }
+    else
+    {
+        ElemHideWindowCursor(applicationPayload->Window);
+    }
+
+    GameState* gameState = &applicationPayload->GameState;
+    UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
+
+    if (MagnitudeSquaredV3(gameState->RotationDelta))
+    {
+        Vector4 rotationQuaternion = MulQuat(CreateQuaternion((Vector3){ 1, 0, 0 }, gameState->RotationDelta.X), MulQuat(CreateQuaternion((Vector3){ 0, 0, 1 }, gameState->RotationDelta.Z), CreateQuaternion((Vector3){ 0, 1, 0 }, gameState->RotationDelta.Y)));
+        applicationPayload->ShaderParameters.RotationQuaternion = MulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
+    }
+
+    float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
+    applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, gameState->Zoom);
+    applicationPayload->ShaderParameters.TriangeColor = inputActions->TriangleColor;
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -434,7 +418,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
-    if (frameMeasurement.NewData)
+    if (frameMeasurement.HasNewData)
     {
         SampleSetWindowTitle(applicationPayload->Window, "HelloInputs", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
     }
