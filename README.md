@@ -36,7 +36,7 @@ For dynamic gpu data that is short lived, we use GPU upload heap (rebar memory).
 
 ## 📋 Features
 
-Implemented features for current version **1.0.0-DEV3**:
+Implemented features for current version **1.0.0-DEV4**:
 
 - Application: 
     - Application Lifetime with the same code for all platforms.
@@ -46,6 +46,11 @@ Implemented features for current version **1.0.0-DEV3**:
     - CommandQueues and CommandLists.
     - SwapChain.
     - Mesh shaders.
+- Inputs:
+    - Keyboard.
+    - Mouse.
+    - Gamepad. (basic for now only work with Xbox one S wireless controller)
+    - Touch. (iOS and MacOS)
 - Tools:
     - Shader Compiler.
 
