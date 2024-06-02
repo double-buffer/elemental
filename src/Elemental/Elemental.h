@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------
 // Elemental Library
-// Version: 1.0.0-dev4
+// Version: 1.0.0-dev5
 //
 // MIT License
 //
@@ -36,7 +36,7 @@
 #define UseLoader
 #endif
 
-#define ELEM_VERSION_LABEL "1.0.0-dev4"
+#define ELEM_VERSION_LABEL "1.0.0-dev5"
 
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
@@ -302,9 +302,19 @@ typedef ElemHandle ElemCommandList;
 typedef ElemHandle ElemSwapChain;
 
 /**
+ * Handle that represents a graphics heap.
+ */
+typedef ElemHandle ElemGraphicsHeap;
+
+/**
  * Handle that represents a texture.
  */
 typedef ElemHandle ElemTexture;
+
+/**
+ * Handle that represents a shader descriptor.
+ */
+typedef uint32_t ElemShaderDescriptor;
 
 /**
  * Handle that represents a shader library.
@@ -351,14 +361,37 @@ typedef enum
     ElemSwapChainFormat_HighDynamicRange = 1
 } ElemSwapChainFormat;
 
+typedef enum
+{
+    ElemGraphicsHeapType_Gpu = 0
+} ElemGraphicsHeapType;
+
+typedef enum
+{
+    ElemTextureShaderDescriptorType_Read,
+    ElemTextureShaderDescriptorType_Uav,
+    ElemTextureShaderDescriptorType_RenderTarget
+} ElemTextureShaderDescriptorType;
+
 /**
  * Enumerates texture formats.
  */
 typedef enum
 {
     // Standard 8-bit BGRA format using sRGB color space.
-    ElemTextureFormat_B8G8R8A8_SRGB
+    ElemTextureFormat_B8G8R8A8_SRGB,
+    ElemTextureFormat_B8G8R8A8_UNORM
 } ElemTextureFormat;
+
+/**
+ * Enumerates texture usages.
+ */
+typedef enum
+{
+    ElemTextureUsage_Standard,
+    ElemTextureUsage_Uav,
+    ElemTextureUsage_RenderTarget
+} ElemTextureUsage;
 
 /**
  * Enumerates render pass load actions.
@@ -542,6 +575,33 @@ typedef struct
 } ElemSwapChainUpdateParameters;
 
 /**
+ * Options for creating a graphics heap.
+ */
+typedef struct
+{
+    // Type of the graphics heap. Default to GPU.
+    ElemGraphicsHeapType HeapType;
+    // Optional debug name for the graphics heap.
+    const char* DebugName;
+} ElemGraphicsHeapOptions;
+
+typedef struct
+{
+    uint32_t Width;
+    uint32_t Height;
+    ElemTextureFormat Format;
+    ElemTextureUsage Usage;
+    // Optional debug name for the texture.
+    const char* DebugName;
+} ElemTextureParameters;
+
+typedef struct
+{
+    ElemTextureShaderDescriptorType Type;
+    uint32_t MipIndex;
+} ElemTextureShaderDescriptorOptions;
+
+/**
  * Represents a collection of texture formats.
  */
 typedef struct
@@ -621,6 +681,9 @@ typedef struct
 {
     // Render target texture.
     ElemTexture RenderTarget;
+
+    // TODO: Add a RTV descriptor optional here so we can override it if needed?
+
     // Color to clear the render target with if the load action is clear.
     ElemColor ClearColor;
     // Action to take when loading data into the render target at the beginning of a render pass.
@@ -783,6 +846,20 @@ ElemAPI void ElemSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLaten
  * @param swapChain The swap chain from which to present the frame.
  */
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
+
+ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
+
+ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
+
+ElemAPI void ElemBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap);
+
+// TODO: GetTextureAllocationInfos
+
+ElemAPI ElemTexture ElemCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
+ElemAPI void ElemFreeTexture(ElemTexture texture);
+
+ElemAPI ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options);
+ElemAPI void ElemFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

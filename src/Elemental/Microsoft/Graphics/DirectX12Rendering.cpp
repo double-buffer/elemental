@@ -1,6 +1,6 @@
 #include "DirectX12Rendering.h"
 #include "DirectX12CommandList.h"
-#include "DirectX12Texture.h"
+#include "DirectX12Resource.h"
 #include "SystemFunctions.h"
 
 void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)

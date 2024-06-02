@@ -1,7 +1,7 @@
 #include "DirectX12SwapChain.h"
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
-#include "DirectX12Texture.h"
+#include "DirectX12Resource.h"
 #include "Inputs/Inputs.h"
 #include "../Win32Application.h"
 #include "../Win32Window.h"

@@ -1,6 +1,6 @@
 #include "VulkanRendering.h"
 #include "VulkanCommandList.h"
-#include "VulkanTexture.h"
+#include "VulkanResource.h"
 #include "SystemLogging.h"
 #include "SystemFunctions.h"
 

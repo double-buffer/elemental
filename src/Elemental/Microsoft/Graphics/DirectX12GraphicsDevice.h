@@ -17,6 +17,8 @@ struct DirectX12GraphicsDeviceData
     ComPtr<ID3D12Device10> Device;
     ComPtr<ID3D12RootSignature> RootSignature;
     uint64_t CommandAllocationGeneration;
+    DirectX12DescriptorHeap ResourceDescriptorHeap;
+    DirectX12DescriptorHeap RTVDescriptorHeap;
 };
 
 struct DirectX12GraphicsDeviceDataFull
@@ -24,7 +26,6 @@ struct DirectX12GraphicsDeviceDataFull
     DXGI_ADAPTER_DESC3 AdapterDescription;
     ComPtr<ID3D12InfoQueue1> DebugInfoQueue;
     DWORD DebugCallBackCookie;
-    DirectX12DescriptorHeap RTVDescriptorHeap;
 };
 
 extern MemoryArena DirectX12MemoryArena;
@@ -36,6 +37,8 @@ DirectX12GraphicsDeviceDataFull* GetDirectX12GraphicsDeviceDataFull(ElemGraphics
 
 D3D12_CPU_DESCRIPTOR_HANDLE CreateDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap);
 void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle);
+uint32_t ConvertDirectX12DescriptorHandleToIndex(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle);
+D3D12_CPU_DESCRIPTOR_HANDLE ConvertDirectX12DescriptorIndexToHandle(DirectX12DescriptorHeap descriptorHeap, uint32_t index);
 
 void DirectX12EnableGraphicsDebugLayer();
 ElemGraphicsDeviceInfoSpan DirectX12GetAvailableGraphicsDevices();

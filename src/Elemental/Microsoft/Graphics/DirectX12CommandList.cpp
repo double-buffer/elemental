@@ -221,6 +221,11 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     commandListPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
     //commandList->SetComputeRootSignature(graphicsDeviceData->RootSignature.Get());
 
+    auto descriptorHeaps = SystemPushArray<ID3D12DescriptorHeap*>(stackMemoryArena, 1);
+    descriptorHeaps[0] = graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorHeap.Get();
+
+    commandListPoolItem->CommandList->SetDescriptorHeaps(1, descriptorHeaps.Pointer);
+
     auto handle = SystemAddDataPoolItem(directX12CommandListPool, {
         .DeviceObject = commandListPoolItem->CommandList,
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,

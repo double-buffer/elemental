@@ -1,7 +1,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
-#include "VulkanTexture.h"
+#include "VulkanResource.h"
 #include "Inputs/Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"

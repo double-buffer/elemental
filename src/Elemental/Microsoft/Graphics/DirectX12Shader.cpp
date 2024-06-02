@@ -1,6 +1,6 @@
 #include "DirectX12Shader.h"
 #include "DirectX12GraphicsDevice.h"
-#include "DirectX12Texture.h"
+#include "DirectX12Resource.h"
 #include "DirectX12CommandList.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"

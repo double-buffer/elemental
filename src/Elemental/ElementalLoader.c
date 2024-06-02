@@ -53,18 +53,24 @@ typedef struct ElementalFunctions
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemSetSwapChainTiming)(ElemSwapChain, unsigned int, unsigned int);
     void (*ElemPresentSwapChain)(ElemSwapChain);
-    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan const);
+    ElemGraphicsHeap (*ElemCreateGraphicsHeap)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *);
+    void (*ElemFreeGraphicsHeap)(ElemGraphicsHeap);
+    void (*ElemBindGraphicsHeap)(ElemCommandList, ElemGraphicsHeap);
+    ElemTexture (*ElemCreateTexture)(ElemGraphicsHeap, unsigned long long, ElemTextureParameters const *);
+    void (*ElemFreeTexture)(ElemTexture);
+    ElemShaderDescriptor (*ElemCreateTextureShaderDescriptor)(ElemTexture, ElemTextureShaderDescriptorOptions const *);
+    void (*ElemFreeShaderDescriptor)(ElemShaderDescriptor);
+    ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
     void (*ElemFreePipelineState)(ElemPipelineState);
     void (*ElemBindPipelineState)(ElemCommandList, ElemPipelineState);
-    void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, ElemDataSpan const);
+    void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, ElemDataSpan);
     void (*ElemBeginRenderPass)(ElemCommandList, ElemBeginRenderPassParameters const *);
     void (*ElemEndRenderPass)(ElemCommandList);
     void (*ElemSetViewport)(ElemCommandList, ElemViewport const *);
     void (*ElemSetViewports)(ElemCommandList, ElemViewportSpan);
     void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
-    ElemInputDeviceInfoSpan (*ElemGetInputDevices)(void);
     ElemInputDeviceInfo (*ElemGetInputDeviceInfo)(ElemInputDevice);
     ElemInputStream (*ElemGetInputStream)(void);
     
@@ -149,18 +155,24 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemSetSwapChainTiming = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemSetSwapChainTiming");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
-    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan const))GetElementalFunctionPointer("ElemCreateShaderLibrary");
+    listElementalFunctions.ElemCreateGraphicsHeap = (ElemGraphicsHeap (*)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsHeap");
+    listElementalFunctions.ElemFreeGraphicsHeap = (void (*)(ElemGraphicsHeap))GetElementalFunctionPointer("ElemFreeGraphicsHeap");
+    listElementalFunctions.ElemBindGraphicsHeap = (void (*)(ElemCommandList, ElemGraphicsHeap))GetElementalFunctionPointer("ElemBindGraphicsHeap");
+    listElementalFunctions.ElemCreateTexture = (ElemTexture (*)(ElemGraphicsHeap, unsigned long long, ElemTextureParameters const *))GetElementalFunctionPointer("ElemCreateTexture");
+    listElementalFunctions.ElemFreeTexture = (void (*)(ElemTexture))GetElementalFunctionPointer("ElemFreeTexture");
+    listElementalFunctions.ElemCreateTextureShaderDescriptor = (ElemShaderDescriptor (*)(ElemTexture, ElemTextureShaderDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateTextureShaderDescriptor");
+    listElementalFunctions.ElemFreeShaderDescriptor = (void (*)(ElemShaderDescriptor))GetElementalFunctionPointer("ElemFreeShaderDescriptor");
+    listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
     listElementalFunctions.ElemFreePipelineState = (void (*)(ElemPipelineState))GetElementalFunctionPointer("ElemFreePipelineState");
     listElementalFunctions.ElemBindPipelineState = (void (*)(ElemCommandList, ElemPipelineState))GetElementalFunctionPointer("ElemBindPipelineState");
-    listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, ElemDataSpan const))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
+    listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
     listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, ElemBeginRenderPassParameters const *))GetElementalFunctionPointer("ElemBeginRenderPass");
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
     listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, ElemViewport const *))GetElementalFunctionPointer("ElemSetViewport");
     listElementalFunctions.ElemSetViewports = (void (*)(ElemCommandList, ElemViewportSpan))GetElementalFunctionPointer("ElemSetViewports");
     listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
-    listElementalFunctions.ElemGetInputDevices = (ElemInputDeviceInfoSpan (*)(void))GetElementalFunctionPointer("ElemGetInputDevices");
     listElementalFunctions.ElemGetInputDeviceInfo = (ElemInputDeviceInfo (*)(ElemInputDevice))GetElementalFunctionPointer("ElemGetInputDeviceInfo");
     listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(void))GetElementalFunctionPointer("ElemGetInputStream");
     
@@ -962,7 +974,168 @@ static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
     listElementalFunctions.ElemPresentSwapChain(swapChain);
 }
 
-static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan const shaderLibraryData)
+static inline ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, unsigned long long sizeInBytes, ElemGraphicsHeapOptions const * options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsHeap result = {};
+        #else
+        ElemGraphicsHeap result = (ElemGraphicsHeap){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateGraphicsHeap) 
+    {
+        assert(listElementalFunctions.ElemCreateGraphicsHeap);
+
+        #ifdef __cplusplus
+        ElemGraphicsHeap result = {};
+        #else
+        ElemGraphicsHeap result = (ElemGraphicsHeap){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, options);
+}
+
+static inline void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemFreeGraphicsHeap) 
+    {
+        assert(listElementalFunctions.ElemFreeGraphicsHeap);
+        return;
+    }
+
+    listElementalFunctions.ElemFreeGraphicsHeap(graphicsHeap);
+}
+
+static inline void ElemBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemBindGraphicsHeap) 
+    {
+        assert(listElementalFunctions.ElemBindGraphicsHeap);
+        return;
+    }
+
+    listElementalFunctions.ElemBindGraphicsHeap(commandList, graphicsHeap);
+}
+
+static inline ElemTexture ElemCreateTexture(ElemGraphicsHeap graphicsHeap, unsigned long long graphicsHeapOffset, ElemTextureParameters const * parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemTexture result = {};
+        #else
+        ElemTexture result = (ElemTexture){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateTexture) 
+    {
+        assert(listElementalFunctions.ElemCreateTexture);
+
+        #ifdef __cplusplus
+        ElemTexture result = {};
+        #else
+        ElemTexture result = (ElemTexture){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateTexture(graphicsHeap, graphicsHeapOffset, parameters);
+}
+
+static inline void ElemFreeTexture(ElemTexture texture)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemFreeTexture) 
+    {
+        assert(listElementalFunctions.ElemFreeTexture);
+        return;
+    }
+
+    listElementalFunctions.ElemFreeTexture(texture);
+}
+
+static inline ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemTexture texture, ElemTextureShaderDescriptorOptions const * options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemShaderDescriptor result = {};
+        #else
+        ElemShaderDescriptor result = (ElemShaderDescriptor){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateTextureShaderDescriptor) 
+    {
+        assert(listElementalFunctions.ElemCreateTextureShaderDescriptor);
+
+        #ifdef __cplusplus
+        ElemShaderDescriptor result = {};
+        #else
+        ElemShaderDescriptor result = (ElemShaderDescriptor){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateTextureShaderDescriptor(texture, options);
+}
+
+static inline void ElemFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemFreeShaderDescriptor) 
+    {
+        assert(listElementalFunctions.ElemFreeShaderDescriptor);
+        return;
+    }
+
+    listElementalFunctions.ElemFreeShaderDescriptor(shaderDescriptor);
+}
+
+static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1075,7 +1248,7 @@ static inline void ElemBindPipelineState(ElemCommandList commandList, ElemPipeli
     listElementalFunctions.ElemBindPipelineState(commandList, pipelineState);
 }
 
-static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, unsigned int offsetInBytes, ElemDataSpan const data)
+static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, unsigned int offsetInBytes, ElemDataSpan data)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1175,37 +1348,6 @@ static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int th
     }
 
     listElementalFunctions.ElemDispatchMesh(commandList, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
-}
-
-static inline ElemInputDeviceInfoSpan ElemGetInputDevices(void)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-
-        #ifdef __cplusplus
-        ElemInputDeviceInfoSpan result = {};
-        #else
-        ElemInputDeviceInfoSpan result = (ElemInputDeviceInfoSpan){0};
-        #endif
-
-        return result;
-    }
-
-    if (!listElementalFunctions.ElemGetInputDevices) 
-    {
-        assert(listElementalFunctions.ElemGetInputDevices);
-
-        #ifdef __cplusplus
-        ElemInputDeviceInfoSpan result = {};
-        #else
-        ElemInputDeviceInfoSpan result = (ElemInputDeviceInfoSpan){0};
-        #endif
-
-        return result;
-    }
-
-    return listElementalFunctions.ElemGetInputDevices();
 }
 
 static inline ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)

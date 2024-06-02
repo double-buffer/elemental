@@ -10,14 +10,14 @@
 #include "Graphics/DirectX12GraphicsDevice.cpp"
 #include "Graphics/DirectX12CommandList.cpp"
 #include "Graphics/DirectX12SwapChain.cpp"
-#include "Graphics/DirectX12Texture.cpp"
+#include "Graphics/DirectX12Resource.cpp"
 #include "Graphics/DirectX12Shader.cpp"
 #include "Graphics/DirectX12Rendering.cpp"
 
 #include "Graphics/Vulkan/VulkanGraphicsDevice.cpp"
 #include "Graphics/Vulkan/VulkanCommandList.cpp"
 #include "Graphics/Vulkan/VulkanSwapChain.cpp"
-#include "Graphics/Vulkan/VulkanTexture.cpp"
+#include "Graphics/Vulkan/VulkanResource.cpp"
 #include "Graphics/Vulkan/VulkanShader.cpp"
 #include "Graphics/Vulkan/VulkanRendering.cpp"
 
@@ -25,6 +25,7 @@
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
 #include "Graphics/SwapChain.cpp"
+#include "Graphics/Resource.cpp"
 #include "Graphics/Shader.cpp"
 #include "Graphics/Rendering.cpp"
 

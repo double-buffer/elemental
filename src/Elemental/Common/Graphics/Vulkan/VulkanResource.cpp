@@ -1,19 +1,32 @@
-#include "VulkanTexture.h"
+#include "VulkanResource.h"
 #include "VulkanGraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
+#define VULKAN_MAX_GRAPHICSHEAP 32
 #define VULKAN_MAX_TEXTURES UINT16_MAX
 
+SystemDataPool<VulkanGraphicsHeapData, VulkanGraphicsHeapDataFull> vulkanGraphicsHeapPool;
 SystemDataPool<VulkanTextureData, VulkanTextureDataFull> vulkanTexturePool;
 
 void InitVulkanTextureMemory()
 {
-    if (!vulkanTexturePool.Storage)
+    if (!vulkanGraphicsHeapPool.Storage)
     {
+        vulkanGraphicsHeapPool = SystemCreateDataPool<VulkanGraphicsHeapData, VulkanGraphicsHeapDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_GRAPHICSHEAP);
         vulkanTexturePool = SystemCreateDataPool<VulkanTextureData, VulkanTextureDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_TEXTURES);
     }
+}
+
+VulkanGraphicsHeapData* GetVulkanGraphicsHeapData(ElemGraphicsHeap graphicsHeap)
+{
+    return SystemGetDataPoolItem(vulkanGraphicsHeapPool, graphicsHeap);
+}
+
+VulkanGraphicsHeapDataFull* GetVulkanGraphicsHeapDataFull(ElemGraphicsHeap graphicsHeap)
+{
+    return SystemGetDataPoolItemFull(vulkanGraphicsHeapPool, graphicsHeap);
 }
 
 VulkanTextureData* GetVulkanTextureData(ElemTexture texture)
@@ -66,6 +79,24 @@ ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, V
 
 // TODO: Functions to create additional optional Descriptors
 
+ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options)
+{
+    return {};
+}
+
+void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
+{
+}
+
+void VulkanBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap)
+{
+}
+
+ElemTexture VulkanCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
+{
+    return {};
+}
+
 void VulkanFreeTexture(ElemTexture texture)
 {
     // TODO: Do a kind a deferred texture delete so we don't crash if the resource is still in use
@@ -83,4 +114,13 @@ void VulkanFreeTexture(ElemTexture texture)
     vkDestroyImageView(graphicsDeviceData->Device, textureData->ImageView, nullptr);
 
     SystemRemoveDataPoolItem(vulkanTexturePool, texture);
+}
+
+ElemShaderDescriptor VulkanCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options)
+{
+    return 0;
+}
+
+void VulkanFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)
+{
 }
