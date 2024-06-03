@@ -272,6 +272,11 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     return handle;
 }
 
+ElemPipelineState MetalCompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters)
+{
+    return {};
+}
+
 void MetalFreePipelineState(ElemPipelineState pipelineState)
 {
 }
@@ -312,4 +317,8 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
     // HACK: For the oment we set the slot 2 because it is the global one for bindless
     renderCommandEncoder->setMeshBytes(data.Items, data.Length, 2);
     renderCommandEncoder->setFragmentBytes(data.Items, data.Length, 2);
+}
+
+void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
 }

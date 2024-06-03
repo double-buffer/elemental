@@ -205,6 +205,11 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
     return handle;
 }
 
+ElemPipelineState VulkanCompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters)
+{
+    return {};
+}
+
 void VulkanFreePipelineState(ElemPipelineState pipelineState)
 {
     SystemAssert(pipelineState != ELEM_HANDLE_NULL);
@@ -244,4 +249,8 @@ void VulkanPushPipelineStateConstants(ElemCommandList commandList, uint32_t offs
     SystemAssert(graphicsDeviceData);
 
     vkCmdPushConstants(commandListData->DeviceObject, graphicsDeviceData->PipelineLayout, VK_SHADER_STAGE_ALL, 0, data.Length, data.Items);
+}
+
+void VulkanDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
 }

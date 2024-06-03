@@ -4,6 +4,12 @@
 #include "SystemSpan.h"
 #include "Graphics/CommandAllocatorPool.h"
 
+enum DirectX12PipelineStateType
+{
+    Graphics,
+    Compute
+};
+
 struct DirectX12CommandQueueData
 {
     ComPtr<ID3D12CommandQueue> DeviceObject;
@@ -28,6 +34,7 @@ struct DirectX12CommandListData
     ComPtr<ID3D12GraphicsCommandList10> DeviceObject;
     CommandAllocatorPoolItem<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*>* CommandAllocatorPoolItem;
     CommandListPoolItem<ID3D12GraphicsCommandList10*>* CommandListPoolItem;
+    DirectX12PipelineStateType PipelineStateType;
 };
 
 struct DirectX12CommandListDataFull

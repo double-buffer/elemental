@@ -98,6 +98,9 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemTextureFormat format)
 
         case ElemTextureFormat_B8G8R8A8_UNORM:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+        case ElemTextureFormat_R16G16B16A16_FLOAT:
+            return DXGI_FORMAT_R16G16B16A16_FLOAT;
     }
 }
 
@@ -324,6 +327,19 @@ ElemShaderDescriptor DirectX12CreateTextureShaderDescriptor(ElemTexture texture,
     {
         case ElemTextureShaderDescriptorType_Read:
         {
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = 
+            {
+                .Format = textureData->ResourceDescription.Format,
+                .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+                .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+                .Texture2D =
+                {
+                    .MostDetailedMip = options->MipIndex,
+                    .MipLevels = textureData->ResourceDescription.MipLevels - options->MipIndex
+                }
+            };
+
+		    graphicsDeviceData->Device->CreateShaderResourceView(textureData->DeviceObject.Get(), &srvDesc, descriptorHandle);
             break;
         }
         case ElemTextureShaderDescriptorType_Uav:

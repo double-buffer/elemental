@@ -380,7 +380,8 @@ typedef enum
 {
     // Standard 8-bit BGRA format using sRGB color space.
     ElemTextureFormat_B8G8R8A8_SRGB,
-    ElemTextureFormat_B8G8R8A8_UNORM
+    ElemTextureFormat_B8G8R8A8_UNORM,
+    ElemTextureFormat_R16G16B16A16_FLOAT 
 } ElemTextureFormat;
 
 /**
@@ -630,6 +631,19 @@ typedef struct
 } ElemGraphicsPipelineStateParameters;
 
 /**
+ * Parameters for creating a compute pipeline state.
+ */
+typedef struct
+{
+    // Optional debug name for the pipeline state.
+    const char* DebugName;
+    // Shader library containing the shaders.
+    ElemShaderLibrary ShaderLibrary;
+    // Function name of the mesh shader in the shader library.
+    const char* ComputeShaderFunction;
+} ElemComputePipelineStateParameters;
+
+/**
  * Represents RGBA color.
  */
 typedef struct
@@ -851,6 +865,8 @@ ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevic
 
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
+// TODO: BindGraphicsHeaps?
+// TODO: Do we really need this? In metal can we auto bind the heaps?
 ElemAPI void ElemBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap);
 
 // TODO: GetTextureAllocationInfos
@@ -883,6 +899,8 @@ ElemAPI void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
  */
 ElemAPI ElemPipelineState ElemCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
 
+ElemAPI ElemPipelineState ElemCompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters);
+
 /**
  * Releases resources associated with a pipeline state.
  * @param pipelineState The pipeline state to free.
@@ -903,6 +921,15 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
  * @param data The data to be pushed as constants.
  */
 ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data);
+
+/**
+ * Dispatches a compute operation on a command list, specifying the number of thread groups in each dimension.
+ * @param commandList The command list on which the mesh operation is to be dispatched.
+ * @param threadGroupCountX The number of thread groups in the X dimension.
+ * @param threadGroupCountY The number of thread groups in the Y dimension.
+ * @param threadGroupCountZ The number of thread groups in the Z dimension.
+ */
+ElemAPI void ElemDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
 
 /**
  * Begins a render pass, setting up the rendering targets and viewports for drawing operations.

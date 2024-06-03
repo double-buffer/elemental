@@ -91,6 +91,16 @@ Vector2 MulScalarV2(Vector2 v, float scalar)
 	return result;
 }
 
+Vector2 DivideScalarV2(Vector2 v, float scalar)
+{
+	Vector2 result;
+
+	result.X = v.X / scalar;
+	result.Y = v.Y / scalar;
+
+	return result;
+}
+
 float DotProductV2(Vector2 v1, Vector2 v2)
 {
 	return v1.X * v2.X + v1.Y * v2.Y;
@@ -148,6 +158,17 @@ Vector3 MulScalarV3(Vector3 v, float scalar)
 	result.X = v.X * scalar;
 	result.Y = v.Y * scalar;
 	result.Z = v.Z * scalar;
+
+	return result;
+}
+
+Vector3 DivideScalarV3(Vector3 v, float scalar)
+{
+	Vector3 result;
+
+	result.X = v.X / scalar;
+	result.Y = v.Y / scalar;
+	result.Z = v.Z / scalar;
 
 	return result;
 }

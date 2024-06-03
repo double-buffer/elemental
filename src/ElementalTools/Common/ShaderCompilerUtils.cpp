@@ -32,6 +32,9 @@ Span<uint8_t> CombineShaderParts(MemoryArena memoryArena, ReadOnlySpan<ShaderPar
         return outputShaderData;
     }
 
-    printf("Error: Cannot compile a lib for the moment\n");
-    return {};
+    auto shaderPart = shaderParts[0];
+
+    auto outputShaderData = SystemPushArray<uint8_t>(memoryArena, shaderPart.ShaderCode.Length);
+    SystemCopyBuffer(outputShaderData, (ReadOnlySpan<uint8_t>)shaderPart.ShaderCode);
+    return outputShaderData;
 }

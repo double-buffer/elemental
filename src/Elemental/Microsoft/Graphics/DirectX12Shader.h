@@ -2,6 +2,7 @@
 
 #include "Elemental.h"
 #include "SystemSpan.h"
+#include "DirectX12CommandList.h"
 
 struct DirectX12ShaderLibraryData
 {
@@ -13,6 +14,7 @@ struct DirectX12PipelineStateData
 {
     ComPtr<ID3D12PipelineState> PipelineState;
     D3D12_PROGRAM_IDENTIFIER ProgramIdentifier;
+    DirectX12PipelineStateType PipelineStateType;
 };
 
 struct DirectX12PipelineStateDataFull
@@ -28,10 +30,12 @@ DirectX12PipelineStateDataFull* GetDirectX12PipelineStateDataFull(ElemPipelineSt
 ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 void DirectX12FreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
+ElemPipelineState DirectX12CompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters);
 void DirectX12FreePipelineState(ElemPipelineState pipelineState);
 void DirectX12BindPipelineState(ElemCommandList commandList, ElemPipelineState pipelineState);
 void DirectX12PushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data); 
 
+void DirectX12DispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
 
 
 // TODO: TEMP

@@ -72,6 +72,9 @@ ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind)
 {
     switch (shaderKind)
     {
+        case DxilShaderKind::Compute:
+            return "cs_6_8";
+
         case DxilShaderKind::Mesh:
             return "ms_6_8";
 
@@ -195,7 +198,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
 
             auto shaderType = GetVersionShaderType(functionDescription.Version);
 
-            if (shaderType == DxilShaderKind::Mesh || shaderType == DxilShaderKind::Pixel)
+            if (shaderType == DxilShaderKind::Mesh || shaderType == DxilShaderKind::Pixel || shaderType == DxilShaderKind::Compute)
             {
                 ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(shaderType), targetGraphicsApi, functionDescription.Name, options);
                 hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);

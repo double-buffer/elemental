@@ -1,7 +1,7 @@
 function(configure_resource_compilation target_name resource_list)
     if(BUILD_FOR_IOS)
         set(SHADER_COMPILER_BIN "${CMAKE_SOURCE_DIR}/build/bin/ShaderCompiler.app/Contents/MacOS/ShaderCompiler")
-        set(SHADER_COMPILER_OPTIONS "--target-platform" "iOS")
+        set(DEFAULT_SHADER_COMPILER_OPTIONS "--target-platform" "iOS")
     else()
         if(CMAKE_GENERATOR STREQUAL "Ninja")
             if (APPLE)
@@ -12,12 +12,12 @@ function(configure_resource_compilation target_name resource_list)
         else()
             set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/ShaderCompiler")
         endif()
-        set(SHADER_COMPILER_OPTIONS "")
+        set(DEFAULT_SHADER_COMPILER_OPTIONS "")
         add_dependencies(${target_name} ShaderCompiler)
     endif()
         
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        list(APPEND SHADER_COMPILER_OPTIONS "--debug")
+        list(APPEND DEFAULT_SHADER_COMPILER_OPTIONS "--debug")
     endif()
 
     # TODO: Take into account other type of resources
@@ -49,6 +49,8 @@ function(configure_resource_compilation target_name resource_list)
 
         set(compiled_shader "${output_dir}/${file_name}.shader")
 
+        SET(SHADER_COMPILER_OPTIONS ${DEFAULT_SHADER_COMPILER_OPTIONS})
+
         add_custom_command(OUTPUT ${compiled_shader}
             COMMAND ${SHADER_COMPILER_BIN} ${SHADER_COMPILER_OPTIONS} ${hlsl_file} ${compiled_shader}
             DEPENDS ${hlsl_file}
@@ -63,7 +65,7 @@ function(configure_resource_compilation target_name resource_list)
         
         if (WIN32)
             set(compiled_shader_vulkan "${output_dir}/${file_name}_vulkan.shader")
-            set(SHADER_COMPILER_OPTIONS "--target-api" "vulkan")
+            list(APPEND SHADER_COMPILER_OPTIONS "--target-api" "vulkan")
 
             add_custom_command(OUTPUT ${compiled_shader_vulkan}
                 COMMAND ${SHADER_COMPILER_BIN} ${SHADER_COMPILER_OPTIONS} ${hlsl_file} ${compiled_shader_vulkan}
