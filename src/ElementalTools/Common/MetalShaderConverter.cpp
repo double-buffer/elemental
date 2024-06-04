@@ -186,6 +186,12 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
                 shaderType = ShaderType_Pixel;
             }
 
+            if (!result)
+            {
+                result = IRObjectGetMetalLibBinary(pOutIR, IRShaderStageCompute, pMetallib);
+                shaderType = ShaderType_Compute;
+            }
+
             size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
             auto shaderByteCode = SystemPushArray<uint8_t>(stackMemoryArena, metallibSize); 
             IRMetalLibGetBytecode(pMetallib, shaderByteCode.Pointer);

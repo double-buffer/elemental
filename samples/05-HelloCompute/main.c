@@ -355,7 +355,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + 15) / 16, (updateParameters->SwapChainInfo.Height + 15) / 16, 1);
 
     // TODO: Barrier
-
+/*
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
         {
@@ -373,7 +373,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->RenderTextureReadDescriptor, .Length = sizeof(uint32_t) });
     ElemDispatchMesh(commandList, 1, 1, 1);
 
-    ElemEndRenderPass(commandList);
+    ElemEndRenderPass(commandList);*/
 
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);

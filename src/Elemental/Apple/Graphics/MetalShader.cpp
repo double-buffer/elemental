@@ -222,7 +222,7 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     if (metalRenderPassDescriptor.DepthTexturePointer.HasValue == 1) {
         pipelineStateDescriptor.depthAttachmentPixelFormat = .depth32Float
     } 
-
+)
     if (metalRenderPassDescriptor.RenderTarget1BlendOperation.HasValue == 1) {
         initBlendState(pipelineStateDescriptor.colorAttachments[0]!, metalRenderPassDescriptor.RenderTarget1BlendOperation.Value)
     }
@@ -274,7 +274,79 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
 
 ElemPipelineState MetalCompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters)
 {
-    return {};
+    InitMetalShaderLibraryMemory();
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+    
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    SystemAssert(parameters);
+    SystemAssert(parameters->ShaderLibrary != ELEM_HANDLE_NULL);
+
+    auto shaderLibraryData= GetMetalShaderLibraryData(parameters->ShaderLibrary);
+    SystemAssert(shaderLibraryData);
+
+    auto pipelineStateDescriptor = NS::TransferPtr(MTL::ComputePipelineDescriptor::alloc()->init());
+
+    NS::SharedPtr<MTL::Function> computeFunction;
+
+    // TODO: Ideally we should have only one mtl lib and get the function from it.
+    // TODO: Amplification shader
+    // TODO: Change that
+    if (parameters->ComputeShaderFunction)
+    {
+        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
+        {
+            computeFunction = NS::TransferPtr(shaderLibraryData->GraphicsShaders[i]->newFunction(NS::String::string(parameters->ComputeShaderFunction, NS::UTF8StringEncoding)));
+
+            if (computeFunction)
+            {
+                break;
+            }
+
+        }
+            
+        if (computeFunction)
+        {
+            pipelineStateDescriptor->setComputeFunction(computeFunction.get());
+        }
+        else
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find compute shader function '%s'", parameters->ComputeShaderFunction);
+        }
+    }
+
+    // TODO: Review this!
+    auto dispatchGroup = dispatch_group_create();
+    dispatch_group_enter(dispatchGroup);
+
+    NS::SharedPtr<MTL::ComputePipelineState> pipelineState;
+    NS::SharedPtr<MTL::ComputePipelineState>* pipelineStatePointer = &pipelineState;
+
+    graphicsDeviceData->Device->newComputePipelineState(pipelineStateDescriptor.get(), MTL::PipelineOptionNone, ^(MTL::ComputePipelineState* metalPipelineStatePointer, MTL::ComputePipelineReflection* reflectionPointer, NS::Error* errorPointer)
+    {
+        auto pipelineStateError = NS::TransferPtr(errorPointer);
+        
+        if (pipelineStateError->code() != 0)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot compile pipeline state object. Error code: %ld: %s\n", pipelineStateError->code(), pipelineStateError->localizedFailureReason()->cString(NS::UTF8StringEncoding));
+            return;
+        }
+    
+        *pipelineStatePointer = NS::RetainPtr(metalPipelineStatePointer);
+        dispatch_group_leave(dispatchGroup);
+    });
+    
+    dispatch_group_wait(dispatchGroup, DISPATCH_TIME_FOREVER);
+    
+    auto handle = SystemAddDataPoolItem(metalPipelineStatePool, {
+        .ComputePipelineState = pipelineState,
+    }); 
+
+    SystemAddDataPoolItemFull(metalPipelineStatePool, handle, {
+    });
+
+    return handle;
 }
 
 void MetalFreePipelineState(ElemPipelineState pipelineState)
@@ -288,15 +360,26 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
 
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
+    
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
 
     auto pipelineStateData = GetMetalPipelineStateData(pipelineState);
     SystemAssert(pipelineStateData);
 
-    SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Render);
-    SystemAssert(commandListData->CommandEncoder);
+    if (commandListData->CommandEncoderType == MetalCommandEncoderType_Render)
+    {
+        auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+        renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
+    }
+    else
+    {
+        auto computeCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->computeCommandEncoder()); 
+        commandListData->CommandEncoder = computeCommandEncoder;
+        commandListData->CommandEncoderType = MetalCommandEncoderType_Compute;
 
-    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
-    renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
+        computeCommandEncoder->setComputePipelineState(pipelineStateData->ComputePipelineState.get());
+    }
 }
 
 void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data)
@@ -306,19 +389,41 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
 
-    SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Render);
-    SystemAssert(commandListData->CommandEncoder);
+    if (commandListData->CommandEncoderType == MetalCommandEncoderType_Render)
+    {
+        auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
 
-    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+        // TODO: Amplification shader
+        // TODO: Do we need to check if the shader stage is bound?
+        // TODO: compute offset
+        // HACK: For the oment we set the slot 2 because it is the global one for bindless
+        renderCommandEncoder->setMeshBytes(data.Items, data.Length, 2);
+        renderCommandEncoder->setFragmentBytes(data.Items, data.Length, 2);
+    }
+    else if (commandListData->CommandEncoderType == MetalCommandEncoderType_Compute)
+    {
+        auto renderCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
 
-    // TODO: Amplification shader
-    // TODO: Do we need to check if the shader stage is bound?
-    // TODO: compute offset
-    // HACK: For the oment we set the slot 2 because it is the global one for bindless
-    renderCommandEncoder->setMeshBytes(data.Items, data.Length, 2);
-    renderCommandEncoder->setFragmentBytes(data.Items, data.Length, 2);
+        // TODO: Amplification shader
+        // TODO: Do we need to check if the shader stage is bound?
+        // TODO: compute offset
+        // HACK: For the oment we set the slot 2 because it is the global one for bindless
+        renderCommandEncoder->setBytes(data.Items, data.Length, 2);
+    }
 }
 
 void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Compute);
+    SystemAssert(commandListData->CommandEncoder);
+
+    auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
+
+    // TODO: Get the correct threads config
+    computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(16, 1, 1));
 }

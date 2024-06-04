@@ -1,4 +1,4 @@
-#include "MetalTexture.h"
+#include "MetalResource.h"
 #include "MetalGraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"

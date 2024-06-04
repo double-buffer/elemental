@@ -12,17 +12,19 @@ enum MetalCommandEncoderType
 struct MetalCommandQueueData
 {
     NS::SharedPtr<MTL::CommandQueue> DeviceObject;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct MetalCommandQueueDataFull
 {
-    ElemGraphicsDevice GraphicsDevice;
+    uint32_t reserved;
 };
 
 struct MetalCommandListData
 {
     NS::SharedPtr<MTL::CommandBuffer> DeviceObject;
     NS::SharedPtr<MTL::CommandEncoder> CommandEncoder;
+    ElemGraphicsDevice GraphicsDevice;
     MetalCommandEncoderType CommandEncoderType;
     bool IsCommitted;
 };

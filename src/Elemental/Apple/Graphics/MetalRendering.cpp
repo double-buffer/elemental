@@ -1,6 +1,6 @@
 #include "MetalRendering.h"
 #include "MetalCommandList.h"
-#include "MetalTexture.h"
+#include "MetalResource.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
@@ -12,6 +12,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
 
     SystemAssert(commandList != ELEM_HANDLE_NULL);
     SystemAssert(parameters);
+
+    ResetMetalCommandEncoder(commandList);
 
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
