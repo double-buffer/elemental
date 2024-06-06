@@ -12,6 +12,7 @@ struct MetalShaderLibraryData
 struct MetalPipelineStateData
 {
     NS::SharedPtr<MTL::RenderPipelineState> RenderPipelineState;
+    NS::SharedPtr<MTL::ComputePipelineState> ComputePipelineState;
 };
 
 struct MetalPipelineStateDataFull

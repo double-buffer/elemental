@@ -102,7 +102,7 @@ function(configure_project_package target_name install_folder)
 
         if(NOT resources_length EQUAL 0)
             set_target_properties(${target_name} PROPERTIES 
-                RESOURCE ${ARG_RESOURCES}    
+                RESOURCE "${ARG_RESOURCES}"   
             )
         endif()
 

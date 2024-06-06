@@ -7,7 +7,8 @@ enum ShaderType
     ShaderType_Amplification = 0,
     ShaderType_Mesh = 1,
     ShaderType_Pixel = 2,
-    ShaderType_Library = 3
+    ShaderType_Compute = 3,
+    ShaderType_Library = 4
 };
 
 struct ShaderPart

@@ -69,11 +69,11 @@ ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Elem
     }
     
     auto handle = SystemAddDataPoolItem(metalCommandQueuePool, {
-        .DeviceObject = metalCommandQueue
+        .DeviceObject = metalCommandQueue,
+        .GraphicsDevice = graphicsDevice
     }); 
 
     SystemAddDataPoolItemFull(metalCommandQueuePool, handle, {
-        .GraphicsDevice = graphicsDevice
     });
 
     return handle;
@@ -115,6 +115,7 @@ ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCom
     
     auto handle = SystemAddDataPoolItem(metalCommandListPool, {
         .DeviceObject = metalCommandBuffer,
+        .GraphicsDevice = commandQueueData->GraphicsDevice,
         .CommandEncoderType = MetalCommandEncoderType_None,
         .IsCommitted = false
     }); 

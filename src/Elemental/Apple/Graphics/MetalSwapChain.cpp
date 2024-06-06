@@ -1,7 +1,7 @@
 #include "MetalSwapChain.h"
 #include "MetalCommandList.h"
 #include "MetalGraphicsDevice.h"
-#include "MetalTexture.h"
+#include "MetalResource.h"
 #include "Inputs/Inputs.h"
 #include "../Inputs.h"
 #include "SystemDataPool.h"
@@ -71,10 +71,10 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
 {
     InitMetalSwapChainMemory();
 
-    auto commandQueueDataFull = GetMetalCommandQueueDataFull(commandQueue);
-    SystemAssert(commandQueueDataFull);
+    auto commandQueueData = GetMetalCommandQueueData(commandQueue);
+    SystemAssert(commandQueueData);
 
-    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandQueueDataFull->GraphicsDevice);
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
     
     auto windowRenderSize = ElemGetWindowRenderSize(window);
@@ -102,7 +102,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
 
     // BUG: On MacOS sometimes we have are capped at 60 fps only on builin display (after disable/enable pro motion, everything work)
     // BUG: Metal Dev Hub doesn't seem to work with the new MetalDisplayLink. see: https://forums.developer.apple.com/forums/thread/743684
-    auto metalDisplayLinkHandler = new MetalDisplayLinkHandler(commandQueueDataFull->GraphicsDevice, updateHandler, options->UpdatePayload);
+    auto metalDisplayLinkHandler = new MetalDisplayLinkHandler(commandQueueData->GraphicsDevice, updateHandler, options->UpdatePayload);
 
     auto swiftResult = ElementalSwiftLib::createMetalView(frameLatency, window, (void*)TouchHandler); 
     auto metalViewResult = (Test*)&swiftResult; 
@@ -140,7 +140,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         .DeviceObject = metalLayer,
         .Window = window,
         .CommandQueue = commandQueue,
-        .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
+        .GraphicsDevice = commandQueueData->GraphicsDevice,
         .CreationTimestamp = CA::CurrentMediaTime(),
         .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime(),
         .Width = width,

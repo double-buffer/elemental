@@ -15,13 +15,14 @@
 #include "Graphics/MetalSwapChain.cpp"
 #include "Graphics/MetalShader.cpp"
 #include "Graphics/MetalRendering.cpp"
-#include "Graphics/MetalTexture.cpp"
+#include "Graphics/MetalResource.cpp"
 
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
 #include "Graphics/SwapChain.cpp"
 #include "Graphics/Shader.cpp"
 #include "Graphics/Rendering.cpp"
+#include "Graphics/Resource.cpp"
 
 #include "Inputs/Inputs.cpp"
 
