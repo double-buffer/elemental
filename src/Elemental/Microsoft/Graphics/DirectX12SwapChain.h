@@ -15,6 +15,7 @@ struct DirectX12SwapChainData
     ElemSwapChainUpdateHandlerPtr UpdateHandler;
     void* UpdatePayload;
     LARGE_INTEGER PreviousTargetPresentationTimestamp;
+    HANDLE TimerHandle;
     uint32_t Width;
     uint32_t Height;
     float AspectRatio;

@@ -46,6 +46,11 @@ typedef union
     {
         Vector3 XYZ;
     }; 
+
+    struct
+    {
+        Vector2 XY;
+    }; 
 } Vector4;
 
 #define V2Zero (Vector2) { .X = 0.0f, .Y = 0.0f }
@@ -247,4 +252,115 @@ Vector4 MulQuat(Vector4 q1, Vector4 q2)
     float w = q1.W * q2.W - DotProductQuat(q1, q2);
 
     return (Vector4) { .X = x, .Y = y, .Z = z, .W = w };
+}
+
+typedef struct
+{
+    float m[4][4];
+} Matrix3x3;
+
+Matrix3x3 CreateIdentityMatrix()
+{
+    Matrix3x3 result;
+
+    result.m[0][0] = 1.0f;
+    result.m[0][1] = 0.0f;
+    result.m[0][2] = 0.0f;
+    result.m[0][3] = 0.0f;
+
+    result.m[1][0] = 0.0f;
+    result.m[1][1] = 1.0f;
+    result.m[1][2] = 0.0f;
+    result.m[1][3] = 0.0f;
+
+    result.m[2][0] = 0.0f;
+    result.m[2][1] = 0.0f;
+    result.m[2][2] = 1.0f;
+    result.m[2][3] = 0.0f;
+
+    return result;
+}
+
+Matrix3x3 CreateRotationMatrix(float angle)
+{
+    Matrix3x3 result;
+    float c = cosf(angle);
+    float s = sinf(angle);
+
+    result.m[0][0] = c;
+    result.m[0][1] = -s;
+    result.m[0][2] = 0.0f;
+
+    result.m[1][0] = s;
+    result.m[1][1] = c;
+    result.m[1][2] = 0.0f;
+
+    result.m[2][0] = 0.0f;
+    result.m[2][1] = 0.0f;
+    result.m[2][2] = 1.0f;
+
+    return result;
+}
+
+Matrix3x3 CreateScaleMatrix(float scale)
+{
+    Matrix3x3 result;
+
+    result.m[0][0] = scale;
+    result.m[0][1] = 0.0f;
+    result.m[0][2] = 0.0f;
+
+    result.m[1][0] = 0.0f;
+    result.m[1][1] = scale;
+    result.m[1][2] = 0.0f;
+
+    result.m[2][0] = 0.0f;
+    result.m[2][1] = 0.0f;
+    result.m[2][2] = 1.0f;
+
+    return result;
+}
+
+Matrix3x3 CreateTranslationMatrix(float tx, float ty)
+{
+    Matrix3x3 result;
+
+    result.m[0][0] = 1.0f;
+    result.m[0][1] = 0.0f;
+    result.m[0][2] = tx;
+
+    result.m[1][0] = 0.0f;
+    result.m[1][1] = 1.0f;
+    result.m[1][2] = ty;
+
+    result.m[2][0] = 0.0f;
+    result.m[2][1] = 0.0f;
+    result.m[2][2] = 1.0f;
+
+    return result;
+}
+
+Matrix3x3 MulMatrix3x3(Matrix3x3 a, Matrix3x3 b)
+{
+    Matrix3x3 result;
+
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            result.m[i][j] = a.m[i][0] * b.m[0][j] + a.m[i][1] * b.m[1][j] + a.m[i][2] * b.m[2][j];
+        }
+    }
+
+    return result;
+}
+
+Vector2 TransformPoint(Vector2 point, Matrix3x3 m)
+{
+    Vector2 result;
+
+    result.X = m.m[0][0] * point.X + m.m[0][1] * point.Y + m.m[0][2];
+    result.Y = m.m[1][0] * point.X + m.m[1][1] * point.Y + m.m[1][2];
+
+    return result;
 }

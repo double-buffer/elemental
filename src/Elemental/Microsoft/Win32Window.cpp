@@ -38,10 +38,11 @@ void RefreshWin32MonitorInfos(ElemWindow window)
                 {
                     .Format = DXGI_FORMAT_R8G8B8A8_UNORM
                 };
-                
+
                 if (SUCCEEDED(output->FindClosestMatchingMode(&currentMode, &currentMode, nullptr))) 
                 {
                     uint32_t refreshRate = SystemRoundUp((float)currentMode.RefreshRate.Numerator / currentMode.RefreshRate.Denominator);
+                    windowData->Output = output;
                     windowData->MonitorRefreshRate = refreshRate;
                 }
                 break;

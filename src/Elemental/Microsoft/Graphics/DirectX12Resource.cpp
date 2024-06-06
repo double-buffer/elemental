@@ -46,6 +46,9 @@ DXGI_FORMAT ConvertDirectX12FormatToSrgbIfNeeded(DXGI_FORMAT format)
         case DXGI_FORMAT_B8G8R8A8_UNORM:
             return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+            return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+
         default:
             return format;
     }
@@ -101,6 +104,9 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemTextureFormat format)
 
         case ElemTextureFormat_R16G16B16A16_FLOAT:
             return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+        case ElemTextureFormat_R32G32B32A32_FLOAT:
+            return DXGI_FORMAT_R32G32B32A32_FLOAT;
     }
 }
 
@@ -223,6 +229,8 @@ void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     auto graphicsHeapData = GetDirectX12GraphicsHeapData(graphicsHeap);
     SystemAssert(graphicsHeapData);
 
+    // BUG: For the moment we need to call this method after the free swapchain that 
+    // flush the queue. We need to be able to see if all the heap resources have been freed before calling this method.
     graphicsHeapData->DeviceObject.Reset();
 }
 

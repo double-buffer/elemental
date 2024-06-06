@@ -381,7 +381,8 @@ typedef enum
     // Standard 8-bit BGRA format using sRGB color space.
     ElemTextureFormat_B8G8R8A8_SRGB,
     ElemTextureFormat_B8G8R8A8_UNORM,
-    ElemTextureFormat_R16G16B16A16_FLOAT 
+    ElemTextureFormat_R16G16B16A16_FLOAT,
+    ElemTextureFormat_R32G32B32A32_FLOAT,
 } ElemTextureFormat;
 
 /**
@@ -573,6 +574,8 @@ typedef struct
     double DeltaTimeInSeconds; 
     // Timestamp for when the next frame is expected to be presented, in seconds.
     double NextPresentTimestampInSeconds;
+    // True if the size of the swapchain has changed from the previous update.
+    bool SizeChanged;
 } ElemSwapChainUpdateParameters;
 
 /**

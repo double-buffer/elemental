@@ -217,7 +217,7 @@ VkPipelineLayout CreateVulkanPipelineLayout(VkDevice graphicsDevice)
 
     VkPushConstantRange push_constant;
     push_constant.offset = 0;
-    push_constant.size = 16 * 4;
+    push_constant.size = 24 * 4;
     push_constant.stageFlags = VK_SHADER_STAGE_ALL;
 
     layoutCreateInfo.pPushConstantRanges = &push_constant;

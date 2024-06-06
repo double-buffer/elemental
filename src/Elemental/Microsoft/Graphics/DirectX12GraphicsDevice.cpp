@@ -26,6 +26,7 @@ struct DirectX12DescriptorHeapStorage
 MemoryArena DirectX12MemoryArena;
 bool DirectX12DebugLayerEnabled = false;
 ComPtr<IDXGIFactory6> DxgiFactory; 
+ComPtr<IDXGIInfoQueue> DxgiInfoQueue;
 
 SystemDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull> directX12GraphicsDevicePool;
 
@@ -54,6 +55,7 @@ void InitDirectX12()
             SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init DirectX12 Debug Mode.");
 
             AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebugInterface.GetAddressOf())));
+            AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(DxgiInfoQueue.GetAddressOf())));
             dxgiCreateFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
             AssertIfFailed(directX12DeviceFactory->GetConfigurationInterface(CLSID_D3D12Debug, IID_PPV_ARGS(directX12DebugInterface.GetAddressOf())));
@@ -61,8 +63,10 @@ void InitDirectX12()
             if (directX12DebugInterface)
             {
                 directX12DebugInterface->EnableDebugLayer();
-                directX12DebugInterface->SetEnableGPUBasedValidation(true);
                 directX12DebugInterface->SetEnableAutoName(true);
+                
+                // TODO: This validation is slow so enable it if really needed
+                //directX12DebugInterface->SetEnableGPUBasedValidation(true);
 
                 directX12DebugInitialized = true;
             }
@@ -266,7 +270,7 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     rootParameters[0].Constants.ShaderRegister = 0;
     rootParameters[0].Constants.RegisterSpace = 0;
-    rootParameters[0].Constants.Num32BitValues = 16;
+    rootParameters[0].Constants.Num32BitValues = 24;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -371,6 +375,9 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
             AssertIfFailed(debugInfoQueue->RegisterMessageCallback(DirectX12DebugReportCallback, D3D12_MESSAGE_CALLBACK_IGNORE_FILTERS, nullptr, &debugCallBackCookie));
         }
     }
+
+    // TODO: Don't enable it by default
+    //AssertIfFailed(device->SetStablePowerState(true));
 
     auto resourceDescriptorHeap = CreateDirectX12DescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_RESOURCES);
     auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);

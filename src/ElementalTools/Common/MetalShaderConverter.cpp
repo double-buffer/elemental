@@ -96,7 +96,7 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
         {
             .ShaderRegister = 0,
             .RegisterSpace = 0,
-            .Num32BitValues = 16
+            .Num32BitValues = 24
         },
         .ShaderVisibility = IRShaderVisibilityAll
     };

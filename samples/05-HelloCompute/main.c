@@ -5,11 +5,11 @@
 #include "SampleInputs.h"
 
 #define ROTATION_TOUCH_DECREASE_SPEED 0.001f
-#define ROTATION_TOUCH_SPEED 4.0f
+#define ROTATION_TOUCH_SPEED 1.0f
 #define ROTATION_TOUCH_MAX_DELTA 0.3f
 #define ROTATION_MULTITOUCH_SPEED 200.0f
-#define ROTATION_ACCELERATION 500.0f
-#define ROTATION_FRICTION 60.0f
+#define ROTATION_ACCELERATION 50.0f
+#define ROTATION_FRICTION 40.0f
 #define ZOOM_MULTITOUCH_SPEED 1000.0f
 #define ZOOM_SPEED 0.5f
 #define ZOOM_FACTOR 10.0f
@@ -46,16 +46,17 @@ typedef struct
 
 typedef struct
 {
-    Vector4 Translation;
     uint32_t RenderTextureIndex;
-    float Zoom;
-    float AspectRatio;
     uint32_t TriangeColor;
+    float Zoom;
+    float Reserved;
+    Matrix3x3 Transform;
 } ShaderParameters;
 
 typedef struct
 {
     Vector2 TranslationDelta;
+    float RotationDelta;
     Vector2 RotationTouch;
     Vector2 CurrentTranslationSpeed;
     float PreviousTouchDistance;
@@ -63,6 +64,7 @@ typedef struct
     float Zoom;
 } GameState;
 
+// TODO: Group common variables into separate structs
 typedef struct
 {
     bool PreferVulkan;
@@ -70,6 +72,7 @@ typedef struct
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
     ElemGraphicsHeap GraphicsHeap;
+    uint32_t CurrentHeapOffset;
     ElemTexture RenderTexture;
     ElemShaderDescriptor RenderTextureUavDescriptor;
     ElemShaderDescriptor RenderTextureReadDescriptor;
@@ -102,10 +105,10 @@ void RegisterInputBindings(ApplicationPayload* applicationPayload)
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseLeftButton, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseRightButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateSide);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateUp);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateDown);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateLeft);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateRight);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateUp);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateDown);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseWheelPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseWheelNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseMiddleButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
@@ -135,6 +138,32 @@ void RegisterInputBindings(ApplicationPayload* applicationPayload)
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_Touch, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
 }
 
+void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
+{
+    // TODO: Delete texture descriptors
+    // TODO: Delete texture
+    // TODO: Test Delete texture with latency=2 (Check driver settings because it seems nvidia is overriding it :()
+
+    // TODO: Get Size requirements
+
+    printf("Creating render texture...\n");
+
+    applicationPayload->RenderTexture = ElemCreateTexture(applicationPayload->GraphicsHeap, 0, &(ElemTextureParameters)
+    {
+        .Width = width,
+        .Height = height,
+        .Format = ElemTextureFormat_R16G16B16A16_FLOAT,
+        .Usage = ElemTextureUsage_Uav,
+        .DebugName = "Render Texture"
+    });
+
+    applicationPayload->RenderTextureUavDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Uav });
+    applicationPayload->RenderTextureReadDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Read });
+
+    // TODO: Increment offset
+    // TODO: Reuse memory?
+}
+
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
@@ -144,22 +173,12 @@ void InitSample(void* payload)
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
     applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
-    applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .UpdatePayload = payload });
+    applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) {.FrameLatency = 1, .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), NULL);
     
-    applicationPayload->RenderTexture = ElemCreateTexture(applicationPayload->GraphicsHeap, 0, &(ElemTextureParameters)
-    {
-        .Width = swapChainInfo.Width,
-        .Height = swapChainInfo.Height,
-        .Format = ElemTextureFormat_R16G16B16A16_FLOAT,
-        .Usage = ElemTextureUsage_Uav,
-        .DebugName = "Render Texture"
-    });
-
-    applicationPayload->RenderTextureUavDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Uav });
-    applicationPayload->RenderTextureReadDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Read });
+    CreateRenderTexture(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Fractal.shader": "Fractal_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -185,9 +204,10 @@ void InitSample(void* payload)
 
     ElemFreeShaderLibrary(shaderLibrary);
 
-    applicationPayload->ShaderParameters.Translation = (Vector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
+    applicationPayload->ShaderParameters.Transform = CreateIdentityMatrix();
     applicationPayload->InputActions.ShowCursor = true;
     applicationPayload->GameState.Zoom = 1.0f;
+    applicationPayload->GameState.RotationDelta = 0.0f;
 
     RegisterInputBindings(applicationPayload);
     
@@ -201,9 +221,9 @@ void FreeSample(void* payload)
     ElemFreePipelineState(applicationPayload->ComputePipeline);
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeTexture(applicationPayload->RenderTexture);
-    ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
+    ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 }
 
@@ -249,14 +269,14 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
         {
             ResetTouchParameters(gameState);
 
-            gameState->TranslationDelta.X = (inputActions->TouchTranslateUp - inputActions->TouchTranslateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-            gameState->TranslationDelta.Y = (inputActions->TouchTranslateLeft - inputActions->TouchTranslateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+            gameState->TranslationDelta.X = (inputActions->TouchTranslateRight - inputActions->TouchTranslateLeft) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+            gameState->TranslationDelta.Y = (inputActions->TouchTranslateDown - inputActions->TouchTranslateUp) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
         }
     }
     else if (inputActions->TouchRotateSide)
     {
         ResetTouchParameters(gameState);
-        rotationDeltaZ = (inputActions->TouchTranslateLeft - inputActions->TouchTranslateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+        rotationDeltaZ = (inputActions->TouchTranslateRight - inputActions->TouchTranslateLeft) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else if (inputActions->TouchReleased && !inputActions->Touch2)
     {
@@ -271,7 +291,6 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
         { 
             .X = (inputActions->TranslateRight - inputActions->TranslateLeft),
             .Y = (inputActions->TranslateDown - inputActions->TranslateUp),
-            //.Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight)
         });
 
         if (MagnitudeSquaredV2(direction))
@@ -281,13 +300,13 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
             ResetTouchParameters(gameState);
 
             gameState->TranslationDelta = AddV2(MulScalarV2(acceleration, 0.5f * pow2f(deltaTimeInSeconds)), MulScalarV2(gameState->CurrentTranslationSpeed, deltaTimeInSeconds));
-
-            //gameState->RotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(deltaTimeInSeconds)), MulScalarV3(gameState->CurrentRotationSpeed, deltaTimeInSeconds));
-            //gameState->CurrentRotationSpeed = AddV3(MulScalarV3(acceleration, deltaTimeInSeconds), gameState->CurrentRotationSpeed);
+            gameState->CurrentTranslationSpeed = AddV2(MulScalarV2(acceleration, deltaTimeInSeconds), gameState->CurrentTranslationSpeed);
         }
+
+        rotationDeltaZ = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 1 * deltaTimeInSeconds;
     }
 
-    zoomDelta = (inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
+    zoomDelta = -(inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
 
     if (zoomDelta != 0)
     {
@@ -302,12 +321,18 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
     }
 
     gameState->TranslationDelta = MulScalarV2(gameState->TranslationDelta, gameState->Zoom);
+    gameState->RotationDelta = rotationDeltaZ;
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
+
+    if (updateParameters->SizeChanged)
+    {
+        CreateRenderTexture(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
+    }
+
     applicationPayload->ShaderParameters.RenderTextureIndex = applicationPayload->RenderTextureUavDescriptor;
 
     InputActions* inputActions = &applicationPayload->InputActions;
@@ -330,21 +355,13 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     GameState* gameState = &applicationPayload->GameState;
     UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
 
-    /*if (MagnitudeSquaredV3(gameState->RotationDelta))
-    {
-        Vector4 rotationQuaternion = MulQuat(CreateQuaternion((Vector3){ 1, 0, 0 }, gameState->RotationDelta.X), MulQuat(CreateQuaternion((Vector3){ 0, 0, 1 }, gameState->RotationDelta.Z), CreateQuaternion((Vector3){ 0, 1, 0 }, gameState->RotationDelta.Y)));
-        applicationPayload->ShaderParameters.Translation = MulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
-    }*/
+    Matrix3x3 transformMatrix = MulMatrix3x3(CreateTranslationMatrix(gameState->TranslationDelta.X, gameState->TranslationDelta.Y), CreateRotationMatrix(gameState->RotationDelta));
 
-    applicationPayload->ShaderParameters.Translation.X += gameState->TranslationDelta.X;
-    applicationPayload->ShaderParameters.Translation.Y += gameState->TranslationDelta.Y;
+    applicationPayload->ShaderParameters.Transform = MulMatrix3x3(applicationPayload->ShaderParameters.Transform, transformMatrix);
     applicationPayload->ShaderParameters.Zoom = gameState->Zoom;
     applicationPayload->ShaderParameters.TriangeColor = inputActions->TriangleColor;
 
-    printf("Translation: %f, %f / Zoom: %f\n", applicationPayload->ShaderParameters.Translation.X, applicationPayload->ShaderParameters.Translation.Y, gameState->Zoom);
-
-    // TODO: We need to recreate the render texture if swapchain size has changed
-    // TODO: So Create and Delete (with enqueue delete with fence check)
+    // TODO: Do an example with another compute queue to demonstrate fences?
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -354,7 +371,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + 15) / 16, (updateParameters->SwapChainInfo.Height + 15) / 16, 1);
 
-    // TODO: Barrier
+    // TODO: Barrier here?
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
@@ -379,7 +396,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
 
     ElemPresentSwapChain(applicationPayload->SwapChain);
-
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
 
     if (frameMeasurement.HasNewData)
