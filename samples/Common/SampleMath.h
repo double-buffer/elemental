@@ -254,6 +254,7 @@ Vector4 MulQuat(Vector4 q1, Vector4 q2)
     return (Vector4) { .X = x, .Y = y, .Z = z, .W = w };
 }
 
+// TODO: Get rid of the 4x4 here and write a function that convert it to constant buffer format
 typedef struct
 {
     float m[4][4];

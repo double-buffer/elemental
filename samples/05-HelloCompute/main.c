@@ -49,7 +49,7 @@ typedef struct
     uint32_t RenderTextureIndex;
     uint32_t TriangeColor;
     float Zoom;
-    float Reserved;
+    float FractalAnimation;
     Matrix3x3 Transform;
 } ShaderParameters;
 
@@ -62,6 +62,8 @@ typedef struct
     float PreviousTouchDistance;
     float PreviousTouchAngle;
     float Zoom;
+    float FractalAnimation;
+    float FractalAnimationDirection;
 } GameState;
 
 // TODO: Group common variables into separate structs
@@ -208,6 +210,7 @@ void InitSample(void* payload)
     applicationPayload->InputActions.ShowCursor = true;
     applicationPayload->GameState.Zoom = 1.0f;
     applicationPayload->GameState.RotationDelta = 0.0f;
+    applicationPayload->GameState.FractalAnimationDirection = 1.0f;
 
     RegisterInputBindings(applicationPayload);
     
@@ -322,6 +325,17 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
 
     gameState->TranslationDelta = MulScalarV2(gameState->TranslationDelta, gameState->Zoom);
     gameState->RotationDelta = rotationDeltaZ;
+
+    gameState->FractalAnimation += 0.0001f * deltaTimeInSeconds * gameState->FractalAnimationDirection;
+
+    if (gameState->FractalAnimation > 0.05f)
+    {
+        gameState->FractalAnimationDirection = -1.0f;
+    }
+    else if (gameState->FractalAnimation < 0.0f)
+    {
+        gameState->FractalAnimationDirection = 1.0f;
+    }
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
@@ -360,6 +374,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     applicationPayload->ShaderParameters.Transform = MulMatrix3x3(applicationPayload->ShaderParameters.Transform, transformMatrix);
     applicationPayload->ShaderParameters.Zoom = gameState->Zoom;
     applicationPayload->ShaderParameters.TriangeColor = inputActions->TriangleColor;
+    applicationPayload->ShaderParameters.FractalAnimation = gameState->FractalAnimation;
 
     // TODO: Do an example with another compute queue to demonstrate fences?
 
@@ -369,7 +384,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemBindPipelineState(commandList, applicationPayload->ComputePipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
-    ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + 15) / 16, (updateParameters->SwapChainInfo.Height + 15) / 16, 1);
+    uint32_t threadSize = 16;
+    ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
 
     // TODO: Barrier here?
 
