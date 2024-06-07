@@ -38,8 +38,6 @@ ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, V
 
 ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
-void VulkanBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap);
-
             
 ElemTexture VulkanCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
 void VulkanFreeTexture(ElemTexture texture);

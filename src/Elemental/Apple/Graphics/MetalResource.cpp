@@ -66,10 +66,6 @@ void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
 {
 }
 
-void MetalBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap)
-{
-}
-
 ElemTexture MetalCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
 {
     return {};

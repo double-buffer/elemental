@@ -88,10 +88,6 @@ void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
 {
 }
 
-void VulkanBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap)
-{
-}
-
 ElemTexture VulkanCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
 {
     return {};

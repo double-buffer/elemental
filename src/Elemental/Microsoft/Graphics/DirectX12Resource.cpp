@@ -234,11 +234,6 @@ void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     graphicsHeapData->DeviceObject.Reset();
 }
 
-void DirectX12BindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap)
-{
-}
-
-
 ElemTexture DirectX12CreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();

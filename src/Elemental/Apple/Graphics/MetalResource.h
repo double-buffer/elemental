@@ -32,7 +32,6 @@ MetalTextureDataFull* GetMetalTextureDataFull(ElemTexture texture);
 
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
-void MetalBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap);
 
 ElemTexture MetalCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
 void MetalFreeTexture(ElemTexture texture);

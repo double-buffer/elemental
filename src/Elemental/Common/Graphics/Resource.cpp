@@ -11,11 +11,6 @@ ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     DispatchGraphicsFunction(FreeGraphicsHeap, graphicsHeap);
 }
 
-ElemAPI void ElemBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap)
-{
-    DispatchGraphicsFunction(BindGraphicsHeap, commandList, graphicsHeap);
-}
-
 ElemAPI ElemTexture ElemCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
 {
     DispatchReturnGraphicsFunction(CreateTexture, graphicsHeap, graphicsHeapOffset, parameters);

@@ -55,7 +55,6 @@ typedef struct ElementalFunctions
     void (*ElemPresentSwapChain)(ElemSwapChain);
     ElemGraphicsHeap (*ElemCreateGraphicsHeap)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *);
     void (*ElemFreeGraphicsHeap)(ElemGraphicsHeap);
-    void (*ElemBindGraphicsHeap)(ElemCommandList, ElemGraphicsHeap);
     ElemTexture (*ElemCreateTexture)(ElemGraphicsHeap, unsigned long long, ElemTextureParameters const *);
     void (*ElemFreeTexture)(ElemTexture);
     ElemShaderDescriptor (*ElemCreateTextureShaderDescriptor)(ElemTexture, ElemTextureShaderDescriptorOptions const *);
@@ -159,7 +158,6 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
     listElementalFunctions.ElemCreateGraphicsHeap = (ElemGraphicsHeap (*)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsHeap");
     listElementalFunctions.ElemFreeGraphicsHeap = (void (*)(ElemGraphicsHeap))GetElementalFunctionPointer("ElemFreeGraphicsHeap");
-    listElementalFunctions.ElemBindGraphicsHeap = (void (*)(ElemCommandList, ElemGraphicsHeap))GetElementalFunctionPointer("ElemBindGraphicsHeap");
     listElementalFunctions.ElemCreateTexture = (ElemTexture (*)(ElemGraphicsHeap, unsigned long long, ElemTextureParameters const *))GetElementalFunctionPointer("ElemCreateTexture");
     listElementalFunctions.ElemFreeTexture = (void (*)(ElemTexture))GetElementalFunctionPointer("ElemFreeTexture");
     listElementalFunctions.ElemCreateTextureShaderDescriptor = (ElemShaderDescriptor (*)(ElemTexture, ElemTextureShaderDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateTextureShaderDescriptor");
@@ -1024,23 +1022,6 @@ static inline void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     }
 
     listElementalFunctions.ElemFreeGraphicsHeap(graphicsHeap);
-}
-
-static inline void ElemBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-        return;
-    }
-
-    if (!listElementalFunctions.ElemBindGraphicsHeap) 
-    {
-        assert(listElementalFunctions.ElemBindGraphicsHeap);
-        return;
-    }
-
-    listElementalFunctions.ElemBindGraphicsHeap(commandList, graphicsHeap);
 }
 
 static inline ElemTexture ElemCreateTexture(ElemGraphicsHeap graphicsHeap, unsigned long long graphicsHeapOffset, ElemTextureParameters const * parameters)

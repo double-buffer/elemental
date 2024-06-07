@@ -326,7 +326,7 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
     gameState->TranslationDelta = MulScalarV2(gameState->TranslationDelta, gameState->Zoom);
     gameState->RotationDelta = rotationDeltaZ;
 
-    gameState->FractalAnimation += 0.0001f * deltaTimeInSeconds * gameState->FractalAnimationDirection;
+    gameState->FractalAnimation += 0.00001f * deltaTimeInSeconds * gameState->FractalAnimationDirection;
 
     if (gameState->FractalAnimation > 0.05f)
     {
@@ -380,7 +380,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
-    ElemBindGraphicsHeap(commandList, applicationPayload->GraphicsHeap);
     ElemBindPipelineState(commandList, applicationPayload->ComputePipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 

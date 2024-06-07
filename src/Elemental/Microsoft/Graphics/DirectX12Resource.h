@@ -38,7 +38,6 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemTextureFormat format);
             
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
-void DirectX12BindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap);
 
 ElemTexture DirectX12CreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
 void DirectX12FreeTexture(ElemTexture texture);

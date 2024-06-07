@@ -868,10 +868,6 @@ ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevic
 
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
-// TODO: BindGraphicsHeaps?
-// TODO: Do we really need this? In metal can we auto bind the heaps?
-ElemAPI void ElemBindGraphicsHeap(ElemCommandList commandList, ElemGraphicsHeap graphicsHeap);
-
 // TODO: GetTextureAllocationInfos
 
 ElemAPI ElemTexture ElemCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
