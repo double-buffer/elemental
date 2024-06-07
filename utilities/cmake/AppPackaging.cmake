@@ -146,7 +146,16 @@ function(configure_project_package target_name install_folder)
                 XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
             )
         else()
-            #set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../Common/MacOS/Info.plist)
+            SET(TARGET_NAME "${target_name}")
+
+            configure_file(
+                "${CMAKE_SOURCE_DIR}/utilities/cmake/MacOS/Info.plist.in"
+                "${CMAKE_BINARY_DIR}/utilities/cmake/MacOS/${target_name}/Info.plist"
+                @ONLY
+            )
+            set_target_properties(${target_name} PROPERTIES 
+                MACOSX_BUNDLE_INFO_PLIST ${CMAKE_BINARY_DIR}/utilities/cmake/MacOS/${target_name}/Info.plist
+            )
         endif()
     else()
         set(output_folder "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}")
