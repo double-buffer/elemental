@@ -4,11 +4,14 @@
 
 struct MetalGraphicsHeapData
 {
+    NS::SharedPtr<MTL::Heap> DeviceObject;
+    uint64_t SizeInBytes;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct MetalGraphicsHeapDataFull
 {
-    ElemGraphicsDevice GraphicsDevice;
+    uint32_t Reserved;
 };
 
 struct MetalTextureData
@@ -23,6 +26,9 @@ struct MetalTextureDataFull
 {
     ElemGraphicsDevice GraphicsDevice;
 };
+
+extern MTL::Heap** CurrentMetalHeaps;
+extern uint32_t CurrentMetalHeapsIndex;
 
 MetalGraphicsHeapData* GetMetalGraphicsHeapData(ElemGraphicsHeap graphicsHeap);
 MetalGraphicsHeapDataFull* GetMetalGraphicsHeapDataFull(ElemGraphicsHeap graphicsHeap);

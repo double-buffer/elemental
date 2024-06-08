@@ -1,6 +1,7 @@
 #include "MetalShader.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalCommandList.h"
+#include "MetalResource.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -371,13 +372,19 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
     {
         auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
         renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
+        renderCommandEncoder->useHeaps(CurrentMetalHeaps, CurrentMetalHeapsIndex);
     }
     else
     {
-        auto computeCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->computeCommandEncoder()); 
-        commandListData->CommandEncoder = computeCommandEncoder;
-        commandListData->CommandEncoderType = MetalCommandEncoderType_Compute;
-
+        if (commandListData->CommandEncoderType == MetalCommandEncoderType_None)
+        {
+            auto computeCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->computeCommandEncoder()); 
+            commandListData->CommandEncoder = computeCommandEncoder;
+            commandListData->CommandEncoderType = MetalCommandEncoderType_Compute;
+            computeCommandEncoder->useHeaps(CurrentMetalHeaps, CurrentMetalHeapsIndex);
+        }
+    
+        auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
         computeCommandEncoder->setComputePipelineState(pipelineStateData->ComputePipelineState.get());
     }
 }

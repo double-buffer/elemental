@@ -127,6 +127,8 @@ D3D12_RESOURCE_FLAGS ConvertToDirectX12ResourceFlags(ElemTextureUsage usage)
 
 D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemTextureParameters* parameters)
 {
+    // TODO: other parameters
+
     SystemAssert(parameters);
     
 	return 
@@ -238,6 +240,7 @@ ElemTexture DirectX12CreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graph
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemAssert(graphicsHeap != ELEM_HANDLE_NULL);
+    SystemAssert(parameters);
 
     auto graphicsHeapData = GetDirectX12GraphicsHeapData(graphicsHeap);
     SystemAssert(graphicsHeapData);
@@ -378,4 +381,5 @@ ElemShaderDescriptor DirectX12CreateTextureShaderDescriptor(ElemTexture texture,
 
 void DirectX12FreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)
 {
+    // TODO:
 }
