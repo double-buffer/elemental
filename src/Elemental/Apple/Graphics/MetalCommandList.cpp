@@ -60,6 +60,9 @@ ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Elem
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
+    auto graphicsDeviceDataFull = GetMetalGraphicsDeviceDataFull(graphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
+
     auto metalCommandQueue = NS::TransferPtr(graphicsDeviceData->Device->newCommandQueue(METAL_MAX_COMMANDLISTS));
     SystemAssertReturnNullHandle(metalCommandQueue);
 
@@ -67,6 +70,8 @@ ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Elem
     {
         metalCommandQueue->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
     }
+
+    metalCommandQueue->addResidencySet(graphicsDeviceDataFull->ResidencySet.get());
     
     auto handle = SystemAddDataPoolItem(metalCommandQueuePool, {
         .DeviceObject = metalCommandQueue,

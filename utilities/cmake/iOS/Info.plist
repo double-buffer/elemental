@@ -34,5 +34,7 @@
     <string>ElementalSample</string>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
+    <key>GCSupportsGameMode</key>
+    <true/>
 </dict>
 </plist>

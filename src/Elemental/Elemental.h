@@ -307,14 +307,14 @@ typedef ElemHandle ElemSwapChain;
 typedef ElemHandle ElemGraphicsHeap;
 
 /**
- * Handle that represents a texture.
+ * Handle that represents a graphics resource.
  */
-typedef ElemHandle ElemTexture;
+typedef ElemHandle ElemGraphicsResource;
 
 /**
  * Handle that represents a shader descriptor.
  */
-typedef uint32_t ElemShaderDescriptor;
+typedef int32_t ElemShaderDescriptor;
 
 /**
  * Handle that represents a shader library.
@@ -374,26 +374,31 @@ typedef enum
 } ElemTextureShaderDescriptorType;
 
 /**
- * Enumerates texture formats.
+ * Enumerates graphics formats.
  */
 typedef enum
 {
-    // Standard 8-bit BGRA format using sRGB color space.
-    ElemTextureFormat_B8G8R8A8_SRGB,
-    ElemTextureFormat_B8G8R8A8_UNORM,
-    ElemTextureFormat_R16G16B16A16_FLOAT,
-    ElemTextureFormat_R32G32B32A32_FLOAT,
-} ElemTextureFormat;
+    ElemGraphicsFormat_B8G8R8A8_SRGB,
+    ElemGraphicsFormat_B8G8R8A8_UNORM,
+    ElemGraphicsFormat_R16G16B16A16_FLOAT,
+    ElemGraphicsFormat_R32G32B32A32_FLOAT,
+} ElemGraphicsFormat;
 
 /**
  * Enumerates texture usages.
  */
 typedef enum
 {
-    ElemTextureUsage_Standard,
-    ElemTextureUsage_Uav,
-    ElemTextureUsage_RenderTarget
-} ElemTextureUsage;
+    ElemGraphicsResourceUsage_Standard,
+    ElemGraphicsResourceUsage_Uav,
+    ElemGraphicsResourceUsage_RenderTarget
+} ElemGraphicsResourceUsage;
+
+typedef enum
+{
+    ElemResourceBarrierType_Buffer,
+    ElemResourceBarrierType_Texture
+} ElemResourceBarrierType;
 
 /**
  * Enumerates render pass load actions.
@@ -558,7 +563,7 @@ typedef struct
     // Aspect ratio of the swap chain.
     float AspectRatio;
     // Format of the textures used in the swap chain.
-    ElemTextureFormat Format;
+    ElemGraphicsFormat Format;
 } ElemSwapChainInfo;
 
 /**
@@ -569,7 +574,7 @@ typedef struct
     // Information about the swap chain's configuration.
     ElemSwapChainInfo SwapChainInfo;
     // Back buffer texture for the swap chain.
-    ElemTexture BackBufferTexture;
+    ElemGraphicsResource BackBufferTexture;
     // Time since the last frame was presented, in seconds.
     double DeltaTimeInSeconds; 
     // Timestamp for when the next frame is expected to be presented, in seconds.
@@ -593,11 +598,10 @@ typedef struct
 {
     uint32_t Width;
     uint32_t Height;
-    ElemTextureFormat Format;
-    ElemTextureUsage Usage;
-    // Optional debug name for the texture.
+    ElemGraphicsFormat Format;
+    ElemGraphicsResourceUsage Usage;
     const char* DebugName;
-} ElemTextureParameters;
+} ElemGraphicsResourceInfo;
 
 typedef struct
 {
@@ -610,11 +614,11 @@ typedef struct
  */
 typedef struct
 {
-    // Pointer to an array of ElemTextureFormat.
-    ElemTextureFormat* Items;
+    // Pointer to an array of ElemGraphicsFormat.
+    ElemGraphicsFormat* Items;
     // Number of items in the array.
     uint32_t Length;
-} ElemTextureFormatSpan;
+} ElemGraphicsFormatSpan;
 
 /**
  * Parameters for creating a graphics pipeline state.
@@ -630,7 +634,7 @@ typedef struct
     // Function name of the pixel shader in the shader library.
     const char* PixelShaderFunction;
     // Supported texture formats for the pipeline state.
-    ElemTextureFormatSpan TextureFormats;
+    ElemGraphicsFormatSpan TextureFormats;
 } ElemGraphicsPipelineStateParameters;
 
 /**
@@ -691,13 +695,24 @@ typedef struct
     uint32_t Length;
 } ElemViewportSpan;
 
+typedef struct
+{
+    ElemHandle Resource;
+    ElemResourceBarrierType Type;
+} ElemResourceBarrier;
+
+typedef struct
+{
+    ElemResourceBarrier* Items;
+    uint32_t Length;
+} ElemResourceBarrierSpan;
+
 /**
  * Configuration for a render pass target.
  */
 typedef struct
 {
-    // Render target texture.
-    ElemTexture RenderTarget;
+    ElemGraphicsResource RenderTarget;
 
     // TODO: Add a RTV descriptor optional here so we can override it if needed?
 
@@ -870,10 +885,12 @@ ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
 // TODO: GetTextureAllocationInfos
 
-ElemAPI ElemTexture ElemCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
-ElemAPI void ElemFreeTexture(ElemTexture texture);
+ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
+ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource);
 
-ElemAPI ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options);
+// TODO: ElemAPI ElemGraphicsResourceView ElemCreateGraphicsResourceView(ElemGraphicsResource resource, const ElemGraphicsResourceViewOptions* options);
+ElemAPI ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options);
+// TODO: Update Descriptor (with buffering)
 ElemAPI void ElemFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);
 
 /**
@@ -920,6 +937,10 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
  * @param data The data to be pushed as constants.
  */
 ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data);
+
+ElemAPI void ElemSetResourceBarrier(ElemCommandList commandList, const ElemResourceBarrier* resourceBarrier);
+
+ElemAPI void ElemSetResourceBarriers(ElemCommandList commandList, ElemResourceBarrierSpan resourceBarriers);
 
 /**
  * Dispatches a compute operation on a command list, specifying the number of thread groups in each dimension.

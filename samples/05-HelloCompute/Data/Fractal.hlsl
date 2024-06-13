@@ -49,7 +49,7 @@ float ComputeJuliaSet(float2 position)
 {
     float2 Z = position;
     //float2 C = float2(-0.8, 0.153) + float2(0, parameters.Time);
-    float2 C = float2(-0.8, 0.16) + float2(0, parameters.Time);
+    float2 C = float2(-0.8, 0.16);// + float2(0, parameters.Time);
 
     uint iteration;
 
@@ -99,6 +99,8 @@ void Fractal(uint3 threadId: SV_DispatchThreadID)
     // TODO: This is slower, pass the width and height!
     uint width, height;
     renderTexture.GetDimensions(width, height);
+
+    // BUG: On metal when out of bound, it is not black but gray (like uninit)
 
     if (threadId.x < width && threadId.y < height)
     {

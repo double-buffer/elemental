@@ -3,14 +3,24 @@
 #include "Elemental.h"
 #include "SystemMemory.h"
 
+#define METAL_MAX_RESOURCES 1000000
+
+struct MetalArgumentBufferStorage;
+
+struct MetalArgumentBuffer
+{
+    MetalArgumentBufferStorage* Storage;
+};
+
 struct MetalGraphicsDeviceData
 {
     NS::SharedPtr<MTL::Device> Device;
+    MetalArgumentBuffer ResourceArgumentBuffer;
 };
 
 struct MetalGraphicsDeviceDataFull
 {
-    uint32_t Reserved;
+    NS::SharedPtr<MTL::ResidencySet> ResidencySet;
 };
 
 extern MemoryArena MetalGraphicsMemoryArena;
@@ -18,6 +28,9 @@ extern bool MetalDebugLayerEnabled;
 
 MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
+
+uint32_t CreateMetalArgumentBufferTextureHandle(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture);
+void FreeMetalArgumentBufferHandle(MetalArgumentBuffer argumentBuffer, uint64_t handle);
 
 void MetalEnableGraphicsDebugLayer();
 ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices();

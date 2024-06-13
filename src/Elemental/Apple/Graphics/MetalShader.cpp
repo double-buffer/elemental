@@ -372,7 +372,10 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
     {
         auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
         renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
-        renderCommandEncoder->useHeaps(CurrentMetalHeaps, CurrentMetalHeapsIndex);
+
+        // TODO: Amplification shader
+        renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+        renderCommandEncoder->setFragmentBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
     }
     else
     {
@@ -381,7 +384,7 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
             auto computeCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->computeCommandEncoder()); 
             commandListData->CommandEncoder = computeCommandEncoder;
             commandListData->CommandEncoderType = MetalCommandEncoderType_Compute;
-            computeCommandEncoder->useHeaps(CurrentMetalHeaps, CurrentMetalHeapsIndex);
+            computeCommandEncoder->setBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         }
     
         auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
@@ -432,5 +435,5 @@ void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCount
     auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
 
     // TODO: Get the correct threads config
-    computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(16, 1, 1));
+    computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(16, 16, 1));
 }

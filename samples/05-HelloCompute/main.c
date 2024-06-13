@@ -75,7 +75,7 @@ typedef struct
     ElemCommandQueue CommandQueue;
     ElemGraphicsHeap GraphicsHeap;
     uint32_t CurrentHeapOffset;
-    ElemTexture RenderTexture;
+    ElemGraphicsResource RenderTexture;
     ElemShaderDescriptor RenderTextureUavDescriptor;
     ElemShaderDescriptor RenderTextureReadDescriptor;
     ElemSwapChain SwapChain;
@@ -150,14 +150,38 @@ void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width,
 
     printf("Creating render texture...\n");
 
-    applicationPayload->RenderTexture = ElemCreateTexture(applicationPayload->GraphicsHeap, 0, &(ElemTextureParameters)
+    // TODO: What would be the benefits to have juste graphics resource and descriptors ?
+
+    // var textureResourceDescriptor = ElemCreateTextureDescriptor(...);
+    // use desc.SizeInBytes and Alignement to compute offset
+    // var renderTexture = ElemCreateResource(graphicsHeader, offset, textureResourceDesc);
+/*
+    auto renderTextureResourceInfo = ElemCreateTextureResourceInfo(&(ElemTextureParameters)
     {
         .Width = width,
         .Height = height,
         .Format = ElemTextureFormat_R16G16B16A16_FLOAT,
         .Usage = ElemTextureUsage_Uav,
         .DebugName = "Render Texture"
-    });
+    });*/
+
+    // Align of resource is => renderTextureResourceDescriptor.Alignment and we have renderTextureResourceDescriptor.SizeInBytes
+
+    ElemGraphicsResourceInfo resourceInfo =
+    {
+        .Width = width,
+        .Height = height,
+        .Format = ElemGraphicsFormat_R16G16B16A16_FLOAT,
+        .Usage = ElemGraphicsResourceUsage_Uav,
+        .DebugName = "Render Texture"
+    };
+
+    applicationPayload->RenderTexture = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, 0, &resourceInfo);
+
+    // TODO: The max resources descriptor will be 1.000.000 with latency 1 and 500.000 with 2 latency
+    // TODO: We need to provide a mechanism to update a descriptor (with a double buffering approach depending on latency)
+    // For the moment we try to delay the descriptor delete and then reuse a free list id but that's not a valid approach because if we encode the descriptor id
+    // into material buffers we need to update the buffer each time.
 
     applicationPayload->RenderTextureUavDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Uav });
     applicationPayload->RenderTextureReadDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Read });
@@ -201,7 +225,7 @@ void InitSample(void* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
-        .TextureFormats = { .Items = (ElemTextureFormat[]) { swapChainInfo.Format }, .Length = 1 }
+        .TextureFormats = { .Items = (ElemGraphicsFormat[]) { swapChainInfo.Format }, .Length = 1 }
     });
 
     ElemFreeShaderLibrary(shaderLibrary);
@@ -223,7 +247,7 @@ void FreeSample(void* payload)
 
     ElemFreePipelineState(applicationPayload->ComputePipeline);
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
-    ElemFreeTexture(applicationPayload->RenderTexture);
+    ElemFreeGraphicsResource(applicationPayload->RenderTexture);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
     ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
@@ -383,17 +407,44 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemBindPipelineState(commandList, applicationPayload->ComputePipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
+    // TODO: Do we transition ResourceDescriptors?
+
+    // TODO: Barrier => UAV Write
+    // ElemResourceBarrier(commandList, &(ElemResourceBarrier) {
+    // })
+
     uint32_t threadSize = 16;
     ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
 
-    // TODO: Barrier here?
+    // TODO: Barrier => Shader Read
+    // TODO: Barrier => Swapchain RTV
+
+    /*ElemSetResourceBarrier(commandList, &(ElemResourceBarrier) {
+        .Type = ElemResourceBarrierType_Texture,
+        .Resource = applicationPayload->RenderTexture,
+    });*/
+
+    // TODO: Here we will issue barriers, with the set Barrier function but Begin render pass will also issue a barrier.
+    // We will defer the barrier submittions so you can call ElemSetResourceBarriers Multiple time if needed
+    // When a function that actually send a command to the GPU will be processed. We will call an internal submit barrier call
+    // that will send in batch the pending barriers. 
+    // This code should be common like the command list management. 
+    // This design allow us to manager the render target transitions separately while keeping good performance by batching barriers.
+    // It would be nice that we could transition the resource to RTV manually if needed and that the begin render pass doesn't insert
+    // a barrier in that case.
+
+    // TODO: If we specify automatically the barriers for RTV and DSV, it means we don't have control on the after sync point.
+    // For example, a RTV texture may be used in a mesh shader for displacement mapping. It we do that automatically, we don't now which 
+    // stage will require it and we will need to specify an after sync that is too generic and so less performant.
+
+    // TODO: For present, because it is not a resource Descriptor and is an edge case, we could do it automatically?
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
         {
             .Items = (ElemRenderPassRenderTarget[]) { 
             {
-                .RenderTarget = updateParameters->BackBufferTexture, 
+                .RenderTarget = updateParameters->BackBufferTexture, // TODO: Pass shader descriptor here 
                 .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
                 .LoadAction = ElemRenderPassLoadAction_Clear
             }},
@@ -406,6 +457,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemDispatchMesh(commandList, 1, 1, 1);
 
     ElemEndRenderPass(commandList);
+
+    // TODO: Barrier => Swapchain Present
 
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);

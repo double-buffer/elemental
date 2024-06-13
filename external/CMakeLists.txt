@@ -1,8 +1,8 @@
 #=======================================================================
 # DirectX Shader Compiler
 #=======================================================================
-set(DXC_VERSION_OFFICIAL "v1.8.2403")
-set(DXC_VERSION_CUSTOM "v2024-03-12")
+set(DXC_VERSION_OFFICIAL "v1.8.2405")
+set(DXC_VERSION_CUSTOM "v2024-06-11")
 
 add_library(dxc INTERFACE)
 
@@ -59,7 +59,7 @@ endif()
 # Metal Shader Converter
 #=======================================================================
 if (WIN32 OR APPLE)
-    set(METAL_SHADER_CONVERTER_VERSION "v2024-03-12")
+    set(METAL_SHADER_CONVERTER_VERSION "v2024-06-11")
 
     add_library(metal-shader-converter INTERFACE)
     target_include_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/MetalShaderConverter/include/)
@@ -100,7 +100,7 @@ endif()
 #=======================================================================
 # SPIRV-Cross Compiler
 #=======================================================================
-set(SPIRV_CROSS_VERSION "v2024-03-12")
+set(SPIRV_CROSS_VERSION "v2024-06-11")
 
 add_library(spirv-cross INTERFACE)
 target_include_directories(spirv-cross INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/spirv-cross/include/)

@@ -5,22 +5,16 @@
 #include "SystemMemory.h"
 
 #define METAL_MAX_GRAPHICSHEAP 32
-#define METAL_MAX_TEXTURES UINT16_MAX
 
 SystemDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull> metalGraphicsHeapPool;
-SystemDataPool<MetalTextureData, MetalTextureDataFull> metalTexturePool;
-
-MTL::Heap** CurrentMetalHeaps;
-uint32_t CurrentMetalHeapsIndex;
+SystemDataPool<MetalResourceData, MetalResourceDataFull> metalResourcePool;
 
 void InitMetalResourceMemory()
 {
     if (!metalGraphicsHeapPool.Storage)
     {
         metalGraphicsHeapPool = SystemCreateDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull>(MetalGraphicsMemoryArena, METAL_MAX_GRAPHICSHEAP);
-        metalTexturePool = SystemCreateDataPool<MetalTextureData, MetalTextureDataFull>(MetalGraphicsMemoryArena, METAL_MAX_TEXTURES);
-
-        CurrentMetalHeaps = SystemPushArray<MTL::Heap*>(MetalGraphicsMemoryArena, METAL_MAX_GRAPHICSHEAP).Pointer;
+        metalResourcePool = SystemCreateDataPool<MetalResourceData, MetalResourceDataFull>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES);
     }
 }
 
@@ -34,108 +28,84 @@ MetalGraphicsHeapDataFull* GetMetalGraphicsHeapDataFull(ElemGraphicsHeap graphic
     return SystemGetDataPoolItemFull(metalGraphicsHeapPool, graphicsHeap);
 }
 
-MetalTextureData* GetMetalTextureData(ElemTexture texture)
+MetalResourceData* GetMetalResourceData(ElemGraphicsResource resource)
 {
-    return SystemGetDataPoolItem(metalTexturePool, texture);
+    return SystemGetDataPoolItem(metalResourcePool, resource);
 }
 
-MetalTextureDataFull* GetMetalTextureDataFull(ElemTexture texture)
+MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource)
 {
-    return SystemGetDataPoolItemFull(metalTexturePool, texture);
+    return SystemGetDataPoolItemFull(metalResourcePool, resource);
 }
 
-void AddToGlobalMetalHeapList(MTL::Heap* graphicsHeap)
-{
-    CurrentMetalHeaps[CurrentMetalHeapsIndex++] = graphicsHeap;
-}
-
-void RemoveFromGlobalMetalHeapList(MTL::Heap* graphicsHeap)
-{
-    for (uint32_t i = 0; i < CurrentMetalHeapsIndex; i++)
-    {
-        if (CurrentMetalHeaps[i] == graphicsHeap)
-        {
-            if (CurrentMetalHeapsIndex > i + 1)
-            {
-                for (uint32_t j = i + 1; j < CurrentMetalHeapsIndex; j++)
-                {
-                    CurrentMetalHeaps[j - 1] = CurrentMetalHeaps[j];
-                }
-            }
-
-            break;
-        }
-    }
-}
-
-ElemTexture CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture)
+ElemGraphicsResource CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture)
 {
     InitMetalResourceMemory();
 
-    auto handle = SystemAddDataPoolItem(metalTexturePool, {
+    auto handle = SystemAddDataPoolItem(metalResourcePool, {
         .DeviceObject = resource,
         .Width = (uint32_t)resource->width(),
         .Height = (uint32_t)resource->height(),
         .IsPresentTexture = isPresentTexture,
     }); 
 
-    SystemAddDataPoolItemFull(metalTexturePool, handle, {
+    SystemAddDataPoolItemFull(metalResourcePool, handle, {
         .GraphicsDevice = graphicsDevice
     });
 
     return handle;
 }
 
-MTL::PixelFormat ConvertToMetalTextureFormat(ElemTextureFormat format)
+MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
 {
     switch (format) 
     {
-        case ElemTextureFormat_B8G8R8A8_SRGB:
+        case ElemGraphicsFormat_B8G8R8A8_SRGB:
             return MTL::PixelFormatBGRA8Unorm_sRGB;
 
-        case ElemTextureFormat_B8G8R8A8_UNORM:
+        case ElemGraphicsFormat_B8G8R8A8_UNORM:
             return MTL::PixelFormatBGRA8Unorm;
 
-        case ElemTextureFormat_R16G16B16A16_FLOAT:
+        case ElemGraphicsFormat_R16G16B16A16_FLOAT:
             return MTL::PixelFormatRGBA16Float;
 
-        case ElemTextureFormat_R32G32B32A32_FLOAT:
+        case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return MTL::PixelFormatRGBA32Float;
     }
 }
 
-MTL::TextureUsage ConvertToMetalTextureUsage(ElemTextureUsage usage)
+MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
 {
     switch (usage) 
     {
-        case ElemTextureUsage_Standard:
+        case ElemGraphicsResourceUsage_Standard:
             return MTL::TextureUsageShaderRead;
 
-        case ElemTextureUsage_Uav:
+        case ElemGraphicsResourceUsage_Uav:
             return MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite;
 
-        case ElemTextureUsage_RenderTarget:
+        case ElemGraphicsResourceUsage_RenderTarget:
             return MTL::TextureUsageShaderRead | MTL::TextureUsageRenderTarget;
     }
 }
 
-NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemTextureParameters* parameters)
+NS::SharedPtr<MTL::TextureDescriptor> CreateMetalResourceDescriptor(const ElemGraphicsResourceInfo* resourceInfo)
 {
-    // TODO: Other parameters
+    // TODO: Other resourceInfo
 
-    SystemAssert(parameters);
+    SystemAssert(resourceInfo);
 
     auto textureDescriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-    textureDescriptor->setTextureType(MTL::TextureType2D);
-    textureDescriptor->setWidth(parameters->Width);
-    textureDescriptor->setHeight(parameters->Height);
+    textureDescriptor->setTextureType(MTL::TextureType2DArray); // TODO: For UAV we need texture2D array?????
+    textureDescriptor->setWidth(resourceInfo->Width);
+    textureDescriptor->setHeight(resourceInfo->Height);
     textureDescriptor->setDepth(1);
     textureDescriptor->setMipmapLevelCount(1);
-    textureDescriptor->setPixelFormat(ConvertToMetalTextureFormat(parameters->Format));
+    textureDescriptor->setPixelFormat(ConvertToMetalResourceFormat(resourceInfo->Format));
     textureDescriptor->setSampleCount(1);
     textureDescriptor->setStorageMode(MTL::StorageModePrivate);
     textureDescriptor->setHazardTrackingMode(MTL::HazardTrackingModeUntracked);
-    textureDescriptor->setUsage(ConvertToMetalTextureUsage(parameters->Usage));
+    textureDescriptor->setUsage(ConvertToMetalResourceUsage(resourceInfo->Usage));
 
     return textureDescriptor;
 }
@@ -148,6 +118,9 @@ ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint
 
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
+
+    auto graphicsDeviceDataFull = GetMetalGraphicsDeviceDataFull(graphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
 
     // TODO: Create other heap types
 
@@ -164,6 +137,10 @@ ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint
     {
         graphicsHeap->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
     }
+
+    graphicsDeviceDataFull->ResidencySet->addAllocation(graphicsHeap.get());
+    graphicsDeviceDataFull->ResidencySet->commit();
+    graphicsDeviceDataFull->ResidencySet->requestResidency();
     
     auto handle = SystemAddDataPoolItem(metalGraphicsHeapPool, {
         .DeviceObject = graphicsHeap,
@@ -173,8 +150,6 @@ ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint
 
     SystemAddDataPoolItemFull(metalGraphicsHeapPool, handle, {
     });
-
-    AddToGlobalMetalHeapList(graphicsHeap.get());
 
     return handle;
 }
@@ -186,17 +161,20 @@ void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     auto graphicsHeapData = GetMetalGraphicsHeapData(graphicsHeap);
     SystemAssert(graphicsHeapData);
 
-    RemoveFromGlobalMetalHeapList(graphicsHeapData->DeviceObject.get());
+    auto graphicsDeviceDataFull = GetMetalGraphicsDeviceDataFull(graphicsHeapData->GraphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
+
+    graphicsDeviceDataFull->ResidencySet->removeAllocation(graphicsHeapData->DeviceObject.get());
 
     // BUG: For the moment we need to call this method after the free swapchain that 
     // flush the queue. We need to be able to see if all the heap resources have been freed before calling this method.
     graphicsHeapData->DeviceObject.reset();
 }
 
-ElemTexture MetalCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
+ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     SystemAssert(graphicsHeap != ELEM_HANDLE_NULL);
-    SystemAssert(parameters);
+    SystemAssert(resourceInfo);
 
     auto graphicsHeapData = GetMetalGraphicsHeapData(graphicsHeap);
     SystemAssert(graphicsHeapData);
@@ -204,32 +182,45 @@ ElemTexture MetalCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsH
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsHeapData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    auto textureDescriptor = CreateMetalTextureDescriptor(parameters);
+    auto textureDescriptor = CreateMetalResourceDescriptor(resourceInfo);
 
     auto texture = NS::TransferPtr(graphicsHeapData->DeviceObject->newTexture(textureDescriptor.get(), graphicsHeapOffset));
     SystemAssertReturnNullHandle(texture);
 
-    if (MetalDebugLayerEnabled && parameters->DebugName)
+    if (MetalDebugLayerEnabled && resourceInfo->DebugName)
     {
-        texture->setLabel(NS::String::string(parameters->DebugName, NS::UTF8StringEncoding));
+        texture->setLabel(NS::String::string(resourceInfo->DebugName, NS::UTF8StringEncoding));
     }
 
     return CreateMetalTextureFromResource(graphicsHeapData->GraphicsDevice, texture, false);
 }
 
-void MetalFreeTexture(ElemTexture texture)
+void MetalFreeGraphicsResource(ElemGraphicsResource resource)
 {
     // TODO: Defer the real texture delete with a fence!
 
-    auto textureData = GetMetalTextureData(texture);
+    auto textureData = GetMetalResourceData(resource);
     SystemAssert(textureData);
 
-    SystemRemoveDataPoolItem(metalTexturePool, texture);
+    SystemRemoveDataPoolItem(metalResourcePool, resource);
 }
 
-ElemShaderDescriptor MetalCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options)
+ElemShaderDescriptor MetalCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options)
 {
-    return 0;
+    SystemAssert(texture != ELEM_HANDLE_NULL);
+
+    auto textureData = GetMetalResourceData(texture);
+    SystemAssert(textureData);
+
+    auto textureDataFull = GetMetalResourceDataFull(texture);
+    SystemAssert(textureDataFull);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(textureDataFull->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    // TODO: We need to use newTextureView if we want to create another view to a specific slice of mip for example
+
+    return CreateMetalArgumentBufferTextureHandle(graphicsDeviceData->ResourceArgumentBuffer, textureData->DeviceObject.get());
 }
 
 void MetalFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)

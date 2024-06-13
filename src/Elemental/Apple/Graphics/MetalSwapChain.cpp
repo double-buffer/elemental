@@ -146,7 +146,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
-        .Format = ElemTextureFormat_B8G8R8A8_SRGB // TODO: Temporary
+        .Format = ElemGraphicsFormat_B8G8R8A8_SRGB // TODO: Temporary
     }); 
 
     SystemAddDataPoolItemFull(metalSwapChainPool, handle, {
@@ -257,10 +257,12 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         auto nextPresentTimestampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
 
         auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
+        auto sizeChanged = false;
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
             ResizeMetalSwapChain(_swapChain, windowSize.Width, windowSize.Height);
+            sizeChanged = true;
         }
 
         swapChainData->PresentCalled = false;
@@ -279,7 +281,8 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             .SwapChainInfo = MetalGetSwapChainInfo(_swapChain),
             .BackBufferTexture = backBufferTexture,
             .DeltaTimeInSeconds = deltaTime,
-            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds
+            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds,
+            .SizeChanged = sizeChanged
         };
 
         _updateHandler(&updateParameters, _updatePayload);
@@ -291,6 +294,6 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             MetalPresentSwapChain(_swapChain);
         }
         
-        MetalFreeTexture(backBufferTexture);
+        MetalFreeGraphicsResource(backBufferTexture);
     }
 }

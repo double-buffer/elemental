@@ -11,17 +11,17 @@ ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     DispatchGraphicsFunction(FreeGraphicsHeap, graphicsHeap);
 }
 
-ElemAPI ElemTexture ElemCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
+ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
-    DispatchReturnGraphicsFunction(CreateTexture, graphicsHeap, graphicsHeapOffset, parameters);
+    DispatchReturnGraphicsFunction(CreateGraphicsResource, graphicsHeap, graphicsHeapOffset, resourceInfo);
 }
 
-ElemAPI void ElemFreeTexture(ElemTexture texture)
+ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource)
 {
-    DispatchGraphicsFunction(FreeTexture, texture);
+    DispatchGraphicsFunction(FreeGraphicsResource, resource);
 }
 
-ElemAPI ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options)
+ElemAPI ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options)
 {
     DispatchReturnGraphicsFunction(CreateTextureShaderDescriptor, texture, options);
 }

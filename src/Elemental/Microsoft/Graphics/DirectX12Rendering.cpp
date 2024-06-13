@@ -92,7 +92,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
             renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
             renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
             renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-            renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
+            renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL; // TODO: Should use sync render target?
             renderTargetBarrier.pResource = textureData->DeviceObject.Get();
 
             D3D12_BARRIER_GROUP textureBarriersGroup;

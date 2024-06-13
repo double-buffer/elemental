@@ -14,7 +14,7 @@ struct MetalGraphicsHeapDataFull
     uint32_t Reserved;
 };
 
-struct MetalTextureData
+struct MetalResourceData
 {
     NS::SharedPtr<MTL::Texture> DeviceObject;
     uint32_t Width;
@@ -22,27 +22,24 @@ struct MetalTextureData
     bool IsPresentTexture;
 };
 
-struct MetalTextureDataFull
+struct MetalResourceDataFull
 {
     ElemGraphicsDevice GraphicsDevice;
 };
 
-extern MTL::Heap** CurrentMetalHeaps;
-extern uint32_t CurrentMetalHeapsIndex;
-
 MetalGraphicsHeapData* GetMetalGraphicsHeapData(ElemGraphicsHeap graphicsHeap);
 MetalGraphicsHeapDataFull* GetMetalGraphicsHeapDataFull(ElemGraphicsHeap graphicsHeap);
 
-MetalTextureData* GetMetalTextureData(ElemTexture texture);
-MetalTextureDataFull* GetMetalTextureDataFull(ElemTexture texture);
+MetalResourceData* GetMetalResourceData(ElemGraphicsResource resource);
+MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource);
 
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
-ElemTexture MetalCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
-void MetalFreeTexture(ElemTexture texture);
+ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
+void MetalFreeGraphicsResource(ElemGraphicsResource resource);
 
-ElemShaderDescriptor MetalCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options);
+ElemShaderDescriptor MetalCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options);
 void MetalFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);
 
-ElemTexture CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture);
+ElemGraphicsResource CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture);
