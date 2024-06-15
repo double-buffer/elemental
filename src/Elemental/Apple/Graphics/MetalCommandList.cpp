@@ -44,8 +44,28 @@ void ResetMetalCommandEncoder(ElemCommandList commandList)
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
 
+    auto commandQueueData = GetMetalCommandQueueData(commandListData->CommandQueue);
+    SystemAssert(commandQueueData);
+
     if (commandListData->CommandEncoder)
     {
+        if (commandQueueData->ResourceBarrierTypes != 0)
+        {
+            commandQueueData->ResourceBarrierTypes |= MetalResourceBarrierType_Fence;
+
+            if (commandListData->CommandEncoderType == MetalCommandEncoderType_Render)
+            {
+                auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+                // TODO: Use the proper stage based on sync
+                renderCommandEncoder->updateFence(commandQueueData->ResourceFence.get(), MTL::RenderStageFragment);
+            }
+            else if (commandListData->CommandEncoderType == MetalCommandEncoderType_Compute)
+            {
+                auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
+                computeCommandEncoder->updateFence(commandQueueData->ResourceFence.get());
+            }
+        }
+
         commandListData->CommandEncoder->endEncoding();
         commandListData->CommandEncoder.reset();
         commandListData->CommandEncoderType = MetalCommandEncoderType_None;
@@ -71,10 +91,13 @@ ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Elem
         metalCommandQueue->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
     }
 
+    auto resourceFence = NS::TransferPtr(graphicsDeviceData->Device->newFence());
+
     metalCommandQueue->addResidencySet(graphicsDeviceDataFull->ResidencySet.get());
     
     auto handle = SystemAddDataPoolItem(metalCommandQueuePool, {
         .DeviceObject = metalCommandQueue,
+        .ResourceFence = resourceFence,
         .GraphicsDevice = graphicsDevice
     }); 
 
@@ -121,6 +144,7 @@ ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCom
     auto handle = SystemAddDataPoolItem(metalCommandListPool, {
         .DeviceObject = metalCommandBuffer,
         .GraphicsDevice = commandQueueData->GraphicsDevice,
+        .CommandQueue = commandQueue,
         .CommandEncoderType = MetalCommandEncoderType_None,
         .IsCommitted = false
     }); 

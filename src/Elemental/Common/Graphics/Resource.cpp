@@ -21,12 +21,22 @@ ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource)
     DispatchGraphicsFunction(FreeGraphicsResource, resource);
 }
 
-ElemAPI ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options)
+ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
 {
-    DispatchReturnGraphicsFunction(CreateTextureShaderDescriptor, texture, options);
+    DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, descriptorInfo);
 }
 
-ElemAPI void ElemFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)
+ElemAPI void ElemUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
 {
-    DispatchGraphicsFunction(FreeShaderDescriptor, shaderDescriptor);
+    DispatchGraphicsFunction(UpdateGraphicsResourceDescriptor, descriptor, descriptorInfo);
+}
+
+ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor)
+{
+    DispatchGraphicsFunction(FreeGraphicsResourceDescriptor, descriptor);
+}
+
+ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)
+{
+    DispatchGraphicsFunction(GraphicsResourceBarrier, commandList, sourceDescriptor, destinationDescriptor, options);
 }

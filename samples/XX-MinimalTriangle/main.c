@@ -98,7 +98,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         .RenderTargets = 
         {
             .Items = (ElemRenderPassRenderTarget[]) {{ 
-                .RenderTarget = updateParameters->BackBufferTexture, 
+                .RenderTarget = updateParameters->BackBufferRenderTarget, 
                 .LoadAction = ElemRenderPassLoadAction_Clear 
             }},
             .Length = 1

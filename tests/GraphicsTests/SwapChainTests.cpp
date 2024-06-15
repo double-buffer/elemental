@@ -14,12 +14,12 @@ UTEST(SwapChain, CreateSwapChain)
     auto swapChain = ElemCreateSwapChain(commandQueue, window, nullptr, nullptr);
 
     // Assert
+    ASSERT_NE(ELEM_HANDLE_NULL, swapChain);
+    ASSERT_FALSE(testHasLogErrors);
+
     ElemFreeSwapChain(swapChain);
     ElemFreeWindow(window);
     ElemFreeCommandQueue(commandQueue);
-
-    ASSERT_NE(ELEM_HANDLE_NULL, swapChain);
-    ASSERT_FALSE(testHasLogErrors);
 }
 
 // TODO: Important! Tests for update delta. Try to simulate a frame that pass the next present time to see if the delta

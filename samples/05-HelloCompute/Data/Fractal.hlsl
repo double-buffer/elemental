@@ -43,7 +43,6 @@ float2 random2(float2 uv)
 
 #define MAX_ITERATIONS 500
 #define BOUNDARY 256
-#define SAMPLE_COUNT 4
 
 float ComputeJuliaSet(float2 position)
 {
@@ -109,24 +108,13 @@ void Fractal(uint3 threadId: SV_DispatchThreadID)
         uv.x *= aspectRatio;
         uv *= parameters.Zoom;
 
-        float2 uvStep = float2(1.0, 1.0) / float2(width, height);
-        uvStep.x *= aspectRatio;
-        uvStep *= parameters.Zoom;
-
         uv = mul(float3(uv, 1.0), parameters.Transform);
 
-        float3 color = float3(0.0, 0.0, 0.0);
+        float gradient = ComputeJuliaSet(uv);
+        //float gradient = ComputeMandelbrotSet(uv);
 
-        for (uint i = 0; i < SAMPLE_COUNT; i++)
-        {
-            float2 random = random2(uv + i) * uvStep;
-            float gradient = ComputeJuliaSet(uv + random);
-            //float gradient = ComputeMandelbrotSet(uv + random);
-
-            color += 0.5 + 0.5 * cos(2.5 + gradient.xxx * 0.15 + float3(0.0, 0.6, 1.0));
-        }
+        float3 color = 0.5 + 0.5 * cos(2.5 + gradient.xxx * 0.15 + float3(0.0, 0.6, 1.0)).rgb;
         
-        color /= SAMPLE_COUNT;
         renderTexture[threadId.xy] = float4(color, 1.0);
     }
     #endif

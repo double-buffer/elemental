@@ -76,8 +76,8 @@ typedef struct
     ElemGraphicsHeap GraphicsHeap;
     uint32_t CurrentHeapOffset;
     ElemGraphicsResource RenderTexture;
-    ElemShaderDescriptor RenderTextureUavDescriptor;
-    ElemShaderDescriptor RenderTextureReadDescriptor;
+    ElemGraphicsResourceDescriptor RenderTextureUavDescriptor;
+    ElemGraphicsResourceDescriptor RenderTextureReadDescriptor;
     ElemSwapChain SwapChain;
     ElemPipelineState GraphicsPipeline;
     ElemPipelineState ComputePipeline;
@@ -169,6 +169,7 @@ void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width,
 
     ElemGraphicsResourceInfo resourceInfo =
     {
+        .Type = ElemGraphicsResourceType_Texture2D,
         .Width = width,
         .Height = height,
         .Format = ElemGraphicsFormat_R16G16B16A16_FLOAT,
@@ -176,18 +177,37 @@ void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width,
         .DebugName = "Render Texture"
     };
 
+    // TODO: Here we can reuse the memory directly because we use 1 for latency so there are no pending rendering operations
     applicationPayload->RenderTexture = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, 0, &resourceInfo);
 
     // TODO: The max resources descriptor will be 1.000.000 with latency 1 and 500.000 with 2 latency
     // TODO: We need to provide a mechanism to update a descriptor (with a double buffering approach depending on latency)
-    // For the moment we try to delay the descriptor delete and then reuse a free list id but that's not a valid approach because if we encode the descriptor id
-    // into material buffers we need to update the buffer each time.
 
-    applicationPayload->RenderTextureUavDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Uav });
-    applicationPayload->RenderTextureReadDescriptor = ElemCreateTextureShaderDescriptor(applicationPayload->RenderTexture, &(ElemTextureShaderDescriptorOptions) { .Type = ElemTextureShaderDescriptorType_Read });
+    ElemGraphicsResourceDescriptorInfo resourceDescriptorInfo =
+    {
+        .Resource = applicationPayload->RenderTexture, 
+        .Usage = ElemGraphicsResourceUsage_Uav 
+    };
 
-    // TODO: Increment offset
-    // TODO: Reuse memory?
+    if (!applicationPayload->RenderTextureUavDescriptor)
+    {
+        applicationPayload->RenderTextureUavDescriptor = ElemCreateGraphicsResourceDescriptor(&resourceDescriptorInfo);
+    }
+    else
+    {
+        ElemUpdateGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor, &resourceDescriptorInfo);
+    }
+
+    resourceDescriptorInfo.Usage = ElemGraphicsResourceUsage_Standard;
+
+    if (!applicationPayload->RenderTextureReadDescriptor)
+    {
+        applicationPayload->RenderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(&resourceDescriptorInfo);
+    }
+    else
+    {
+        ElemUpdateGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor, &resourceDescriptorInfo);
+    }
 }
 
 void InitSample(void* payload)
@@ -247,6 +267,8 @@ void FreeSample(void* payload)
 
     ElemFreePipelineState(applicationPayload->ComputePipeline);
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor);
     ElemFreeGraphicsResource(applicationPayload->RenderTexture);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
@@ -407,16 +429,14 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemBindPipelineState(commandList, applicationPayload->ComputePipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
-    // TODO: Do we transition ResourceDescriptors?
-
-    // TODO: Barrier => UAV Write
-    // ElemResourceBarrier(commandList, &(ElemResourceBarrier) {
-    // })
+    ElemGraphicsResourceBarrier(commandList, ELEM_HANDLE_NULL, applicationPayload->RenderTextureUavDescriptor, NULL);
 
     uint32_t threadSize = 16;
     ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
 
-    // TODO: Barrier => Shader Read
+    // TODO: Sync points
+    ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTextureUavDescriptor, applicationPayload->RenderTextureReadDescriptor, NULL);
+
     // TODO: Barrier => Swapchain RTV
 
     /*ElemSetResourceBarrier(commandList, &(ElemResourceBarrier) {
@@ -444,7 +464,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         {
             .Items = (ElemRenderPassRenderTarget[]) { 
             {
-                .RenderTarget = updateParameters->BackBufferTexture, // TODO: Pass shader descriptor here 
+                .RenderTarget = updateParameters->BackBufferRenderTarget, // TODO: Pass shader descriptor here 
                 .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
                 .LoadAction = ElemRenderPassLoadAction_Clear
             }},
@@ -458,7 +478,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemEndRenderPass(commandList);
 
-    // TODO: Barrier => Swapchain Present
+    // TODO: Barrier => Swapchain Present (Will not do that, present is a special internal state that will be handled automatically)
 
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);

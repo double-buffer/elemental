@@ -274,12 +274,21 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             return;
         }
 
+        // TODO: Can we do something better than juste creating/destroying each time? 
         auto backBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
+
+        ElemGraphicsResourceDescriptorInfo resourceDescriptorInfo =
+        {
+            .Resource = backBufferTexture, 
+            .Usage = ElemGraphicsResourceUsage_RenderTarget
+        };
+
+        auto renderTarget = ElemCreateGraphicsResourceDescriptor(&resourceDescriptorInfo);
 
         ElemSwapChainUpdateParameters updateParameters = 
         {
             .SwapChainInfo = MetalGetSwapChainInfo(_swapChain),
-            .BackBufferTexture = backBufferTexture,
+            .BackBufferRenderTarget = renderTarget,
             .DeltaTimeInSeconds = deltaTime,
             .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds,
             .SizeChanged = sizeChanged
@@ -294,6 +303,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             MetalPresentSwapChain(_swapChain);
         }
         
+        MetalFreeGraphicsResourceDescriptor(renderTarget);
         MetalFreeGraphicsResource(backBufferTexture);
     }
 }

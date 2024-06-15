@@ -1,5 +1,6 @@
 #include "MetalResource.h"
 #include "MetalGraphicsDevice.h"
+#include "MetalCommandList.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -8,6 +9,7 @@
 
 SystemDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull> metalGraphicsHeapPool;
 SystemDataPool<MetalResourceData, MetalResourceDataFull> metalResourcePool;
+Span<ElemGraphicsResourceDescriptorInfo> metalResourceDescriptorInfos;
 
 void InitMetalResourceMemory()
 {
@@ -15,6 +17,7 @@ void InitMetalResourceMemory()
     {
         metalGraphicsHeapPool = SystemCreateDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull>(MetalGraphicsMemoryArena, METAL_MAX_GRAPHICSHEAP);
         metalResourcePool = SystemCreateDataPool<MetalResourceData, MetalResourceDataFull>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES);
+        metalResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES);
     }
 }
 
@@ -36,6 +39,12 @@ MetalResourceData* GetMetalResourceData(ElemGraphicsResource resource)
 MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource)
 {
     return SystemGetDataPoolItemFull(metalResourcePool, resource);
+}
+        
+// TODO: Put that in common code?
+ElemGraphicsResourceDescriptorInfo* MetalGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
+{
+    return &metalResourceDescriptorInfos[descriptor];
 }
 
 ElemGraphicsResource CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture)
@@ -205,14 +214,14 @@ void MetalFreeGraphicsResource(ElemGraphicsResource resource)
     SystemRemoveDataPoolItem(metalResourcePool, resource);
 }
 
-ElemShaderDescriptor MetalCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options)
+ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
 {
-    SystemAssert(texture != ELEM_HANDLE_NULL);
+    SystemAssert(descriptorInfo->Resource != ELEM_HANDLE_NULL);
 
-    auto textureData = GetMetalResourceData(texture);
+    auto textureData = GetMetalResourceData(descriptorInfo->Resource);
     SystemAssert(textureData);
 
-    auto textureDataFull = GetMetalResourceDataFull(texture);
+    auto textureDataFull = GetMetalResourceDataFull(descriptorInfo->Resource);
     SystemAssert(textureDataFull);
 
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(textureDataFull->GraphicsDevice);
@@ -220,9 +229,74 @@ ElemShaderDescriptor MetalCreateTextureShaderDescriptor(ElemGraphicsResource tex
 
     // TODO: We need to use newTextureView if we want to create another view to a specific slice of mip for example
 
-    return CreateMetalArgumentBufferTextureHandle(graphicsDeviceData->ResourceArgumentBuffer, textureData->DeviceObject.get());
+    auto handle = CreateMetalArgumentBufferTextureHandle(graphicsDeviceData->ResourceArgumentBuffer, textureData->DeviceObject.get());
+    metalResourceDescriptorInfos[handle] = *descriptorInfo;
+    return handle;
 }
 
-void MetalFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)
+void MetalUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
 {
+}
+
+void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor)
+{
+}
+
+void EnsureMetalResourceBarrier(ElemCommandList commandList)
+{
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto commandQueueData = GetMetalCommandQueueData(commandListData->CommandQueue);
+    SystemAssert(commandQueueData);
+
+    auto shouldWait = (commandQueueData->ResourceBarrierTypes & MetalResourceBarrierType_Fence) != 0;
+
+    // TODO: Do a resource barrier if we still are inside the same encoder (Fence is false)
+
+    if (commandListData->CommandEncoderType == MetalCommandEncoderType_Render)
+    {
+        auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+        
+        if (shouldWait)
+        {
+            // TODO: Use the proper stage
+            renderCommandEncoder->waitForFence(commandQueueData->ResourceFence.get(), MTL::RenderStageFragment);
+
+            // BUG: It seems that waiting for mesh stage is not working???
+            //renderCommandEncoder->waitForFence(commandQueueData->ResourceFence.get(), MTL::RenderStageObject);
+            //renderCommandEncoder->waitForFence(commandQueueData->ResourceFence.get(), MTL::RenderStageMesh);
+        }
+    }
+    else if (commandListData->CommandEncoderType == MetalCommandEncoderType_Compute)
+    {
+        auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
+        //renderCommandEncoder->setBytes(data.Items, data.Length, 2);
+
+        if (shouldWait)
+        {
+            // TODO: Use the proper stage
+            computeCommandEncoder->waitForFence(commandQueueData->ResourceFence.get());
+        }
+    }
+
+    commandQueueData->ResourceBarrierTypes = 0;
+}
+
+void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)
+{
+    // TODO: Deffer until needed the waits
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto commandQueueData = GetMetalCommandQueueData(commandListData->CommandQueue);
+    SystemAssert(commandQueueData);
+
+    // TODO: Test code!!!
+    commandQueueData->ResourceBarrierTypes |= MetalResourceBarrierType_Texture;
 }

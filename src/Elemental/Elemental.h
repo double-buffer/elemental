@@ -312,9 +312,9 @@ typedef ElemHandle ElemGraphicsHeap;
 typedef ElemHandle ElemGraphicsResource;
 
 /**
- * Handle that represents a shader descriptor.
+ * Handle that represents a graphics resource descriptor.
  */
-typedef int32_t ElemShaderDescriptor;
+typedef int32_t ElemGraphicsResourceDescriptor;
 
 /**
  * Handle that represents a shader library.
@@ -366,39 +366,30 @@ typedef enum
     ElemGraphicsHeapType_Gpu = 0
 } ElemGraphicsHeapType;
 
-typedef enum
-{
-    ElemTextureShaderDescriptorType_Read,
-    ElemTextureShaderDescriptorType_Uav,
-    ElemTextureShaderDescriptorType_RenderTarget
-} ElemTextureShaderDescriptorType;
-
 /**
  * Enumerates graphics formats.
  */
 typedef enum
 {
+    ElemGraphicsFormat_Raw,
     ElemGraphicsFormat_B8G8R8A8_SRGB,
     ElemGraphicsFormat_B8G8R8A8_UNORM,
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
 } ElemGraphicsFormat;
 
-/**
- * Enumerates texture usages.
- */
+typedef enum
+{
+    ElemGraphicsResourceType_Buffer,
+    ElemGraphicsResourceType_Texture2D
+} ElemGraphicsResourceType;
+
 typedef enum
 {
     ElemGraphicsResourceUsage_Standard,
     ElemGraphicsResourceUsage_Uav,
     ElemGraphicsResourceUsage_RenderTarget
 } ElemGraphicsResourceUsage;
-
-typedef enum
-{
-    ElemResourceBarrierType_Buffer,
-    ElemResourceBarrierType_Texture
-} ElemResourceBarrierType;
 
 /**
  * Enumerates render pass load actions.
@@ -573,8 +564,8 @@ typedef struct
 {
     // Information about the swap chain's configuration.
     ElemSwapChainInfo SwapChainInfo;
-    // Back buffer texture for the swap chain.
-    ElemGraphicsResource BackBufferTexture;
+    // Back buffer render target for the swap chain.
+    ElemGraphicsResourceDescriptor BackBufferRenderTarget;
     // Time since the last frame was presented, in seconds.
     double DeltaTimeInSeconds; 
     // Timestamp for when the next frame is expected to be presented, in seconds.
@@ -596,6 +587,7 @@ typedef struct
 
 typedef struct
 {
+    ElemGraphicsResourceType Type;
     uint32_t Width;
     uint32_t Height;
     ElemGraphicsFormat Format;
@@ -605,9 +597,10 @@ typedef struct
 
 typedef struct
 {
-    ElemTextureShaderDescriptorType Type;
-    uint32_t MipIndex;
-} ElemTextureShaderDescriptorOptions;
+    ElemGraphicsResource Resource;
+    ElemGraphicsResourceUsage Usage;
+    uint32_t TextureMipIndex;
+} ElemGraphicsResourceDescriptorInfo;
 
 /**
  * Represents a collection of texture formats.
@@ -649,6 +642,11 @@ typedef struct
     // Function name of the mesh shader in the shader library.
     const char* ComputeShaderFunction;
 } ElemComputePipelineStateParameters;
+
+typedef struct
+{
+    uint32_t Reserved;
+} ElemGraphicsResourceBarrierOptions;
 
 /**
  * Represents RGBA color.
@@ -695,18 +693,6 @@ typedef struct
     uint32_t Length;
 } ElemViewportSpan;
 
-typedef struct
-{
-    ElemHandle Resource;
-    ElemResourceBarrierType Type;
-} ElemResourceBarrier;
-
-typedef struct
-{
-    ElemResourceBarrier* Items;
-    uint32_t Length;
-} ElemResourceBarrierSpan;
-
 /**
  * Configuration for a render pass target.
  */
@@ -717,6 +703,7 @@ typedef struct
     // TODO: Add a RTV descriptor optional here so we can override it if needed?
 
     // Color to clear the render target with if the load action is clear.
+
     ElemColor ClearColor;
     // Action to take when loading data into the render target at the beginning of a render pass.
     ElemRenderPassLoadAction LoadAction;
@@ -880,18 +867,18 @@ ElemAPI void ElemSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLaten
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 
 ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
-
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
-// TODO: GetTextureAllocationInfos
+// TODO: GetTextureAllocationInfos with factory functions
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource);
 
-// TODO: ElemAPI ElemGraphicsResourceView ElemCreateGraphicsResourceView(ElemGraphicsResource resource, const ElemGraphicsResourceViewOptions* options);
-ElemAPI ElemShaderDescriptor ElemCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options);
-// TODO: Update Descriptor (with buffering)
-ElemAPI void ElemFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);
+// TODO: Descriptor factory functions
+
+ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
+ElemAPI void ElemUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
+ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.
@@ -938,9 +925,7 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
  */
 ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data);
 
-ElemAPI void ElemSetResourceBarrier(ElemCommandList commandList, const ElemResourceBarrier* resourceBarrier);
-
-ElemAPI void ElemSetResourceBarriers(ElemCommandList commandList, ElemResourceBarrierSpan resourceBarriers);
+ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options);
 
 /**
  * Dispatches a compute operation on a command list, specifying the number of thread groups in each dimension.

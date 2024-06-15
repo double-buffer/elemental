@@ -9,9 +9,20 @@ enum MetalCommandEncoderType
     MetalCommandEncoderType_Compute = 2
 };
 
+enum MetalResourceBarrierType
+{
+    MetalResourceBarrierType_None = 0,
+    MetalResourceBarrierType_Buffer = 1,
+    MetalResourceBarrierType_Texture = 2,
+    MetalResourceBarrierType_RenderTarget = 4,
+    MetalResourceBarrierType_Fence = 8,
+};
+
 struct MetalCommandQueueData
 {
     NS::SharedPtr<MTL::CommandQueue> DeviceObject;
+    NS::SharedPtr<MTL::Fence> ResourceFence;
+    uint32_t ResourceBarrierTypes;
     ElemGraphicsDevice GraphicsDevice;
 };
 
@@ -25,6 +36,7 @@ struct MetalCommandListData
     NS::SharedPtr<MTL::CommandBuffer> DeviceObject;
     NS::SharedPtr<MTL::CommandEncoder> CommandEncoder;
     ElemGraphicsDevice GraphicsDevice;
+    ElemCommandQueue CommandQueue;
     MetalCommandEncoderType CommandEncoderType;
     bool IsCommitted;
 };

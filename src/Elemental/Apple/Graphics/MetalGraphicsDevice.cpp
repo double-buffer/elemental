@@ -121,6 +121,8 @@ void FreeMetalArgumentBuffer(MetalArgumentBuffer descriptorHeap)
 
 // TODO: Buffers
 
+// TODO: We need to extract the code get or update handles (index) to a common place because 
+// we need to be able to manage double buffering if needed for updates
 uint32_t CreateMetalArgumentBufferTextureHandle(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture)
 {            
     SystemAssert(argumentBuffer.Storage);

@@ -55,14 +55,14 @@ UTEST(GraphicsDevice, CreateGraphicsDevice)
 
     // Assert
     auto resultDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
-    
-    ElemFreeGraphicsDevice(graphicsDevice);
 
     ASSERT_FALSE(testHasLogErrors);
     ASSERT_EQ(graphicsDeviceInfo.DeviceId, resultDeviceInfo.DeviceId); 
     ASSERT_STREQ(deviceName, resultDeviceInfo.DeviceName); 
     ASSERT_EQ(graphicsDeviceInfo.GraphicsApi, resultDeviceInfo.GraphicsApi); 
     ASSERT_EQ(graphicsDeviceInfo.AvailableMemory, resultDeviceInfo.AvailableMemory); 
+    
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
 // TODO: Test Shader Resource Descriptors 

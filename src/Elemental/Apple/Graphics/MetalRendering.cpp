@@ -28,8 +28,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        // TODO: Use descriptor info instead
-        auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
+        auto descriptorData = MetalGetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget);
+        auto textureData = GetMetalResourceData(descriptorData->Resource); 
         SystemAssert(textureData);
 
         auto renderTargetDescriptor = renderPassDescriptor->colorAttachments()->object(i);
@@ -90,6 +90,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     
     commandListData->CommandEncoder = renderCommandEncoder;
     commandListData->CommandEncoderType = MetalCommandEncoderType_Render;
+    
+    EnsureMetalResourceBarrier(commandList);
 
     if (parameters->Viewports.Length > 0)
     {
@@ -100,8 +102,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
         auto renderTargetParameters = parameters->RenderTargets.Items[0];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        // TODO: Use descriptor info instead
-        auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
+        auto descriptorData = MetalGetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget);
+        auto textureData = GetMetalResourceData(descriptorData->Resource); 
         SystemAssert(textureData);
 
         ElemViewport viewport = 

@@ -33,13 +33,20 @@ MetalGraphicsHeapDataFull* GetMetalGraphicsHeapDataFull(ElemGraphicsHeap graphic
 MetalResourceData* GetMetalResourceData(ElemGraphicsResource resource);
 MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource);
 
+void EnsureMetalResourceBarrier(ElemCommandList commandList);
+
+ElemGraphicsResourceDescriptorInfo* MetalGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
+
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
 ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 void MetalFreeGraphicsResource(ElemGraphicsResource resource);
 
-ElemShaderDescriptor MetalCreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options);
-void MetalFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);
+ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
+void MetalUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
+void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor);
+
+void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options);
 
 ElemGraphicsResource CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture);
