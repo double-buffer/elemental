@@ -26,7 +26,7 @@ struct VulkanPipelineStateDataFull
 };
 
 VulkanShaderLibraryData* GetVulkanShaderLibraryData(ElemShaderLibrary shaderLibrary);
-VulkanShaderLibraryDataFull* GetVulkanShaderLibraryDataFull(ElemTexture shaderLibrary);
+VulkanShaderLibraryDataFull* GetVulkanShaderLibraryDataFull(ElemShaderLibrary shaderLibrary);
 
 VulkanPipelineStateData* GetVulkanPipelineStateData(ElemPipelineState pipelineState);
 VulkanPipelineStateDataFull* GetVulkanPipelineStateDataFull(ElemPipelineState pipelineState);

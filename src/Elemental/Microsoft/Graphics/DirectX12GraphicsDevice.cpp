@@ -7,7 +7,6 @@
 #define D3D12SDK_VERSION 614
 #define D3D12SDK_PATH ".\\"
 #define DIRECTX12_MAX_RTVS 1024u
-#define DIRECTX12_MAX_RESOURCES 1000000
 
 struct DirectX12DescriptorHeapFreeListItem
 {

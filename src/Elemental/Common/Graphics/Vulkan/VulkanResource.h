@@ -13,7 +13,7 @@ struct VulkanGraphicsHeapDataFull
     ElemGraphicsDevice GraphicsDevice;
 };
 
-struct VulkanTextureData
+struct VulkanGraphicsResourceData
 {
     VkImage DeviceObject;
     VkImageView ImageView;
@@ -23,7 +23,7 @@ struct VulkanTextureData
     uint32_t Height;
 };
 
-struct VulkanTextureDataFull
+struct VulkanGraphicsResourceDataFull
 {
     ElemGraphicsDevice GraphicsDevice;
 };
@@ -31,16 +31,16 @@ struct VulkanTextureDataFull
 VulkanGraphicsHeapData* GetVulkanGraphicsHeapData(ElemGraphicsHeap graphicsHeap);
 VulkanGraphicsHeapDataFull* GetVulkanGraphicsHeapDataFull(ElemGraphicsHeap graphicsHeap);
 
-VulkanTextureData* GetVulkanTextureData(ElemTexture texture);
-VulkanTextureDataFull* GetVulkanTextureDataFull(ElemTexture texture);
+VulkanGraphicsResourceData* GetVulkanGraphicsResourceData(ElemGraphicsResource resource);
+VulkanGraphicsResourceDataFull* GetVulkanGraphicsResourceDataFull(ElemGraphicsResource resource);
 
-ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, uint32_t width, uint32_t height, bool isPresentTexture);
+ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, uint32_t width, uint32_t height, bool isPresentTexture);
 
 ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
             
-ElemTexture VulkanCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
-void VulkanFreeTexture(ElemTexture texture);
+ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
+void VulkanFreeGraphicsResource(ElemGraphicsResource resource);
 
-ElemShaderDescriptor VulkanCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options);
+ElemShaderDescriptor VulkanCreateTextureShaderDescriptor(ElemGraphicsResource resource, const ElemTextureShaderDescriptorOptions* options);
 void VulkanFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);

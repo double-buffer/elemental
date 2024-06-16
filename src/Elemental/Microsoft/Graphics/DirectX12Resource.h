@@ -14,15 +14,18 @@ struct DirectX12GraphicsHeapDataFull
     D3D12_HEAP_DESC HeapDescription;
 };
 
-struct DirectX12TextureData
+struct DirectX12GraphicsResourceData
 {
     ComPtr<ID3D12Resource> DeviceObject;
-    D3D12_RESOURCE_DESC ResourceDescription;
+    DXGI_FORMAT DirectX12Format;
+    uint32_t Width;
+    uint32_t Height;
+    uint32_t MipLevels;
     bool IsPresentTexture;
     D3D12_CPU_DESCRIPTOR_HANDLE RtvDescriptor;
 };
 
-struct DirectX12TextureDataFull
+struct DirectX12GraphicsResourceDataFull
 {
     ElemGraphicsDevice GraphicsDevice;
 };
@@ -30,17 +33,17 @@ struct DirectX12TextureDataFull
 DirectX12GraphicsHeapData* GetDirectX12GraphicsHeapData(ElemGraphicsHeap graphicsHeap);
 DirectX12GraphicsHeapDataFull* GetDirectX12GraphicsHeapDataFull(ElemGraphicsHeap graphicsHeap);
 
-DirectX12TextureData* GetDirectX12TextureData(ElemTexture texture);
-DirectX12TextureDataFull* GetDirectX12TextureDataFull(ElemTexture texture);
+DirectX12GraphicsResourceData* GetDirectX12GraphicsResourceData(ElemGraphicsResource texture);
+DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGraphicsResource texture);
 
-ElemTexture CreateDirectX12TextureFromResource(ElemGraphicsDevice graphicsDevice, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
-DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemTextureFormat format);
+ElemGraphicsResource CreateDirectX12TextureFromResource(ElemGraphicsDevice graphicsDevice, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
+DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format);
             
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
-ElemTexture DirectX12CreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters);
-void DirectX12FreeTexture(ElemTexture texture);
+ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
+void DirectX12FreeGraphicsResource(ElemGraphicsResource resource);
 
-ElemShaderDescriptor DirectX12CreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options);
+ElemShaderDescriptor DirectX12CreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options);
 void DirectX12FreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);

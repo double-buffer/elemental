@@ -18,7 +18,7 @@ struct VulkanSwapChainData
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
     ElemWindow Window;
-    ElemTexture BackBufferTextures[VULKAN_MAX_SWAPCHAIN_BUFFERS];
+    ElemGraphicsResource BackBufferTextures[VULKAN_MAX_SWAPCHAIN_BUFFERS];
     uint32_t CurrentImageIndex;
     VkFence BackBufferAcquireFence;
     ElemSwapChainUpdateHandlerPtr UpdateHandler;
@@ -28,7 +28,7 @@ struct VulkanSwapChainData
     uint32_t Width;
     uint32_t Height;
     float AspectRatio;
-    ElemTextureFormat Format;
+    ElemGraphicsFormat Format;
     bool PresentCalled;
     uint64_t PresentId;
     uint32_t FrameLatency;

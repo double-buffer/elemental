@@ -11,7 +11,7 @@ struct DirectX12SwapChainData
     ElemCommandQueue CommandQueue;
     ElemWindow Window;
     HANDLE WaitHandle;
-    ElemTexture BackBufferTextures[DIRECTX12_MAX_SWAPCHAIN_BUFFERS];
+    ElemGraphicsResource BackBufferTextures[DIRECTX12_MAX_SWAPCHAIN_BUFFERS];
     ElemSwapChainUpdateHandlerPtr UpdateHandler;
     void* UpdatePayload;
     LARGE_INTEGER PreviousTargetPresentationTimestamp;
@@ -19,7 +19,7 @@ struct DirectX12SwapChainData
     uint32_t Width;
     uint32_t Height;
     float AspectRatio;
-    ElemTextureFormat Format;
+    ElemGraphicsFormat Format;
     bool PresentCalled;
     uint32_t FrameLatency;
     uint32_t TargetFPS;

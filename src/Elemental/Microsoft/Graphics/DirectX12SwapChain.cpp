@@ -80,7 +80,7 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
     {
         if (swapChainData->BackBufferTextures[i] != ELEM_HANDLE_NULL)
         {
-            DirectX12FreeTexture(swapChainData->BackBufferTextures[i]);
+            DirectX12FreeGraphicsResource(swapChainData->BackBufferTextures[i]);
         }
     } 
     #if ENABLE_TEARING
@@ -360,7 +360,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
-        .Format = ElemTextureFormat_B8G8R8A8_SRGB, // TODO: change that
+        .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
     }); 
@@ -389,7 +389,7 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     {
         if (swapChainData->BackBufferTextures[i])
         {
-            DirectX12FreeTexture(swapChainData->BackBufferTextures[i]);
+            DirectX12FreeGraphicsResource(swapChainData->BackBufferTextures[i]);
         }
     }
 
