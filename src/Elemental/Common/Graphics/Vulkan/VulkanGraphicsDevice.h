@@ -11,6 +11,7 @@
 #include "volk.h"
 
 #define VULKAN_MAX_DEVICES 10u
+#define VULKAN_MAX_RESOURCES 1000000
 
 struct VulkanGraphicsDeviceData
 {

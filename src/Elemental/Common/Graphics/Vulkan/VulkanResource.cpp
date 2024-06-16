@@ -5,17 +5,16 @@
 #include "SystemMemory.h"
 
 #define VULKAN_MAX_GRAPHICSHEAP 32
-#define VULKAN_MAX_TEXTURES UINT16_MAX
 
 SystemDataPool<VulkanGraphicsHeapData, VulkanGraphicsHeapDataFull> vulkanGraphicsHeapPool;
-SystemDataPool<VulkanTextureData, VulkanTextureDataFull> vulkanTexturePool;
+SystemDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull> vulkanGraphicsResourcePool;
 
 void InitVulkanTextureMemory()
 {
     if (!vulkanGraphicsHeapPool.Storage)
     {
         vulkanGraphicsHeapPool = SystemCreateDataPool<VulkanGraphicsHeapData, VulkanGraphicsHeapDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_GRAPHICSHEAP);
-        vulkanTexturePool = SystemCreateDataPool<VulkanTextureData, VulkanTextureDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_TEXTURES);
+        vulkanGraphicsResourcePool = SystemCreateDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
     }
 }
 
@@ -29,17 +28,17 @@ VulkanGraphicsHeapDataFull* GetVulkanGraphicsHeapDataFull(ElemGraphicsHeap graph
     return SystemGetDataPoolItemFull(vulkanGraphicsHeapPool, graphicsHeap);
 }
 
-VulkanTextureData* GetVulkanTextureData(ElemTexture texture)
+VulkanGraphicsResourceData* GetVulkanGraphicsResourceData(ElemGraphicsResource texture)
 {
-    return SystemGetDataPoolItem(vulkanTexturePool, texture);
+    return SystemGetDataPoolItem(vulkanGraphicsResourcePool, texture);
 }
 
-VulkanTextureDataFull* GetVulkanTextureDataFull(ElemTexture texture)
+VulkanGraphicsResourceDataFull* GetVulkanGraphicsResourceDataFull(ElemGraphicsResource texture)
 {
-    return SystemGetDataPoolItemFull(vulkanTexturePool, texture);
+    return SystemGetDataPoolItemFull(vulkanGraphicsResourcePool, texture);
 }
 
-ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, uint32_t width, uint32_t height, bool isPresentTexture)
+ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, uint32_t width, uint32_t height, bool isPresentTexture)
 {
     InitVulkanTextureMemory();
 
@@ -61,7 +60,7 @@ ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, V
     VkImageView imageView;
     AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &imageView));
 
-    auto handle = SystemAddDataPoolItem(vulkanTexturePool, {
+    auto handle = SystemAddDataPoolItem(vulkanGraphicsResourcePool, {
         .DeviceObject = resource,
         .ImageView = imageView,
         .Format = format,
@@ -70,7 +69,7 @@ ElemTexture CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, V
         .Height = height
     }); 
 
-    SystemAddDataPoolItemFull(vulkanTexturePool, handle, {
+    SystemAddDataPoolItemFull(vulkanGraphicsResourcePool, handle, {
         .GraphicsDevice = graphicsDevice
     });
 
@@ -88,31 +87,31 @@ void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
 {
 }
 
-ElemTexture VulkanCreateTexture(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemTextureParameters* parameters)
+ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     return {};
 }
 
-void VulkanFreeTexture(ElemTexture texture)
+void VulkanFreeGraphicsResource(ElemGraphicsResource resource)
 {
-    // TODO: Do a kind a deferred texture delete so we don't crash if the resource is still in use
-    SystemAssert(texture != ELEM_HANDLE_NULL);
+    // TODO: Do a kind a deferred resource delete so we don't crash if the resource is still in use
+    SystemAssert(resource != ELEM_HANDLE_NULL);
 
-    auto textureData = GetVulkanTextureData(texture);
-    SystemAssert(textureData);
+    auto resourceData = GetVulkanGraphicsResourceData(resource);
+    SystemAssert(resourceData);
 
-    auto textureDataFull = GetVulkanTextureDataFull(texture);
-    SystemAssert(textureDataFull);
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
+    SystemAssert(resourceDataFull);
 
-    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(textureDataFull->GraphicsDevice);
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    vkDestroyImageView(graphicsDeviceData->Device, textureData->ImageView, nullptr);
+    vkDestroyImageView(graphicsDeviceData->Device, resourceData->ImageView, nullptr);
 
-    SystemRemoveDataPoolItem(vulkanTexturePool, texture);
+    SystemRemoveDataPoolItem(vulkanGraphicsResourcePool, resource);
 }
 
-ElemShaderDescriptor VulkanCreateTextureShaderDescriptor(ElemTexture texture, const ElemTextureShaderDescriptorOptions* options)
+ElemShaderDescriptor VulkanCreateTextureShaderDescriptor(ElemGraphicsResource resource, const ElemTextureShaderDescriptorOptions* options)
 {
     return 0;
 }

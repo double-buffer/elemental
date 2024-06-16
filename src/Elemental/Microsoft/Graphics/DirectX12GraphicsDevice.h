@@ -4,6 +4,7 @@
 #include "SystemMemory.h"
 
 #define DIRECTX12_MAX_DEVICES 10u
+#define DIRECTX12_MAX_RESOURCES 1000000
 
 struct DirectX12DescriptorHeapStorage;
 

@@ -29,7 +29,7 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetVulkanTextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetVulkanGraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
         
         VkAttachmentLoadOp loadOperation;
@@ -169,7 +169,7 @@ void VulkanEndRenderPass(ElemCommandList commandList)
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetVulkanTextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetVulkanGraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         // TODO: Handle texture accesses, currently we only handle the image layout

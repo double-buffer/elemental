@@ -26,7 +26,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetDirectX12TextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetDirectX12GraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE beginAccessType;
@@ -50,7 +50,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         {
             .ClearValue = 
             { 
-                .Format = textureData->ResourceDescription.Format, 
+                .Format = textureData->DirectX12Format, 
                 .Color = 
                 { 
                     renderTargetParameters.ClearColor.Red, 
@@ -115,8 +115,8 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
             {
                 .X = 0, 
                 .Y = 0, 
-                .Width = (float)textureData->ResourceDescription.Width, 
-                .Height = (float)textureData->ResourceDescription.Height, 
+                .Width = (float)textureData->Width, 
+                .Height = (float)textureData->Height, 
                 .MinDepth = 0.0f, 
                 .MaxDepth = 1.0f
             };
@@ -153,7 +153,7 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetDirectX12TextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetDirectX12GraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!

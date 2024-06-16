@@ -144,7 +144,7 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     for (int32_t i = 0; i < 3; i++)
     {
         auto texture = swapChainData->BackBufferTextures[i];
-        VulkanFreeTexture(texture);
+        VulkanFreeGraphicsResource(texture);
     }
 
     vkDestroySwapchainKHR(graphicsDeviceData->Device, oldSwapChain, nullptr);
@@ -394,7 +394,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
-        .Format = ElemTextureFormat_B8G8R8A8_SRGB, // TODO: change that
+        .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
     });
@@ -439,10 +439,10 @@ void VulkanFreeSwapChain(ElemSwapChain swapChain)
 
     for (int i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
     {
-        auto textureData = GetVulkanTextureData(swapChainData->BackBufferTextures[i]);
+        auto textureData = GetVulkanGraphicsResourceData(swapChainData->BackBufferTextures[i]);
         SystemAssert(textureData);
 
-        VulkanFreeTexture(swapChainData->BackBufferTextures[i]);
+        VulkanFreeGraphicsResource(swapChainData->BackBufferTextures[i]);
     }
 
     vkDestroySwapchainKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, nullptr);
