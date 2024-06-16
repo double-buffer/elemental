@@ -22,6 +22,8 @@ struct MetalCommandQueueData
 {
     NS::SharedPtr<MTL::CommandQueue> DeviceObject;
     NS::SharedPtr<MTL::Fence> ResourceFence;
+    NS::SharedPtr<MTL::SharedEvent> QueueEvent;
+    uint64_t FenceValue;
     uint32_t ResourceBarrierTypes;
     ElemGraphicsDevice GraphicsDevice;
 };

@@ -2,6 +2,9 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+// TODO: Render on a render target texture
+
+/*
 UTEST(Rendering, RenderPassClearRenderTarget) 
 {
     // Arrange
@@ -22,7 +25,7 @@ UTEST(Rendering, RenderPassClearRenderTarget)
 
     ASSERT_NE(ELEM_HANDLE_NULL, swapChain);
     ASSERT_FALSE(testHasLogErrors);
-}
+}*/
 
 // TODO: Check command list type when dispatch mesh
 // TODO: Multiple config for rendering

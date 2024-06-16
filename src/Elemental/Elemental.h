@@ -519,10 +519,6 @@ typedef struct
  */
 typedef struct
 {
-    // TODO: Do we need that? This was foreseen for metal because SharedEvent may be slower
-    // But it would be great to avoid this flag.
-    // If set to true, CPU can wait on the fence.
-    bool FenceAwaitableOnCpu;
     // Fences that the execution should wait on before starting.
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;

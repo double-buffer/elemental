@@ -5,7 +5,7 @@
 // TODO: Rename to resource tests
 // TODO: Test barriers with compute/render encoders and different parameters
 
-UTEST(Texture, CreateTexture) 
+UTEST(Resource, CreateTexture2D) 
 {
     // Arrange
     InitLog();

@@ -1,13 +1,18 @@
 #pragma once
 
+#include <functional>
 #include "Elemental.h"
 
 #ifdef WIN32
     #define strcpy strcpy_s
 #endif
 
+#define ASSERT_LOG(message) ASSERT_TRUE_MSG(strstr(testLogs, message) != NULL, message)
+
 extern bool testForceVulkanApi;
 extern bool testHasLogErrors;
+extern char testLogs[2048];
+extern uint32_t currentTestLogsIndex;
 extern ElemGraphicsDevice sharedGraphicsDevice;
 
 static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
@@ -37,7 +42,6 @@ static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessage
     }
 
     printf("\033[0m]");
-
     printf("\033[32m %s", function);
 
     if (messageType == ElemLogMessageType_Error)
@@ -58,6 +62,10 @@ static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessage
         printf("\033[0m");
     }
 
+    char* logCopyDestination = testLogs + currentTestLogsIndex;
+    strcpy(logCopyDestination, message);
+    currentTestLogsIndex += strlen(message);
+
     printf(" %s\033[0m\n", message);
     fflush(stdout);
 }
@@ -65,17 +73,7 @@ static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessage
 void InitLog()
 {
     testHasLogErrors = false;
-
-    ElemGraphicsOptions options = { .PreferVulkan = testForceVulkanApi };
-
-    #ifdef _DEBUG
-    ElemConfigureLogHandler(TestLogHandler);
-    options.EnableDebugLayer = true;
-    #else
-    ElemConfigureLogHandler(ElemConsoleErrorLogHandler);
-    #endif
-
-    ElemSetGraphicsOptions(&options);
+    currentTestLogsIndex = 0u;
 }
 
 ElemGraphicsDevice GetSharedGraphicsDevice()

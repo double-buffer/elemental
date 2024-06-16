@@ -72,6 +72,24 @@ void ResetMetalCommandEncoder(ElemCommandList commandList)
     }
 }
 
+ElemFence CreateMetalCommandQueueFence(ElemCommandQueue commandQueue, MTL::CommandBuffer* commandBuffer)
+{
+    auto commandQueueData = GetMetalCommandQueueData(commandQueue);
+    SystemAssert(commandQueueData);
+
+    auto commandQueueDataFull = GetMetalCommandQueueDataFull(commandQueue);
+    SystemAssert(commandQueueDataFull);
+
+    auto fenceValue = SystemAtomicAdd(commandQueueData->FenceValue, 1) + 1;
+    commandBuffer->encodeSignalEvent(commandQueueData->QueueEvent.get(), fenceValue);
+
+    return 
+    {
+        .CommandQueue = commandQueue,
+        .FenceValue = fenceValue
+    };
+}
+
 ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, ElemCommandQueueType type, const ElemCommandQueueOptions* options)
 {
     InitMetalCommandListMemory();
@@ -92,12 +110,14 @@ ElemCommandQueue MetalCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Elem
     }
 
     auto resourceFence = NS::TransferPtr(graphicsDeviceData->Device->newFence());
+    auto queueEvent = NS::TransferPtr(graphicsDeviceData->Device->newSharedEvent());
 
     metalCommandQueue->addResidencySet(graphicsDeviceDataFull->ResidencySet.get());
     
     auto handle = SystemAddDataPoolItem(metalCommandQueuePool, {
         .DeviceObject = metalCommandQueue,
         .ResourceFence = resourceFence,
+        .QueueEvent = queueEvent,
         .GraphicsDevice = graphicsDevice
     }); 
 
@@ -116,6 +136,7 @@ void MetalFreeCommandQueue(ElemCommandQueue commandQueue)
 
     // TODO: Wait for command queue fence?
 
+    commandQueueData->QueueEvent.reset();
     commandQueueData->DeviceObject.reset();
 }
 
@@ -166,18 +187,37 @@ void MetalCommitCommandList(ElemCommandList commandList)
 
 ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
+    SystemAssert(commandQueue != ELEM_HANDLE_NULL);
+    
+    auto commandQueueData = GetMetalCommandQueueData(commandQueue);
+    SystemAssert(commandQueueData);
+
+    ElemFence fence = {};
+
     // TODO: This is really bad because we should reuse the command lists objects
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetMetalCommandListData(commandLists.Items[i]);
         SystemAssert(commandListData);
 
+        if (!commandListData->IsCommitted)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Commandlist needs to be committed before executing it.");
+            return {};
+        }
+
+        if (i == commandLists.Length - 1) 
+        {
+            fence = CreateMetalCommandQueueFence(commandQueue, commandListData->DeviceObject.get());
+        }
+
         commandListData->DeviceObject->commit();
         commandListData->DeviceObject.reset();
 
         SystemRemoveDataPoolItem(metalCommandListPool, commandLists.Items[i]);
     }
-    return {};
+
+    return fence;
 }
 
 void MetalWaitForFenceOnCpu(ElemFence fence)

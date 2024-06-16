@@ -23,7 +23,7 @@ UTEST(GraphicsDevice, GetAvailableGraphicsDevices)
     }
 
     ASSERT_FALSE(testHasLogErrors);
-    ASSERT_LE(1u, deviceCount);
+    ASSERT_GE(deviceCount, 1u);
 }
 
 UTEST(GraphicsDevice, CreateGraphicsDevice) 
@@ -57,10 +57,10 @@ UTEST(GraphicsDevice, CreateGraphicsDevice)
     auto resultDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
     ASSERT_FALSE(testHasLogErrors);
-    ASSERT_EQ(graphicsDeviceInfo.DeviceId, resultDeviceInfo.DeviceId); 
-    ASSERT_STREQ(deviceName, resultDeviceInfo.DeviceName); 
-    ASSERT_EQ(graphicsDeviceInfo.GraphicsApi, resultDeviceInfo.GraphicsApi); 
-    ASSERT_EQ(graphicsDeviceInfo.AvailableMemory, resultDeviceInfo.AvailableMemory); 
+    ASSERT_EQ(resultDeviceInfo.DeviceId, graphicsDeviceInfo.DeviceId); 
+    ASSERT_STREQ(resultDeviceInfo.DeviceName, deviceName); 
+    ASSERT_EQ(resultDeviceInfo.GraphicsApi, graphicsDeviceInfo.GraphicsApi); 
+    ASSERT_EQ(resultDeviceInfo.AvailableMemory, graphicsDeviceInfo.AvailableMemory); 
     
     ElemFreeGraphicsDevice(graphicsDevice);
 }

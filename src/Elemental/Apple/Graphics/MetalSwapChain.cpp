@@ -83,6 +83,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     auto height = windowRenderSize.Height;
     auto format = MTL::PixelFormatBGRA8Unorm_sRGB; // TODO: Enumerate compatible formats first
     auto frameLatency = 1u;
+    void* updatePayload = nullptr;
  
     if (options)
     {
@@ -96,13 +97,18 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         {
             frameLatency = options->FrameLatency;
         }
+
+        if (options->UpdatePayload)
+        {
+            updatePayload = options->UpdatePayload;
+        }
     }
 
     // TODO: Remove new
 
     // BUG: On MacOS sometimes we have are capped at 60 fps only on builin display (after disable/enable pro motion, everything work)
     // BUG: Metal Dev Hub doesn't seem to work with the new MetalDisplayLink. see: https://forums.developer.apple.com/forums/thread/743684
-    auto metalDisplayLinkHandler = new MetalDisplayLinkHandler(commandQueueData->GraphicsDevice, updateHandler, options->UpdatePayload);
+    auto metalDisplayLinkHandler = new MetalDisplayLinkHandler(commandQueueData->GraphicsDevice, updateHandler, updatePayload);
 
     auto swiftResult = ElementalSwiftLib::createMetalView(frameLatency, window, (void*)TouchHandler); 
     auto metalViewResult = (Test*)&swiftResult; 

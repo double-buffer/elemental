@@ -14,11 +14,12 @@ UTEST(CommandList, GetCommandList)
 
     // Assert
     ElemCommitCommandList(commandList);
-    ElemFreeCommandQueue(commandQueue);
 
-    ASSERT_NE(ELEM_HANDLE_NULL, commandQueue);
-    ASSERT_NE(ELEM_HANDLE_NULL, commandList);
+    ASSERT_NE(commandQueue, ELEM_HANDLE_NULL);
+    ASSERT_NE(commandList, ELEM_HANDLE_NULL);
     ASSERT_FALSE(testHasLogErrors);
+
+    ElemFreeCommandQueue(commandQueue);
 }
 
 UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread) 
@@ -33,9 +34,8 @@ UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread)
     ElemGetCommandList(commandQueue, nullptr);
 
     // Assert
-    ElemFreeCommandQueue(commandQueue);
-
     ASSERT_TRUE(testHasLogErrors);
+    ElemFreeCommandQueue(commandQueue);
 }
 
 UTEST(CommandList, ExecuteCommandListWithoutCommit) 
@@ -50,12 +50,12 @@ UTEST(CommandList, ExecuteCommandListWithoutCommit)
     ElemExecuteCommandList(commandQueue, commandList, nullptr);
 
     // Assert
-    ElemFreeCommandQueue(commandQueue);
-
     ASSERT_TRUE(testHasLogErrors);
+    ASSERT_LOG("Commandlist needs to be committed before executing it.");
+    ElemFreeCommandQueue(commandQueue);
 }
 
-UTEST(CommandList, ExecuteCommandListWithoutInsertFence) 
+UTEST(CommandList, ExecuteCommandListFenceIsValid) 
 {
     // Arrange
     InitLog();
@@ -68,31 +68,11 @@ UTEST(CommandList, ExecuteCommandListWithoutInsertFence)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
 
     // Assert
-    ElemFreeCommandQueue(commandQueue);
-
     ASSERT_FALSE(testHasLogErrors);
-    ASSERT_EQ(ELEM_HANDLE_NULL, fence.CommandQueue);
-}
+    ASSERT_EQ(fence.CommandQueue, commandQueue);
+    ASSERT_GT(fence.FenceValue, 0u);
 
-UTEST(CommandList, ExecuteCommandListWithInsertFence) 
-{
-    // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
-    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
-    ElemCommitCommandList(commandList);
-
-    // Act
-    ElemExecuteCommandListOptions executeOptions = { .FenceAwaitableOnCpu = true }; 
-    auto fence = ElemExecuteCommandList(commandQueue, commandList, &executeOptions);
-    ElemWaitForFenceOnCpu(fence);
-
-    // Assert
     ElemFreeCommandQueue(commandQueue);
-
-    ASSERT_FALSE(testHasLogErrors);
-    ASSERT_NE(ELEM_HANDLE_NULL, fence.CommandQueue);
 }
 
 // TODO: Test Cannot wait fence on cpu if flag was not passed

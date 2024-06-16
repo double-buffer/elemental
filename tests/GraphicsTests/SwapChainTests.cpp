@@ -5,7 +5,6 @@
 UTEST(SwapChain, CreateSwapChain) 
 {
     // Arrange
-    InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto window = ElemCreateWindow(nullptr);
@@ -14,7 +13,7 @@ UTEST(SwapChain, CreateSwapChain)
     auto swapChain = ElemCreateSwapChain(commandQueue, window, nullptr, nullptr);
 
     // Assert
-    ASSERT_NE(ELEM_HANDLE_NULL, swapChain);
+    ASSERT_NE(swapChain, ELEM_HANDLE_NULL);
     ASSERT_FALSE(testHasLogErrors);
 
     ElemFreeSwapChain(swapChain);
