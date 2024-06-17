@@ -25,6 +25,8 @@ MetalShaderLibraryData* GetMetalShaderLibraryData(ElemShaderLibrary shaderLibrar
 MetalPipelineStateData* GetMetalPipelineStateData(ElemPipelineState pipelineState);
 MetalPipelineStateDataFull* GetMetalPipelineStateDataFull(ElemPipelineState pipelineState);
 
+bool CheckMetalCommandEncoderType(const MetalCommandListData* commandListData, MetalCommandEncoderType type);
+
 ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData);
 void MetalFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
 ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);

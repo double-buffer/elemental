@@ -16,7 +16,8 @@ struct MetalGraphicsHeapDataFull
 
 struct MetalResourceData
 {
-    NS::SharedPtr<MTL::Texture> DeviceObject;
+    NS::SharedPtr<MTL::Resource> DeviceObject;
+    ElemGraphicsResourceType Type;
     uint32_t Width;
     uint32_t Height;
     bool IsPresentTexture;
@@ -42,6 +43,7 @@ void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
 ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 void MetalFreeGraphicsResource(ElemGraphicsResource resource);
+ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
 
 ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
 void MetalUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
@@ -49,4 +51,4 @@ void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descript
 
 void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options);
 
-ElemGraphicsResource CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture);
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);

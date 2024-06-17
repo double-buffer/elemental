@@ -5,6 +5,11 @@
 // TODO: Rename to resource tests
 // TODO: Test barriers with compute/render encoders and different parameters
 
+// TODO: Test Buffer create with get resource info and compare
+// TODO: Test Reosurce UAV only if resource created with uav
+
+// TODO: Test GetDataSpan buffer only
+
 UTEST(Resource, CreateTexture2D) 
 {
     // Arrange

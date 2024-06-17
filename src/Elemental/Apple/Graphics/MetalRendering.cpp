@@ -26,7 +26,6 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
-        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
         auto descriptorData = MetalGetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget);
         auto textureData = GetMetalResourceData(descriptorData->Resource); 
@@ -69,7 +68,7 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
             return;
         }
 
-        renderTargetDescriptor->setTexture(textureData->DeviceObject.get());
+        renderTargetDescriptor->setTexture((MTL::Texture*)textureData->DeviceObject.get());
         renderTargetDescriptor->setLoadAction(loadAction);
         renderTargetDescriptor->setStoreAction(storeAction); 
 
@@ -100,7 +99,6 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     else if (parameters->RenderTargets.Length > 0)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[0];
-        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
         auto descriptorData = MetalGetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget);
         auto textureData = GetMetalResourceData(descriptorData->Resource); 

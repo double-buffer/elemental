@@ -5,6 +5,7 @@
 UTEST(SwapChain, CreateSwapChain) 
 {
     // Arrange
+    InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto window = ElemCreateWindow(nullptr);

@@ -57,6 +57,7 @@ typedef struct ElementalFunctions
     void (*ElemFreeGraphicsHeap)(ElemGraphicsHeap);
     ElemGraphicsResource (*ElemCreateGraphicsResource)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *);
     void (*ElemFreeGraphicsResource)(ElemGraphicsResource);
+    ElemDataSpan (*ElemGetGraphicsResourceDataSpan)(ElemGraphicsResource);
     ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptorInfo const *);
     void (*ElemUpdateGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemGraphicsResourceDescriptorInfo const *);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor);
@@ -162,6 +163,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemFreeGraphicsHeap = (void (*)(ElemGraphicsHeap))GetElementalFunctionPointer("ElemFreeGraphicsHeap");
     listElementalFunctions.ElemCreateGraphicsResource = (ElemGraphicsResource (*)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResource");
     listElementalFunctions.ElemFreeGraphicsResource = (void (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemFreeGraphicsResource");
+    listElementalFunctions.ElemGetGraphicsResourceDataSpan = (ElemDataSpan (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceDataSpan");
     listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResourceDescriptorInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemUpdateGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemGraphicsResourceDescriptorInfo const *))GetElementalFunctionPointer("ElemUpdateGraphicsResourceDescriptor");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
@@ -1074,6 +1076,37 @@ static inline void ElemFreeGraphicsResource(ElemGraphicsResource resource)
     }
 
     listElementalFunctions.ElemFreeGraphicsResource(resource);
+}
+
+static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemDataSpan result = {};
+        #else
+        ElemDataSpan result = (ElemDataSpan){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetGraphicsResourceDataSpan) 
+    {
+        assert(listElementalFunctions.ElemGetGraphicsResourceDataSpan);
+
+        #ifdef __cplusplus
+        ElemDataSpan result = {};
+        #else
+        ElemDataSpan result = (ElemDataSpan){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetGraphicsResourceDataSpan(resource);
 }
 
 static inline ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptorInfo const * descriptorInfo)

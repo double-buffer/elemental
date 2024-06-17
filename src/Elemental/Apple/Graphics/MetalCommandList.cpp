@@ -10,12 +10,18 @@
 SystemDataPool<MetalCommandQueueData, MetalCommandQueueDataFull> metalCommandQueuePool;
 SystemDataPool<MetalCommandListData, MetalCommandListDataFull> metalCommandListPool;
 
+MTL::SharedEventListener* globalSharedEventListener;
+
+thread_local bool metalThreadCommandBufferCommitted = true;
+
 void InitMetalCommandListMemory()
 {
     if (!metalCommandQueuePool.Storage)
     {
         metalCommandQueuePool = SystemCreateDataPool<MetalCommandQueueData, MetalCommandQueueDataFull>(MetalGraphicsMemoryArena, METAL_MAX_COMMANDQUEUES);
         metalCommandListPool = SystemCreateDataPool<MetalCommandListData, MetalCommandListDataFull>(MetalGraphicsMemoryArena, METAL_MAX_COMMANDLISTS);
+
+        globalSharedEventListener = MTL::SharedEventListener::alloc()->init();
     }
 }
 
@@ -136,7 +142,9 @@ void MetalFreeCommandQueue(ElemCommandQueue commandQueue)
 
     // TODO: Wait for command queue fence?
 
-    commandQueueData->QueueEvent.reset();
+    metalThreadCommandBufferCommitted = true;
+
+    //commandQueueData->QueueEvent.reset();
     commandQueueData->DeviceObject.reset();
 }
 
@@ -146,6 +154,12 @@ void MetalResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
 
 ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
+    if (!metalThreadCommandBufferCommitted)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot get a command list if commit was not called on the same thread.");
+        return ELEM_HANDLE_NULL;
+    }
+
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueData = GetMetalCommandQueueData(commandQueue);
@@ -173,6 +187,8 @@ ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCom
     SystemAddDataPoolItemFull(metalCommandListPool, handle, {
     });
 
+    metalThreadCommandBufferCommitted = false;
+
     return handle;
 }
 
@@ -183,6 +199,7 @@ void MetalCommitCommandList(ElemCommandList commandList)
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
     commandListData->IsCommitted = true;
+    metalThreadCommandBufferCommitted = true;
 }
 
 ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
@@ -222,5 +239,32 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
 
 void MetalWaitForFenceOnCpu(ElemFence fence)
 {
-    // TODO: Implement this
+    SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
+
+    auto commandQueueToWaitData = GetMetalCommandQueueData(fence.CommandQueue);
+    SystemAssert(commandQueueToWaitData);
+
+    auto commandQueueToWaitDataFull = GetMetalCommandQueueDataFull(fence.CommandQueue);
+    SystemAssert(commandQueueToWaitDataFull);
+
+    if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue) 
+    {
+        commandQueueToWaitDataFull->LastCompletedFenceValue = SystemMax(commandQueueToWaitDataFull->LastCompletedFenceValue, commandQueueToWaitData->QueueEvent->signaledValue());
+    }
+
+    if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
+    
+        auto dispatchGroup = dispatch_group_create();
+        dispatch_group_enter(dispatchGroup);
+
+        commandQueueToWaitData->QueueEvent->notifyListener(globalSharedEventListener, fence.FenceValue, ^(MTL::SharedEvent* event, uint64_t value)
+        {
+            dispatch_group_leave(dispatchGroup);
+        });
+
+        // TODO: It is a little bit extreme to block at infinity. We should set a timeout and break the program.
+        dispatch_group_wait(dispatchGroup, DISPATCH_TIME_FOREVER);
+    }
 }

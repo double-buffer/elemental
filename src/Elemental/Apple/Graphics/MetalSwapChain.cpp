@@ -281,7 +281,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         }
 
         // TODO: Can we do something better than juste creating/destroying each time? 
-        auto backBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
+        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
         ElemGraphicsResourceDescriptorInfo resourceDescriptorInfo =
         {

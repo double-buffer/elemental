@@ -30,7 +30,7 @@ struct MetalCommandQueueData
 
 struct MetalCommandQueueDataFull
 {
-    uint32_t reserved;
+    uint64_t LastCompletedFenceValue;
 };
 
 struct MetalCommandListData

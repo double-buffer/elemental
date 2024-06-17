@@ -35,6 +35,7 @@ UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread)
 
     // Assert
     ASSERT_TRUE(testHasLogErrors);
+    ASSERT_LOG("Cannot get a command list if commit was not called on the same thread.");
     ElemFreeCommandQueue(commandQueue);
 }
 
@@ -52,6 +53,7 @@ UTEST(CommandList, ExecuteCommandListWithoutCommit)
     // Assert
     ASSERT_TRUE(testHasLogErrors);
     ASSERT_LOG("Commandlist needs to be committed before executing it.");
+
     ElemFreeCommandQueue(commandQueue);
 }
 
@@ -72,6 +74,7 @@ UTEST(CommandList, ExecuteCommandListFenceIsValid)
     ASSERT_EQ(fence.CommandQueue, commandQueue);
     ASSERT_GT(fence.FenceValue, 0u);
 
+    ElemWaitForFenceOnCpu(fence);
     ElemFreeCommandQueue(commandQueue);
 }
 

@@ -21,6 +21,11 @@ ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource)
     DispatchGraphicsFunction(FreeGraphicsResource, resource);
 }
 
+ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+{
+    DispatchReturnGraphicsFunction(GetGraphicsResourceDataSpan, resource);
+}
+
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
 {
     DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, descriptorInfo);

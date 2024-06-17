@@ -50,6 +50,25 @@ bool CheckMetalShaderDataHeader(ElemDataSpan data, const char* headerValue)
     return true;
 }
 
+bool CheckMetalCommandEncoderType(const MetalCommandListData* commandListData, MetalCommandEncoderType type)
+{
+    if (commandListData->CommandEncoderType != type)
+    {
+        if (type == MetalCommandEncoderType_Compute)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "A compute pipelinestate must be bound to the commandlist before calling a compute command.");
+        }
+        else
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "A graphics pipelinestate must be bound to the commandlist before calling a rendering command.");
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
 ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitMetalShaderLibraryMemory();
@@ -314,6 +333,7 @@ ElemPipelineState MetalCompileComputePipelineState(ElemGraphicsDevice graphicsDe
         else
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find compute shader function '%s'", parameters->ComputeShaderFunction);
+            return ELEM_HANDLE_NULL;
         }
     }
 
@@ -429,7 +449,11 @@ void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCount
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
 
-    SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Compute);
+    if (!CheckMetalCommandEncoderType(commandListData, MetalCommandEncoderType_Compute))
+    {
+        return;
+    }
+
     SystemAssert(commandListData->CommandEncoder);
 
     auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();

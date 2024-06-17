@@ -1,15 +1,19 @@
 #include "GraphicsDeviceTests.cpp"
 #include "CommandListTests.cpp"
+#include "ShaderTests.cpp"
 #include "SwapChainTests.cpp"
 #include "ResourceTests.cpp"
 #include "RenderingTests.cpp"
 #include "utest.h"
 
+bool testPrintLogs = true;
 bool testForceVulkanApi = false;
 bool testHasLogErrors = false;
 char testLogs[2048];
 uint32_t currentTestLogsIndex = 0u;
 ElemGraphicsDevice sharedGraphicsDevice = ELEM_HANDLE_NULL;
+ElemSystemInfo sharedSystemInfo;
+ElemGraphicsDeviceInfo sharedGraphicsDeviceInfo;
 
 struct ApplicationTestPayload
 {
@@ -28,15 +32,13 @@ void ApplicationTestInitFunction(void* payload)
         options.PreferVulkan = true;
     }
 
-    #ifdef _DEBUG
-    ElemConfigureLogHandler(TestLogHandler);
     options.EnableDebugLayer = true;
-    #else
-    ElemConfigureLogHandler(ElemConsoleErrorLogHandler);
-    #endif
 
+    ElemConfigureLogHandler(TestLogHandler);
     ElemSetGraphicsOptions(&options);
     sharedGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    sharedSystemInfo = ElemGetSystemInfo();
+    sharedGraphicsDeviceInfo = ElemGetGraphicsDeviceInfo(sharedGraphicsDevice);
 
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
 
@@ -48,10 +50,6 @@ UTEST_STATE();
 
 int main(int argc, const char* argv[]) 
 {
-    #ifdef _DEBUG
-    ElemConfigureLogHandler(ElemConsoleLogHandler);
-    #endif
-
     ApplicationTestPayload payload =
     {
         .argc = argc,

@@ -123,7 +123,7 @@ void FreeMetalArgumentBuffer(MetalArgumentBuffer descriptorHeap)
 
 // TODO: We need to extract the code get or update handles (index) to a common place because 
 // we need to be able to manage double buffering if needed for updates
-uint32_t CreateMetalArgumentBufferTextureHandle(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture)
+uint32_t CreateMetalArgumentBufferHandleForTexture(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture)
 {            
     SystemAssert(argumentBuffer.Storage);
 
@@ -148,6 +148,46 @@ uint32_t CreateMetalArgumentBufferTextureHandle(MetalArgumentBuffer argumentBuff
 
     auto argumentBufferData = (MetalArgumentBufferDescriptor*)storage->ArgumentBuffer->contents();
     argumentBufferData[argumentIndex].TextureResourceId = (uint64_t)texture->gpuResourceID()._impl;
+
+    return argumentIndex;
+}
+
+const uint64_t kIRBufSizeOffset     = 0;
+const uint64_t kIRBufSizeMask       = 0xffffffff;
+const uint64_t kIRTypedBufferOffset = 63;
+
+uint32_t CreateMetalArgumentBufferHandleForBuffer(MetalArgumentBuffer argumentBuffer, MTL::Buffer* buffer, uint32_t length)
+{            
+    SystemAssert(argumentBuffer.Storage);
+
+    auto storage = argumentBuffer.Storage;
+    auto argumentIndex = UINT32_MAX;
+
+    do
+    {
+        if (storage->FreeListIndex == UINT32_MAX)
+        {
+            argumentIndex = UINT32_MAX;
+            break;
+        }
+        
+        argumentIndex = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, argumentIndex, storage->Items[storage->FreeListIndex].Next));
+
+    if (argumentIndex == UINT32_MAX)
+    {
+        argumentIndex = SystemAtomicAdd(storage->CurrentIndex, 1);
+    }
+
+    auto argumentBufferData = (MetalArgumentBufferDescriptor*)storage->ArgumentBuffer->contents();
+    argumentBufferData[argumentIndex].BufferAddress = (uint64_t)buffer->gpuAddress();
+
+    uint32_t typedBuffer = 1;
+    uint64_t md = (length & kIRBufSizeMask) << kIRBufSizeOffset;
+    //md |= ((uint64_t)view->textureViewOffsetInElements & kIRTexViewMask) << kIRTexViewOffset;
+    md |= (uint64_t)typedBuffer << kIRTypedBufferOffset; 
+    
+    argumentBufferData[argumentIndex].Metadata = md;
 
     return argumentIndex;
 }

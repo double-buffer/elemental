@@ -3,7 +3,8 @@
 #include "Elemental.h"
 #include "SystemMemory.h"
 
-#define METAL_MAX_RESOURCES 1000000
+// TODO: Increase to 1.000.000?
+#define METAL_MAX_RESOURCES 500000
 
 struct MetalArgumentBufferStorage;
 
@@ -29,7 +30,8 @@ extern bool MetalDebugLayerEnabled;
 MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
-uint32_t CreateMetalArgumentBufferTextureHandle(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture);
+uint32_t CreateMetalArgumentBufferHandleForTexture(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture);
+uint32_t CreateMetalArgumentBufferHandleForBuffer(MetalArgumentBuffer argumentBuffer, MTL::Buffer* buffer, uint32_t length);
 void FreeMetalArgumentBufferHandle(MetalArgumentBuffer argumentBuffer, uint64_t handle);
 
 void MetalEnableGraphicsDebugLayer();

@@ -363,7 +363,8 @@ typedef enum
 
 typedef enum
 {
-    ElemGraphicsHeapType_Gpu = 0
+    ElemGraphicsHeapType_Gpu = 0,
+    ElemGraphicsHeapType_ReadBack = 1
 } ElemGraphicsHeapType;
 
 /**
@@ -869,6 +870,7 @@ ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource);
+ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
 
 // TODO: Descriptor factory functions
 

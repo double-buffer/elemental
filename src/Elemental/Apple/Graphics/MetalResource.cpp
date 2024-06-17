@@ -47,14 +47,30 @@ ElemGraphicsResourceDescriptorInfo* MetalGetGraphicsResourceDescriptorInfo(ElemG
     return &metalResourceDescriptorInfos[descriptor];
 }
 
-ElemGraphicsResource CreateMetalTextureFromResource(ElemGraphicsDevice graphicsDevice, NS::SharedPtr<MTL::Texture> resource, bool isPresentTexture)
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
 {
     InitMetalResourceMemory();
 
+    auto width = 0u;
+    auto height = 0u;
+
+    if (type == ElemGraphicsResourceType_Texture2D)
+    {
+        auto texture = (MTL::Texture*)resource.get();
+        width = texture->width();
+        height = texture->height();
+    }
+    else
+    {
+        auto buffer = (MTL::Buffer*)resource.get();
+        width = buffer->length();
+    }
+
     auto handle = SystemAddDataPoolItem(metalResourcePool, {
         .DeviceObject = resource,
-        .Width = (uint32_t)resource->width(),
-        .Height = (uint32_t)resource->height(),
+        .Type = type,
+        .Width = width,
+        .Height = height,
         .IsPresentTexture = isPresentTexture,
     }); 
 
@@ -80,6 +96,9 @@ MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
 
         case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return MTL::PixelFormatRGBA32Float;
+
+        default:
+            return MTL::PixelFormatR8Unorm;
     }
 }
 
@@ -98,7 +117,7 @@ MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
     }
 }
 
-NS::SharedPtr<MTL::TextureDescriptor> CreateMetalResourceDescriptor(const ElemGraphicsResourceInfo* resourceInfo)
+NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGraphicsResourceInfo* resourceInfo)
 {
     // TODO: Other resourceInfo
 
@@ -112,7 +131,7 @@ NS::SharedPtr<MTL::TextureDescriptor> CreateMetalResourceDescriptor(const ElemGr
     textureDescriptor->setMipmapLevelCount(1);
     textureDescriptor->setPixelFormat(ConvertToMetalResourceFormat(resourceInfo->Format));
     textureDescriptor->setSampleCount(1);
-    textureDescriptor->setStorageMode(MTL::StorageModePrivate);
+    textureDescriptor->setStorageMode(MTL::StorageModeShared);
     textureDescriptor->setHazardTrackingMode(MTL::HazardTrackingModeUntracked);
     textureDescriptor->setUsage(ConvertToMetalResourceUsage(resourceInfo->Usage));
 
@@ -131,10 +150,8 @@ ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint
     auto graphicsDeviceDataFull = GetMetalGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
-    // TODO: Create other heap types
-
     auto heapDescriptor = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
-    heapDescriptor->setStorageMode(MTL::StorageModePrivate);
+    heapDescriptor->setStorageMode(MTL::StorageModeShared);
     heapDescriptor->setType(MTL::HeapTypePlacement);
     heapDescriptor->setSize(sizeInBytes);
     heapDescriptor->setHazardTrackingMode(MTL::HazardTrackingModeUntracked);
@@ -191,45 +208,82 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsHeapData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    auto textureDescriptor = CreateMetalResourceDescriptor(resourceInfo);
+    NS::SharedPtr<MTL::Resource> resource;
 
-    auto texture = NS::TransferPtr(graphicsHeapData->DeviceObject->newTexture(textureDescriptor.get(), graphicsHeapOffset));
-    SystemAssertReturnNullHandle(texture);
+    if (resourceInfo->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        auto textureDescriptor = CreateMetalTextureDescriptor(resourceInfo);
+        resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newTexture(textureDescriptor.get(), graphicsHeapOffset));
+    }
+    else
+    {
+        resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newBuffer(resourceInfo->Width, MTL::ResourceHazardTrackingModeUntracked, graphicsHeapOffset));
+    }
+        
+    SystemAssertReturnNullHandle(resource);
 
     if (MetalDebugLayerEnabled && resourceInfo->DebugName)
     {
-        texture->setLabel(NS::String::string(resourceInfo->DebugName, NS::UTF8StringEncoding));
+        resource->setLabel(NS::String::string(resourceInfo->DebugName, NS::UTF8StringEncoding));
     }
 
-    return CreateMetalTextureFromResource(graphicsHeapData->GraphicsDevice, texture, false);
+    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, resource, false);
 }
 
 void MetalFreeGraphicsResource(ElemGraphicsResource resource)
 {
     // TODO: Defer the real texture delete with a fence!
+    SystemAssert(resource != ELEM_HANDLE_NULL);
 
-    auto textureData = GetMetalResourceData(resource);
-    SystemAssert(textureData);
+    auto resourceData = GetMetalResourceData(resource);
+    SystemAssert(resourceData);
 
     SystemRemoveDataPoolItem(metalResourcePool, resource);
+}
+
+ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+{
+    // TODO: Check if buffer only
+
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto resourceData = GetMetalResourceData(resource);
+    SystemAssert(resourceData);
+
+    auto dataPointer = ((MTL::Buffer*)resourceData->DeviceObject.get())->contents();
+
+    return
+    {
+        .Items = (uint8_t*)dataPointer,
+        .Length = resourceData->Width
+    }; 
 }
 
 ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
 {
     SystemAssert(descriptorInfo->Resource != ELEM_HANDLE_NULL);
 
-    auto textureData = GetMetalResourceData(descriptorInfo->Resource);
-    SystemAssert(textureData);
+    auto resourceData = GetMetalResourceData(descriptorInfo->Resource);
+    SystemAssert(resourceData);
 
-    auto textureDataFull = GetMetalResourceDataFull(descriptorInfo->Resource);
-    SystemAssert(textureDataFull);
+    auto resourceDataFull = GetMetalResourceDataFull(descriptorInfo->Resource);
+    SystemAssert(resourceDataFull);
 
-    auto graphicsDeviceData = GetMetalGraphicsDeviceData(textureDataFull->GraphicsDevice);
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(resourceDataFull->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
     // TODO: We need to use newTextureView if we want to create another view to a specific slice of mip for example
+    auto handle = -1;
 
-    auto handle = CreateMetalArgumentBufferTextureHandle(graphicsDeviceData->ResourceArgumentBuffer, textureData->DeviceObject.get());
+    if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        handle = CreateMetalArgumentBufferHandleForTexture(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Texture*)resourceData->DeviceObject.get());
+    }
+    else
+    {
+        handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
+    }
+
     metalResourceDescriptorInfos[handle] = *descriptorInfo;
     return handle;
 }
