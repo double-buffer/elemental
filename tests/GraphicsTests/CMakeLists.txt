@@ -1,6 +1,6 @@
-add_executable(GraphicsTests UnityBuild.cpp)
+add_executable(GraphicsTests UnityBuild.cpp Shaders)
 target_link_libraries(GraphicsTests PRIVATE utest)
 target_link_libraries(GraphicsTests PRIVATE ElementalInterface)
-target_link_libraries(GraphicsTests PRIVATE ElementalToolsInterface)
 
-configure_project_package(GraphicsTests "tests" DEPENDENCIES Elemental ElementalTools)
+configure_resource_compilation(GraphicsTests resource_list)
+configure_project_package(GraphicsTests "tests" DEPENDENCIES Elemental RESOURCES ${resource_list})

@@ -31,6 +31,33 @@ SystemDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull> metalGraphi
 
 bool MetalDebugLayerEnabled = false;
 
+void* MetalDebugReportCallback(void* arg) 
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    int fd = *((int*)arg);
+    char buffer[256];
+    ssize_t bytesRead;
+
+    while ((bytesRead = read(fd, buffer, sizeof(buffer))) > 0) 
+    {
+        buffer[bytesRead - 1] = '\0';
+
+        auto splittedStrings = SystemSplitString(stackMemoryArena, ReadOnlySpan<char>(buffer), ']');
+        if (splittedStrings.Length == 2)
+        {
+            auto message = ((ReadOnlySpan<char>)splittedStrings[1]).Slice(1);
+
+            if (SystemFindSubString(message, "Metal API Validation Enabled") == -1)
+            {
+                SystemLogErrorMessage(ElemLogMessageCategory_Graphics, message);
+            }
+        }
+    }
+
+    return nullptr;
+}
+
 void InitMetal()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -39,11 +66,31 @@ void InitMetal()
 
     if (MetalDebugLayerEnabled)
     {
-        auto sdkLayerExists = false;
+        setenv("MTL_DEBUG_LAYER", "1", 1); 
+        setenv("MTL_DEBUG_LAYER_ERROR_MODE", "nslog", 1); 
+        setenv("MTL_DEBUG_LAYER_WARNING_MODE", "nslog", 1); 
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init Metal Debug Mode");
 
-        if (sdkLayerExists)
-        {
-            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init Metal Debug Mode");
+        int pipefd[2];
+        if (pipe(pipefd) == -1) {
+            perror("pipe");
+            return;
+        }
+
+        // Redirect stderr to the write end of the pipe
+        if (dup2(pipefd[1], fileno(stderr)) == -1) {
+            perror("dup2");
+            return;
+        }
+
+        // Close the write end of the pipe in the parent process
+        close(pipefd[1]);
+
+        // Create a thread to read from the pipe
+        pthread_t thread;
+        if (pthread_create(&thread, nullptr, MetalDebugReportCallback, &pipefd[0]) != 0) {
+            perror("pthread_create");
+            return;
         }
     }
     else

@@ -6,11 +6,13 @@
 #include "RenderingTests.cpp"
 #include "utest.h"
 
-bool testPrintLogs = true;
+bool testPrintLogs = false;
 bool testForceVulkanApi = false;
 bool testHasLogErrors = false;
 char testLogs[2048];
 uint32_t currentTestLogsIndex = 0u;
+char testErrorLogs[2048];
+uint32_t currentTestErrorLogsIndex;
 ElemGraphicsDevice sharedGraphicsDevice = ELEM_HANDLE_NULL;
 ElemSystemInfo sharedSystemInfo;
 ElemGraphicsDeviceInfo sharedGraphicsDeviceInfo;

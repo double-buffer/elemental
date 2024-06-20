@@ -255,6 +255,16 @@ template<typename T>
 Span<T> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<T> source);
 
 /**
+ * Dupliquate elements from a source buffer to a destination buffer.
+ * @tparam T The type of elements in the buffers.
+ * @param memoryArena A pointer to the MemoryArena.
+ * @param source A ReadOnlySpan<T> representing the source buffer.
+ * @return A pointer to the newly allocated structure that contains a copy of source.
+ */
+template<>
+Span<char> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<char> source);
+
+/**
  * Concatenates two buffers into a new buffer allocated in the specified memory arena.
  * @tparam T The type of elements in the buffers.
  * @param memoryArena The memory arena to allocate space for the concatenated buffer.

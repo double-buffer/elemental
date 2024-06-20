@@ -75,6 +75,9 @@ ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind)
         case DxilShaderKind::Compute:
             return "cs_6_8";
 
+        case DxilShaderKind::Amplification:
+            return "as_6_8";
+
         case DxilShaderKind::Mesh:
             return "ms_6_8";
 
@@ -83,6 +86,27 @@ ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind)
 
         default:
             return "";
+    }
+}
+
+ShaderType GetShaderTypeEnum(DxilShaderKind shaderKind) 
+{
+    switch (shaderKind)
+    {
+        case DxilShaderKind::Compute:
+            return ShaderType_Compute;
+
+        case DxilShaderKind::Amplification:
+            return ShaderType_Amplification;
+
+        case DxilShaderKind::Mesh:
+            return ShaderType_Mesh;
+
+        case DxilShaderKind::Pixel:
+            return ShaderType_Pixel;
+
+        default:
+            return ShaderType_Unknown;
     }
 }
 
@@ -137,6 +161,26 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
     return dxilCompileResult;
 }
 
+ComPtr<ID3D12ShaderReflection> GetDirectXShaderReflection(ComPtr<IDxcUtils> dxcUtils, ReadOnlySpan<uint8_t> shaderCode, ReadOnlySpan<char> target, ReadOnlySpan<char> entryPoint, const ElemCompileShaderOptions* options)
+{
+    ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, target, ElemToolsGraphicsApi_DirectX12, entryPoint, options);
+
+    ComPtr<IDxcBlob> shaderReflectionBlob;
+    AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&shaderReflectionBlob), nullptr));
+
+    DxcBuffer reflectionBuffer =
+    {
+        .Ptr = shaderReflectionBlob->GetBufferPointer(),
+        .Size = shaderReflectionBlob->GetBufferSize(),
+        .Encoding = 0
+    };
+
+    ComPtr<ID3D12ShaderReflection> shaderReflection;
+    AssertIfFailed(dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection)));
+
+    return shaderReflection;
+}
+
 bool DirectXShaderCompilerIsInstalled()
 {
     InitDirectXShaderCompiler();
@@ -154,7 +198,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
     auto compilationMessages = SystemPushArray<ElemToolsMessage>(memoryArena, 1024);
     auto compilationMessageIndex = 0u;
 
-    ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_8", ElemToolsGraphicsApi_DirectX12, "", options);
+    auto dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_8", ElemToolsGraphicsApi_DirectX12, "", options);
     auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
 
     auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, 64);
@@ -166,11 +210,6 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
         AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
 
         auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
-        outputShaderDataList[outputShaderDataListIndex++] = 
-        {
-            .ShaderType = ShaderType_Library, 
-            .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode)
-        };
 
         ComPtr<IDxcUtils> dxcUtils;
         AssertIfFailed(directXShaderCompilerCreateInstanceFunction(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
@@ -196,21 +235,33 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
             D3D12_FUNCTION_DESC functionDescription;
             functionReflection->GetDesc(&functionDescription);
 
-            auto shaderType = GetVersionShaderType(functionDescription.Version);
+            auto dxilShaderType = GetVersionShaderType(functionDescription.Version);
+            auto shaderType = GetShaderTypeEnum(dxilShaderType);
 
-            if (shaderType == DxilShaderKind::Mesh || shaderType == DxilShaderKind::Pixel || shaderType == DxilShaderKind::Compute)
+            if (shaderType != ShaderType_Unknown)
             {
-                ComPtr<IDxcResult> dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(shaderType), targetGraphicsApi, functionDescription.Name, options);
-                hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
-
+                auto dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(dxilShaderType), targetGraphicsApi, functionDescription.Name, options);
+   
                 ComPtr<IDxcBlob> shaderByteCodeComPtr;
                 AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
+
+                auto shaderReflection = GetDirectXShaderReflection(dxcUtils, shaderCode, GetShaderTypeTarget(dxilShaderType), functionDescription.Name, options);
+
+                uint32_t threadCountX, threadCountY, threadCountZ;
+                shaderReflection->GetThreadGroupSize(&threadCountX, &threadCountY, &threadCountZ);
+
+                auto metadata = SystemPushArray<ShaderMetadata>(stackMemoryArena, 1);
+                auto currentMetadataIndex = 0u;
+
+                metadata[currentMetadataIndex++] = { .Type = ShaderMetadataType_ThreadGroupSize, .Value = { threadCountX, threadCountY, threadCountZ } };
 
                 auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
 
                 outputShaderDataList[outputShaderDataListIndex++] = 
                 {
-                    .ShaderType = shaderType == DxilShaderKind::Mesh ? ShaderType_Mesh : ShaderType_Pixel, 
+                    .ShaderType = shaderType,
+                    .Name = SystemDuplicateBuffer(stackMemoryArena, ReadOnlySpan<char>(functionDescription.Name)),
+                    .Metadata = metadata,
                     .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode),
                 };
             }

@@ -1,54 +1,14 @@
 #include "Elemental.h"
-#include "ElementalTools.h"
 #include "GraphicsTests.h"
 #include "utest.h"
 
-// TODO: For the moment graphics tests will not run on mobile platform because we need in that case to compile test shaders separately
-
-// TODO: For now we use 16x16 to make it pass on metal but it should be 16x1
-auto testComputeShader = R"(
-    [[vk::push_constant]]
-    uint testBufferIndex : register(b0);
-
-    [shader("compute")]
-    [numthreads(16, 16, 1)]
-    void TestCompute(uint threadId: SV_DispatchThreadID)
-    {
-        RWStructuredBuffer<float> testBuffer = ResourceDescriptorHeap[testBufferIndex];
-        testBuffer[threadId] = threadId;
-    }
-)";
-
-ElemShaderLibrary TestCompileShader(const char* shaderSource)
+ElemShaderLibrary OpenShader(const char* shader)
 {
     auto graphicsDevice = GetSharedGraphicsDevice();
-    auto systemInfo = GetSharedSystemInfo();
-    auto graphicsDeviceInfo = GetSharedGraphicsDeviceInfo();
 
-    ElemShaderSourceData sourceData = 
-    { 
-        .ShaderLanguage = ElemShaderLanguage_Hlsl,
-        .Data = 
-        { 
-            .Items = (uint8_t*)shaderSource, 
-            .Length = (uint32_t)strlen(shaderSource) 
-        } 
-    };
-
-    auto compiledShader = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, (ElemToolsPlatform)systemInfo.Platform, &sourceData, nullptr);
-
-    for (uint32_t i = 0; i < compiledShader.Messages.Length; i++)
-    {
-        printf("Compil msg (%d): %s\n", compiledShader.Messages.Items[i].Type, compiledShader.Messages.Items[i].Message);
-    }
-
-    if (compiledShader.HasErrors)
-    {
-        printf("Error while compiling shader!\n");
-        return ELEM_HANDLE_NULL;
-    }
-
-    auto shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, { .Items = compiledShader.Data.Items, .Length = compiledShader.Data.Length });
+    // TODO: Vulkan shaders on windows
+    auto shaderData = ReadFile(shader);
+    auto shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, shaderData);
     return shaderLibrary;
 }
 
@@ -57,8 +17,8 @@ UTEST(Shader, CreateComputePipelineState)
     // Arrange
     InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
-    auto shaderLibrary = TestCompileShader(testComputeShader);
-    ASSERT_NE(shaderLibrary, ELEM_HANDLE_NULL);
+    auto shaderLibrary = OpenShader("ShaderTests.shader");
+    ASSERT_NE(ELEM_HANDLE_NULL, shaderLibrary);
 
     // Act
     ElemComputePipelineStateParameters parameters =
@@ -70,8 +30,8 @@ UTEST(Shader, CreateComputePipelineState)
     auto pipelineState = ElemCompileComputePipelineState(graphicsDevice, &parameters); 
 
     // Assert
-    ASSERT_NE(pipelineState, ELEM_HANDLE_NULL);
-    ASSERT_FALSE(testHasLogErrors);
+    ASSERT_NE(ELEM_HANDLE_NULL, pipelineState);
+    ASSERT_FALSE_MSG(testHasLogErrors, testErrorLogs);
 
     ElemFreePipelineState(pipelineState);
 }
@@ -81,7 +41,7 @@ UTEST(Shader, CreateComputePipelineStateFunctionNotExist)
     // Arrange
     InitLog();
     auto graphicsDevice = GetSharedGraphicsDevice();
-    auto shaderLibrary = TestCompileShader(testComputeShader);
+    auto shaderLibrary = OpenShader("ShaderTests.shader");
     ASSERT_NE(shaderLibrary, ELEM_HANDLE_NULL);
 
     // Act
@@ -94,8 +54,8 @@ UTEST(Shader, CreateComputePipelineStateFunctionNotExist)
     auto pipelineState = ElemCompileComputePipelineState(graphicsDevice, &parameters); 
 
     // Assert
-    ASSERT_EQ(pipelineState, ELEM_HANDLE_NULL);
-    ASSERT_TRUE(testHasLogErrors);
+    ASSERT_EQ(ELEM_HANDLE_NULL, pipelineState);
+    ASSERT_TRUE_MSG(testHasLogErrors, "Validation logs should have errors.");
     ASSERT_LOG("Cannot find compute shader function");
 }
 
@@ -111,7 +71,7 @@ UTEST(Shader, DispatchComputeWithoutBindPipelineState)
     ElemDispatchCompute(commandList, 1, 0, 0);
 
     // Assert
-    ASSERT_TRUE(testHasLogErrors);
+    ASSERT_TRUE_MSG(testHasLogErrors, "Validation logs should have errors.");
     ASSERT_LOG("A compute pipelinestate must be bound to the commandlist before calling a compute command.");
 
     ElemFreeCommandQueue(commandQueue);
@@ -134,7 +94,7 @@ UTEST(Shader, DispatchCompute)
     ElemGraphicsResourceInfo bufferInfo =  
     {
         .Type = ElemGraphicsResourceType_Buffer,
-        .Width = 64,
+        .Width = 64 * sizeof(uint32_t),
         .Usage = ElemGraphicsResourceUsage_Uav
     };
 
@@ -148,7 +108,7 @@ UTEST(Shader, DispatchCompute)
 
     auto bufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(&descriptorInfo);
 
-    auto shaderLibrary = TestCompileShader(testComputeShader);
+    auto shaderLibrary = OpenShader("ShaderTests.shader");
     ASSERT_NE(shaderLibrary, ELEM_HANDLE_NULL);
 
     ElemComputePipelineStateParameters parameters =
@@ -170,15 +130,16 @@ UTEST(Shader, DispatchCompute)
     ElemCommitCommandList(commandList);
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
+    
+    ASSERT_FALSE_MSG(testHasLogErrors, testErrorLogs);
 
     auto bufferData = ElemGetGraphicsResourceDataSpan(buffer);
+    auto uintData = (uint32_t*)bufferData.Items;
 
-    for (uint32_t i = 0; i < bufferData.Length; i++)
+    for (uint32_t i = 0; i < bufferData.Length / 4; i++)
     {
         printf("Test: %d\n", bufferData.Items[i]);
     }
-
-    ASSERT_FALSE(testHasLogErrors);
 
     ElemFreeGraphicsResourceDescriptor(bufferWriteDescriptor);
     ElemFreeGraphicsResource(buffer);

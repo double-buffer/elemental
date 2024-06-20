@@ -1,7 +1,7 @@
 target_include_directories(ElementalTools PRIVATE ../../Elemental/Apple/)
 target_include_directories(ElementalTools PRIVATE ./Interop/)
 target_compile_options(ElementalTools PRIVATE -fms-extensions -fno-objc-arc -Wno-language-extension-token)
-target_link_options(ElementalTools PRIVATE "SHELL:-framework Foundation")
+target_link_options(ElementalTools PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation")
 
 set(ELEMENTALTOOLS_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ElementalTools.framework" PARENT_SCOPE)
 
