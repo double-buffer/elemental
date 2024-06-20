@@ -40,6 +40,7 @@ struct MetalCommandListData
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
     MetalCommandEncoderType CommandEncoderType;
+    ElemPipelineState PipelineState;
     bool IsCommitted;
 };
 

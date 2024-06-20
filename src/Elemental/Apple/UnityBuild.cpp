@@ -17,6 +17,7 @@
 #include "Graphics/MetalRendering.cpp"
 #include "Graphics/MetalResource.cpp"
 
+#include "Graphics/ShaderReader.cpp"
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
 #include "Graphics/SwapChain.cpp"

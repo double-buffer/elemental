@@ -138,7 +138,7 @@ UTEST(Shader, DispatchCompute)
 
     for (uint32_t i = 0; i < bufferData.Length / 4; i++)
     {
-        printf("Test: %d\n", bufferData.Items[i]);
+        ASSERT_EQ_MSG(uintData[i], i < 16 ? i : 0u, "Compute shader data is invalid.");
     }
 
     ElemFreeGraphicsResourceDescriptor(bufferWriteDescriptor);

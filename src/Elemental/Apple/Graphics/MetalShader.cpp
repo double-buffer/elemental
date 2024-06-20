@@ -81,6 +81,7 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
     
     NS::SharedPtr<MTL::Library> metalLibrary = {};
     Span<NS::SharedPtr<MTL::Library>> graphicsShaderData = {};
+    ReadOnlySpan<Shader> shaders = {};
 
     if (CheckMetalShaderDataHeader(shaderLibraryData, "MTL"))
     {
@@ -100,18 +101,17 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
     else 
     {
         auto dataSpan = Span<uint8_t>(shaderLibraryData.Items, shaderLibraryData.Length); 
-        auto shaderCount = *(uint32_t*)dataSpan.Pointer;
-        dataSpan = dataSpan.Slice(sizeof(uint32_t));
 
         // HACK: This is bad to allocate this here but this should be temporary
-        graphicsShaderData = SystemPushArray<NS::SharedPtr<MTL::Library>>(MetalGraphicsMemoryArena, shaderCount);
-
-        for (uint32_t i = 0; i < shaderCount; i++)
+        // Here the solution should be to define a memory arena per library (malloc style)
+        shaders = ReadShaders(MetalGraphicsMemoryArena, dataSpan);
+        graphicsShaderData = SystemPushArray<NS::SharedPtr<MTL::Library>>(MetalGraphicsMemoryArena, shaders.Length);
+        
+        for (uint32_t i = 0; i < shaders.Length; i++)
         {
-            auto size = *(uint32_t*)dataSpan.Pointer;
-            dataSpan = dataSpan.Slice(sizeof(uint32_t));
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Shader: %s", shaders[i].Name);
 
-            auto dispatchData = dispatch_data_create(dataSpan.Pointer, size, nullptr, nullptr);
+            auto dispatchData = dispatch_data_create(shaders[i].ShaderCode.Pointer, shaders[i].ShaderCode.Length, nullptr, nullptr);
 
             NS::Error* errorPointer;
             graphicsShaderData[i] = NS::TransferPtr(graphicsDeviceData->Device->newLibrary(dispatchData, &errorPointer));
@@ -131,14 +131,13 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
                 SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot create shader library. Error Code: %d => %s", libraryError->code(), errorMessage);
                 return ELEM_HANDLE_NULL;
             }
-
-            dataSpan = dataSpan.Slice(size);
         }
     }
 
     auto handle = SystemAddDataPoolItem(metalShaderLibraryPool, {
         .MetalLibrary = metalLibrary,
-        .GraphicsShaders = graphicsShaderData
+        .GraphicsShaders = graphicsShaderData,
+        .Shaders = shaders
     }); 
 
     return handle;
@@ -167,8 +166,7 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     NS::SharedPtr<MTL::Function> meshShaderFunction;
     NS::SharedPtr<MTL::Function> pixelShaderFunction;
 
-    // TODO: Ideally we should have only one mtl lib and get the function from it.
-    // TODO: Amplification shader
+    // TODO: Get the correct shader based on the function name
     if (parameters->MeshShaderFunction)
     {
         for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
@@ -303,7 +301,7 @@ ElemPipelineState MetalCompileComputePipelineState(ElemGraphicsDevice graphicsDe
     SystemAssert(parameters);
     SystemAssert(parameters->ShaderLibrary != ELEM_HANDLE_NULL);
 
-    auto shaderLibraryData= GetMetalShaderLibraryData(parameters->ShaderLibrary);
+    auto shaderLibraryData = GetMetalShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
 
     auto pipelineStateDescriptor = NS::TransferPtr(MTL::ComputePipelineDescriptor::alloc()->init());
@@ -362,6 +360,10 @@ ElemPipelineState MetalCompileComputePipelineState(ElemGraphicsDevice graphicsDe
     
     auto handle = SystemAddDataPoolItem(metalPipelineStatePool, {
         .ComputePipelineState = pipelineState,
+        // TODO: Get correct metadata here it is just for test
+        .ThreadSizeX = shaderLibraryData->Shaders[0].Metadata[0].Value[0],
+        .ThreadSizeY = shaderLibraryData->Shaders[0].Metadata[0].Value[1],
+        .ThreadSizeZ = shaderLibraryData->Shaders[0].Metadata[0].Value[2],
     }); 
 
     SystemAddDataPoolItemFull(metalPipelineStatePool, handle, {
@@ -409,6 +411,7 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
     
         auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
         computeCommandEncoder->setComputePipelineState(pipelineStateData->ComputePipelineState.get());
+        commandListData->PipelineState = pipelineState;
     }
 }
 
@@ -456,8 +459,11 @@ void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCount
 
     SystemAssert(commandListData->CommandEncoder);
 
+    auto pipelineStateData = GetMetalPipelineStateData(commandListData->PipelineState);
+    SystemAssert(pipelineStateData);
+
     auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
 
     // TODO: Get the correct threads config
-    computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(16, 16, 1));
+    computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(pipelineStateData->ThreadSizeX, pipelineStateData->ThreadSizeY, pipelineStateData->ThreadSizeZ));
 }

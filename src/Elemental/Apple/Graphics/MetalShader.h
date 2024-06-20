@@ -2,17 +2,22 @@
 
 #include "Elemental.h"
 #include "SystemSpan.h"
+#include "Graphics/ShaderReader.h"
 
 struct MetalShaderLibraryData
 {
     NS::SharedPtr<MTL::Library> MetalLibrary;
     Span<NS::SharedPtr<MTL::Library>> GraphicsShaders;
+    ReadOnlySpan<Shader> Shaders;
 };
 
 struct MetalPipelineStateData
 {
     NS::SharedPtr<MTL::RenderPipelineState> RenderPipelineState;
     NS::SharedPtr<MTL::ComputePipelineState> ComputePipelineState;
+    uint32_t ThreadSizeX;
+    uint32_t ThreadSizeY;
+    uint32_t ThreadSizeZ;
 };
 
 struct MetalPipelineStateDataFull
