@@ -11,14 +11,29 @@ ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     DispatchGraphicsFunction(FreeGraphicsHeap, graphicsHeap);
 }
 
+ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options)
+{
+    DispatchReturnGraphicsFunction(CreateGraphicsBufferResourceInfo, graphicsDevice, sizeInBytes, options);
+}
+
+ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options)
+{
+    DispatchReturnGraphicsFunction(CreateTexture2DResourceInfo, graphicsDevice, width, height, mipLevels, format, options);
+}
+
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     DispatchReturnGraphicsFunction(CreateGraphicsResource, graphicsHeap, graphicsHeapOffset, resourceInfo);
 }
 
-ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource)
+ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
 {
-    DispatchGraphicsFunction(FreeGraphicsResource, resource);
+    DispatchGraphicsFunction(FreeGraphicsResource, resource, options);
+}
+
+ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource)
+{
+    DispatchReturnGraphicsFunction(GetGraphicsResourceInfo, resource);
 }
 
 ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
@@ -26,19 +41,19 @@ ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resour
     DispatchReturnGraphicsFunction(GetGraphicsResourceDataSpan, resource);
 }
 
-ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
+ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
-    DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, descriptorInfo);
+    DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, resource, usage, options);
 }
 
-ElemAPI void ElemUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
+ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
 {
-    DispatchGraphicsFunction(UpdateGraphicsResourceDescriptor, descriptor, descriptorInfo);
+    DispatchReturnGraphicsFunction(GetGraphicsResourceDescriptorInfo, descriptor);
 }
 
-ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor)
+ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
 {
-    DispatchGraphicsFunction(FreeGraphicsResourceDescriptor, descriptor);
+    DispatchGraphicsFunction(FreeGraphicsResourceDescriptor, descriptor, options);
 }
 
 ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)

@@ -5,8 +5,7 @@
 UTEST(CommandList, GetCommandList) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = TestGetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
     // Act
@@ -17,7 +16,7 @@ UTEST(CommandList, GetCommandList)
 
     ASSERT_NE(commandQueue, ELEM_HANDLE_NULL);
     ASSERT_NE(commandList, ELEM_HANDLE_NULL);
-    ASSERT_FALSE(testHasLogErrors);
+    ASSERT_LOG_NOERROR();
 
     ElemFreeCommandQueue(commandQueue);
 }
@@ -25,8 +24,7 @@ UTEST(CommandList, GetCommandList)
 UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = TestGetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     ElemGetCommandList(commandQueue, nullptr);
 
@@ -34,16 +32,14 @@ UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread)
     ElemGetCommandList(commandQueue, nullptr);
 
     // Assert
-    ASSERT_TRUE(testHasLogErrors);
-    ASSERT_LOG("Cannot get a command list if commit was not called on the same thread.");
+    ASSERT_LOG_MESSAGE("Cannot get a command list if commit was not called on the same thread.");
     ElemFreeCommandQueue(commandQueue);
 }
 
 UTEST(CommandList, ExecuteCommandListWithoutCommit) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = TestGetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
@@ -51,8 +47,7 @@ UTEST(CommandList, ExecuteCommandListWithoutCommit)
     ElemExecuteCommandList(commandQueue, commandList, nullptr);
 
     // Assert
-    ASSERT_TRUE(testHasLogErrors);
-    ASSERT_LOG("Commandlist needs to be committed before executing it.");
+    ASSERT_LOG_MESSAGE("Commandlist needs to be committed before executing it.");
 
     ElemFreeCommandQueue(commandQueue);
 }
@@ -60,8 +55,7 @@ UTEST(CommandList, ExecuteCommandListWithoutCommit)
 UTEST(CommandList, ExecuteCommandListFenceIsValid) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = TestGetSharedGraphicsDevice();
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
     ElemCommitCommandList(commandList);
@@ -70,7 +64,7 @@ UTEST(CommandList, ExecuteCommandListFenceIsValid)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
 
     // Assert
-    ASSERT_FALSE(testHasLogErrors);
+    ASSERT_LOG_NOERROR();
     ASSERT_EQ(fence.CommandQueue, commandQueue);
     ASSERT_GT(fence.FenceValue, 0u);
 
@@ -78,6 +72,7 @@ UTEST(CommandList, ExecuteCommandListFenceIsValid)
     ElemFreeCommandQueue(commandQueue);
 }
 
+// TODO: Test operation that can execute only on certain queue types
 // TODO: Test Cannot wait fence on cpu if flag was not passed
 // TODO: Test mutli threading create command list
 // TODO: Test also one / multi thread with multiple frame in flight (if we don't use swapchain it can grow dynamically)

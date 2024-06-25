@@ -41,46 +41,6 @@ MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource)
     return SystemGetDataPoolItemFull(metalResourcePool, resource);
 }
         
-// TODO: Put that in common code?
-ElemGraphicsResourceDescriptorInfo* MetalGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
-{
-    return &metalResourceDescriptorInfos[descriptor];
-}
-
-ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
-{
-    InitMetalResourceMemory();
-
-    auto width = 0u;
-    auto height = 0u;
-
-    if (type == ElemGraphicsResourceType_Texture2D)
-    {
-        auto texture = (MTL::Texture*)resource.get();
-        width = texture->width();
-        height = texture->height();
-    }
-    else
-    {
-        auto buffer = (MTL::Buffer*)resource.get();
-        width = buffer->length();
-    }
-
-    auto handle = SystemAddDataPoolItem(metalResourcePool, {
-        .DeviceObject = resource,
-        .Type = type,
-        .Width = width,
-        .Height = height,
-        .IsPresentTexture = isPresentTexture,
-    }); 
-
-    SystemAddDataPoolItemFull(metalResourcePool, handle, {
-        .GraphicsDevice = graphicsDevice
-    });
-
-    return handle;
-}
-
 MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
 {
     switch (format) 
@@ -102,6 +62,27 @@ MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
     }
 }
 
+ElemGraphicsFormat ConvertFromMetalResourceFormat(MTL::PixelFormat format)
+{
+    switch (format) 
+    {
+        case MTL::PixelFormatBGRA8Unorm_sRGB:
+            return ElemGraphicsFormat_B8G8R8A8_SRGB;
+
+        case MTL::PixelFormatBGRA8Unorm:
+            return ElemGraphicsFormat_B8G8R8A8_UNORM;
+
+        case MTL::PixelFormatRGBA16Float:
+            return ElemGraphicsFormat_R16G16B16A16_FLOAT;
+
+        case MTL::PixelFormatRGBA32Float:
+            return ElemGraphicsFormat_R32G32B32A32_FLOAT;
+
+        default:
+            return ElemGraphicsFormat_Raw;
+    }
+}
+
 MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
 {
     switch (usage) 
@@ -117,6 +98,65 @@ MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
     }
 }
 
+ElemGraphicsResourceUsage ConvertFromMetalResourceUsage(MTL::TextureUsage usage)
+{
+    if ((usage & MTL::TextureUsageShaderRead) && (usage & MTL::TextureUsageShaderWrite))
+    {
+        return ElemGraphicsResourceUsage_Uav;
+    }
+    else if ((usage & MTL::TextureUsageShaderRead) && (usage & MTL::TextureUsageRenderTarget))
+    {
+        return ElemGraphicsResourceUsage_RenderTarget;
+    }
+
+    return ElemGraphicsResourceUsage_Standard;
+}
+
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
+{
+    InitMetalResourceMemory();
+
+    auto width = 0u;
+    auto height = 0u;
+    auto format = ElemGraphicsFormat_Raw;
+    auto usage = ElemGraphicsResourceUsage_Standard;
+    auto mipLevels = 0u;
+
+    if (type == ElemGraphicsResourceType_Texture2D)
+    {
+        auto texture = (MTL::Texture*)resource.get();
+        width = texture->width();
+        height = texture->height();
+        mipLevels = texture->mipmapLevelCount();
+        format = ConvertFromMetalResourceFormat(texture->pixelFormat());
+        usage = ConvertFromMetalResourceUsage(texture->usage());
+    }
+    else
+    {
+        auto buffer = (MTL::Buffer*)resource.get();
+        width = buffer->length();
+        usage = ElemGraphicsResourceUsage_Uav;
+    }
+
+    auto handle = SystemAddDataPoolItem(metalResourcePool, {
+        .DeviceObject = resource,
+        .Type = type,
+        .Width = width,
+        .Height = height,
+        .MipLevels = mipLevels,
+        .Format = format,
+        .Usage = usage,
+        .IsPresentTexture = isPresentTexture,
+    }); 
+
+    SystemAddDataPoolItemFull(metalResourcePool, handle, {
+        .GraphicsDevice = graphicsDevice
+    });
+
+    return handle;
+}
+
+
 NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGraphicsResourceInfo* resourceInfo)
 {
     // TODO: Other resourceInfo
@@ -128,7 +168,7 @@ NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGra
     textureDescriptor->setWidth(resourceInfo->Width);
     textureDescriptor->setHeight(resourceInfo->Height);
     textureDescriptor->setDepth(1);
-    textureDescriptor->setMipmapLevelCount(1);
+    textureDescriptor->setMipmapLevelCount(resourceInfo->MipLevels);
     textureDescriptor->setPixelFormat(ConvertToMetalResourceFormat(resourceInfo->Format));
     textureDescriptor->setSampleCount(1);
     textureDescriptor->setStorageMode(MTL::StorageModeShared);
@@ -197,6 +237,64 @@ void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     graphicsHeapData->DeviceObject.reset();
 }
 
+ElemGraphicsResourceInfo MetalCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options)
+{
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Buffer,
+        .Width = sizeInBytes,
+    };
+
+    if (options != nullptr)
+    {
+        resourceInfo.Usage = options->Usage;
+        resourceInfo.DebugName = options->DebugName;
+    }
+
+    auto sizeAndAlignInfo = graphicsDeviceData->Device->heapBufferSizeAndAlign(sizeInBytes, {});
+    resourceInfo.Alignment = sizeAndAlignInfo.align;
+    resourceInfo.SizeInBytes = sizeAndAlignInfo.size;
+
+    return resourceInfo;
+
+}
+
+ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options)
+{    
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Texture2D,
+        .Width = width,
+        .Height = height,
+        .MipLevels = mipLevels,
+        .Format = format,
+    };
+
+    if (options != nullptr)
+    {
+        resourceInfo.Usage = options->Usage;
+        resourceInfo.DebugName = options->DebugName;
+    }
+
+    auto metalTextureDescriptor = CreateMetalTextureDescriptor(&resourceInfo);
+    auto sizeAndAlignInfo = graphicsDeviceData->Device->heapTextureSizeAndAlign(metalTextureDescriptor.get());
+
+    resourceInfo.Alignment = sizeAndAlignInfo.align;
+    resourceInfo.SizeInBytes = sizeAndAlignInfo.size;
+
+    return resourceInfo;
+}
+
 ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     SystemAssert(graphicsHeap != ELEM_HANDLE_NULL);
@@ -212,11 +310,41 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
 
     if (resourceInfo->Type == ElemGraphicsResourceType_Texture2D)
     {
+        if (resourceInfo->Width == 0)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D width should not be equals to 0.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        if (resourceInfo->Height == 0)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D height should not be equals to 0.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        if (resourceInfo->MipLevels == 0)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D mipLevels should not be equals to 0.");
+            return ELEM_HANDLE_NULL;
+        }
+
         auto textureDescriptor = CreateMetalTextureDescriptor(resourceInfo);
         resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newTexture(textureDescriptor.get(), graphicsHeapOffset));
     }
     else
     {
+        if (resourceInfo->Width == 0)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer width should not be equals to 0.");
+            return ELEM_HANDLE_NULL;
+        }
+        
+        if (resourceInfo->Usage == ElemGraphicsResourceUsage_RenderTarget)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to RenderTarget.");
+            return ELEM_HANDLE_NULL;
+        }
+
         resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newBuffer(resourceInfo->Width, MTL::ResourceHazardTrackingModeUntracked, graphicsHeapOffset));
     }
         
@@ -230,9 +358,13 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
     return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, resource, false);
 }
 
-void MetalFreeGraphicsResource(ElemGraphicsResource resource)
+void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
 {
-    // TODO: Defer the real texture delete with a fence!
+    if (options && options->FencesToWait.Length > 0)
+    {
+        return;
+    }
+    // TODO: To be able to delete with the fence, we should have another thread to check each fence in the queue
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
     auto resourceData = GetMetalResourceData(resource);
@@ -241,14 +373,40 @@ void MetalFreeGraphicsResource(ElemGraphicsResource resource)
     SystemRemoveDataPoolItem(metalResourcePool, resource);
 }
 
+ElemGraphicsResourceInfo MetalGetGraphicsResourceInfo(ElemGraphicsResource resource)
+{
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto resourceData = GetMetalResourceData(resource);
+
+    if (!resourceData)
+    {
+        return {};
+    }
+
+    return 
+    {
+        .Type = resourceData->Type,
+        .Width = resourceData->Width,
+        .Height = resourceData->Height,
+        .MipLevels = resourceData->MipLevels,
+        .Format = resourceData->Format,
+        .Usage = resourceData->Usage
+    };
+}
+
 ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 {
-    // TODO: Check if buffer only
-
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
     auto resourceData = GetMetalResourceData(resource);
     SystemAssert(resourceData);
+
+    if (resourceData->Type != ElemGraphicsResourceType_Buffer)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GetGraphicsResourceDataSpan only works with graphics buffers.");
+        return {};
+    }
 
     auto dataPointer = ((MTL::Buffer*)resourceData->DeviceObject.get())->contents();
 
@@ -259,14 +417,14 @@ ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
     }; 
 }
 
-ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
+ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
-    SystemAssert(descriptorInfo->Resource != ELEM_HANDLE_NULL);
+    SystemAssert(resource != ELEM_HANDLE_NULL);
 
-    auto resourceData = GetMetalResourceData(descriptorInfo->Resource);
+    auto resourceData = GetMetalResourceData(resource);
     SystemAssert(resourceData);
 
-    auto resourceDataFull = GetMetalResourceDataFull(descriptorInfo->Resource);
+    auto resourceDataFull = GetMetalResourceDataFull(resource);
     SystemAssert(resourceDataFull);
 
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(resourceDataFull->GraphicsDevice);
@@ -284,15 +442,17 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(const ElemG
         handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
     }
 
-    metalResourceDescriptorInfos[handle] = *descriptorInfo;
+    metalResourceDescriptorInfos[handle].Resource = resource;
+    metalResourceDescriptorInfos[handle].Usage = usage;
     return handle;
 }
 
-void MetalUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo)
+ElemGraphicsResourceDescriptorInfo MetalGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
 {
+    return metalResourceDescriptorInfos[descriptor];
 }
 
-void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor)
+void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
 {
 }
 

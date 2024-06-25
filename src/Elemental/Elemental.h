@@ -210,6 +210,8 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
+// TODO: Do a ElemGetLastError() function?
+
 /**
  * Retrieves system-related information, such as platform and application path.
  *
@@ -364,7 +366,7 @@ typedef enum
 typedef enum
 {
     ElemGraphicsHeapType_Gpu = 0,
-    ElemGraphicsHeapType_ReadBack = 1
+    ElemGraphicsHeapType_Readback = 1
 } ElemGraphicsHeapType;
 
 /**
@@ -584,13 +586,34 @@ typedef struct
 
 typedef struct
 {
+    ElemGraphicsResourceUsage Usage;
+    const char* DebugName;
+} ElemGraphicsResourceInfoOptions;
+
+// TODO: Mip Levels
+typedef struct
+{
     ElemGraphicsResourceType Type;
     uint32_t Width;
     uint32_t Height;
+    uint32_t MipLevels;
     ElemGraphicsFormat Format;
+    uint32_t Alignment;
+    uint32_t SizeInBytes;
     ElemGraphicsResourceUsage Usage;
     const char* DebugName;
 } ElemGraphicsResourceInfo;
+
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsResourceOptions;
+
+typedef struct
+{
+    uint32_t TextureMipIndex;
+} ElemGraphicsResourceDescriptorOptions;
 
 typedef struct
 {
@@ -598,6 +621,12 @@ typedef struct
     ElemGraphicsResourceUsage Usage;
     uint32_t TextureMipIndex;
 } ElemGraphicsResourceDescriptorInfo;
+
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsResourceDescriptorOptions;
 
 /**
  * Represents a collection of texture formats.
@@ -615,8 +644,6 @@ typedef struct
  */
 typedef struct
 {
-    // Optional debug name for the pipeline state.
-    const char* DebugName;
     // Shader library containing the shaders.
     ElemShaderLibrary ShaderLibrary;
     // Function name of the mesh shader in the shader library.
@@ -625,6 +652,8 @@ typedef struct
     const char* PixelShaderFunction;
     // Supported texture formats for the pipeline state.
     ElemGraphicsFormatSpan TextureFormats;
+    // Optional debug name for the pipeline state.
+    const char* DebugName;
 } ElemGraphicsPipelineStateParameters;
 
 /**
@@ -632,12 +661,12 @@ typedef struct
  */
 typedef struct
 {
-    // Optional debug name for the pipeline state.
-    const char* DebugName;
     // Shader library containing the shaders.
     ElemShaderLibrary ShaderLibrary;
     // Function name of the mesh shader in the shader library.
     const char* ComputeShaderFunction;
+    // Optional debug name for the pipeline state.
+    const char* DebugName;
 } ElemComputePipelineStateParameters;
 
 typedef struct
@@ -765,6 +794,7 @@ ElemAPI void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
  * @param graphicsDevice The graphics device to query.
  * @return A structure containing detailed information about the device.
  */
+// TODO: Add IsHdrSupported
 ElemAPI ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);
 
 /**
@@ -826,6 +856,8 @@ ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCom
  */
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 
+// TODO: ElemIsFenceCompleted
+
 /**
  * Creates a swap chain for a window, allowing rendered frames to be presented to the screen.
  * @param commandQueue The command queue associated with rendering commands for the swap chain.
@@ -866,17 +898,19 @@ ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
-// TODO: GetTextureAllocationInfos with factory functions
+ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options);
+ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options);
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
-ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource);
+ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
+ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
 ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
 
-// TODO: Descriptor factory functions
+// TODO: ElemFlushGraphicsResourceDeleteQueue
 
-ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
-ElemAPI void ElemUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
-ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor);
+ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
+ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
+ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

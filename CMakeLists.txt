@@ -65,6 +65,13 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_NAME_DIR "@rpath")
 
+if (TEST_BUILD)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-O0>)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-coverage>)
+
+    add_link_options($<$<COMPILE_LANGUAGE:CXX>:-coverage>)
+endif()
+
 if(APPLE)
     set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../Frameworks;@executable_path/Frameworks;@loader_path")
 elseif(LINUX)

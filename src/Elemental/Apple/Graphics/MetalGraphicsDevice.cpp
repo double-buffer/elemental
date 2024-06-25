@@ -88,7 +88,8 @@ void InitMetal()
 
         // Create a thread to read from the pipe
         pthread_t thread;
-        if (pthread_create(&thread, nullptr, MetalDebugReportCallback, &pipefd[0]) != 0) {
+        if (pthread_create(&thread, nullptr, MetalDebugReportCallback, &pipefd[0]) != 0) 
+        {
             perror("pthread_create");
             return;
         }
@@ -289,8 +290,6 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     }
 
     SystemAssertReturnNullHandle(foundAdapter);
-    
-    // TODO: No debug message queue on metal 😞 
     
     auto resourceArgumentBuffer = CreateMetalArgumentBuffer(device, METAL_MAX_RESOURCES);
 

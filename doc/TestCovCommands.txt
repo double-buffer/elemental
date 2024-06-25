@@ -1,0 +1,4 @@
+lcov --directory . --capture --ignore-errors inconsistent --output-file coverage.info
+lcov --remove coverage.info "/Library/*" "external/*" "samples/*" "build-test/*" "src/Elemental/ElementalLoader.c" "src/ElementalTools/ElementalToolsLoader.c" "src/Elemental/Apple/Frameworks/*" "tests/*" --ignore-errors inconsistent --ignore-errors unused --output-file coverage.info
+
+genhtml --demangle-cpp --ignore-errors inconsistent -o coverage coverage.info

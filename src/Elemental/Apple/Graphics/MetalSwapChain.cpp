@@ -196,7 +196,7 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 void MetalSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
 {
     // TODO: Not implemented yet
-    SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "This feature is not yet implelmented.");
+    SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "This feature is not yet implemented.");
 }
 
 void MetalPresentSwapChain(ElemSwapChain swapChain)
@@ -283,13 +283,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         // TODO: Can we do something better than juste creating/destroying each time? 
         auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
-        ElemGraphicsResourceDescriptorInfo resourceDescriptorInfo =
-        {
-            .Resource = backBufferTexture, 
-            .Usage = ElemGraphicsResourceUsage_RenderTarget
-        };
-
-        auto renderTarget = ElemCreateGraphicsResourceDescriptor(&resourceDescriptorInfo);
+        auto renderTarget = ElemCreateGraphicsResourceDescriptor(backBufferTexture, ElemGraphicsResourceUsage_RenderTarget, nullptr);
 
         ElemSwapChainUpdateParameters updateParameters = 
         {
@@ -309,7 +303,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             MetalPresentSwapChain(_swapChain);
         }
         
-        MetalFreeGraphicsResourceDescriptor(renderTarget);
-        MetalFreeGraphicsResource(backBufferTexture);
+        MetalFreeGraphicsResourceDescriptor(renderTarget, nullptr);
+        MetalFreeGraphicsResource(backBufferTexture, nullptr);
     }
 }

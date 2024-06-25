@@ -1,3 +1,4 @@
+#include "GraphicsTests.cpp"
 #include "GraphicsDeviceTests.cpp"
 #include "CommandListTests.cpp"
 #include "ShaderTests.cpp"
@@ -5,17 +6,6 @@
 #include "ResourceTests.cpp"
 #include "RenderingTests.cpp"
 #include "utest.h"
-
-bool testPrintLogs = false;
-bool testForceVulkanApi = false;
-bool testHasLogErrors = false;
-char testLogs[2048];
-uint32_t currentTestLogsIndex = 0u;
-char testErrorLogs[2048];
-uint32_t currentTestErrorLogsIndex;
-ElemGraphicsDevice sharedGraphicsDevice = ELEM_HANDLE_NULL;
-ElemSystemInfo sharedSystemInfo;
-ElemGraphicsDeviceInfo sharedGraphicsDeviceInfo;
 
 struct ApplicationTestPayload
 {
@@ -42,8 +32,11 @@ void ApplicationTestInitFunction(void* payload)
     sharedSystemInfo = ElemGetSystemInfo();
     sharedGraphicsDeviceInfo = ElemGetGraphicsDeviceInfo(sharedGraphicsDevice);
 
+    sharedCommandQueue = ElemCreateCommandQueue(sharedGraphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
 
+    ElemFreeCommandQueue(sharedCommandQueue);
     ElemFreeGraphicsDevice(sharedGraphicsDevice);
     ElemExitApplication(result);
 }

@@ -4,13 +4,12 @@
 #include "SampleMath.h"
 #include "SampleInputs.h"
 
-#define ROTATION_TOUCH_DECREASE_SPEED 0.001f
-#define ROTATION_TOUCH_SPEED 1.0f
+#define ROTATION_TOUCH_SPEED 0.5f
 #define ROTATION_TOUCH_MAX_DELTA 0.3f
-#define ROTATION_MULTITOUCH_SPEED 200.0f
+#define ROTATION_MULTITOUCH_SPEED 100.0f
 #define ROTATION_ACCELERATION 50.0f
 #define ROTATION_FRICTION 40.0f
-#define ZOOM_MULTITOUCH_SPEED 1000.0f
+#define ZOOM_MULTITOUCH_SPEED 100.0f
 #define ZOOM_SPEED 0.5f
 #define ZOOM_FACTOR 10.0f
 
@@ -78,6 +77,7 @@ typedef struct
     ElemGraphicsResource RenderTexture;
     ElemGraphicsResourceDescriptor RenderTextureUavDescriptor;
     ElemGraphicsResourceDescriptor RenderTextureReadDescriptor;
+    ElemFence LastExecutionFence;
     ElemSwapChain SwapChain;
     ElemPipelineState GraphicsPipeline;
     ElemPipelineState ComputePipeline;
@@ -107,10 +107,10 @@ void RegisterInputBindings(ApplicationPayload* applicationPayload)
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseLeftButton, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseRightButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateSide);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateUp);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateDown);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateLeft);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateRight);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateUp);
+    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateDown);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseWheelPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseWheelNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseMiddleButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
@@ -140,74 +140,35 @@ void RegisterInputBindings(ApplicationPayload* applicationPayload)
     SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_Touch, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
 }
 
+// NOTE: Here we can reuse memory and delete resources directly because we use the default latency for the swapchain that
+// is set to 1. So it means the GPU is not using the resources while this code is executed.
+// If the latency is configured to 2. You need to be carreful to not overlap the memory in the heap and use a fence for the 
+// delete functions.
 void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
 {
-    // TODO: Delete texture descriptors
-    // TODO: Delete texture
-    // TODO: Test Delete texture with latency=2 (Check driver settings because it seems nvidia is overriding it :()
+    if (applicationPayload->RenderTexture != ELEM_HANDLE_NULL)
+    {
+        // TODO: Can we provide an utility function for spans?
+        ElemFreeGraphicsResource(applicationPayload->RenderTexture, &(ElemFreeGraphicsResourceOptions) { 
+            .FencesToWait = (ElemFenceSpan) { .Items = (ElemFence[]){ applicationPayload->LastExecutionFence }, .Length = 1 } 
+        });
 
-    // TODO: Get Size requirements
+        ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor, NULL);
+        ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor, NULL);
+    }
 
     printf("Creating render texture...\n");
 
-    // TODO: What would be the benefits to have juste graphics resource and descriptors ?
+    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R16G16B16A16_FLOAT, 
+                                                                            &(ElemGraphicsResourceInfoOptions) { 
+                                                                                .Usage = ElemGraphicsResourceUsage_Uav, 
+                                                                                .DebugName = "Render Texture" 
+                                                                            });
 
-    // var textureResourceDescriptor = ElemCreateTextureDescriptor(...);
-    // use desc.SizeInBytes and Alignement to compute offset
-    // var renderTexture = ElemCreateResource(graphicsHeader, offset, textureResourceDesc);
-/*
-    auto renderTextureResourceInfo = ElemCreateTextureResourceInfo(&(ElemTextureParameters)
-    {
-        .Width = width,
-        .Height = height,
-        .Format = ElemTextureFormat_R16G16B16A16_FLOAT,
-        .Usage = ElemTextureUsage_Uav,
-        .DebugName = "Render Texture"
-    });*/
-
-    // Align of resource is => renderTextureResourceDescriptor.Alignment and we have renderTextureResourceDescriptor.SizeInBytes
-
-    ElemGraphicsResourceInfo resourceInfo =
-    {
-        .Type = ElemGraphicsResourceType_Texture2D,
-        .Width = width,
-        .Height = height,
-        .Format = ElemGraphicsFormat_R16G16B16A16_FLOAT,
-        .Usage = ElemGraphicsResourceUsage_Uav,
-        .DebugName = "Render Texture"
-    };
-
-    // TODO: Here we can reuse the memory directly because we use 1 for latency so there are no pending rendering operations
     applicationPayload->RenderTexture = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, 0, &resourceInfo);
 
-    // TODO: The max resources descriptor will be 1.000.000 with latency 1 and 500.000 with 2 latency
-    // TODO: We need to provide a mechanism to update a descriptor (with a double buffering approach depending on latency)
-
-    ElemGraphicsResourceDescriptorInfo resourceDescriptorInfo =
-    {
-        .Resource = applicationPayload->RenderTexture, 
-        .Usage = ElemGraphicsResourceUsage_Uav 
-    };
-
-    if (!applicationPayload->RenderTextureUavDescriptor)
-    {
-        applicationPayload->RenderTextureUavDescriptor = ElemCreateGraphicsResourceDescriptor(&resourceDescriptorInfo);
-    }
-    else
-    {
-        ElemUpdateGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor, &resourceDescriptorInfo);
-    }
-
-    resourceDescriptorInfo.Usage = ElemGraphicsResourceUsage_Standard;
-
-    if (!applicationPayload->RenderTextureReadDescriptor)
-    {
-        applicationPayload->RenderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(&resourceDescriptorInfo);
-    }
-    else
-    {
-        ElemUpdateGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor, &resourceDescriptorInfo);
-    }
+    applicationPayload->RenderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Standard, NULL);
+    applicationPayload->RenderTextureUavDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Uav, NULL);
 }
 
 void InitSample(void* payload)
@@ -265,11 +226,13 @@ void FreeSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
+    ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
+
     ElemFreePipelineState(applicationPayload->ComputePipeline);
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
-    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor);
-    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor);
-    ElemFreeGraphicsResource(applicationPayload->RenderTexture);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor, NULL);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor, NULL);
+    ElemFreeGraphicsResource(applicationPayload->RenderTexture, NULL);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
     ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
@@ -303,7 +266,7 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
 
             if (gameState->PreviousTouchDistance != 0.0f)
             {
-                zoomDelta = (distance - gameState->PreviousTouchDistance) * ZOOM_MULTITOUCH_SPEED * deltaTimeInSeconds;
+                zoomDelta = -(distance - gameState->PreviousTouchDistance) * ZOOM_MULTITOUCH_SPEED * deltaTimeInSeconds;
             }
 
             if (gameState->PreviousTouchAngle != 0.0f)
@@ -318,14 +281,14 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
         {
             ResetTouchParameters(gameState);
 
-            gameState->TranslationDelta.X = (inputActions->TouchTranslateRight - inputActions->TouchTranslateLeft) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-            gameState->TranslationDelta.Y = (inputActions->TouchTranslateDown - inputActions->TouchTranslateUp) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+            gameState->TranslationDelta.X = (inputActions->TouchTranslateLeft - inputActions->TouchTranslateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+            gameState->TranslationDelta.Y = (inputActions->TouchTranslateUp - inputActions->TouchTranslateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
         }
     }
     else if (inputActions->TouchRotateSide)
     {
         ResetTouchParameters(gameState);
-        rotationDeltaZ = (inputActions->TouchTranslateRight - inputActions->TouchTranslateLeft) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+        rotationDeltaZ = (inputActions->TouchTranslateLeft - inputActions->TouchTranslateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else if (inputActions->TouchReleased && !inputActions->Touch2)
     {
@@ -353,9 +316,8 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
         }
 
         rotationDeltaZ = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 1 * deltaTimeInSeconds;
+        zoomDelta = -(inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
     }
-
-    zoomDelta = -(inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
 
     if (zoomDelta != 0)
     {
@@ -429,6 +391,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemBindPipelineState(commandList, applicationPayload->ComputePipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
+    // BUG: On iOS when the framerate is slower (we miss the vsync), the barrier here is not kicked in and the gpu overlapp the render encoders
     ElemGraphicsResourceBarrier(commandList, ELEM_HANDLE_NULL, applicationPayload->RenderTextureUavDescriptor, NULL);
 
     uint32_t threadSize = 16;
@@ -481,7 +444,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // TODO: Barrier => Swapchain Present (Will not do that, present is a special internal state that will be handled automatically)
 
     ElemCommitCommandList(commandList);
-    ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
+    applicationPayload->LastExecutionFence = ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
 
     ElemPresentSwapChain(applicationPayload->SwapChain);
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();

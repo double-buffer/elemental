@@ -20,6 +20,9 @@ struct MetalResourceData
     ElemGraphicsResourceType Type;
     uint32_t Width;
     uint32_t Height;
+    uint32_t MipLevels;
+    ElemGraphicsFormat Format;
+    ElemGraphicsResourceUsage Usage;
     bool IsPresentTexture;
 };
 
@@ -36,18 +39,20 @@ MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource);
 
 void EnsureMetalResourceBarrier(ElemCommandList commandList);
 
-ElemGraphicsResourceDescriptorInfo* MetalGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
-
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
+ElemGraphicsResourceInfo MetalCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options);
+ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options);
+
 ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
-void MetalFreeGraphicsResource(ElemGraphicsResource resource);
+void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
+ElemGraphicsResourceInfo MetalGetGraphicsResourceInfo(ElemGraphicsResource resource);
 ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
 
-ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
-void MetalUpdateGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceDescriptorInfo* descriptorInfo);
-void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor);
+ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
+ElemGraphicsResourceDescriptorInfo MetalGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
+void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
 void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options);
 

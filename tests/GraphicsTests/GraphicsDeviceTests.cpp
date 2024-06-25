@@ -4,9 +4,6 @@
 
 UTEST(GraphicsDevice, GetAvailableGraphicsDevices) 
 {
-    // Arrange
-    InitLog();
-
     // Act
     auto graphicsDevices = ElemGetAvailableGraphicsDevices();
 
@@ -22,14 +19,13 @@ UTEST(GraphicsDevice, GetAvailableGraphicsDevices)
         }
     }
 
-    ASSERT_FALSE(testHasLogErrors);
+    ASSERT_LOG_NOERROR();
     ASSERT_GE(deviceCount, 1u);
 }
 
 UTEST(GraphicsDevice, CreateGraphicsDevice) 
 {
     // Arrange
-    InitLog();
     auto graphicsDevices = ElemGetAvailableGraphicsDevices();
     ElemGraphicsDeviceInfo graphicsDeviceInfo = {};
 
@@ -51,12 +47,12 @@ UTEST(GraphicsDevice, CreateGraphicsDevice)
     // Act
     ElemGraphicsDeviceOptions options = { .DeviceId = graphicsDeviceInfo.DeviceId };
     auto graphicsDevice = ElemCreateGraphicsDevice(&options); 
-    ASSERT_NE(ELEM_HANDLE_NULL, graphicsDevice);
+    ASSERT_NE_MSG(graphicsDevice, ELEM_HANDLE_NULL, "Handle should not be null.");
 
     // Assert
     auto resultDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
 
-    ASSERT_FALSE(testHasLogErrors);
+    ASSERT_LOG_NOERROR();
     ASSERT_EQ(resultDeviceInfo.DeviceId, graphicsDeviceInfo.DeviceId); 
     ASSERT_STREQ(resultDeviceInfo.DeviceName, deviceName); 
     ASSERT_EQ(resultDeviceInfo.GraphicsApi, graphicsDeviceInfo.GraphicsApi); 
