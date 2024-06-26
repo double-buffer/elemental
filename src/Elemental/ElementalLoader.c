@@ -48,6 +48,7 @@ typedef struct ElementalFunctions
     ElemFence (*ElemExecuteCommandList)(ElemCommandQueue, ElemCommandList, ElemExecuteCommandListOptions const *);
     ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, ElemExecuteCommandListOptions const *);
     void (*ElemWaitForFenceOnCpu)(ElemFence);
+    bool (*ElemIsFenceCompleted)(ElemFence);
     ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, ElemSwapChainOptions const *);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
@@ -64,6 +65,7 @@ typedef struct ElementalFunctions
     ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceUsage, ElemGraphicsResourceDescriptorOptions const *);
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
+    void (*ElemProcessGraphicsResourceDeleteQueue)(void);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
@@ -157,6 +159,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemExecuteCommandList = (ElemFence (*)(ElemCommandQueue, ElemCommandList, ElemExecuteCommandListOptions const *))GetElementalFunctionPointer("ElemExecuteCommandList");
     listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, ElemExecuteCommandListOptions const *))GetElementalFunctionPointer("ElemExecuteCommandLists");
     listElementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetElementalFunctionPointer("ElemWaitForFenceOnCpu");
+    listElementalFunctions.ElemIsFenceCompleted = (bool (*)(ElemFence))GetElementalFunctionPointer("ElemIsFenceCompleted");
     listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, ElemSwapChainOptions const *))GetElementalFunctionPointer("ElemCreateSwapChain");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
@@ -173,6 +176,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(void))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
@@ -875,6 +879,37 @@ static inline void ElemWaitForFenceOnCpu(ElemFence fence)
     listElementalFunctions.ElemWaitForFenceOnCpu(fence);
 }
 
+static inline bool ElemIsFenceCompleted(ElemFence fence)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        bool result = {};
+        #else
+        bool result = (bool){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemIsFenceCompleted) 
+    {
+        assert(listElementalFunctions.ElemIsFenceCompleted);
+
+        #ifdef __cplusplus
+        bool result = {};
+        #else
+        bool result = (bool){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemIsFenceCompleted(fence);
+}
+
 static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, ElemSwapChainOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
@@ -1285,6 +1320,23 @@ static inline void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescri
     }
 
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor(descriptor, options);
+}
+
+static inline void ElemProcessGraphicsResourceDeleteQueue(void)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue) 
+    {
+        assert(listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue);
+        return;
+    }
+
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue();
 }
 
 static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)

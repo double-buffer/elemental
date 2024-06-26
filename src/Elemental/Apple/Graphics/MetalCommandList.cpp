@@ -268,3 +268,21 @@ void MetalWaitForFenceOnCpu(ElemFence fence)
         dispatch_group_wait(dispatchGroup, DISPATCH_TIME_FOREVER);
     }
 }
+
+bool MetalIsFenceCompleted(ElemFence fence)
+{
+    SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
+
+    auto commandQueueToWaitData = GetMetalCommandQueueData(fence.CommandQueue);
+    SystemAssert(commandQueueToWaitData);
+
+    auto commandQueueToWaitDataFull = GetMetalCommandQueueDataFull(fence.CommandQueue);
+    SystemAssert(commandQueueToWaitDataFull);
+
+    if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue) 
+    {
+        commandQueueToWaitDataFull->LastCompletedFenceValue = SystemMax(commandQueueToWaitDataFull->LastCompletedFenceValue, commandQueueToWaitData->QueueEvent->signaledValue());
+    }
+
+    return fence.FenceValue <= commandQueueToWaitDataFull->LastCompletedFenceValue;
+}

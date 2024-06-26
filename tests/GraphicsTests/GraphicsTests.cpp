@@ -239,6 +239,7 @@ ElemGraphicsDeviceInfo TestGetSharedGraphicsDeviceInfo()
 
 ElemCommandQueue TestGetSharedCommandQueue()
 {
+    // TODO: Reset CommandAllocation
     return sharedCommandQueue;
 }
 

@@ -46,3 +46,8 @@ ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence)
 {
     DispatchGraphicsFunction(WaitForFenceOnCpu, fence);
 }
+
+ElemAPI bool ElemIsFenceCompleted(ElemFence fence)
+{
+    DispatchReturnGraphicsFunction(IsFenceCompleted, fence);
+}

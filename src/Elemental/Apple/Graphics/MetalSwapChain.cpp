@@ -281,7 +281,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         }
 
         // TODO: Can we do something better than juste creating/destroying each time? 
-        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
+        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ElemGraphicsResourceUsage_RenderTarget, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
         auto renderTarget = ElemCreateGraphicsResourceDescriptor(backBufferTexture, ElemGraphicsResourceUsage_RenderTarget, nullptr);
 
@@ -305,5 +305,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         
         MetalFreeGraphicsResourceDescriptor(renderTarget, nullptr);
         MetalFreeGraphicsResource(backBufferTexture, nullptr);
+
+        MetalProcessGraphicsResourceDeleteQueue();
     }
 }

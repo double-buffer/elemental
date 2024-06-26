@@ -855,8 +855,7 @@ ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCom
  * @param fence The fence to wait on.
  */
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
-
-// TODO: ElemIsFenceCompleted
+ElemAPI bool ElemIsFenceCompleted(ElemFence fence);
 
 /**
  * Creates a swap chain for a window, allowing rendered frames to be presented to the screen.
@@ -906,11 +905,11 @@ ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemF
 ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
 ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
 
-// TODO: ElemFlushGraphicsResourceDeleteQueue
-
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
+
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(void);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

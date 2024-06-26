@@ -2,6 +2,13 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+// TODO: Test operation that can execute only on certain queue types
+// TODO: Test mutli threading create command list
+// TODO: Test also one / multi thread with multiple frame in flight (if we don't use swapchain it can grow dynamically)
+// TODO: Test Fences, assign a buffer counter at each step and check the result
+// TODO: Test WaitForFenceOnCpu
+// TODO: Test IsFenceCompleted()
+
 UTEST(CommandList, GetCommandList) 
 {
     // Arrange
@@ -71,9 +78,3 @@ UTEST(CommandList, ExecuteCommandListFenceIsValid)
     ElemWaitForFenceOnCpu(fence);
     ElemFreeCommandQueue(commandQueue);
 }
-
-// TODO: Test operation that can execute only on certain queue types
-// TODO: Test Cannot wait fence on cpu if flag was not passed
-// TODO: Test mutli threading create command list
-// TODO: Test also one / multi thread with multiple frame in flight (if we don't use swapchain it can grow dynamically)
-// TODO: Test Fences, assign a buffer counter at each step and check the result

@@ -332,6 +332,7 @@ UTEST(Resource, FreeGraphicsResource_WithFenceNotExecuted)
     // Assert
     ASSERT_LOG_NOERROR();
 
+    ElemProcessGraphicsResourceDeleteQueue();
     auto afterFreeResourceInfo = ElemGetGraphicsResourceInfo(resource);
     ASSERT_EQ_MSG(afterFreeResourceInfo.Width, resourceInfo.Width, "Width should be equals to creation info.");
 
@@ -355,12 +356,12 @@ UTEST(Resource, FreeGraphicsResource_WithFenceExecuted)
 
     // Act
     ElemFreeGraphicsResource(resource, &options);
-    // TODO: ElemFlush
 
     // Assert
     ASSERT_LOG_NOERROR();
 
     ElemWaitForFenceOnCpu(fence);
+    ElemProcessGraphicsResourceDeleteQueue();
     auto afterFreeResourceInfo = ElemGetGraphicsResourceInfo(resource);
     ASSERT_EQ_MSG(afterFreeResourceInfo.Width, 0u, "Width should be equals to 0.");
 
@@ -428,11 +429,8 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithBufferNotUav)
 
     // Assert
     ASSERT_LOG_MESSAGE("Resource Descriptor UAV only works with buffer created with UAV usage.");
+    ASSERT_EQ_MSG(descriptor, -1, "Descriptor should be -1.");
 
-    auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
-    ASSERT_EQ_MSG(descriptorInfo.Resource, ELEM_HANDLE_NULL, "Resource should be null.");
-
-    ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
 }
@@ -450,11 +448,8 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_StandardWithBufferRenderTarget)
 
     // Assert
     ASSERT_LOG_MESSAGE("Resource Descriptor RenderTarget only works with textures.");
+    ASSERT_EQ_MSG(descriptor, -1, "Descriptor should be -1.");
 
-    auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
-    ASSERT_EQ_MSG(descriptorInfo.Resource, ELEM_HANDLE_NULL, "Resource should be null.");
-
-    ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
 }
@@ -520,11 +515,8 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithTexture2DNotUav)
 
     // Assert
     ASSERT_LOG_MESSAGE("Resource Descriptor UAV only works with texture created with UAV usage.");
+    ASSERT_EQ_MSG(descriptor, -1, "Descriptor should be -1.");
 
-    auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
-    ASSERT_EQ_MSG(descriptorInfo.Resource, ELEM_HANDLE_NULL, "Resource should be null.");
-
-    ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
 }
@@ -567,11 +559,8 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_RenderTargetWithTexture2DNotRen
 
     // Assert
     ASSERT_LOG_MESSAGE("Resource Descriptor RenderTarget only works with texture created with RenderTarget usage.");
+    ASSERT_EQ_MSG(descriptor, -1, "Descriptor should be -1.");
 
-    auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
-    ASSERT_EQ_MSG(descriptorInfo.Resource, ELEM_HANDLE_NULL, "Resource should be null.");
-
-    ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
 }
@@ -617,6 +606,7 @@ UTEST(Resource, FreeGraphicsResourceDescriptor_WithFenceNotExecuted)
     // Assert
     ASSERT_LOG_NOERROR();
 
+    ElemProcessGraphicsResourceDeleteQueue();
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
     ASSERT_EQ_MSG(descriptorInfo.Resource, resource, "Resource should be equals to creation.");
 
@@ -642,15 +632,40 @@ UTEST(Resource, FreeGraphicsResourceDescriptor_WithFenceExecuted)
 
     // Act
     ElemFreeGraphicsResourceDescriptor(descriptor, &options);
-    // TODO: ElemFlush
 
     // Assert
     ASSERT_LOG_NOERROR();
 
     ElemWaitForFenceOnCpu(fence);
+    ElemProcessGraphicsResourceDeleteQueue();
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
     ASSERT_EQ_MSG(descriptorInfo.Resource, 0u, "Resource should be equals to 0.");
 
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
+}
+
+UTEST(Resource, FreeGraphicsResourceDescriptor_WithInvalidDescriptor) 
+{
+    // Arrange
+    ElemGraphicsResourceDescriptor descriptor = -1;
+
+    // Act
+    ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
+
+    // Assert
+    ASSERT_LOG_MESSAGE("Resource Descriptor is invalid.");
+}
+
+UTEST(Resource, GetGraphicsResourceDescriptorInfo_WithInvalidDescriptor) 
+{
+    // Arrange
+    ElemGraphicsResourceDescriptor descriptor = -1;
+
+    // Act
+    auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
+
+    // Assert
+    ASSERT_LOG_MESSAGE("Resource Descriptor is invalid.");
+    ASSERT_EQ_MSG(descriptorInfo.Resource, 0u, "Resource should be equals to 0.");
 }

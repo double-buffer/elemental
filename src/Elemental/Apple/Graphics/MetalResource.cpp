@@ -1,6 +1,7 @@
 #include "MetalResource.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalCommandList.h"
+#include "Graphics/ResourceDeleteQueue.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -98,28 +99,13 @@ MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
     }
 }
 
-ElemGraphicsResourceUsage ConvertFromMetalResourceUsage(MTL::TextureUsage usage)
-{
-    if ((usage & MTL::TextureUsageShaderRead) && (usage & MTL::TextureUsageShaderWrite))
-    {
-        return ElemGraphicsResourceUsage_Uav;
-    }
-    else if ((usage & MTL::TextureUsageShaderRead) && (usage & MTL::TextureUsageRenderTarget))
-    {
-        return ElemGraphicsResourceUsage_RenderTarget;
-    }
-
-    return ElemGraphicsResourceUsage_Standard;
-}
-
-ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
 {
     InitMetalResourceMemory();
 
     auto width = 0u;
     auto height = 0u;
     auto format = ElemGraphicsFormat_Raw;
-    auto usage = ElemGraphicsResourceUsage_Standard;
     auto mipLevels = 0u;
 
     if (type == ElemGraphicsResourceType_Texture2D)
@@ -129,13 +115,11 @@ ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice 
         height = texture->height();
         mipLevels = texture->mipmapLevelCount();
         format = ConvertFromMetalResourceFormat(texture->pixelFormat());
-        usage = ConvertFromMetalResourceUsage(texture->usage());
     }
     else
     {
         auto buffer = (MTL::Buffer*)resource.get();
         width = buffer->length();
-        usage = ElemGraphicsResourceUsage_Uav;
     }
 
     auto handle = SystemAddDataPoolItem(metalResourcePool, {
@@ -355,17 +339,18 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
         resource->setLabel(NS::String::string(resourceInfo->DebugName, NS::UTF8StringEncoding));
     }
 
-    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, resource, false);
+    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, resourceInfo->Usage, resource, false);
 }
 
 void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
 {
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
     if (options && options->FencesToWait.Length > 0)
     {
+        EnqueueResourceDeleteEntry(MetalGraphicsMemoryArena, resource, ResourceDeleteType_Resource, options->FencesToWait);
         return;
     }
-    // TODO: To be able to delete with the fence, we should have another thread to check each fence in the queue
-    SystemAssert(resource != ELEM_HANDLE_NULL);
 
     auto resourceData = GetMetalResourceData(resource);
     SystemAssert(resourceData);
@@ -435,10 +420,34 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
 
     if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
+        if (usage == ElemGraphicsResourceUsage_Uav && resourceData->Usage != ElemGraphicsResourceUsage_Uav)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor UAV only works with texture created with UAV usage.");
+            return -1;
+        }
+
+        if (usage == ElemGraphicsResourceUsage_RenderTarget && resourceData->Usage != ElemGraphicsResourceUsage_RenderTarget)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with texture created with RenderTarget usage.");
+            return -1;
+        }
+
         handle = CreateMetalArgumentBufferHandleForTexture(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Texture*)resourceData->DeviceObject.get());
     }
     else
     {
+        if (usage == ElemGraphicsResourceUsage_Uav && resourceData->Usage != ElemGraphicsResourceUsage_Uav)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor UAV only works with buffer created with UAV usage.");
+            return -1;
+        }
+        
+        if (usage == ElemGraphicsResourceUsage_RenderTarget)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with textures.");
+            return -1;
+        }
+
         handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
     }
 
@@ -449,11 +458,35 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
 
 ElemGraphicsResourceDescriptorInfo MetalGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
 {
+    if (descriptor == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor is invalid.");
+        return {};
+    }
+
     return metalResourceDescriptorInfos[descriptor];
 }
 
 void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
 {
+    if (descriptor == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor is invalid.");
+        return;
+    }
+
+    if (options && options->FencesToWait.Length > 0)
+    {
+        EnqueueResourceDeleteEntry(MetalGraphicsMemoryArena, descriptor, ResourceDeleteType_Descriptor, options->FencesToWait);
+        return;
+    }
+
+    metalResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
+}
+
+void MetalProcessGraphicsResourceDeleteQueue()
+{
+    ProcessResourceDeleteQueue();
 }
 
 void EnsureMetalResourceBarrier(ElemCommandList commandList)
