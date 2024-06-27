@@ -67,9 +67,18 @@ set(CMAKE_INSTALL_NAME_DIR "@rpath")
 
 if (TEST_BUILD)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-O0>)
-    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-coverage>)
 
-    add_link_options($<$<COMPILE_LANGUAGE:CXX>:-coverage>)
+    # TODO: Investigate why is doesn't work on windows
+     
+    #add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprofile-instr-generate>)
+    #add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fcoverage-mapping>)
+    #add_link_options($<$<COMPILE_LANGUAGE:CXX>:-fprofile-instr-generate>)
+    #add_link_options($<$<COMPILE_LANGUAGE:CXX>:-fcoverage-mapping>)
+    
+    #add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-coverage>)
+    #add_link_options($<$<COMPILE_LANGUAGE:CXX>:-coverage>)
+
+    #"clang_rt.profile-x86_64.lib"
 endif()
 
 if(APPLE)

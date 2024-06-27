@@ -8,6 +8,7 @@
 
 SystemDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull> directX12GraphicsHeapPool;
 SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull> directX12GraphicsResourcePool;
+Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
 
 void InitDirectX12ResourceMemory()
 {
@@ -15,6 +16,7 @@ void InitDirectX12ResourceMemory()
     {
         directX12GraphicsHeapPool = SystemCreateDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_GRAPHICSHEAP);
         directX12GraphicsResourcePool = SystemCreateDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
+        directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
     }
 }
 
@@ -61,30 +63,14 @@ ElemGraphicsResource CreateDirectX12TextureFromResource(ElemGraphicsDevice graph
     SystemAssert(graphicsDeviceData);
 
     auto resourceDesc = resource->GetDesc();
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptor = {};
-
-    if (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
-    {
-        // TODO: Do we create the RTV view here?
-        rtvDescriptor = CreateDirectX12DescriptorHandle(graphicsDeviceData->RTVDescriptorHeap);
-
-        D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = 
-        {
-            .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceDesc.Format),
-            .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-        };
- 
-        graphicsDeviceData->Device->CreateRenderTargetView(resource.Get(), &renderTargetViewDesc, rtvDescriptor);
-    }
-
+  
     auto handle = SystemAddDataPoolItem(directX12GraphicsResourcePool, {
         .DeviceObject = resource,
         .DirectX12Format = resourceDesc.Format,
         .Width = (uint32_t)resourceDesc.Width,
         .Height = (uint32_t)resourceDesc.Height,
         .MipLevels = resourceDesc.MipLevels,
-        .IsPresentTexture = isPresentTexture,
-        .RtvDescriptor = rtvDescriptor
+        .IsPresentTexture = isPresentTexture
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsResourcePool, handle, {
@@ -238,6 +224,16 @@ void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     graphicsHeapData->DeviceObject.Reset();
 }
 
+ElemGraphicsResourceInfo DirectX12CreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options)
+{
+    return {};
+}
+
+ElemGraphicsResourceInfo DirectX12CreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options)
+{
+    return {};
+}
+
 ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -274,11 +270,8 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
     return CreateDirectX12TextureFromResource(graphicsHeapData->GraphicsDevice, texture, false);
 }
 
-// TODO: Functions to create additional optional Descriptors
-
-void DirectX12FreeGraphicsResource(ElemGraphicsResource resource)
+void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
 {
-    // TODO: Do a kind a deferred resource delete so we don't crash if the resource is still in use
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
     auto resourceData = GetDirectX12GraphicsResourceData(resource);
@@ -290,13 +283,6 @@ void DirectX12FreeGraphicsResource(ElemGraphicsResource resource)
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(resourceDataFull->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    // TODO: Remove descriptor handles
-    if (resourceData->RtvDescriptor.ptr)
-    {
-        FreeDirectX12DescriptorHandle(graphicsDeviceData->RTVDescriptorHeap, resourceData->RtvDescriptor);
-        resourceData->RtvDescriptor.ptr = 0;
-    }
-
     if (resourceData->DeviceObject)
     {
         resourceData->DeviceObject.Reset();
@@ -305,22 +291,31 @@ void DirectX12FreeGraphicsResource(ElemGraphicsResource resource)
     SystemRemoveDataPoolItem(directX12GraphicsResourcePool, resource);
 }
 
-ElemShaderDescriptor DirectX12CreateTextureShaderDescriptor(ElemGraphicsResource texture, const ElemTextureShaderDescriptorOptions* options)
+ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource resource)
 {
-    SystemAssert(texture != ELEM_HANDLE_NULL);
+    return {};
+}
 
-    auto textureData = GetDirectX12GraphicsResourceData(texture);
-    SystemAssert(textureData);
+ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+{
+}
 
-    auto textureDataFull = GetDirectX12GraphicsResourceDataFull(texture);
-    SystemAssert(textureDataFull);
+ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
+{
+    SystemAssert(resource != ELEM_HANDLE_NULL);
 
-    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(textureDataFull->GraphicsDevice);
+    auto resourceData = GetDirectX12GraphicsResourceData(resource);
+    SystemAssert(resourceData);
+
+    auto resourceDataFull = GetDirectX12GraphicsResourceDataFull(resource);
+    SystemAssert(resourceDataFull);
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(resourceDataFull->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
     DirectX12DescriptorHeap descriptorHeap;
 
-    if (options->Type == ElemTextureShaderDescriptorType_RenderTarget)
+    if (usage == ElemGraphicsResourceUsage_RenderTarget)
     {
         descriptorHeap = graphicsDeviceData->RTVDescriptorHeap;
     }
@@ -331,49 +326,49 @@ ElemShaderDescriptor DirectX12CreateTextureShaderDescriptor(ElemGraphicsResource
         
     auto descriptorHandle = CreateDirectX12DescriptorHandle(graphicsDeviceData->ResourceDescriptorHeap);
 
-    switch (options->Type)
+    switch (usage)
     {
-        case ElemTextureShaderDescriptorType_Read:
+        case ElemGraphicsResourceUsage_Standard:
         {
             D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = 
             {
-                .Format = textureData->DirectX12Format,
+                .Format = resourceData->DirectX12Format,
                 .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
                 .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
                 .Texture2D =
                 {
-                    .MostDetailedMip = options->MipIndex,
-                    .MipLevels = textureData->MipLevels - options->MipIndex
+                    .MostDetailedMip = options->TextureMipIndex,
+                    .MipLevels = resourceData->MipLevels - options->TextureMipIndex
                 }
             };
 
-		    graphicsDeviceData->Device->CreateShaderResourceView(textureData->DeviceObject.Get(), &srvDesc, descriptorHandle);
+		    graphicsDeviceData->Device->CreateShaderResourceView(resourceData->DeviceObject.Get(), &srvDesc, descriptorHandle);
             break;
         }
-        case ElemTextureShaderDescriptorType_Uav:
+        case ElemGraphicsResourceUsage_Uav:
         {
             D3D12_UNORDERED_ACCESS_VIEW_DESC uavViewDesc = 
             {
-                .Format = textureData->DirectX12Format,
+                .Format = resourceData->DirectX12Format,
                 .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
                 .Texture2D = 
                 {
-                    .MipSlice = options->MipIndex
+                    .MipSlice = options->TextureMipIndex
                 }
             };
             
-            graphicsDeviceData->Device->CreateUnorderedAccessView(textureData->DeviceObject.Get(), nullptr, &uavViewDesc, descriptorHandle);
+            graphicsDeviceData->Device->CreateUnorderedAccessView(resourceData->DeviceObject.Get(), nullptr, &uavViewDesc, descriptorHandle);
             break;
         }
-        case ElemTextureShaderDescriptorType_RenderTarget:
+        case ElemGraphicsResourceUsage_RenderTarget:
         {
             D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = 
             {
-                .Format = ConvertDirectX12FormatToSrgbIfNeeded(textureData->DirectX12Format),
+                .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceData->DirectX12Format),
                 .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
             };
      
-            graphicsDeviceData->Device->CreateRenderTargetView(textureData->DeviceObject.Get(), &renderTargetViewDesc, descriptorHandle);
+            graphicsDeviceData->Device->CreateRenderTargetView(resourceData->DeviceObject.Get(), &renderTargetViewDesc, descriptorHandle);
             break;
         }
     }
@@ -381,7 +376,18 @@ ElemShaderDescriptor DirectX12CreateTextureShaderDescriptor(ElemGraphicsResource
     return ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
 }
 
-void DirectX12FreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)
+ElemGraphicsResourceDescriptorInfo DirectX12GetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
 {
-    // TODO:
+}
+
+void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
+{
+}
+
+void DirectX12ProcessGraphicsResourceDeleteQueue(void)
+{
+}
+
+void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)
+{
 }

@@ -19,6 +19,7 @@ struct VulkanSwapChainData
     ElemCommandQueue CommandQueue;
     ElemWindow Window;
     ElemGraphicsResource BackBufferTextures[VULKAN_MAX_SWAPCHAIN_BUFFERS];
+    ElemGraphicsResourceDescriptor BackBufferDescriptors[VULKAN_MAX_SWAPCHAIN_BUFFERS];
     uint32_t CurrentImageIndex;
     VkFence BackBufferAcquireFence;
     ElemSwapChainUpdateHandlerPtr UpdateHandler;

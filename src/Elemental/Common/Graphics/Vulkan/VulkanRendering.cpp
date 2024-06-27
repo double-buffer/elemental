@@ -76,7 +76,7 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         renderingAttachments[i] =
         {
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-            .imageView = textureData->ImageView,
+            //.imageView = textureData->ImageView,
             .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
             .loadOp = loadOperation,
             .storeOp = storeOperation,

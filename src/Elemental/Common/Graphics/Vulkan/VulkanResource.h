@@ -16,7 +16,6 @@ struct VulkanGraphicsHeapDataFull
 struct VulkanGraphicsResourceData
 {
     VkImage DeviceObject;
-    VkImageView ImageView;
     VkFormat Format;
     bool IsPresentTexture;
     uint32_t Width;
@@ -39,8 +38,18 @@ ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphics
 ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
             
-ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
-void VulkanFreeGraphicsResource(ElemGraphicsResource resource);
+ElemGraphicsResourceInfo VulkanCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options);
+ElemGraphicsResourceInfo VulkanCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options);
 
-ElemShaderDescriptor VulkanCreateTextureShaderDescriptor(ElemGraphicsResource resource, const ElemTextureShaderDescriptorOptions* options);
-void VulkanFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor);
+ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
+void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
+ElemGraphicsResourceInfo VulkanGetGraphicsResourceInfo(ElemGraphicsResource resource);
+ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
+
+ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
+ElemGraphicsResourceDescriptorInfo VulkanGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
+void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
+
+void VulkanProcessGraphicsResourceDeleteQueue(void);
+
+void VulkanGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options);

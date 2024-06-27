@@ -53,3 +53,4 @@ void VulkanCommitCommandList(ElemCommandList commandList);
 
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void VulkanWaitForFenceOnCpu(ElemFence fence);
+bool VulkanIsFenceCompleted(ElemFence fence);

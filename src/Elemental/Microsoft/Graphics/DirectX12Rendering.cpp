@@ -1,4 +1,5 @@
 #include "DirectX12Rendering.h"
+#include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
 #include "DirectX12Resource.h"
 #include "SystemFunctions.h"
@@ -19,6 +20,9 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
     SystemAssert(commandListDataFull);
     commandListDataFull->CurrentRenderPassParameters = *parameters;
 
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
     auto renderTargetDescList = SystemPushArray<D3D12_RENDER_PASS_RENDER_TARGET_DESC>(stackMemoryArena, parameters->RenderTargets.Length);
 
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
@@ -26,8 +30,11 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetDirectX12GraphicsResourceData(renderTargetParameters.RenderTarget); 
+        auto renderTargetDescriptorInfo = DirectX12GetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget); 
+        auto textureData = GetDirectX12GraphicsResourceData(renderTargetDescriptorInfo.Resource);
         SystemAssert(textureData);
+
+        // TODO: Validate usage
 
         D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE beginAccessType;
 
@@ -77,7 +84,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         // TODO: Group the barriers with a barrier system
         renderTargetDescList[i] =
         {
-            .cpuDescriptor = textureData->RtvDescriptor,
+            .cpuDescriptor = ConvertDirectX12DescriptorIndexToHandle(graphicsDeviceData->RTVDescriptorHeap, renderTargetParameters.RenderTarget),
             .BeginningAccess = { .Type = beginAccessType, .Clear = beginAccessClearValue },
             .EndingAccess = { .Type = endAccessType }
         };

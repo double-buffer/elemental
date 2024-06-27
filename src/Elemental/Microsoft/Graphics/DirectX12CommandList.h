@@ -35,6 +35,7 @@ struct DirectX12CommandListData
     CommandAllocatorPoolItem<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*>* CommandAllocatorPoolItem;
     CommandListPoolItem<ID3D12GraphicsCommandList10*>* CommandListPoolItem;
     DirectX12PipelineStateType PipelineStateType;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct DirectX12CommandListDataFull
@@ -56,3 +57,4 @@ void DirectX12CommitCommandList(ElemCommandList commandList);
 
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void DirectX12WaitForFenceOnCpu(ElemFence fence);
+bool DirectX12IsFenceCompleted(ElemFence fence);

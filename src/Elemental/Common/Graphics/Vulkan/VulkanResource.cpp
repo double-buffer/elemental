@@ -48,21 +48,9 @@ ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphics
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
-    VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    createInfo.image = resource;
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = format;
-    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
-    createInfo.subresourceRange.layerCount = 1;
-
-    VkImageView imageView;
-    AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &imageView));
 
     auto handle = SystemAddDataPoolItem(vulkanGraphicsResourcePool, {
         .DeviceObject = resource,
-        .ImageView = imageView,
         .Format = format,
         .IsPresentTexture = isPresentTexture,
         .Width = width,
@@ -87,12 +75,22 @@ void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
 {
 }
 
+ElemGraphicsResourceInfo VulkanCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options)
+{
+    return {};
+}
+
+ElemGraphicsResourceInfo VulkanCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options)
+{
+    return {};
+}
+
 ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     return {};
 }
 
-void VulkanFreeGraphicsResource(ElemGraphicsResource resource)
+void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
 {
     // TODO: Do a kind a deferred resource delete so we don't crash if the resource is still in use
     SystemAssert(resource != ELEM_HANDLE_NULL);
@@ -106,16 +104,49 @@ void VulkanFreeGraphicsResource(ElemGraphicsResource resource)
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    vkDestroyImageView(graphicsDeviceData->Device, resourceData->ImageView, nullptr);
-
     SystemRemoveDataPoolItem(vulkanGraphicsResourcePool, resource);
 }
 
-ElemShaderDescriptor VulkanCreateTextureShaderDescriptor(ElemGraphicsResource resource, const ElemTextureShaderDescriptorOptions* options)
+ElemGraphicsResourceInfo VulkanGetGraphicsResourceInfo(ElemGraphicsResource resource)
 {
-    return 0;
+    return {};
 }
 
-void VulkanFreeShaderDescriptor(ElemShaderDescriptor shaderDescriptor)
+ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+{
+    return {};
+}
+
+ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
+{
+/*    VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    createInfo.image = resource;
+    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    createInfo.format = format;
+    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    createInfo.subresourceRange.baseMipLevel = 0;
+    createInfo.subresourceRange.levelCount = 1;
+    createInfo.subresourceRange.layerCount = 1;
+
+    VkImageView imageView;
+    AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &imageView));*/
+    return {};
+}
+
+ElemGraphicsResourceDescriptorInfo VulkanGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
+{
+    return {};
+}
+
+void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
+{
+    //vkDestroyImageView(graphicsDeviceData->Device, resourceData->ImageView, nullptr);
+}
+
+void VulkanProcessGraphicsResourceDeleteQueue(void)
+{
+}
+
+void VulkanGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)
 {
 }

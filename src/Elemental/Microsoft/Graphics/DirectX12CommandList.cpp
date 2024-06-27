@@ -229,7 +229,8 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     auto handle = SystemAddDataPoolItem(directX12CommandListPool, {
         .DeviceObject = commandListPoolItem->CommandList,
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
-        .CommandListPoolItem = commandListPoolItem
+        .CommandListPoolItem = commandListPoolItem,
+        .GraphicsDevice = commandQueueData->GraphicsDevice
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
@@ -297,4 +298,9 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
         // TODO: It is a little bit extreme to block at infinity. We should set a timeout and break the program.
         WaitForSingleObject(directX12GlobalFenceEvent, INFINITE);
     }
+}
+
+bool DirectX12IsFenceCompleted(ElemFence fence)
+{
+    return false;
 }

@@ -387,3 +387,8 @@ void VulkanWaitForFenceOnCpu(ElemFence fence)
         AssertIfFailed(vkWaitSemaphores(graphicsDeviceData->Device, &waitInfo, UINT64_MAX));
     }
 }
+
+bool VulkanIsFenceCompleted(ElemFence fence)
+{
+    return false;
+}
