@@ -14,6 +14,15 @@ struct TestReadBackBuffer
     ElemGraphicsResourceDescriptor Descriptor;
 };
 
+struct TestRenderTarget
+{
+    ElemGraphicsHeap GraphicsHeap;
+    ElemGraphicsResource Texture;
+    ElemGraphicsResourceDescriptor ReadDescriptor;
+    ElemGraphicsResourceDescriptor RenderTargetDescriptor;
+    ElemGraphicsFormat Format;
+};
+
 // TODO: Review
 extern bool testPrintLogs;
 extern bool testForceVulkanApi;
@@ -31,8 +40,12 @@ static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessage
 void TestInitLog();
 
 ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader);
+
 TestReadBackBuffer TestCreateReadbackBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes);
 void TestFreeReadbackBuffer(TestReadBackBuffer readbackBuffer);
+
+TestRenderTarget TestCreateRenderTarget(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format);
+void TestFreeRenderTarget(TestRenderTarget renderTarget);
 
 template<typename T>
 void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);

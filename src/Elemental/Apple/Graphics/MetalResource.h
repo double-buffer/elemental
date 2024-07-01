@@ -37,6 +37,8 @@ MetalGraphicsHeapDataFull* GetMetalGraphicsHeapDataFull(ElemGraphicsHeap graphic
 MetalResourceData* GetMetalResourceData(ElemGraphicsResource resource);
 MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource);
 
+MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format);
+
 void EnsureMetalResourceBarrier(ElemCommandList commandList);
 
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);

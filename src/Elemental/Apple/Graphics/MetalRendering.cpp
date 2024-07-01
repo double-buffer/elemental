@@ -1,5 +1,6 @@
 #include "MetalRendering.h"
 #include "MetalCommandList.h"
+#include "MetalShader.h"
 #include "MetalResource.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -181,8 +182,12 @@ void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, 
     SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Render);
     SystemAssert(commandListData->CommandEncoder);
 
-    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+    auto pipelineStateData = GetMetalPipelineStateData(commandListData->PipelineState);
+    SystemAssert(pipelineStateData);
 
-    // TODO: Get the correct threads config
-    renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(32, 1, 1), MTL::Size(32, 1, 1));
+    // TODO: Get the correct threads config for amplification shader
+    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+    renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), 
+                                               MTL::Size(32, 1, 1), 
+                                               MTL::Size(pipelineStateData->ThreadSizeX, pipelineStateData->ThreadSizeY, pipelineStateData->ThreadSizeZ));
 }

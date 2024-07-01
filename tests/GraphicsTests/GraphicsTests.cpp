@@ -253,6 +253,32 @@ void TestFreeReadbackBuffer(TestReadBackBuffer readbackBuffer)
     ElemFreeGraphicsHeap(readbackBuffer.GraphicsHeap);
 }
 
+TestRenderTarget TestCreateRenderTarget(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format)
+{
+    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 16, 16, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget, nullptr);
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, textureInfo.SizeInBytes, nullptr);
+    auto texture = ElemCreateGraphicsResource(graphicsHeap, 0, &textureInfo);
+    auto textureReadDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto renderTargetDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceUsage_RenderTarget, nullptr);
+
+    return
+    {
+        .GraphicsHeap = graphicsHeap,
+        .Texture = texture,
+        .ReadDescriptor = textureReadDescriptor,
+        .RenderTargetDescriptor = renderTargetDescriptor,
+        .Format = format
+    };
+}
+
+void TestFreeRenderTarget(TestRenderTarget renderTarget)
+{
+    ElemFreeGraphicsResourceDescriptor(renderTarget.RenderTargetDescriptor, nullptr);
+    ElemFreeGraphicsResourceDescriptor(renderTarget.ReadDescriptor, nullptr);
+    ElemFreeGraphicsResource(renderTarget.Texture, nullptr);
+    ElemFreeGraphicsHeap(renderTarget.GraphicsHeap);
+}
+
 template<typename T>
 void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
 {

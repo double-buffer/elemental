@@ -167,6 +167,8 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     NS::SharedPtr<MTL::Function> meshShaderFunction;
     NS::SharedPtr<MTL::Function> pixelShaderFunction;
 
+    uint32_t meshThreadGroupSizeX, meshThreadGroupSizeY, meshThreadGroupSizeZ = 0u;
+
     // TODO: Get the correct shader based on the function name
     if (parameters->MeshShaderFunction)
     {
@@ -176,9 +178,12 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
 
             if (meshShaderFunction)
             {
+                // TODO: Get correct metadata here it is just for test
+                meshThreadGroupSizeX = shaderLibraryData->Shaders[i].Metadata[0].Value[0];
+                meshThreadGroupSizeY = shaderLibraryData->Shaders[i].Metadata[0].Value[1];
+                meshThreadGroupSizeZ = shaderLibraryData->Shaders[i].Metadata[0].Value[2];
                 break;
             }
-
         }
             
         if (meshShaderFunction)
@@ -214,7 +219,10 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
         }
     }
         
-    pipelineStateDescriptor->colorAttachments()->object(0)->setPixelFormat(MTL::PixelFormatBGRA8Unorm_sRGB);
+    for (uint32_t i = 0; i < parameters->TextureFormats.Length; i++)
+    {
+        pipelineStateDescriptor->colorAttachments()->object(0)->setPixelFormat(ConvertToMetalResourceFormat(parameters->TextureFormats.Items[i]));
+    }
     
     // TODO: Why is the triangle not back face culled by default?
     //pipelineStateDescriptor.supportIndirectCommandBuffers = true
@@ -283,6 +291,9 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     
     auto handle = SystemAddDataPoolItem(metalPipelineStatePool, {
         .RenderPipelineState = pipelineState,
+        .ThreadSizeX = meshThreadGroupSizeX,
+        .ThreadSizeY = meshThreadGroupSizeY,
+        .ThreadSizeZ = meshThreadGroupSizeZ,
     }); 
 
     SystemAddDataPoolItemFull(metalPipelineStatePool, handle, {
@@ -395,10 +406,6 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
     {
         auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
         renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
-
-        // TODO: Amplification shader
-        renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
-        renderCommandEncoder->setFragmentBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
     }
     else
     {
@@ -407,13 +414,13 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
             auto computeCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->computeCommandEncoder()); 
             commandListData->CommandEncoder = computeCommandEncoder;
             commandListData->CommandEncoderType = MetalCommandEncoderType_Compute;
-            computeCommandEncoder->setBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         }
     
         auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
         computeCommandEncoder->setComputePipelineState(pipelineStateData->ComputePipelineState.get());
-        commandListData->PipelineState = pipelineState;
     }
+        
+    commandListData->PipelineState = pipelineState;
 }
 
 void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data)
@@ -422,6 +429,9 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
 
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
+    
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
 
     if (commandListData->CommandEncoderType == MetalCommandEncoderType_Render)
     {
@@ -431,18 +441,23 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
         // TODO: Do we need to check if the shader stage is bound?
         // TODO: compute offset
         // HACK: For the oment we set the slot 2 because it is the global one for bindless
+        
+        renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         renderCommandEncoder->setMeshBytes(data.Items, data.Length, 2);
+
+        renderCommandEncoder->setFragmentBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         renderCommandEncoder->setFragmentBytes(data.Items, data.Length, 2);
     }
     else if (commandListData->CommandEncoderType == MetalCommandEncoderType_Compute)
     {
-        auto renderCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
+        auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
 
         // TODO: Amplification shader
         // TODO: Do we need to check if the shader stage is bound?
         // TODO: compute offset
         // HACK: For the oment we set the slot 2 because it is the global one for bindless
-        renderCommandEncoder->setBytes(data.Items, data.Length, 2);
+        computeCommandEncoder->setBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+        computeCommandEncoder->setBytes(data.Items, data.Length, 2);
     }
 }
 
@@ -464,7 +479,6 @@ void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCount
     SystemAssert(pipelineStateData);
 
     auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
-
-    // TODO: Get the correct threads config
-    computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(pipelineStateData->ThreadSizeX, pipelineStateData->ThreadSizeY, pipelineStateData->ThreadSizeZ));
+    computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), 
+                                                MTL::Size(pipelineStateData->ThreadSizeX, pipelineStateData->ThreadSizeY, pipelineStateData->ThreadSizeZ));
 }
