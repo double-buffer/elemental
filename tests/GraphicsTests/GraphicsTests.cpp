@@ -2,7 +2,7 @@
 
 #include "GraphicsTests.h"
 
-bool testPrintLogs = false;
+bool testPrintLogs = true;
 bool testForceVulkanApi = false;
 
 bool workingTestHasLogErrors = false;
@@ -11,11 +11,6 @@ uint32_t currentTestErrorLogsIndex;
 
 bool testHasLogErrors = false;
 char testErrorLogs[2048];
-
-ElemGraphicsDevice sharedGraphicsDevice = ELEM_HANDLE_NULL;
-ElemCommandQueue sharedCommandQueue = ELEM_HANDLE_NULL;
-ElemSystemInfo sharedSystemInfo;
-ElemGraphicsDeviceInfo sharedGraphicsDeviceInfo;
 
 uint64_t TestMegaBytesToBytes(uint64_t value)
 {
@@ -222,41 +217,16 @@ void TestInitLog()
     currentTestErrorLogsIndex = 0u;
 }
 
-ElemGraphicsDevice TestGetSharedGraphicsDevice()
+ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader)
 {
-    return sharedGraphicsDevice;
-}
-
-ElemSystemInfo TestGetSharedSystemInfo()
-{
-    return sharedSystemInfo;
-}
-
-ElemGraphicsDeviceInfo TestGetSharedGraphicsDeviceInfo()
-{
-    return sharedGraphicsDeviceInfo;
-}
-
-ElemCommandQueue TestGetSharedCommandQueue()
-{
-    // TODO: Reset CommandAllocation
-    return sharedCommandQueue;
-}
-
-ElemShaderLibrary TestOpenShader(const char* shader)
-{
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
-
     // TODO: Vulkan shaders on windows
     auto shaderData = ReadFile(shader);
     auto shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, shaderData);
     return shaderLibrary;
 }
 
-TestReadBackBuffer TestCreateReadbackBuffer(uint32_t sizeInBytes)
+TestReadBackBuffer TestCreateReadbackBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes)
 {
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
-
     ElemGraphicsHeapOptions heapOptions =
     {
         .HeapType = ElemGraphicsHeapType_Readback
@@ -264,9 +234,7 @@ TestReadBackBuffer TestCreateReadbackBuffer(uint32_t sizeInBytes)
 
     auto readBackGraphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &heapOptions);
 
-    ElemGraphicsResourceInfoOptions options = { .Usage = ElemGraphicsResourceUsage_Uav };
-    ElemGraphicsResourceInfo bufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, &options); 
-
+    auto bufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Uav, nullptr); 
     auto buffer = ElemCreateGraphicsResource(readBackGraphicsHeap, 0, &bufferInfo);
     auto bufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceUsage_Uav, nullptr);
 
@@ -286,11 +254,9 @@ void TestFreeReadbackBuffer(TestReadBackBuffer readbackBuffer)
 }
 
 template<typename T>
-void TestDispatchComputeForReadbackBuffer(const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
+void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
 {
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
-    auto commandQueue = TestGetSharedCommandQueue();
-    auto shaderLibrary = TestOpenShader(shaderName);
+    auto shaderLibrary = TestOpenShader(graphicsDevice, shaderName);
 
     ElemComputePipelineStateParameters pipelineStateParameters =
     {
@@ -305,7 +271,7 @@ void TestDispatchComputeForReadbackBuffer(const char* shaderName, const char* fu
     {
         return;
     }
-
+    
     ElemBindPipelineState(commandList, pipelineState);
     ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)parameters, .Length = sizeof(T) });
 

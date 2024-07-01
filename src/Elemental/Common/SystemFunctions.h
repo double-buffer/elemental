@@ -16,9 +16,9 @@
 #endif
 #else
 #ifdef _DEBUG
-    #define SystemAssert(expression) if (!(expression)) { printf("Assert failed: %s", #expression); int* ptr = 0; *ptr = 0; }
+    #define SystemAssert(expression) if (!(expression)) { printf("Assert failed: %s\n", #expression); int* ptr = 0; *ptr = 0; }
 #else
-    #define SystemAssert(expression) if (!(expression)) { printf("Assert failed: %s", #expression); exit(1); }
+    #define SystemAssert(expression) if (!(expression)) { printf("Assert failed: %s\n", #expression); exit(1); }
 #endif
 
 #endif 

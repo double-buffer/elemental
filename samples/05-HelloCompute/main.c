@@ -159,9 +159,8 @@ void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width,
 
     printf("Creating render texture...\n");
 
-    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R16G16B16A16_FLOAT, 
+    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R16G16B16A16_FLOAT, ElemGraphicsResourceUsage_Uav,
                                                                             &(ElemGraphicsResourceInfoOptions) { 
-                                                                                .Usage = ElemGraphicsResourceUsage_Uav, 
                                                                                 .DebugName = "Render Texture" 
                                                                             });
 
@@ -392,6 +391,10 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
     // BUG: On iOS when the framerate is slower (we miss the vsync), the barrier here is not kicked in and the gpu overlapp the render encoders
+    // For this case, it seems it is caused by calling the update handler for vsync regardless of if the frame was presented
+
+    // TODO: Passing ELEM_HANDLE_NULL is not very intuitive here :(
+    // Maybe we don't need this barrier except to change the layout?
     ElemGraphicsResourceBarrier(commandList, ELEM_HANDLE_NULL, applicationPayload->RenderTextureUavDescriptor, NULL);
 
     uint32_t threadSize = 16;

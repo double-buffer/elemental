@@ -11,6 +11,7 @@ SystemDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull> directX
 SystemDataPool<DirectX12CommandListData, DirectX12CommandListDataFull> directX12CommandListPool;
 
 thread_local CommandAllocatorDevicePool<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*> threadDirectX12DeviceCommandPools[DIRECTX12_MAX_DEVICES];
+thread_local bool threadDirectX12CommandBufferCommitted = true;
 
 HANDLE directX12GlobalFenceEvent;
 
@@ -144,6 +145,8 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
         commandQueueDataFull->CommandLists[i].Reset();
     }
 
+    threadDirectX12DeviceCommandPools[commandQueueData->GraphicsDevice] = {};
+
     SystemRemoveDataPoolItem(directX12CommandQueuePool, commandQueue);
 }
 
@@ -153,10 +156,17 @@ void DirectX12ResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
     SystemAssert(graphicsDeviceData);
 
     graphicsDeviceData->CommandAllocationGeneration++;
+    threadDirectX12CommandBufferCommitted = true;
 }
 
 ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
+    if (!threadDirectX12CommandBufferCommitted)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot get a command list if commit was not called on the same thread.");
+        return ELEM_HANDLE_NULL;
+    }
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
@@ -167,6 +177,8 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
+    // BUG: We have a bug here because if we reuse an ID for graphics device, the generation will be added to the ID and it will not work anymore
+    // we need to use the decode function here
     auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadDirectX12DeviceCommandPools[commandQueueData->GraphicsDevice], 
                                                                 graphicsDeviceData->CommandAllocationGeneration, 
                                                                 commandQueueData->CommandAllocatorQueueType);
@@ -214,9 +226,9 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     {
         commandListPoolItem->CommandList->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
     }
-            
-    AssertIfFailedReturnNullHandle(commandListPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
 
+    AssertIfFailedReturnNullHandle(commandListPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
+            
     auto descriptorHeaps = SystemPushArray<ID3D12DescriptorHeap*>(stackMemoryArena, 1);
     descriptorHeaps[0] = graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorHeap.Get();
 
@@ -235,6 +247,8 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
     });
+    
+    threadDirectX12CommandBufferCommitted = false;
 
     return handle;
 }
@@ -243,10 +257,18 @@ void DirectX12CommitCommandList(ElemCommandList commandList)
 {    
     auto commandListData = GetDirectX12CommandListData(commandList);
     AssertIfFailed(commandListData->DeviceObject->Close());
+    
+    commandListData->IsCommitted = true;
+    threadDirectX12CommandBufferCommitted = true;
 }
 
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
+    auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
+    SystemAssert(commandQueueData);
+
+    bool hasError = false;
+
     // TODO: Wait for fences if any
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -255,23 +277,36 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetDirectX12CommandListData(commandLists.Items[i]);
-        commandListsToExecute[i] = commandListData->DeviceObject.Get();
+
+        if (!commandListData->IsCommitted)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Commandlist needs to be committed before executing it.");
+            hasError = true;
+            break;
+        }
+
+        commandListsToExecute[i] = commandListData->DeviceObject;
     }
 
-    auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
-    SystemAssert(commandQueueData);
-
-    commandQueueData->DeviceObject->ExecuteCommandLists(commandLists.Length, commandListsToExecute.Pointer);
+    if (!hasError)
+    {
+        commandQueueData->DeviceObject->ExecuteCommandLists(commandLists.Length, commandListsToExecute.Pointer);
+    }
 
     auto fence = CreateDirectX12CommandQueueFence(commandQueue);
     
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetDirectX12CommandListData(commandLists.Items[i]);
+
+        if (!commandListData->IsCommitted)
+        {
+            DirectX12CommitCommandList(commandLists.Items[i]);
+        }
+
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
 
-        commandListData->DeviceObject.Reset();
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);
     }
 
@@ -283,7 +318,11 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
     SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueToWaitDataFull = GetDirectX12CommandQueueDataFull(fence.CommandQueue);
-    SystemAssert(commandQueueToWaitDataFull);
+
+    if (!commandQueueToWaitDataFull)
+    {
+        return;
+    }
 
     if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue) 
     {
@@ -302,5 +341,19 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
 
 bool DirectX12IsFenceCompleted(ElemFence fence)
 {
-    return false;
+    SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
+
+    auto commandQueueToWaitDataFull = GetDirectX12CommandQueueDataFull(fence.CommandQueue);
+
+    if (!commandQueueToWaitDataFull)
+    {
+        return true;
+    }
+
+    if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue) 
+    {
+        commandQueueToWaitDataFull->LastCompletedFenceValue = SystemMax(commandQueueToWaitDataFull->LastCompletedFenceValue, commandQueueToWaitDataFull->Fence->GetCompletedValue());
+    }
+
+    return fence.FenceValue <= commandQueueToWaitDataFull->LastCompletedFenceValue;
 }

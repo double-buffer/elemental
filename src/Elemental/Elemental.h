@@ -586,7 +586,6 @@ typedef struct
 
 typedef struct
 {
-    ElemGraphicsResourceUsage Usage;
     const char* DebugName;
 } ElemGraphicsResourceInfoOptions;
 
@@ -724,7 +723,7 @@ typedef struct
  */
 typedef struct
 {
-    ElemGraphicsResource RenderTarget;
+    ElemGraphicsResourceDescriptor RenderTarget;
 
     // TODO: Add a RTV descriptor optional here so we can override it if needed?
 
@@ -897,8 +896,9 @@ ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
-ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options);
-ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options);
+// TODO: Put usage in the parameters and not in options?
+ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
+ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);

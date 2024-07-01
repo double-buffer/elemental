@@ -12,11 +12,12 @@
 UTEST(CommandList, GetCommandList) 
 {
     // Arrange
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    ElemCommandListOptions options = { .DebugName = "GetCommandList" };
 
     // Act
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, &options);
 
     // Assert
     ElemCommitCommandList(commandList);
@@ -26,45 +27,51 @@ UTEST(CommandList, GetCommandList)
     ASSERT_LOG_NOERROR();
 
     ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
 UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread) 
 {
     // Arrange
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    ElemGetCommandList(commandQueue, nullptr);
+    ElemCommandListOptions options = { .DebugName = "GetCommandListWithoutPreviousCommittedOnSameThread" };
+    auto commandList1 = ElemGetCommandList(commandQueue, &options);
 
     // Act
-    ElemGetCommandList(commandQueue, nullptr);
+    ElemGetCommandList(commandQueue, &options);
 
     // Assert
     ASSERT_LOG_MESSAGE("Cannot get a command list if commit was not called on the same thread.");
+    ElemCommitCommandList(commandList1);
     ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
 UTEST(CommandList, ExecuteCommandListWithoutCommit) 
 {
     // Arrange
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemCommandListOptions options = { .DebugName = "ExecuteCommandListWithoutCommit" };
+    auto commandList = ElemGetCommandList(commandQueue, &options);
 
     // Act
     ElemExecuteCommandList(commandQueue, commandList, nullptr);
 
     // Assert
     ASSERT_LOG_MESSAGE("Commandlist needs to be committed before executing it.");
-
     ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
 UTEST(CommandList, ExecuteCommandListFenceIsValid) 
 {
     // Arrange
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemCommandListOptions options = { .DebugName = "ExecuteCommandListFenceIsValid" };
+    auto commandList = ElemGetCommandList(commandQueue, &options);
     ElemCommitCommandList(commandList);
 
     // Act
@@ -75,6 +82,6 @@ UTEST(CommandList, ExecuteCommandListFenceIsValid)
     ASSERT_EQ(fence.CommandQueue, commandQueue);
     ASSERT_GT(fence.FenceValue, 0u);
 
-    ElemWaitForFenceOnCpu(fence);
     ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }

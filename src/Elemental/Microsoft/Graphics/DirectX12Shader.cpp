@@ -2,6 +2,7 @@
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12Resource.h"
 #include "DirectX12CommandList.h"
+#include "Graphics/ShaderReader.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -49,12 +50,31 @@ bool CheckDirectX12ShaderDataHeader(ElemDataSpan data, const char* headerValue)
     return true;
 }
 
+bool CheckDirectX12PipelineStateType(const DirectX12CommandListData* commandListData, DirectX12PipelineStateType type)
+{
+    if (commandListData->PipelineStateType != type)
+    {
+        if (type == DirectX12PipelineStateType_Compute)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "A compute pipelinestate must be bound to the commandlist before calling a compute command.");
+        }
+        else
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "A graphics pipelinestate must be bound to the commandlist before calling a rendering command.");
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
 ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitDirectX12ShaderMemory();
 
     D3D12_SHADER_BYTECODE directX12LibraryData = {};
-    Span<D3D12_SHADER_BYTECODE> graphicsShaderData = {};
+    ReadOnlySpan<Shader> graphicsShaderData = {};
 
     if (CheckDirectX12ShaderDataHeader(shaderLibraryData, "DXBC"))
     {
@@ -70,29 +90,7 @@ ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice
     else 
     {
         auto dataSpan = Span<uint8_t>(shaderLibraryData.Items, shaderLibraryData.Length); 
-        auto shaderCount = *(uint32_t*)dataSpan.Pointer;
-        dataSpan = dataSpan.Slice(sizeof(uint32_t));
-
-        // HACK: This is bad to allocate this here but this should be temporary
-        graphicsShaderData = SystemPushArray<D3D12_SHADER_BYTECODE>(DirectX12MemoryArena, shaderCount);
-
-        for (uint32_t i = 0; i < shaderCount; i++)
-        {
-            auto size = *(uint32_t*)dataSpan.Pointer;
-            dataSpan = dataSpan.Slice(sizeof(uint32_t));
-
-            // TODO: Debug
-            auto dest = SystemPushArray<uint8_t>(DirectX12MemoryArena, size);
-            SystemCopyBuffer(dest, ReadOnlySpan<uint8_t>(dataSpan.Pointer, size));
-
-            graphicsShaderData[i] =
-            {
-                .pShaderBytecode = dest.Pointer,
-                .BytecodeLength = dest.Length
-            };
-
-            dataSpan = dataSpan.Slice(size);
-        }
+        graphicsShaderData = ReadShaders(DirectX12MemoryArena, dataSpan);
     }
 
     auto handle = SystemAddDataPoolItem(directX12ShaderLibraryPool, {
@@ -209,8 +207,8 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     
     psoDesc.RootSignature = graphicsDeviceData->RootSignature.Get();
 
-    psoDesc.MS = shaderLibraryData->GraphicsShaders[0];
-    psoDesc.PS = shaderLibraryData->GraphicsShaders[1];
+    psoDesc.MS = D3D12_SHADER_BYTECODE { .pShaderBytecode = shaderLibraryData->GraphicsShaders[0].ShaderCode.Pointer, .BytecodeLength = shaderLibraryData->GraphicsShaders[0].ShaderCode.Length };
+    psoDesc.PS = D3D12_SHADER_BYTECODE { .pShaderBytecode = shaderLibraryData->GraphicsShaders[1].ShaderCode.Pointer, .BytecodeLength = shaderLibraryData->GraphicsShaders[1].ShaderCode.Length };
 
     psoDesc.RenderTargets = renderTargets;
     psoDesc.SampleDesc = sampleDesc;
@@ -259,8 +257,8 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
     { 
         for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
         {
-            D3D12_DXIL_LIBRARY_DESC desc = { .DXILLibrary = shaderLibraryData->GraphicsShaders[i] };
-            dxilLibraries[dxilLibrariesIndex++] = desc;
+            //D3D12_DXIL_LIBRARY_DESC desc = { .DXILLibrary = shaderLibraryData->GraphicsShaders[i] };
+            //dxilLibraries[dxilLibrariesIndex++] = desc;
         }
     }
 
@@ -350,9 +348,14 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
     // TODO: Temporary
     auto oldPso = CreateDirectX12OldPSO(graphicsDevice, parameters);
 
+    if (DirectX12DebugLayerEnabled && parameters->DebugName)
+    {
+        oldPso->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, parameters->DebugName).Pointer);
+    }
+
     auto handle = SystemAddDataPoolItem(directX12PipelineStatePool, {
         .PipelineState = oldPso,
-        .PipelineStateType = DirectX12PipelineStateType::Graphics,
+        .PipelineStateType = DirectX12PipelineStateType_Graphics,
         //.ProgramIdentifier = programIdentifier
     }); 
 
@@ -365,6 +368,8 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
 
 ElemPipelineState DirectX12CompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     InitDirectX12ShaderMemory();
     SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
     
@@ -377,19 +382,50 @@ ElemPipelineState DirectX12CompileComputePipelineState(ElemGraphicsDevice graphi
     auto shaderLibraryData= GetDirectX12ShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
 
+    D3D12_SHADER_BYTECODE computeFunction;
+
+    if (parameters->ComputeShaderFunction)
+    {
+        const Shader* shader = nullptr;
+
+        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
+        {
+            if (SystemFindSubString(shaderLibraryData->GraphicsShaders[i].Name, parameters->ComputeShaderFunction) != -1)
+            {
+                shader = &shaderLibraryData->GraphicsShaders[i];
+                break;
+            }
+        }
+            
+        if (shader)
+        {
+            computeFunction = { .pShaderBytecode = shader->ShaderCode.Pointer, .BytecodeLength = shader->ShaderCode.Length };
+        }
+        else
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find compute shader function '%s'", parameters->ComputeShaderFunction);
+            return ELEM_HANDLE_NULL;
+        }
+    }
+
     // TODO: Use the new pso model
     ComPtr<ID3D12PipelineState> pipelineState;
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 
     psoDesc.pRootSignature = graphicsDeviceData->RootSignature.Get();
-    psoDesc.CS = shaderLibraryData->GraphicsShaders[0];
+    psoDesc.CS = computeFunction;
 
 	AssertIfFailed(graphicsDeviceData->Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(pipelineState.ReleaseAndGetAddressOf())));
 
+    if (DirectX12DebugLayerEnabled && parameters->DebugName)
+    {
+        pipelineState->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, parameters->DebugName).Pointer);
+    }
+
     auto handle = SystemAddDataPoolItem(directX12PipelineStatePool, {
         .PipelineState = pipelineState,
-        .PipelineStateType = DirectX12PipelineStateType::Compute,
+        .PipelineStateType = DirectX12PipelineStateType_Compute,
         //.ProgramIdentifier = programIdentifier
     }); 
 
@@ -411,6 +447,7 @@ void DirectX12FreePipelineState(ElemPipelineState pipelineState)
     SystemAssert(pipelineStateDataFull);
 
     pipelineStateDataFull->StateObject.Reset();
+    pipelineStateData->PipelineState.Reset();
 
     SystemRemoveDataPoolItem(directX12PipelineStatePool, pipelineState);
 }
@@ -449,7 +486,7 @@ void DirectX12PushPipelineStateConstants(ElemCommandList commandList, uint32_t o
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
 
-    if (commandListData->PipelineStateType == DirectX12PipelineStateType::Graphics)
+    if (commandListData->PipelineStateType == DirectX12PipelineStateType_Graphics)
     {
         commandListData->DeviceObject->SetGraphicsRoot32BitConstants(0, data.Length / 4, data.Items, offsetInBytes / 4);
     }
@@ -465,6 +502,11 @@ void DirectX12DispatchCompute(ElemCommandList commandList, uint32_t threadGroupC
 
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
+
+    if (!CheckDirectX12PipelineStateType(commandListData, DirectX12PipelineStateType_Compute))
+    {
+        return;
+    }
 
     commandListData->DeviceObject->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

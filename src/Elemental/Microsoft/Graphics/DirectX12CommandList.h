@@ -6,8 +6,8 @@
 
 enum DirectX12PipelineStateType
 {
-    Graphics,
-    Compute
+    DirectX12PipelineStateType_Graphics,
+    DirectX12PipelineStateType_Compute
 };
 
 struct DirectX12CommandQueueData
@@ -31,11 +31,12 @@ struct DirectX12CommandQueueDataFull
 
 struct DirectX12CommandListData
 {
-    ComPtr<ID3D12GraphicsCommandList10> DeviceObject;
+    ID3D12GraphicsCommandList10* DeviceObject;
     CommandAllocatorPoolItem<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*>* CommandAllocatorPoolItem;
     CommandListPoolItem<ID3D12GraphicsCommandList10*>* CommandListPoolItem;
     DirectX12PipelineStateType PipelineStateType;
     ElemGraphicsDevice GraphicsDevice;
+    bool IsCommitted;
 };
 
 struct DirectX12CommandListDataFull

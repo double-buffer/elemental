@@ -23,6 +23,11 @@ CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* GetCommandAllocatorPo
         commandAllocatorPool->CurrentCommandAllocatorIndex = (commandAllocatorPool->CurrentCommandAllocatorIndex + 1) % MAX_COMMANDALLOCATOR;
     }
 
+    if (commandAllocatorPool->CurrentCommandQueuePoolItems[commandQueueType]->CommandAllocator == nullptr)
+    {
+        commandAllocatorPool->CurrentCommandQueuePoolItems[commandQueueType]->IsResetNeeded = true;
+    }
+
     return commandAllocatorPool->CurrentCommandQueuePoolItems[commandQueueType];
 }
 

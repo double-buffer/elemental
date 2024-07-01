@@ -14,7 +14,7 @@
 UTEST(SwapChain, CreateSwapChain) 
 {
     // Arrange
-    auto graphicsDevice = TestGetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto window = ElemCreateWindow(nullptr);
 
@@ -28,4 +28,5 @@ UTEST(SwapChain, CreateSwapChain)
     ElemFreeSwapChain(swapChain);
     ElemFreeWindow(window);
     ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }

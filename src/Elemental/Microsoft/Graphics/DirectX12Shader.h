@@ -3,11 +3,12 @@
 #include "Elemental.h"
 #include "SystemSpan.h"
 #include "DirectX12CommandList.h"
+#include "Graphics/ShaderReader.h"
 
 struct DirectX12ShaderLibraryData
 {
     D3D12_SHADER_BYTECODE ShaderLibraryData;
-    ReadOnlySpan<D3D12_SHADER_BYTECODE> GraphicsShaders; // HACK: This should be temporary, in the future DX12 should only libs for all stages
+    ReadOnlySpan<Shader> GraphicsShaders; // HACK: This should be temporary, in the future DX12 should only libs for all stages
 };
 
 struct DirectX12PipelineStateData

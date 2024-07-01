@@ -52,7 +52,7 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
         ComPtr<ID3D12Resource> backBuffer;
         AssertIfFailed(swapChainData->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
 
-        swapChainData->BackBufferTextures[i] = CreateDirectX12TextureFromResource(swapChainDataFull->GraphicsDevice, backBuffer, true);
+        swapChainData->BackBufferTextures[i] = CreateDirectX12GraphicsResourceFromResource(swapChainDataFull->GraphicsDevice, ElemGraphicsResourceType_Texture2D, backBuffer, true);
         swapChainData->BackBufferDescriptors[i] = DirectX12CreateGraphicsResourceDescriptor(swapChainData->BackBufferTextures[i], ElemGraphicsResourceUsage_RenderTarget, nullptr);
     }
 }
@@ -467,4 +467,5 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     #endif
     
     DirectX12ResetCommandAllocation(swapChainDataFull->GraphicsDevice);
+    DirectX12ProcessGraphicsResourceDeleteQueue();
 }

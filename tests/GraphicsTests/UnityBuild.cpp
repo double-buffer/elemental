@@ -28,17 +28,12 @@ void ApplicationTestInitFunction(void* payload)
 
     ElemConfigureLogHandler(TestLogHandler);
     ElemSetGraphicsOptions(&options);
-    sharedGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
-    sharedSystemInfo = ElemGetSystemInfo();
-    sharedGraphicsDeviceInfo = ElemGetGraphicsDeviceInfo(sharedGraphicsDevice);
 
-    sharedCommandQueue = ElemCreateCommandQueue(sharedGraphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    auto testGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
 
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
-
-    ElemFreeCommandQueue(sharedCommandQueue);
-    ElemFreeGraphicsDevice(sharedGraphicsDevice);
     ElemExitApplication(result);
+    ElemFreeGraphicsDevice(testGraphicsDevice);
 }
 
 UTEST_STATE();

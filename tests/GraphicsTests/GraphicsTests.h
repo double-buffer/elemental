@@ -21,12 +21,6 @@ extern bool testHasLogErrors;
 extern char testErrorLogs[2048];
 extern uint32_t currentTestErrorLogsIndex;
 
-extern ElemGraphicsDevice sharedGraphicsDevice;
-extern ElemCommandQueue sharedCommandQueue;
-
-extern ElemSystemInfo sharedSystemInfo;
-extern ElemGraphicsDeviceInfo sharedGraphicsDeviceInfo;
-
 uint64_t TestMegaBytesToBytes(uint64_t value);
 
 void CopyString(char* destination, uint32_t destinationLength, const char* source, uint32_t sourceLength);
@@ -36,15 +30,9 @@ static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessage
 
 void TestInitLog();
 
-ElemGraphicsDevice TestGetSharedGraphicsDevice();
-ElemSystemInfo TestGetSharedSystemInfo();
-ElemGraphicsDeviceInfo TestGetSharedGraphicsDeviceInfo();
-
-ElemCommandQueue TestGetSharedCommandQueue();
-
-ElemShaderLibrary TestOpenShader(const char* shader);
-TestReadBackBuffer TestCreateReadbackBuffer(uint32_t sizeInBytes);
+ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader);
+TestReadBackBuffer TestCreateReadbackBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes);
 void TestFreeReadbackBuffer(TestReadBackBuffer readbackBuffer);
 
 template<typename T>
-void TestDispatchComputeForReadbackBuffer(const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);
+void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);

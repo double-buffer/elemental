@@ -11,14 +11,14 @@ ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     DispatchGraphicsFunction(FreeGraphicsHeap, graphicsHeap);
 }
 
-ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options)
+ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options)
 {
-    DispatchReturnGraphicsFunction(CreateGraphicsBufferResourceInfo, graphicsDevice, sizeInBytes, options);
+    DispatchReturnGraphicsFunction(CreateGraphicsBufferResourceInfo, graphicsDevice, sizeInBytes, usage, options);
 }
 
-ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options)
+ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options)
 {
-    DispatchReturnGraphicsFunction(CreateTexture2DResourceInfo, graphicsDevice, width, height, mipLevels, format, options);
+    DispatchReturnGraphicsFunction(CreateTexture2DResourceInfo, graphicsDevice, width, height, mipLevels, format, usage, options);
 }
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)

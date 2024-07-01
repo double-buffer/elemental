@@ -28,7 +28,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
-        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
+        SystemAssert(renderTargetParameters.RenderTarget != -1);
 
         auto renderTargetDescriptorInfo = DirectX12GetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget); 
         auto textureData = GetDirectX12GraphicsResourceData(renderTargetDescriptorInfo.Resource);
@@ -91,8 +91,10 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
         // See: https://github.com/TheRealMJP/MemPoolTest/blob/8d7a5b9af5e6f1fe4ff3a35ba51aeb7924183ae2/SampleFramework12/v1.04/Graphics/GraphicsTypes.h#L461
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test Before present check: %d", textureData->IsPresentTexture);
         if (textureData->IsPresentTexture)
         {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test Present");
             D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
             renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
             renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
@@ -111,11 +113,6 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
             commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
         }
         
-        // TODO: To remove
-        //commandListData->DeviceObject->OMSetRenderTargets(1, &textureData->RtvDescriptor, FALSE, nullptr);
-        //const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-        //commandListData->DeviceObject->ClearRenderTargetView(textureData->RtvDescriptor, clearColor, 0, nullptr);
-
         if (i == 0 && parameters->Viewports.Length == 0)
         {
             ElemViewport viewport =
@@ -158,9 +155,10 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
-        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
+        SystemAssert(renderTargetParameters.RenderTarget != -1);
 
-        auto textureData = GetDirectX12GraphicsResourceData(renderTargetParameters.RenderTarget); 
+        auto renderTargetDescriptorInfo = DirectX12GetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget); 
+        auto textureData = GetDirectX12GraphicsResourceData(renderTargetDescriptorInfo.Resource); 
         SystemAssert(textureData);
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
