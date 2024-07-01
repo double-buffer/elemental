@@ -144,14 +144,14 @@ MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice g
     return SystemGetDataPoolItemFull(metalGraphicsDevicePool, graphicsDevice);
 }
 
-MetalArgumentBuffer CreateMetalArgumentBuffer(NS::SharedPtr<MTL::Device> graphicsDevice, uint32_t length)
+MetalArgumentBuffer CreateMetalArgumentBuffer(NS::SharedPtr<MTL::Device> graphicsDevice, MemoryArena memoryArena, uint32_t length)
 {
     auto argumentBuffer = NS::TransferPtr(graphicsDevice->newBuffer(sizeof(MetalArgumentBufferDescriptor) * length, MTL::ResourceOptionCPUCacheModeDefault));
     SystemAssert(argumentBuffer);
 
-    auto descriptorStorage = SystemPushStruct<MetalArgumentBufferStorage>(MetalGraphicsMemoryArena);
+    auto descriptorStorage = SystemPushStruct<MetalArgumentBufferStorage>(memoryArena);
     descriptorStorage->ArgumentBuffer = argumentBuffer;
-    descriptorStorage->Items = SystemPushArray<MetalArgumentBufferFreeListItem>(MetalGraphicsMemoryArena, length);
+    descriptorStorage->Items = SystemPushArray<MetalArgumentBufferFreeListItem>(memoryArena, length);
     descriptorStorage->CurrentIndex = 0;
     descriptorStorage->FreeListIndex = UINT32_MAX;
 
@@ -291,7 +291,8 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
 
     SystemAssertReturnNullHandle(foundAdapter);
     
-    auto resourceArgumentBuffer = CreateMetalArgumentBuffer(device, METAL_MAX_RESOURCES);
+    auto memoryArena = SystemAllocateMemoryArena();
+    auto resourceArgumentBuffer = CreateMetalArgumentBuffer(device, memoryArena, METAL_MAX_RESOURCES);
 
     auto residencySetDescriptor = NS::TransferPtr(MTL::ResidencySetDescriptor::alloc()->init());
     residencySetDescriptor->setInitialCapacity(8);
@@ -305,7 +306,8 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
 
     auto handle = SystemAddDataPoolItem(metalGraphicsDevicePool, {
         .Device = device,
-        .ResourceArgumentBuffer = resourceArgumentBuffer
+        .ResourceArgumentBuffer = resourceArgumentBuffer,
+        .MemoryArena = memoryArena
     }); 
 
     SystemAddDataPoolItemFull(metalGraphicsDevicePool, handle, {
@@ -324,8 +326,15 @@ void MetalFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     
     FreeMetalArgumentBuffer(graphicsDeviceData->ResourceArgumentBuffer);
     
+    SystemFreeMemoryArena(graphicsDeviceData->MemoryArena);
+
     graphicsDeviceData->Device.reset();
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing Metal");
+    SystemRemoveDataPoolItem(metalGraphicsDevicePool, graphicsDevice);
+    
+    if (SystemGetDataPoolItemCount(metalGraphicsDevicePool) == 0)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing Metal");
+    }
 }
 
 ElemGraphicsDeviceInfo MetalGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)

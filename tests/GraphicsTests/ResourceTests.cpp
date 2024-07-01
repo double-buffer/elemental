@@ -616,6 +616,7 @@ UTEST(Resource, FreeGraphicsResourceDescriptor_WithFenceNotExecuted)
     ElemProcessGraphicsResourceDeleteQueue();
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
 
+    ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
     ElemFreeCommandQueue(commandQueue);

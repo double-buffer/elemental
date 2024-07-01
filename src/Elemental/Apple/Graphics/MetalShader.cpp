@@ -145,6 +145,7 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
 
 void MetalFreeShaderLibrary(ElemShaderLibrary shaderLibrary)
 {
+    // TODO: Free data
 }
 
 ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters)

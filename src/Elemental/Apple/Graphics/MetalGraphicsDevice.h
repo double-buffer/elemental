@@ -17,6 +17,7 @@ struct MetalGraphicsDeviceData
 {
     NS::SharedPtr<MTL::Device> Device;
     MetalArgumentBuffer ResourceArgumentBuffer;
+    MemoryArena MemoryArena;
 };
 
 struct MetalGraphicsDeviceDataFull

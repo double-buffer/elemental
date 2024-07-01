@@ -219,9 +219,11 @@ void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     // BUG: For the moment we need to call this method after the free swapchain that 
     // flush the queue. We need to be able to see if all the heap resources have been freed before calling this method.
     graphicsHeapData->DeviceObject.reset();
+    
+    SystemRemoveDataPoolItem(metalGraphicsHeapPool, graphicsHeap);
 }
 
-ElemGraphicsResourceInfo MetalCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, const ElemGraphicsResourceInfoOptions* options)
+ElemGraphicsResourceInfo MetalCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options)
 {
     SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
 
@@ -232,11 +234,11 @@ ElemGraphicsResourceInfo MetalCreateGraphicsBufferResourceInfo(ElemGraphicsDevic
     {
         .Type = ElemGraphicsResourceType_Buffer,
         .Width = sizeInBytes,
+        .Usage = usage
     };
 
     if (options != nullptr)
     {
-        resourceInfo.Usage = options->Usage;
         resourceInfo.DebugName = options->DebugName;
     }
 
@@ -248,7 +250,7 @@ ElemGraphicsResourceInfo MetalCreateGraphicsBufferResourceInfo(ElemGraphicsDevic
 
 }
 
-ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const ElemGraphicsResourceInfoOptions* options)
+ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options)
 {    
     SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
 
@@ -262,11 +264,11 @@ ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice gra
         .Height = height,
         .MipLevels = mipLevels,
         .Format = format,
+        .Usage = usage
     };
 
     if (options != nullptr)
     {
-        resourceInfo.Usage = options->Usage;
         resourceInfo.DebugName = options->DebugName;
     }
 
@@ -353,9 +355,12 @@ void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGrap
     }
 
     auto resourceData = GetMetalResourceData(resource);
-    SystemAssert(resourceData);
 
-    SystemRemoveDataPoolItem(metalResourcePool, resource);
+    if (resourceData)
+    {
+        resourceData->DeviceObject.reset();
+        SystemRemoveDataPoolItem(metalResourcePool, resource);
+    }
 }
 
 ElemGraphicsResourceInfo MetalGetGraphicsResourceInfo(ElemGraphicsResource resource)
@@ -480,7 +485,7 @@ void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descript
         EnqueueResourceDeleteEntry(MetalGraphicsMemoryArena, descriptor, ResourceDeleteType_Descriptor, options->FencesToWait);
         return;
     }
-
+    
     metalResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 

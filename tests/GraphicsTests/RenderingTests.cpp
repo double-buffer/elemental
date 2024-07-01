@@ -14,7 +14,7 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTextureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 64, 64, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget, nullptr);
+    auto renderTextureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 16, 16, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, renderTextureInfo.SizeInBytes, nullptr);
     auto renderTexture = ElemCreateGraphicsResource(graphicsHeap, 0, &renderTextureInfo);
     auto renderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(renderTexture, ElemGraphicsResourceUsage_Standard, nullptr);
@@ -23,7 +23,7 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     ElemRenderPassRenderTarget renderTarget = 
     {
         .RenderTarget = renderTargetDescriptor,
-        .ClearColor = { .Red = 1.0f, .Green = 0.5f, .Blue = 0.25f, .Alpha = 1.0f },
+        .ClearColor = { .Red = 1.0f, .Green = 0.5f, .Blue = 0.25f, .Alpha = 0.95f },
         .LoadAction = ElemRenderPassLoadAction_Clear
     };
 
@@ -49,9 +49,10 @@ UTEST(Rendering, RenderPassClearRenderTarget)
 
     // TODO: Barrier to ShaderRead?
 
-    auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, 64 * 64 * 4 * sizeof(float));
+    auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float));
     uint32_t resourceIdList[] = { (uint32_t)renderTextureReadDescriptor, (uint32_t)readbackBuffer.Descriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "RenderingTests.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
     TestFreeReadbackBuffer(readbackBuffer);
     ElemFreeGraphicsResourceDescriptor(renderTargetDescriptor, nullptr);
@@ -62,12 +63,14 @@ UTEST(Rendering, RenderPassClearRenderTarget)
 
     ASSERT_LOG_NOERROR();
 
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
-    auto uintData = (uint32_t*)bufferData.Items;
+    auto floatData = (float*)bufferData.Items;
 
-    for (uint32_t i = 0; i < bufferData.Length / 4; i++)
+    for (uint32_t i = 0; i < bufferData.Length / 4; i += 4)
     {
-        ASSERT_EQ_MSG(uintData[i], i < 16 ? i : 0u, "Compute shader data is invalid.");
+        ASSERT_EQ_MSG(floatData[i], 1.0f, "Red channel data is invalid.");
+        ASSERT_EQ_MSG(floatData[i + 1], 0.5f, "Green channel data is invalid.");
+        ASSERT_EQ_MSG(floatData[i + 2], 0.25f, "Blue channel data is invalid.");
+        ASSERT_EQ_MSG(floatData[i + 3], 0.95f, "Alpha channel data is invalid.");
     }
 }
 

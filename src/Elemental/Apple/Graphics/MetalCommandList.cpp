@@ -146,6 +146,8 @@ void MetalFreeCommandQueue(ElemCommandQueue commandQueue)
 
     //commandQueueData->QueueEvent.reset();
     commandQueueData->DeviceObject.reset();
+    
+    SystemRemoveDataPoolItem(metalCommandQueuePool, commandQueue);
 }
 
 void MetalResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
@@ -220,6 +222,8 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
         if (!commandListData->IsCommitted)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Commandlist needs to be committed before executing it.");
+
+            SystemRemoveDataPoolItem(metalCommandListPool, commandLists.Items[i]);
             return {};
         }
 
@@ -242,7 +246,11 @@ void MetalWaitForFenceOnCpu(ElemFence fence)
     SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueToWaitData = GetMetalCommandQueueData(fence.CommandQueue);
-    SystemAssert(commandQueueToWaitData);
+
+    if (!commandQueueToWaitData)
+    {
+        return;
+    }
 
     auto commandQueueToWaitDataFull = GetMetalCommandQueueDataFull(fence.CommandQueue);
     SystemAssert(commandQueueToWaitDataFull);
@@ -274,7 +282,11 @@ bool MetalIsFenceCompleted(ElemFence fence)
     SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueToWaitData = GetMetalCommandQueueData(fence.CommandQueue);
-    SystemAssert(commandQueueToWaitData);
+
+    if (!commandQueueToWaitData)
+    {
+        return true;
+    }
 
     auto commandQueueToWaitDataFull = GetMetalCommandQueueDataFull(fence.CommandQueue);
     SystemAssert(commandQueueToWaitDataFull);

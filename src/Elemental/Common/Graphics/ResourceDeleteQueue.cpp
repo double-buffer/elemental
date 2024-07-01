@@ -56,7 +56,8 @@ void ProcessResourceDeleteQueue()
     {
         auto entry = &GraphicsResourceDeleteQueue[i];
 
-        if (entry->Resource != ELEM_HANDLE_NULL)
+        if ((entry->Type == ResourceDeleteType_Resource && entry->Resource != ELEM_HANDLE_NULL) ||
+            (entry->Type == ResourceDeleteType_Descriptor && (int)entry->Resource != -1))
         {
             auto fencesCompleted = true;
 
