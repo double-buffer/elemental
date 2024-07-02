@@ -389,9 +389,9 @@ typedef enum
 
 typedef enum
 {
-    ElemGraphicsResourceUsage_Standard,
-    ElemGraphicsResourceUsage_Uav,
-    ElemGraphicsResourceUsage_RenderTarget
+    ElemGraphicsResourceUsage_Read = 0x00,
+    ElemGraphicsResourceUsage_Write = 0x01,
+    ElemGraphicsResourceUsage_RenderTarget = 0x02
 } ElemGraphicsResourceUsage;
 
 /**

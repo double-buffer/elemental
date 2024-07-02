@@ -142,32 +142,36 @@ ElemGraphicsFormat ConvertFromDirectX12TextureFormat(DXGI_FORMAT format)
 
 D3D12_RESOURCE_FLAGS ConvertToDirectX12ResourceFlags(ElemGraphicsResourceUsage usage)
 {
-    switch (usage) 
+    D3D12_RESOURCE_FLAGS result = D3D12_RESOURCE_FLAG_NONE;
+
+    if (usage & ElemGraphicsResourceUsage_Write)
     {
-        case ElemGraphicsResourceUsage_Standard:
-            return D3D12_RESOURCE_FLAG_NONE;
-
-        case ElemGraphicsResourceUsage_Uav:
-            return D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-        case ElemGraphicsResourceUsage_RenderTarget:
-            return D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        result |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
+    
+    if (usage & ElemGraphicsResourceUsage_RenderTarget)
+    {
+        result |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    }
+    
+    return result;
 }
 
 ElemGraphicsResourceUsage ConvertFromDirectX12ResourceFlags(D3D12_RESOURCE_FLAGS flags)
 {
-    switch (flags) 
+    ElemGraphicsResourceUsage result = ElemGraphicsResourceUsage_Read;
+
+    if (flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
     {
-        case D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS:
-            return ElemGraphicsResourceUsage_Uav;
-
-        case D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET:
-            return ElemGraphicsResourceUsage_RenderTarget;
-
-        default:
-            return ElemGraphicsResourceUsage_Standard;
+        result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_Write);
     }
+
+    if (flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+    {
+        result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_RenderTarget);
+    }
+
+    return result;
 }
 
 D3D12_RESOURCE_DESC1 CreateDirectX12BufferDescription(const ElemGraphicsResourceInfo* resourceInfo)
@@ -199,6 +203,8 @@ D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemGraphicsResourc
 
     SystemAssert(resourceInfo);
     
+    // TODO: We need to allow the creation of UAV + RTV it is possible
+
 	return 
     {
         .Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -408,7 +414,7 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
             return ELEM_HANDLE_NULL;
         }
         
-        if (resourceInfo->Usage == ElemGraphicsResourceUsage_RenderTarget)
+        if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget))
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to RenderTarget.");
             return ELEM_HANDLE_NULL;
@@ -447,20 +453,22 @@ void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFree
     }
 
     auto resourceData = GetDirectX12GraphicsResourceData(resource);
-    SystemAssert(resourceData);
 
-    auto resourceDataFull = GetDirectX12GraphicsResourceDataFull(resource);
-    SystemAssert(resourceDataFull);
-
-    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(resourceDataFull->GraphicsDevice);
-    SystemAssert(graphicsDeviceData);
-
-    if (resourceData->DeviceObject)
+    if (resourceData)
     {
-        resourceData->DeviceObject.Reset();
-    }
+        auto resourceDataFull = GetDirectX12GraphicsResourceDataFull(resource);
+        SystemAssert(resourceDataFull);
 
-    SystemRemoveDataPoolItem(directX12GraphicsResourcePool, resource);
+        auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(resourceDataFull->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        if (resourceData->DeviceObject)
+        {
+            resourceData->DeviceObject.Reset();
+        }
+
+        SystemRemoveDataPoolItem(directX12GraphicsResourcePool, resource);
+    }
 }
 
 ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource resource)
@@ -520,9 +528,9 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
     if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-        if (usage == ElemGraphicsResourceUsage_Uav && resourceUsage != ElemGraphicsResourceUsage_Uav)
+        if (usage == ElemGraphicsResourceUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
         {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor UAV only works with texture created with UAV usage.");
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with texture created with write usage.");
             return -1;
         }
 
@@ -534,9 +542,9 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
     }
     else
     {
-        if (usage == ElemGraphicsResourceUsage_Uav && resourceUsage != ElemGraphicsResourceUsage_Uav)
+        if (usage == ElemGraphicsResourceUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
         {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor UAV only works with buffer created with UAV usage.");
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with buffer created with write usage.");
             return -1;
         }
         
@@ -573,80 +581,76 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
         
     auto descriptorHandle = CreateDirectX12DescriptorHandle(descriptorHeap);
 
-    switch (usage)
+    if (usage == ElemGraphicsResourceUsage_Read)
     {
-        case ElemGraphicsResourceUsage_Standard:
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = 
         {
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = 
-            {
-                .Format = resourceData->DirectX12Format,
-                .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-            };
+            .Format = resourceData->DirectX12Format,
+            .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+        };
 
-            if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
-            {
-                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-                srvDesc.Texture2D =
-                {
-                    .MostDetailedMip = textureMipIndex,
-                    .MipLevels = resourceData->MipLevels - textureMipIndex
-                };
-            }
-            else
-            {
-                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-                srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-                srvDesc.Buffer =
-                {
-                    .NumElements = resourceData->Width / 4,
-                    .Flags = D3D12_BUFFER_SRV_FLAG_RAW
-                };
-            }
-
-		    graphicsDeviceData->Device->CreateShaderResourceView(resourceData->DeviceObject.Get(), &srvDesc, descriptorHandle);
-            break;
-        }
-        case ElemGraphicsResourceUsage_Uav:
+        if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
         {
-            D3D12_UNORDERED_ACCESS_VIEW_DESC uavViewDesc = 
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Texture2D =
             {
-                .Format = ConvertDirectX12FormatWithoutSrgbIfNeeded(resourceData->DirectX12Format),
+                .MostDetailedMip = textureMipIndex,
+                .MipLevels = resourceData->MipLevels - textureMipIndex
             };
-
-            if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
-            {
-                uavViewDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-                uavViewDesc.Texture2D = 
-                {
-                    .MipSlice = textureMipIndex
-                };
-            }
-            else
-            {
-                uavViewDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-                uavViewDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-                uavViewDesc.Buffer =
-                {
-                    .NumElements = resourceData->Width / 4,
-                    .Flags = D3D12_BUFFER_UAV_FLAG_RAW
-                };
-            }
-            
-            graphicsDeviceData->Device->CreateUnorderedAccessView(resourceData->DeviceObject.Get(), nullptr, &uavViewDesc, descriptorHandle);
-            break;
         }
-        case ElemGraphicsResourceUsage_RenderTarget:
+        else
         {
-            D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = 
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+            srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+            srvDesc.Buffer =
             {
-                .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceData->DirectX12Format),
-                .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+                .NumElements = resourceData->Width / 4,
+                .Flags = D3D12_BUFFER_SRV_FLAG_RAW
             };
-     
-            graphicsDeviceData->Device->CreateRenderTargetView(resourceData->DeviceObject.Get(), &renderTargetViewDesc, descriptorHandle);
-            break;
         }
+
+        graphicsDeviceData->Device->CreateShaderResourceView(resourceData->DeviceObject.Get(), &srvDesc, descriptorHandle);
     }
+    else if (usage == ElemGraphicsResourceUsage_Write)
+    {
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavViewDesc = 
+        {
+            .Format = ConvertDirectX12FormatWithoutSrgbIfNeeded(resourceData->DirectX12Format),
+        };
+
+        if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+        {
+            uavViewDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+            uavViewDesc.Texture2D = 
+            {
+                .MipSlice = textureMipIndex
+            };
+        }
+        else
+        {
+            uavViewDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+            uavViewDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+            uavViewDesc.Buffer =
+            {
+                .NumElements = resourceData->Width / 4,
+                .Flags = D3D12_BUFFER_UAV_FLAG_RAW
+            };
+        }
+        
+        graphicsDeviceData->Device->CreateUnorderedAccessView(resourceData->DeviceObject.Get(), nullptr, &uavViewDesc, descriptorHandle);
+    }
+    else if (usage == ElemGraphicsResourceUsage_RenderTarget)
+    {
+        D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = 
+        {
+            .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceData->DirectX12Format),
+            .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+        };
+ 
+        graphicsDeviceData->Device->CreateRenderTargetView(resourceData->DeviceObject.Get(), &renderTargetViewDesc, descriptorHandle);
+    }
+
+    // TODO: Error message if combinasions
     
     auto index = ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
 

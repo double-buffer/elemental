@@ -145,7 +145,8 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
         commandQueueDataFull->CommandLists[i].Reset();
     }
 
-    threadDirectX12DeviceCommandPools[commandQueueData->GraphicsDevice] = {};
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
+    threadDirectX12DeviceCommandPools[graphicsIdUnpacked.Index] = {};
 
     SystemRemoveDataPoolItem(directX12CommandQueuePool, commandQueue);
 }
@@ -177,9 +178,8 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    // BUG: We have a bug here because if we reuse an ID for graphics device, the generation will be added to the ID and it will not work anymore
-    // we need to use the decode function here
-    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadDirectX12DeviceCommandPools[commandQueueData->GraphicsDevice], 
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
+    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadDirectX12DeviceCommandPools[graphicsIdUnpacked.Index], 
                                                                 graphicsDeviceData->CommandAllocationGeneration, 
                                                                 commandQueueData->CommandAllocatorQueueType);
 

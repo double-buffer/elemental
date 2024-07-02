@@ -21,6 +21,7 @@ struct DirectX12GraphicsDeviceData
     uint64_t CommandAllocationGeneration;
     DirectX12DescriptorHeap ResourceDescriptorHeap;
     DirectX12DescriptorHeap RTVDescriptorHeap;
+    MemoryArena MemoryArena;
 };
 
 struct DirectX12GraphicsDeviceDataFull

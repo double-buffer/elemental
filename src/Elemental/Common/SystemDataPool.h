@@ -4,6 +4,15 @@
 #include "SystemMemory.h"
 
 /**
+ * Represents an handle of a data pool decomposed into index and version.
+ */
+struct SystemDataPoolHandle
+{
+    uint32_t Index;
+    uint32_t Version;
+};
+
+/**
  * A default full structure used as a fallback for the SystemDataPool template when no full data type is specified.
  */
 struct SystemDataPoolDefaultFull
@@ -30,6 +39,13 @@ struct SystemDataPool
 {
     SystemDataPoolStorage<T, TFull>* Storage; ///< Pointer to the underlying storage mechanism of the data pool.
 };
+
+/**
+* Unpack a data pool handle to a struct that contains the index and the version
+* @param packedValue The packed value to unpack.
+* @return The unpacked handle.
+*/
+SystemDataPoolHandle UnpackSystemDataPoolHandle(uint64_t packedValue);
 
 /**
  * Creates and initializes a data pool capable of storing items of type T, with an optional fuller version of each item of type TFull.

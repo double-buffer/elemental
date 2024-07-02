@@ -2,6 +2,7 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+// TODO: Add a test for texture2D uav + rendertarget
 // TODO: Test all formats
 // TODO: Test barriers with compute/render encoders and different parameters
 // TODO: Test barriers inside the same encoder and different encoder
@@ -18,7 +19,7 @@ UTEST(Resource, CreateBufferGraphicsResource)
     {
         .Type = ElemGraphicsResourceType_Buffer,
         .Width = sizeInBytes,
-        .Usage = ElemGraphicsResourceUsage_Uav
+        .Usage = ElemGraphicsResourceUsage_Write
     };
 
     // Act
@@ -38,7 +39,7 @@ UTEST(Resource, CreateBufferGraphicsResource)
     ASSERT_EQ_MSG(resourceInfo.Width, sizeInBytes, "Width should be equals to buffer size.");
     ASSERT_EQ_MSG(resourceInfo.Height, 0u, "Height should be equals to 0.");
     ASSERT_EQ_MSG(resourceInfo.Format, ElemGraphicsFormat_Raw, "Format should be equals to Raw.");
-    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_Uav, "Usage should match the creation usage.");
+    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_Write, "Usage should match the creation usage.");
 }
 
 UTEST(Resource, CreateBufferGraphicsResource_WidthZero) 
@@ -88,6 +89,30 @@ UTEST(Resource, CreateBufferGraphicsResource_UsageRenderTarget)
     ASSERT_EQ_MSG(resource, ELEM_HANDLE_NULL, "Handle should be null.");
 }
 
+UTEST(Resource, CreateBufferGraphicsResource_UsageRenderTargetAndUav) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Buffer,
+        .Width = 64,
+        .Usage = (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_Write)
+    };
+
+    // Act
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Assert
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("GraphicsBuffer usage should not be equals to RenderTarget.");
+    ASSERT_EQ_MSG(resource, ELEM_HANDLE_NULL, "Handle should be null.");
+}
+
 UTEST(Resource, CreateGraphicsBufferResourceInfo) 
 {
     // Arrange
@@ -96,9 +121,11 @@ UTEST(Resource, CreateGraphicsBufferResourceInfo)
     ElemGraphicsResourceInfoOptions options = { .DebugName = "TestBuffer" };
 
     // Act
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Uav, &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Write, &options);
 
     // Assert
+    ElemFreeGraphicsDevice(graphicsDevice);
+
     ASSERT_LOG_NOERROR();
 
     ASSERT_EQ_MSG(resourceInfo.Type, ElemGraphicsResourceType_Buffer, "Resource Type should be a Buffer.");
@@ -108,7 +135,7 @@ UTEST(Resource, CreateGraphicsBufferResourceInfo)
     ASSERT_EQ_MSG(resourceInfo.Format, ElemGraphicsFormat_Raw, "Format should be equals to raw.");
     ASSERT_GT_MSG(resourceInfo.Alignment, 0u, "Alignment should be greater than 0.");
     ASSERT_GT_MSG(resourceInfo.SizeInBytes, 0u, "SizeInBytes should be greater than 0.");
-    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_Uav, "Usage should match the creation usage.");
+    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_Write, "Usage should match the creation usage.");
     ASSERT_STREQ_MSG(resourceInfo.DebugName, "TestBuffer", "Debug name should match the creation usage.");
 }
 
@@ -149,7 +176,7 @@ UTEST(Resource, CreateTexture2DGraphicsResource)
     ASSERT_EQ_MSG(resourceInfo.Height, height, "Height should be equals to creation.");
     ASSERT_EQ_MSG(resourceInfo.MipLevels, mipLevels, "MipLevels should be equals to creation.");
     ASSERT_EQ_MSG(resourceInfo.Format, format, "Format should be equals to creation.");
-    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_Standard, "Usage should match the creation usage.");
+    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_Read, "Usage should match the creation usage.");
 }
 
 UTEST(Resource, CreateTexture2DGraphicsResource_WidthZero) 
@@ -238,6 +265,8 @@ UTEST(Resource, CreateTexture2DResourceInfo)
     auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevels, format, ElemGraphicsResourceUsage_RenderTarget, &options);
 
     // Assert
+    ElemFreeGraphicsDevice(graphicsDevice);
+
     ASSERT_LOG_NOERROR();
 
     ASSERT_EQ_MSG(resourceInfo.Type, ElemGraphicsResourceType_Texture2D, "Resource Type should be a Texture2D.");
@@ -251,12 +280,41 @@ UTEST(Resource, CreateTexture2DResourceInfo)
     ASSERT_STREQ_MSG(resourceInfo.DebugName, "TestTexture2D", "Debug name should match the creation usage.");
 }
 
+UTEST(Resource, CreateTexture2DResourceInfo_RenderTargetWrite) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto width = 128u;
+    auto height = 256u;
+    auto mipLevels = 5u;
+    auto format = ElemGraphicsFormat_B8G8R8A8_SRGB;
+    ElemGraphicsResourceInfoOptions options = { .DebugName = "TestTexture2D" };
+
+    // Act
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevels, format, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_Write), &options);
+
+    // Assert
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    ASSERT_EQ_MSG(resourceInfo.Type, ElemGraphicsResourceType_Texture2D, "Resource Type should be a Texture2D.");
+    ASSERT_EQ_MSG(resourceInfo.Width, width, "Width should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Height, height, "Height should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.MipLevels, mipLevels, "MipLevels should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Format, format, "Format should be equals to creation.");
+    ASSERT_GT_MSG(resourceInfo.Alignment, 0u, "Alignment should be greater than 0.");
+    ASSERT_GT_MSG(resourceInfo.SizeInBytes, 0u, "SizeInBytes should be greater than 0.");
+    ASSERT_EQ_MSG(resourceInfo.Usage, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_Write), "Usage should match the creation usage.");
+    ASSERT_STREQ_MSG(resourceInfo.DebugName, "TestTexture2D", "Debug name should match the creation usage.");
+}
+
 UTEST(Resource, GetGraphicsResourceDataSpan_WithBuffer) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
@@ -278,7 +336,7 @@ UTEST(Resource, GetGraphicsResourceDataSpan_WithTexture2D)
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
@@ -300,7 +358,7 @@ UTEST(Resource, FreeGraphicsResource)
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
@@ -321,7 +379,7 @@ UTEST(Resource, FreeGraphicsResource_WithFenceNotExecuted)
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
     ElemFence fence = { .CommandQueue = commandQueue, .FenceValue = UINT64_MAX }; 
     ElemFreeGraphicsResourceOptions options = { .FencesToWait = { .Items = &fence, .Length = 1 } };
@@ -348,7 +406,7 @@ UTEST(Resource, FreeGraphicsResource_WithFenceExecuted)
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
@@ -373,16 +431,16 @@ UTEST(Resource, FreeGraphicsResource_WithFenceExecuted)
     ASSERT_EQ_MSG(afterFreeResourceInfo.Width, 0u, "Width should be equals to 0.");
 }
 
-UTEST(Resource, CreateGraphicsResourceDescriptor_StandardWithBuffer) 
+UTEST(Resource, CreateGraphicsResourceDescriptor_ReadWithBuffer) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Read, nullptr);
 
     // Assert
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
@@ -394,19 +452,19 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_StandardWithBuffer)
 
     ASSERT_LOG_NOERROR();
     ASSERT_EQ_MSG(descriptorInfo.Resource, resource, "Resource should be equals to the one used during creation.");
-    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Standard, "Usage should be equals to the one used during creation.");
+    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Read, "Usage should be equals to the one used during creation.");
 }
 
-UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithBufferUav) 
+UTEST(Resource, CreateGraphicsResourceDescriptor_WriteWithBufferUav) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Write, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Write, nullptr);
 
     // Assert
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
@@ -418,35 +476,35 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithBufferUav)
     
     ASSERT_LOG_NOERROR();
     ASSERT_EQ_MSG(descriptorInfo.Resource, resource, "Resource should be equals to the one used during creation.");
-    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Uav, "Usage should be equals to the one used during creation.");
+    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Write, "Usage should be equals to the one used during creation.");
 }
 
-UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithBufferNotUav) 
+UTEST(Resource, CreateGraphicsResourceDescriptor_WriteWithBufferNotUav) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Write, nullptr);
 
     // Assert
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
     ElemFreeGraphicsDevice(graphicsDevice);
 
-    ASSERT_LOG_MESSAGE("Resource Descriptor UAV only works with buffer created with UAV usage.");
+    ASSERT_LOG_MESSAGE("Resource Descriptor write only works with buffer created with write usage.");
     ASSERT_EQ_MSG(descriptor, -1, "Descriptor should be -1.");
 }
 
-UTEST(Resource, CreateGraphicsResourceDescriptor_StandardWithBufferRenderTarget) 
+UTEST(Resource, CreateGraphicsResourceDescriptor_ReadWithBufferRenderTarget) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
@@ -461,16 +519,16 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_StandardWithBufferRenderTarget)
     ASSERT_EQ_MSG(descriptor, -1, "Descriptor should be -1.");
 }
 
-UTEST(Resource, CreateGraphicsResourceDescriptor_StandardWithTexture2D) 
+UTEST(Resource, CreateGraphicsResourceDescriptor_ReadWithTexture2D) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Read, nullptr);
 
     // Assert
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
@@ -482,19 +540,19 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_StandardWithTexture2D)
 
     ASSERT_LOG_NOERROR();
     ASSERT_EQ_MSG(descriptorInfo.Resource, resource, "Resource should be equals to the one used during creation.");
-    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Standard, "Usage should be equals to the one used during creation.");
+    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Read, "Usage should be equals to the one used during creation.");
 }
 
-UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithTexture2DUav) 
+UTEST(Resource, CreateGraphicsResourceDescriptor_WriteWithTexture2DUav) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Write, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Write, nullptr);
 
     // Assert
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
@@ -506,26 +564,26 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithTexture2DUav)
 
     ASSERT_LOG_NOERROR();
     ASSERT_EQ_MSG(descriptorInfo.Resource, resource, "Resource should be equals to the one used during creation.");
-    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Uav, "Usage should be equals to the one used during creation.");
+    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceUsage_Write, "Usage should be equals to the one used during creation.");
 }
 
-UTEST(Resource, CreateGraphicsResourceDescriptor_UavWithTexture2DNotUav) 
+UTEST(Resource, CreateGraphicsResourceDescriptor_WriteWithTexture2DNotUav) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Write, nullptr);
 
     // Assert
     ElemFreeGraphicsResource(resource, nullptr);
     ElemFreeGraphicsHeap(graphicsHeap);
     ElemFreeGraphicsDevice(graphicsDevice);
     
-    ASSERT_LOG_MESSAGE("Resource Descriptor UAV only works with texture created with UAV usage.");
+    ASSERT_LOG_MESSAGE("Resource Descriptor write only works with texture created with write usage.");
     ASSERT_EQ_MSG(descriptor, -1, "Descriptor should be -1.");
 }
 
@@ -558,7 +616,7 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_RenderTargetWithTexture2DNotRen
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Write, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
@@ -578,9 +636,9 @@ UTEST(Resource, FreeGraphicsResourceDescriptor)
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Read, nullptr);
 
     // Act
     ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
@@ -602,9 +660,9 @@ UTEST(Resource, FreeGraphicsResourceDescriptor_WithFenceNotExecuted)
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Read, nullptr);
 
     ElemFence fence = { .CommandQueue = commandQueue, .FenceValue = UINT64_MAX }; 
     ElemFreeGraphicsResourceDescriptorOptions options = { .FencesToWait = { .Items = &fence, .Length = 1 } };
@@ -632,9 +690,9 @@ UTEST(Resource, FreeGraphicsResourceDescriptor_WithFenceExecuted)
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Standard, nullptr);
+    auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceUsage_Read, nullptr);
 
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
     ElemCommitCommandList(commandList);
@@ -689,9 +747,9 @@ UTEST(Resource, GetGraphicsResourceDescriptorInfo_WithTextureUavAndTextureRtv)
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfoUav = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto resourceInfoUav = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Write, nullptr);
     auto resourceUav = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfoUav);
-    auto descriptorUav = ElemCreateGraphicsResourceDescriptor(resourceUav, ElemGraphicsResourceUsage_Uav, nullptr);
+    auto descriptorUav = ElemCreateGraphicsResourceDescriptor(resourceUav, ElemGraphicsResourceUsage_Write, nullptr);
     auto resourceInfoRtv = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_RenderTarget, nullptr);
     auto resourceRtv = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfoRtv);
     auto descriptorRtv = ElemCreateGraphicsResourceDescriptor(resourceRtv, ElemGraphicsResourceUsage_RenderTarget, nullptr);
@@ -712,6 +770,6 @@ UTEST(Resource, GetGraphicsResourceDescriptorInfo_WithTextureUavAndTextureRtv)
     ASSERT_LOG_NOERROR();
     ASSERT_EQ_MSG(descriptorInfoRtv.Resource, resourceRtv, "Resource RTV should be equals to the one used during creation.");
     ASSERT_EQ_MSG(descriptorInfoRtv.Usage, ElemGraphicsResourceUsage_RenderTarget, "Usage RTV should be equals to the one used during creation.");
-    ASSERT_EQ_MSG(descriptorInfoUav.Resource, resourceUav, "Resource UAV should be equals to the one used during creation.");
-    ASSERT_EQ_MSG(descriptorInfoUav.Usage, ElemGraphicsResourceUsage_Uav, "Usage UAV should be equals to the one used during creation.");
+    ASSERT_EQ_MSG(descriptorInfoUav.Resource, resourceUav, "Resource write should be equals to the one used during creation.");
+    ASSERT_EQ_MSG(descriptorInfoUav.Usage, ElemGraphicsResourceUsage_Write, "Usage write should be equals to the one used during creation.");
 }

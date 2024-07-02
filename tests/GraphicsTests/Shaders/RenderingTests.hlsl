@@ -1,3 +1,4 @@
+// TODO: Move copy texture to assert.hlsl and rename
 struct Parameters
 {
     uint SourceBufferIndex;

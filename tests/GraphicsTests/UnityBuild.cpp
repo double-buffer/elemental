@@ -32,8 +32,9 @@ void ApplicationTestInitFunction(void* payload)
     auto testGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
 
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
-    ElemExitApplication(result);
+
     ElemFreeGraphicsDevice(testGraphicsDevice);
+    ElemExitApplication(result);
 }
 
 UTEST_STATE();

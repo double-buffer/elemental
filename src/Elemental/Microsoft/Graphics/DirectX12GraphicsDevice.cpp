@@ -175,7 +175,7 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
     return false;
 }
 
-DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> graphicsDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t length)
+DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> graphicsDevice, MemoryArena memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t length)
 {
     D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = 
     {
@@ -187,9 +187,9 @@ DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> gra
     ComPtr<ID3D12DescriptorHeap> descriptorHeap;
     AssertIfFailed(graphicsDevice->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(descriptorHeap.GetAddressOf())));
 
-    auto descriptorStorage = SystemPushStruct<DirectX12DescriptorHeapStorage>(DirectX12MemoryArena);
+    auto descriptorStorage = SystemPushStruct<DirectX12DescriptorHeapStorage>(memoryArena);
     descriptorStorage->DescriptorHeap = descriptorHeap;
-    descriptorStorage->Items = SystemPushArray<DirectX12DescriptorHeapFreeListItem>(DirectX12MemoryArena, length);
+    descriptorStorage->Items = SystemPushArray<DirectX12DescriptorHeapFreeListItem>(memoryArena, length);
     descriptorStorage->DescriptorHandleSize = graphicsDevice->GetDescriptorHandleIncrementSize(type);
     descriptorStorage->CurrentIndex = 0;
     descriptorStorage->FreeListIndex = UINT32_MAX;
@@ -378,15 +378,18 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     // TODO: Don't enable it by default
     //AssertIfFailed(device->SetStablePowerState(true));
 
-    auto resourceDescriptorHeap = CreateDirectX12DescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_RESOURCES);
-    auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
+    auto memoryArena = SystemAllocateMemoryArena();
+
+    auto resourceDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_RESOURCES);
+    auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
 
     auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
         .Device = device,
         .RootSignature = rootSignature,
         .ResourceDescriptorHeap = resourceDescriptorHeap,
-        .RTVDescriptorHeap = rtvDescriptorHeap
+        .RTVDescriptorHeap = rtvDescriptorHeap,
+        .MemoryArena = memoryArena
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
@@ -412,6 +415,8 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     FreeDirectX12DescriptorHeap(graphicsDeviceData->RTVDescriptorHeap);
     graphicsDeviceData->Device.Reset();
     graphicsDeviceData->RootSignature.Reset();
+
+    SystemFreeMemoryArena(graphicsDeviceData->MemoryArena);
 
     SystemRemoveDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
 

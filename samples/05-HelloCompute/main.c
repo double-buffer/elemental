@@ -75,7 +75,7 @@ typedef struct
     ElemGraphicsHeap GraphicsHeap;
     uint32_t CurrentHeapOffset;
     ElemGraphicsResource RenderTexture;
-    ElemGraphicsResourceDescriptor RenderTextureUavDescriptor;
+    ElemGraphicsResourceDescriptor RenderTextureWriteDescriptor;
     ElemGraphicsResourceDescriptor RenderTextureReadDescriptor;
     ElemFence LastExecutionFence;
     ElemSwapChain SwapChain;
@@ -154,20 +154,20 @@ void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width,
         });
 
         ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor, NULL);
-        ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor, NULL);
+        ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureWriteDescriptor, NULL);
     }
 
     printf("Creating render texture...\n");
 
-    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R16G16B16A16_FLOAT, ElemGraphicsResourceUsage_Uav,
+    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R16G16B16A16_FLOAT, ElemGraphicsResourceUsage_Write,
                                                                             &(ElemGraphicsResourceInfoOptions) { 
                                                                                 .DebugName = "Render Texture" 
                                                                             });
 
     applicationPayload->RenderTexture = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, 0, &resourceInfo);
 
-    applicationPayload->RenderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Standard, NULL);
-    applicationPayload->RenderTextureUavDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Uav, NULL);
+    applicationPayload->RenderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Read, NULL);
+    applicationPayload->RenderTextureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Write, NULL);
 }
 
 void InitSample(void* payload)
@@ -230,7 +230,7 @@ void FreeSample(void* payload)
     ElemFreePipelineState(applicationPayload->ComputePipeline);
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor, NULL);
-    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureUavDescriptor, NULL);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureWriteDescriptor, NULL);
     ElemFreeGraphicsResource(applicationPayload->RenderTexture, NULL);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
@@ -354,7 +354,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         CreateRenderTexture(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
     }
 
-    applicationPayload->ShaderParameters.RenderTextureIndex = applicationPayload->RenderTextureUavDescriptor;
+    applicationPayload->ShaderParameters.RenderTextureIndex = applicationPayload->RenderTextureWriteDescriptor;
 
     InputActions* inputActions = &applicationPayload->InputActions;
     SampleUpdateInputActions(&applicationPayload->InputActionBindings);
@@ -395,13 +395,13 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     // TODO: Passing ELEM_HANDLE_NULL is not very intuitive here :(
     // Maybe we don't need this barrier except to change the layout?
-    ElemGraphicsResourceBarrier(commandList, ELEM_HANDLE_NULL, applicationPayload->RenderTextureUavDescriptor, NULL);
+    ElemGraphicsResourceBarrier(commandList, ELEM_HANDLE_NULL, applicationPayload->RenderTextureWriteDescriptor, NULL);
 
     uint32_t threadSize = 16;
     ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
 
     // TODO: Sync points
-    ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTextureUavDescriptor, applicationPayload->RenderTextureReadDescriptor, NULL);
+    ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTextureWriteDescriptor, applicationPayload->RenderTextureReadDescriptor, NULL);
 
     // TODO: Barrier => Swapchain RTV
 

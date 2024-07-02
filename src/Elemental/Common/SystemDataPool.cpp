@@ -23,12 +23,6 @@ struct SystemDataPoolStorage
     uint32_t ItemCount;
 };
 
-struct SystemDataPoolHandle
-{
-    uint32_t Index;
-    uint32_t Version;
-};
-
 ElemHandle PackSystemDataPoolHandle(SystemDataPoolHandle handle)
 {
     return ((uint64_t)handle.Version << 32) | (handle.Index + 1);
