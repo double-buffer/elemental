@@ -18,6 +18,8 @@ void InitMetalResourceMemory()
     {
         metalGraphicsHeapPool = SystemCreateDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull>(MetalGraphicsMemoryArena, METAL_MAX_GRAPHICSHEAP);
         metalResourcePool = SystemCreateDataPool<MetalResourceData, MetalResourceDataFull>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES);
+
+        // TODO: This should be part of the graphics device data
         metalResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES);
     }
 }
@@ -86,17 +88,19 @@ ElemGraphicsFormat ConvertFromMetalResourceFormat(MTL::PixelFormat format)
 
 MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
 {
-    switch (usage) 
+    MTL::TextureUsage result = MTL::TextureUsageShaderRead;
+
+    if (usage & ElemGraphicsResourceUsage_Write)
     {
-        case ElemGraphicsResourceUsage_Standard:
-            return MTL::TextureUsageShaderRead;
-
-        case ElemGraphicsResourceUsage_Uav:
-            return MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite;
-
-        case ElemGraphicsResourceUsage_RenderTarget:
-            return MTL::TextureUsageShaderRead | MTL::TextureUsageRenderTarget;
+        result |= MTL::TextureUsageShaderWrite;
     }
+
+    if (usage & ElemGraphicsResourceUsage_RenderTarget)
+    {
+        result |= MTL::TextureUsageRenderTarget;
+    }
+
+    return result;
 }
 
 ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
@@ -148,7 +152,7 @@ NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGra
     SystemAssert(resourceInfo);
 
     auto textureDescriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-    textureDescriptor->setTextureType(MTL::TextureType2DArray); // TODO: For UAV we need texture2D array?????
+    textureDescriptor->setTextureType(MTL::TextureType2DArray); // TODO: For Write we need texture2D array?????
     textureDescriptor->setWidth(resourceInfo->Width);
     textureDescriptor->setHeight(resourceInfo->Height);
     textureDescriptor->setDepth(1);
@@ -325,7 +329,7 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
             return ELEM_HANDLE_NULL;
         }
         
-        if (resourceInfo->Usage == ElemGraphicsResourceUsage_RenderTarget)
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to RenderTarget.");
             return ELEM_HANDLE_NULL;
@@ -425,13 +429,13 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
 
     if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-        if (usage == ElemGraphicsResourceUsage_Uav && resourceData->Usage != ElemGraphicsResourceUsage_Uav)
+        if ((usage & ElemGraphicsResourceUsage_Write) && !(resourceData->Usage & ElemGraphicsResourceUsage_Write))
         {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor UAV only works with texture created with UAV usage.");
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with texture created with write usage.");
             return -1;
         }
 
-        if (usage == ElemGraphicsResourceUsage_RenderTarget && resourceData->Usage != ElemGraphicsResourceUsage_RenderTarget)
+        if ((usage & ElemGraphicsResourceUsage_RenderTarget) && !(resourceData->Usage & ElemGraphicsResourceUsage_RenderTarget))
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with texture created with RenderTarget usage.");
             return -1;
@@ -441,13 +445,13 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
     }
     else
     {
-        if (usage == ElemGraphicsResourceUsage_Uav && resourceData->Usage != ElemGraphicsResourceUsage_Uav)
+        if ((usage & ElemGraphicsResourceUsage_Write) && !(resourceData->Usage & ElemGraphicsResourceUsage_Write))
         {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor UAV only works with buffer created with UAV usage.");
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with buffer created with write usage.");
             return -1;
         }
         
-        if (usage == ElemGraphicsResourceUsage_RenderTarget)
+        if (usage & ElemGraphicsResourceUsage_RenderTarget)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with textures.");
             return -1;

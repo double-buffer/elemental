@@ -12,7 +12,10 @@
 
 All using the same command list.
 Note that for textures even if are using separate commandlists (with separate execute), we still
-need to transition the layout.
+need to transition the layout (for RTV)
+
+We can deduce the sync before and access before by recording the last one in the command list data. 
+We could allow the user to specify more fine grained stages if needed.
 
 1. Texture: Generate background in compute => Render geometry to RTV => post process in compute shader
 
@@ -27,7 +30,8 @@ need to transition the layout.
 
     });
 
-    // Ideal barrier
+    // Ideal barrier (Layout change only)
+    // If the resource is in a queue specific common layout, we can use it directly as UAV
     barrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
     barrier.SyncAfter = D3D12_BARRIER_SYNC_COMPUTE_SHADING;
     barrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
@@ -63,7 +67,7 @@ need to transition the layout.
     barrier.AccessBefore = D3D12_BARRIER_ACCESS_RENDER_TARGET;
     barrier.AccessAfter = D3D12_BARRIER_ACCESS_SHADER_RESOURCE;
     barrier.LayoutBefore = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-    barrier.LayoutAfter = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
+    barrier.LayoutAfter = D3D12_BARRIER_LAYOUT_DIRECT_QUEUE_SHADER_RESOURCE; // Important: If possible we need to use the queue specific layout
 
     ElemBindPipelineState(computePso)
     ElemPushConstants // with SRV 
