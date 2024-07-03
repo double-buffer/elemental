@@ -124,7 +124,7 @@ void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE
 
     if (strstr(description, "Live ID3D12Device at") && strstr(description, "Refcount: 1"))
     {
-        return;
+        //return;
     }
 
     auto stackMemoryArena = SystemGetStackMemoryArena();

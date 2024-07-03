@@ -2,8 +2,8 @@
 
 ## Decisions to make
 
-- [x] Do we use descriptors when describing a barrier?
-- [x] Do we use descriptor for BeginRenderTarget?
+- [ ] Do we use descriptors when describing a barrier?
+- [ ] Do we use descriptor for BeginRenderTarget?
 - [x] Do we automatically insert barriers in Begin/EndRender but allow overriding them?
 - [ ] Do we separate layout transition from synchronization into separate functions? (Even if we specify
       layout and sync separately we could merge them in one barrier)
@@ -16,6 +16,7 @@ need to transition the layout.
 
 1. Texture: Generate background in compute => Render geometry to RTV => post process in compute shader
 
+```c
     // Transition from ??? to UAV
     // For buffer we don't care for the sync and access because we start the execution of a new
     // batch of commandlist
@@ -35,7 +36,7 @@ need to transition the layout.
     barrier.LayoutAfter = D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
 
     ElemBindPipelineState(backgroundComputePso)
-    ElemPushConstants with UAV
+    ElemPushConstants// with UAV
     ElemDispatchCompute(...)
 
     // Transition from UAV to RTV?
@@ -51,7 +52,7 @@ need to transition the layout.
     barrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
     barrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
 
-    ElemBeginRenderPass with RTV resource (do we use descriptor?)
+    ElemBeginRenderPass // with RTV resource (do we use descriptor?)
     ElemEndRenderPass
 
     // Transition from RTV to SRV?
@@ -65,11 +66,13 @@ need to transition the layout.
     barrier.LayoutAfter = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
 
     ElemBindPipelineState(computePso)
-    ElemPushConstants with SRV 
+    ElemPushConstants // with SRV 
     ElemDispatchCompute(...)
-    
+```
+
 2. Texture: RenderToTexture only
 
+```c
     // Transition from ??? to RTV?
     // The sync and access before are not really needed here because it the the only command in the list
     // We need the barrier here because we need to change the layout of the texture
@@ -83,6 +86,6 @@ need to transition the layout.
     barrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;  // or D3D12_BARRIER_LAYOUT_COMMON?
     barrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
 
-    ElemBeginRenderPass with RTV resource (do we use descriptor?)
+    ElemBeginRenderPass // with RTV resource (do we use descriptor?)
     ElemEndRenderPass
-
+```

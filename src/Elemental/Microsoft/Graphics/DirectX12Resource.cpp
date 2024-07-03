@@ -9,6 +9,8 @@
 
 SystemDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull> directX12GraphicsHeapPool;
 SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull> directX12GraphicsResourcePool;
+
+// TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
 
 void InitDirectX12ResourceMemory()

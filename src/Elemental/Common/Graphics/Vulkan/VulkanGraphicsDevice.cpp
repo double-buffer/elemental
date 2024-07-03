@@ -98,7 +98,7 @@ void InitVulkan()
                 VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
                 // TODO: For the moment we disable this error because it may be a bug related to timeline semaphore
                 // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/7455
-                //VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+                VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
             };
 
             VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
