@@ -236,7 +236,7 @@ TestReadBackBuffer TestCreateReadbackBuffer(ElemGraphicsDevice graphicsDevice, u
 
     auto bufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Write, nullptr); 
     auto buffer = ElemCreateGraphicsResource(readBackGraphicsHeap, 0, &bufferInfo);
-    auto bufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceUsage_Write, nullptr);
+    auto bufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
 
     return
     {
@@ -258,22 +258,19 @@ TestRenderTarget TestCreateRenderTarget(ElemGraphicsDevice graphicsDevice, uint3
     auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 16, 16, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, textureInfo.SizeInBytes, nullptr);
     auto texture = ElemCreateGraphicsResource(graphicsHeap, 0, &textureInfo);
-    auto textureReadDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceUsage_Read, nullptr);
-    auto renderTargetDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceUsage_RenderTarget, nullptr);
+    auto textureReadDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
 
     return
     {
         .GraphicsHeap = graphicsHeap,
         .Texture = texture,
         .ReadDescriptor = textureReadDescriptor,
-        .RenderTargetDescriptor = renderTargetDescriptor,
         .Format = format
     };
 }
 
 void TestFreeRenderTarget(TestRenderTarget renderTarget)
 {
-    ElemFreeGraphicsResourceDescriptor(renderTarget.RenderTargetDescriptor, nullptr);
     ElemFreeGraphicsResourceDescriptor(renderTarget.ReadDescriptor, nullptr);
     ElemFreeGraphicsResource(renderTarget.Texture, nullptr);
     ElemFreeGraphicsHeap(renderTarget.GraphicsHeap);

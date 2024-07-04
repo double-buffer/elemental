@@ -45,6 +45,7 @@ uint32_t ConvertDirectX12DescriptorHandleToIndex(DirectX12DescriptorHeap descrip
 D3D12_CPU_DESCRIPTOR_HANDLE ConvertDirectX12DescriptorIndexToHandle(DirectX12DescriptorHeap descriptorHeap, uint32_t index);
 
 void DirectX12EnableGraphicsDebugLayer();
+void DirectX12EnableGpuValidation();
 ElemGraphicsDeviceInfoSpan DirectX12GetAvailableGraphicsDevices();
 ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);

@@ -17,6 +17,7 @@ struct DirectX12GraphicsHeapDataFull
 struct DirectX12GraphicsResourceData
 {
     ComPtr<ID3D12Resource> DeviceObject;
+    D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle;
     ElemGraphicsResourceType Type;
     DXGI_FORMAT DirectX12Format;
     D3D12_RESOURCE_FLAGS DirectX12Flags;
@@ -52,10 +53,10 @@ void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFree
 ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource resource);
 ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource);
 
-ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
+ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemGraphicsResourceDescriptorInfo DirectX12GetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
 void DirectX12ProcessGraphicsResourceDeleteQueue(void);
 
-void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options);
+void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);

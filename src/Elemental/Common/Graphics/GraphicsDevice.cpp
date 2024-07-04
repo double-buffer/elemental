@@ -14,6 +14,11 @@ ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options)
     {
         DispatchGraphicsFunction(EnableGraphicsDebugLayer);
     }
+
+    if (options->EnableGpuValidation)
+    {
+        DispatchGraphicsFunction(EnableGpuValidation)
+    }
 }
 
 ElemAPI ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices()

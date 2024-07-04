@@ -81,9 +81,24 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
     SystemAssert(graphicsDeviceData);
 
     auto resourceDesc = resource->GetDesc();
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = {};
+
+    if (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+    {
+        rtvHandle = CreateDirectX12DescriptorHandle(graphicsDeviceData->RTVDescriptorHeap);
+        
+        D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = 
+        {
+            .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceDesc.Format),
+            .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+        };
+ 
+        graphicsDeviceData->Device->CreateRenderTargetView(resource.Get(), &renderTargetViewDesc, rtvHandle);
+    }
   
     auto handle = SystemAddDataPoolItem(directX12GraphicsResourcePool, {
         .DeviceObject = resource,
+        .RtvHandle = rtvHandle,
         .Type = type,
         .DirectX12Format = resourceDesc.Format,
         .DirectX12Flags = resourceDesc.Flags,
@@ -205,8 +220,6 @@ D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemGraphicsResourc
 
     SystemAssert(resourceInfo);
     
-    // TODO: We need to allow the creation of UAV + RTV it is possible
-
 	return 
     {
         .Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -266,16 +279,21 @@ ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, 
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    // TODO: Create other heap types
+    D3D12_HEAP_PROPERTIES heapProperties =
+    {
+        .Type = D3D12_HEAP_TYPE_GPU_UPLOAD,
+		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+    };
+
+    if (options && options->HeapType == ElemGraphicsHeapType_Readback)
+    {
+        heapProperties = graphicsDeviceData->Device->GetCustomHeapProperties(0, D3D12_HEAP_TYPE_READBACK);
+    }
 
     D3D12_HEAP_DESC heapDesc = 
     {
 		.SizeInBytes = sizeInBytes,
-        .Properties = 
-        {
-            .Type = D3D12_HEAP_TYPE_GPU_UPLOAD,
-		    .CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-        },
+        .Properties = heapProperties,
 		.Flags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES
     };
 
@@ -519,7 +537,7 @@ ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 	return { .Items = (uint8_t*)resourceData->CpuDataPointer, .Length = resourceData->Width };
 }
 
-ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
+ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
@@ -530,29 +548,17 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
     if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-        if (usage == ElemGraphicsResourceUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
+        if (usage == ElemGraphicsResourceDescriptorUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with texture created with write usage.");
-            return -1;
-        }
-
-        if (usage == ElemGraphicsResourceUsage_RenderTarget && resourceUsage != ElemGraphicsResourceUsage_RenderTarget)
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with texture created with RenderTarget usage.");
             return -1;
         }
     }
     else
     {
-        if (usage == ElemGraphicsResourceUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
+        if (usage == ElemGraphicsResourceDescriptorUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with buffer created with write usage.");
-            return -1;
-        }
-        
-        if (usage == ElemGraphicsResourceUsage_RenderTarget)
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with textures.");
             return -1;
         }
     }
@@ -570,20 +576,10 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
         textureMipIndex = options->TextureMipIndex;
     }
 
-    DirectX12DescriptorHeap descriptorHeap;
-
-    if (usage == ElemGraphicsResourceUsage_RenderTarget)
-    {
-        descriptorHeap = graphicsDeviceData->RTVDescriptorHeap;
-    }
-    else 
-    {
-        descriptorHeap = graphicsDeviceData->ResourceDescriptorHeap;
-    }
-        
+    auto descriptorHeap = graphicsDeviceData->ResourceDescriptorHeap;
     auto descriptorHandle = CreateDirectX12DescriptorHandle(descriptorHeap);
 
-    if (usage == ElemGraphicsResourceUsage_Read)
+    if (usage == ElemGraphicsResourceDescriptorUsage_Read)
     {
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = 
         {
@@ -613,7 +609,7 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
         graphicsDeviceData->Device->CreateShaderResourceView(resourceData->DeviceObject.Get(), &srvDesc, descriptorHandle);
     }
-    else if (usage == ElemGraphicsResourceUsage_Write)
+    else if (usage == ElemGraphicsResourceDescriptorUsage_Write)
     {
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavViewDesc = 
         {
@@ -640,16 +636,6 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
         }
         
         graphicsDeviceData->Device->CreateUnorderedAccessView(resourceData->DeviceObject.Get(), nullptr, &uavViewDesc, descriptorHandle);
-    }
-    else if (usage == ElemGraphicsResourceUsage_RenderTarget)
-    {
-        D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = 
-        {
-            .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceData->DirectX12Format),
-            .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-        };
- 
-        graphicsDeviceData->Device->CreateRenderTargetView(resourceData->DeviceObject.Get(), &renderTargetViewDesc, descriptorHandle);
     }
 
     // TODO: Error message if combinasions
@@ -697,6 +683,6 @@ void DirectX12ProcessGraphicsResourceDeleteQueue(void)
     ProcessResourceDeleteQueue();
 }
 
-void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)
+void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options)
 {
 }

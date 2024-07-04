@@ -8,6 +8,7 @@ MemoryArena VulkanGraphicsMemoryArena;
 SystemDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull> vulkanGraphicsDevicePool;
 
 bool VulkanDebugLayerEnabled = false;
+bool vulkanDebugGpuValidationEnabled = false;
 VkInstance VulkanInstance = nullptr;
 VkDebugReportCallbackEXT vulkanDebugCallback = nullptr;
 
@@ -93,17 +94,20 @@ void InitVulkan()
             createInfo.ppEnabledExtensionNames = extensions;
             createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
 
-            VkValidationFeatureEnableEXT enabledValidationFeatures[] =
+            auto enabledValidationFeatures = SystemPushArray<VkValidationFeatureEnableEXT>(stackMemoryArena, 3);
+            auto currentEnabledValidationFeaturesIndex = 0u;
+
+            enabledValidationFeatures[currentEnabledValidationFeaturesIndex++] = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
+            enabledValidationFeatures[currentEnabledValidationFeaturesIndex++] = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+
+            if (vulkanDebugGpuValidationEnabled)
             {
-                VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-                // TODO: For the moment we disable this error because it may be a bug related to timeline semaphore
-                // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/7455
-                VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
-            };
+                enabledValidationFeatures[currentEnabledValidationFeaturesIndex++] = VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
+            }
 
             VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
-            validationFeatures.enabledValidationFeatureCount = ARRAYSIZE(enabledValidationFeatures);
-            validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
+            validationFeatures.enabledValidationFeatureCount = currentEnabledValidationFeaturesIndex;
+            validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures.Pointer;
 
             createInfo.pNext = &validationFeatures;
 
@@ -232,6 +236,11 @@ VkPipelineLayout CreateVulkanPipelineLayout(VkDevice graphicsDevice)
 void VulkanEnableGraphicsDebugLayer()
 {
     VulkanDebugLayerEnabled = true;
+}
+
+void VulkanEnableGpuValidation()
+{
+    vulkanDebugGpuValidationEnabled = true;
 }
 
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices()

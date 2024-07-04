@@ -144,7 +144,6 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     for (int32_t i = 0; i < 3; i++)
     {
         auto texture = swapChainData->BackBufferTextures[i];
-        VulkanFreeGraphicsResourceDescriptor(swapChainData->BackBufferDescriptors[i], nullptr);
         VulkanFreeGraphicsResource(texture, nullptr);
     }
 
@@ -204,12 +203,12 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     vkResetFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFence);
 
     swapChainData->PresentCalled = false;
-    auto backBufferDescriptor = swapChainData->BackBufferDescriptors[swapChainData->CurrentImageIndex];
+    auto backBuffer = swapChainData->BackBufferTextures[swapChainData->CurrentImageIndex];
 
     ElemSwapChainUpdateParameters updateParameters
     {
         .SwapChainInfo = VulkanGetSwapChainInfo(handle),
-        .BackBufferRenderTarget = backBufferDescriptor,
+        .BackBufferRenderTarget = backBuffer,
         .DeltaTimeInSeconds = deltaTime,
         .NextPresentTimestampInSeconds = 1.0f//nextPresentTimestampInSeconds
     };
@@ -443,7 +442,6 @@ void VulkanFreeSwapChain(ElemSwapChain swapChain)
         auto textureData = GetVulkanGraphicsResourceData(swapChainData->BackBufferTextures[i]);
         SystemAssert(textureData);
 
-        VulkanFreeGraphicsResourceDescriptor(swapChainData->BackBufferDescriptors[i], nullptr);
         VulkanFreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
     }
 

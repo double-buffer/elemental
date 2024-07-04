@@ -394,6 +394,12 @@ typedef enum
     ElemGraphicsResourceUsage_RenderTarget = 0x02
 } ElemGraphicsResourceUsage;
 
+typedef enum
+{
+    ElemGraphicsResourceDescriptorUsage_Read = 0x00,
+    ElemGraphicsResourceDescriptorUsage_Write = 0x01
+} ElemGraphicsResourceDescriptorUsage;
+
 /**
  * Enumerates render pass load actions.
  */
@@ -425,6 +431,8 @@ typedef struct
 {
     // Enable debugging features if set to true.
     bool EnableDebugLayer;
+    // Enable GPU validation if debug layer is enabled.
+    bool EnableGpuValidation;
     // Prefer using Vulkan API if set to true.
     bool PreferVulkan;
 } ElemGraphicsOptions;
@@ -564,7 +572,7 @@ typedef struct
     // Information about the swap chain's configuration.
     ElemSwapChainInfo SwapChainInfo;
     // Back buffer render target for the swap chain.
-    ElemGraphicsResourceDescriptor BackBufferRenderTarget;
+    ElemGraphicsResource BackBufferRenderTarget;
     // Time since the last frame was presented, in seconds.
     double DeltaTimeInSeconds; 
     // Timestamp for when the next frame is expected to be presented, in seconds.
@@ -617,7 +625,7 @@ typedef struct
 typedef struct
 {
     ElemGraphicsResource Resource;
-    ElemGraphicsResourceUsage Usage;
+    ElemGraphicsResourceDescriptorUsage Usage;
     uint32_t TextureMipIndex;
 } ElemGraphicsResourceDescriptorInfo;
 
@@ -723,9 +731,7 @@ typedef struct
  */
 typedef struct
 {
-    ElemGraphicsResourceDescriptor RenderTarget;
-
-    // TODO: Add a RTV descriptor optional here so we can override it if needed?
+    ElemGraphicsResource RenderTarget;
 
     // Color to clear the render target with if the load action is clear.
 
@@ -904,7 +910,7 @@ ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemF
 ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
 ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
 
-ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
+ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
@@ -955,7 +961,7 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
  */
 ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data);
 
-ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options);
+ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
 
 /**
  * Dispatches a compute operation on a command list, specifying the number of thread groups in each dimension.

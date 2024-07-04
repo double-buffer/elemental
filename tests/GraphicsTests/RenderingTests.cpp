@@ -7,7 +7,7 @@
 // TODO: Check command list type when dispatch mesh
 // TODO: Multiple config for rendering
 
-void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResourceDescriptor renderTarget, ElemColor clearColor)
+void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor)
 {
     ElemRenderPassRenderTarget renderPassRenderTarget = 
     {
@@ -25,8 +25,6 @@ void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResourceD
         }
     };
 
-    // TODO: Barrier to RTV?
-
     // Act
     ElemBeginRenderPass(commandList, &parameters);
 }
@@ -40,18 +38,14 @@ UTEST(Rendering, RenderPassClearRenderTarget)
 
     auto renderTarget = TestCreateRenderTarget(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT);
 
-    // TODO: Barrier to RTV?
-
     // Act
-    TestBeginClearRenderPass(commandList, renderTarget.RenderTargetDescriptor, { .Red = 1.0f, .Green = 0.5f, .Blue = 0.25f, .Alpha = 0.95f });
+    TestBeginClearRenderPass(commandList, renderTarget.Texture, { .Red = 1.0f, .Green = 0.5f, .Blue = 0.25f, .Alpha = 0.95f });
     ElemEndRenderPass(commandList);
     
     // Assert
     ElemCommitCommandList(commandList);
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
-
-    // TODO: Barrier to ShaderRead?
 
     auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float));
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.Descriptor };
@@ -98,10 +92,8 @@ UTEST(Rendering, DispatchMesh)
     auto meshShaderPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &parameters);
     ElemFreeShaderLibrary(shaderLibrary);
 
-    // TODO: Barrier to RTV?
-
     // Act
-    TestBeginClearRenderPass(commandList, renderTarget.RenderTargetDescriptor, { .Red = 0.0f, .Green = 0.0f, .Blue = 1.0f, .Alpha = 1.0f });
+    TestBeginClearRenderPass(commandList, renderTarget.Texture, { .Red = 0.0f, .Green = 0.0f, .Blue = 1.0f, .Alpha = 1.0f });
     ElemBindPipelineState(commandList, meshShaderPipeline);
     ElemDispatchMesh(commandList, 1, 1, 1);
     ElemEndRenderPass(commandList);
@@ -110,8 +102,6 @@ UTEST(Rendering, DispatchMesh)
     ElemCommitCommandList(commandList);
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
-
-    // TODO: Barrier to ShaderRead?
 
     auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float));
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.Descriptor };

@@ -41,7 +41,7 @@ ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resour
     DispatchReturnGraphicsFunction(GetGraphicsResourceDataSpan, resource);
 }
 
-ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
+ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
     DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, resource, usage, options);
 }
@@ -56,9 +56,9 @@ ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor d
     DispatchGraphicsFunction(FreeGraphicsResourceDescriptor, descriptor, options);
 }
 
-ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)
+ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options)
 {
-    DispatchGraphicsFunction(GraphicsResourceBarrier, commandList, sourceDescriptor, destinationDescriptor, options);
+    DispatchGraphicsFunction(GraphicsResourceBarrier, commandList, descriptor, options);
 }
 
 ElemAPI void ElemProcessGraphicsResourceDeleteQueue()

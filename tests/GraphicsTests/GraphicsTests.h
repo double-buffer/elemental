@@ -19,7 +19,6 @@ struct TestRenderTarget
     ElemGraphicsHeap GraphicsHeap;
     ElemGraphicsResource Texture;
     ElemGraphicsResourceDescriptor ReadDescriptor;
-    ElemGraphicsResourceDescriptor RenderTargetDescriptor;
     ElemGraphicsFormat Format;
 };
 

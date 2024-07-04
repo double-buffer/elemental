@@ -25,6 +25,7 @@ void ApplicationTestInitFunction(void* payload)
     }
 
     options.EnableDebugLayer = true;
+    options.EnableGpuValidation = true;
 
     ElemConfigureLogHandler(TestLogHandler);
     ElemSetGraphicsOptions(&options);

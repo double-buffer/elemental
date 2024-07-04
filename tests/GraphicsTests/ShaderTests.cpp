@@ -2,6 +2,9 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+// TODO: Validate dispatch thread group count
+// TODO: Cannot push constant before binding pso
+
 UTEST(Shader, CreateComputePipelineState) 
 {
     // Arrange
@@ -47,7 +50,7 @@ UTEST(Shader, CreateComputePipelineStateFunctionNotExist)
     ElemFreeShaderLibrary(shaderLibrary);
     ElemFreeGraphicsDevice(graphicsDevice);
 
-    ASSERT_LOG_MESSAGE("Cannot find compute shader function");
+    ASSERT_LOG_MESSAGE("Cannot find shader function");
     ASSERT_EQ(ELEM_HANDLE_NULL, pipelineState);
 }
 
@@ -96,6 +99,3 @@ UTEST(Shader, DispatchCompute)
         ASSERT_EQ_MSG(uintData[i], i < 16 ? i : 0u, "Compute shader data is invalid.");
     }
 }
-
-// TODO: Validate dispatch thread group count
-// TODO: Cannot push constant before binding pso

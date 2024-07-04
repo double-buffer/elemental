@@ -53,7 +53,6 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
         AssertIfFailed(swapChainData->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
 
         swapChainData->BackBufferTextures[i] = CreateDirectX12GraphicsResourceFromResource(swapChainDataFull->GraphicsDevice, ElemGraphicsResourceType_Texture2D, backBuffer, true);
-        swapChainData->BackBufferDescriptors[i] = DirectX12CreateGraphicsResourceDescriptor(swapChainData->BackBufferTextures[i], ElemGraphicsResourceUsage_RenderTarget, nullptr);
     }
 }
 
@@ -81,7 +80,6 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
     {
         if (swapChainData->BackBufferTextures[i] != ELEM_HANDLE_NULL)
         {
-            DirectX12FreeGraphicsResourceDescriptor(swapChainData->BackBufferDescriptors[i], nullptr);
             DirectX12FreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
         }
     } 
@@ -214,12 +212,12 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         }
         
         swapChainData->PresentCalled = false;
-        auto backBufferDescriptor = swapChainData->BackBufferDescriptors[swapChainData->DeviceObject->GetCurrentBackBufferIndex()];
+        auto backBufferTexture = swapChainData->BackBufferTextures[swapChainData->DeviceObject->GetCurrentBackBufferIndex()];
 
         ElemSwapChainUpdateParameters updateParameters
         {
             .SwapChainInfo = DirectX12GetSwapChainInfo(handle),
-            .BackBufferRenderTarget = backBufferDescriptor,
+            .BackBufferRenderTarget = backBufferTexture,
             //.DeltaTimeInSeconds = 1.0f / swapChainData->TargetFPS,
             .DeltaTimeInSeconds = deltaTime,
                 //TODO: Fix next present it is wrong now
@@ -391,7 +389,6 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     {
         if (swapChainData->BackBufferTextures[i])
         {
-            DirectX12FreeGraphicsResourceDescriptor(swapChainData->BackBufferDescriptors[i], nullptr);
             DirectX12FreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
         }
     }

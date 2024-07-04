@@ -62,7 +62,7 @@ typedef struct ElementalFunctions
     void (*ElemFreeGraphicsResource)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *);
     ElemGraphicsResourceInfo (*ElemGetGraphicsResourceInfo)(ElemGraphicsResource);
     ElemDataSpan (*ElemGetGraphicsResourceDataSpan)(ElemGraphicsResource);
-    ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceUsage, ElemGraphicsResourceDescriptorOptions const *);
+    ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *);
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
     void (*ElemProcessGraphicsResourceDeleteQueue)(void);
@@ -73,7 +73,7 @@ typedef struct ElementalFunctions
     void (*ElemFreePipelineState)(ElemPipelineState);
     void (*ElemBindPipelineState)(ElemCommandList, ElemPipelineState);
     void (*ElemPushPipelineStateConstants)(ElemCommandList, unsigned int, ElemDataSpan);
-    void (*ElemGraphicsResourceBarrier)(ElemCommandList, ElemGraphicsResourceDescriptor, ElemGraphicsResourceDescriptor, ElemGraphicsResourceBarrierOptions const *);
+    void (*ElemGraphicsResourceBarrier)(ElemCommandList, ElemGraphicsResourceDescriptor, ElemGraphicsResourceBarrierOptions const *);
     void (*ElemDispatchCompute)(ElemCommandList, unsigned int, unsigned int, unsigned int);
     void (*ElemBeginRenderPass)(ElemCommandList, ElemBeginRenderPassParameters const *);
     void (*ElemEndRenderPass)(ElemCommandList);
@@ -173,7 +173,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemFreeGraphicsResource = (void (*)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResource");
     listElementalFunctions.ElemGetGraphicsResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceInfo");
     listElementalFunctions.ElemGetGraphicsResourceDataSpan = (ElemDataSpan (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceDataSpan");
-    listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
+    listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
     listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(void))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
@@ -184,7 +184,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemFreePipelineState = (void (*)(ElemPipelineState))GetElementalFunctionPointer("ElemFreePipelineState");
     listElementalFunctions.ElemBindPipelineState = (void (*)(ElemCommandList, ElemPipelineState))GetElementalFunctionPointer("ElemBindPipelineState");
     listElementalFunctions.ElemPushPipelineStateConstants = (void (*)(ElemCommandList, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemPushPipelineStateConstants");
-    listElementalFunctions.ElemGraphicsResourceBarrier = (void (*)(ElemCommandList, ElemGraphicsResourceDescriptor, ElemGraphicsResourceDescriptor, ElemGraphicsResourceBarrierOptions const *))GetElementalFunctionPointer("ElemGraphicsResourceBarrier");
+    listElementalFunctions.ElemGraphicsResourceBarrier = (void (*)(ElemCommandList, ElemGraphicsResourceDescriptor, ElemGraphicsResourceBarrierOptions const *))GetElementalFunctionPointer("ElemGraphicsResourceBarrier");
     listElementalFunctions.ElemDispatchCompute = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchCompute");
     listElementalFunctions.ElemBeginRenderPass = (void (*)(ElemCommandList, ElemBeginRenderPassParameters const *))GetElementalFunctionPointer("ElemBeginRenderPass");
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
@@ -1243,7 +1243,7 @@ static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource 
     return listElementalFunctions.ElemGetGraphicsResourceDataSpan(resource);
 }
 
-static inline ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, ElemGraphicsResourceDescriptorOptions const * options)
+static inline ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, ElemGraphicsResourceDescriptorOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1500,7 +1500,7 @@ static inline void ElemPushPipelineStateConstants(ElemCommandList commandList, u
     listElementalFunctions.ElemPushPipelineStateConstants(commandList, offsetInBytes, data);
 }
 
-static inline void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, ElemGraphicsResourceBarrierOptions const * options)
+static inline void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, ElemGraphicsResourceBarrierOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1514,7 +1514,7 @@ static inline void ElemGraphicsResourceBarrier(ElemCommandList commandList, Elem
         return;
     }
 
-    listElementalFunctions.ElemGraphicsResourceBarrier(commandList, sourceDescriptor, destinationDescriptor, options);
+    listElementalFunctions.ElemGraphicsResourceBarrier(commandList, descriptor, options);
 }
 
 static inline void ElemDispatchCompute(ElemCommandList commandList, unsigned int threadGroupCountX, unsigned int threadGroupCountY, unsigned int threadGroupCountZ)

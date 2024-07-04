@@ -166,8 +166,8 @@ void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width,
 
     applicationPayload->RenderTexture = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, 0, &resourceInfo);
 
-    applicationPayload->RenderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Read, NULL);
-    applicationPayload->RenderTextureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceUsage_Write, NULL);
+    applicationPayload->RenderTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    applicationPayload->RenderTextureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTexture, ElemGraphicsResourceDescriptorUsage_Write, NULL);
 }
 
 void InitSample(void* payload)
@@ -175,7 +175,7 @@ void InitSample(void* payload)
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->Window = ElemCreateWindow(NULL);
 
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .PreferVulkan = applicationPayload->PreferVulkan });
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .EnableGpuValidation = false, .PreferVulkan = applicationPayload->PreferVulkan });
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
     applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
@@ -393,22 +393,12 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // BUG: On iOS when the framerate is slower (we miss the vsync), the barrier here is not kicked in and the gpu overlapp the render encoders
     // For this case, it seems it is caused by calling the update handler for vsync regardless of if the frame was presented
 
-    // TODO: Passing ELEM_HANDLE_NULL is not very intuitive here :(
-    // Maybe we don't need this barrier except to change the layout?
-    ElemGraphicsResourceBarrier(commandList, ELEM_HANDLE_NULL, applicationPayload->RenderTextureWriteDescriptor, NULL);
+    ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTextureWriteDescriptor, NULL);
 
     uint32_t threadSize = 16;
     ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
 
-    // TODO: Sync points
-    ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTextureWriteDescriptor, applicationPayload->RenderTextureReadDescriptor, NULL);
-
-    // TODO: Barrier => Swapchain RTV
-
-    /*ElemSetResourceBarrier(commandList, &(ElemResourceBarrier) {
-        .Type = ElemResourceBarrierType_Texture,
-        .Resource = applicationPayload->RenderTexture,
-    });*/
+    ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTextureReadDescriptor, NULL);
 
     // TODO: Here we will issue barriers, with the set Barrier function but Begin render pass will also issue a barrier.
     // We will defer the barrier submittions so you can call ElemSetResourceBarriers Multiple time if needed
@@ -443,8 +433,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemDispatchMesh(commandList, 1, 1, 1);
 
     ElemEndRenderPass(commandList);
-
-    // TODO: Barrier => Swapchain Present (Will not do that, present is a special internal state that will be handled automatically)
 
     ElemCommitCommandList(commandList);
     applicationPayload->LastExecutionFence = ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);

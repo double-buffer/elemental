@@ -41,6 +41,7 @@ VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphic
 VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
 void VulkanEnableGraphicsDebugLayer();
+void VulkanEnableGpuValidation();
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices();
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);

@@ -28,10 +28,9 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
-        SystemAssert(renderTargetParameters.RenderTarget != -1);
+        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto renderTargetDescriptorInfo = DirectX12GetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget); 
-        auto textureData = GetDirectX12GraphicsResourceData(renderTargetDescriptorInfo.Resource);
+        auto textureData = GetDirectX12GraphicsResourceData(renderTargetParameters.RenderTarget);
         SystemAssert(textureData);
 
         // TODO: Validate usage
@@ -84,34 +83,29 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         // TODO: Group the barriers with a barrier system
         renderTargetDescList[i] =
         {
-            .cpuDescriptor = ConvertDirectX12DescriptorIndexToHandle(graphicsDeviceData->RTVDescriptorHeap, renderTargetParameters.RenderTarget),
+            .cpuDescriptor = textureData->RtvHandle,
             .BeginningAccess = { .Type = beginAccessType, .Clear = beginAccessClearValue },
             .EndingAccess = { .Type = endAccessType }
         };
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
         // See: https://github.com/TheRealMJP/MemPoolTest/blob/8d7a5b9af5e6f1fe4ff3a35ba51aeb7924183ae2/SampleFramework12/v1.04/Graphics/GraphicsTypes.h#L461
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test Before present check: %d", textureData->IsPresentTexture);
-        if (textureData->IsPresentTexture)
-        {
-            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test Present");
-            D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
-            renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
-            renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
-            renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
-            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
-            renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-            renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL; // TODO: Should use sync render target?
-            renderTargetBarrier.pResource = textureData->DeviceObject.Get();
+        D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
+        renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
+        renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
+        renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
+        renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
+        renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+        renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL; // TODO: Should use sync render target?
+        renderTargetBarrier.pResource = textureData->DeviceObject.Get();
 
-            D3D12_BARRIER_GROUP textureBarriersGroup;
-            textureBarriersGroup = {};
-            textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
-            textureBarriersGroup.NumBarriers = 1;
-            textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
+        D3D12_BARRIER_GROUP textureBarriersGroup;
+        textureBarriersGroup = {};
+        textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
+        textureBarriersGroup.NumBarriers = 1;
+        textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
 
-            commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
-        }
+        commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
         
         if (i == 0 && parameters->Viewports.Length == 0)
         {
@@ -155,10 +149,9 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
-        SystemAssert(renderTargetParameters.RenderTarget != -1);
+        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto renderTargetDescriptorInfo = DirectX12GetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget); 
-        auto textureData = GetDirectX12GraphicsResourceData(renderTargetDescriptorInfo.Resource); 
+        auto textureData = GetDirectX12GraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!

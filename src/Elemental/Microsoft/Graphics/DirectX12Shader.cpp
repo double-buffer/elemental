@@ -69,6 +69,30 @@ bool CheckDirectX12PipelineStateType(const DirectX12CommandListData* commandList
     return true;
 }
 
+D3D12_SHADER_BYTECODE GetDirectX12ShaderFunctionByteCode(DirectX12ShaderLibraryData* shaderLibraryData, ShaderType shaderType, const char* function)
+{
+    SystemAssert(function);
+    D3D12_SHADER_BYTECODE result = {};
+
+    for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
+    {
+        auto shader = shaderLibraryData->GraphicsShaders[i];
+        auto byteCodeData = D3D12_SHADER_BYTECODE { .pShaderBytecode = shader.ShaderCode.Pointer, .BytecodeLength = shader.ShaderCode.Length };
+
+        if (shader.ShaderType == shaderType && SystemFindSubString(shader.Name, function) != -1)
+        {
+            result = byteCodeData;
+        }
+    }
+        
+    if (!result.pShaderBytecode)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find shader function '%s'", function);
+    }
+
+    return result;
+}
+
 ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitDirectX12ShaderMemory();
@@ -116,7 +140,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
 
     auto shaderLibraryData= GetDirectX12ShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
-    
+
     ComPtr<ID3D12PipelineState> pipelineState;
 
     D3D12_RT_FORMAT_ARRAY renderTargets = {};
@@ -207,8 +231,49 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     
     psoDesc.RootSignature = graphicsDeviceData->RootSignature.Get();
 
-    psoDesc.MS = D3D12_SHADER_BYTECODE { .pShaderBytecode = shaderLibraryData->GraphicsShaders[0].ShaderCode.Pointer, .BytecodeLength = shaderLibraryData->GraphicsShaders[0].ShaderCode.Length };
-    psoDesc.PS = D3D12_SHADER_BYTECODE { .pShaderBytecode = shaderLibraryData->GraphicsShaders[1].ShaderCode.Pointer, .BytecodeLength = shaderLibraryData->GraphicsShaders[1].ShaderCode.Length };
+    if (parameters->MeshShaderFunction)
+    {
+        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
+        {
+            auto shader = shaderLibraryData->GraphicsShaders[i];
+            auto byteCodeData = D3D12_SHADER_BYTECODE { .pShaderBytecode = shader.ShaderCode.Pointer, .BytecodeLength = shader.ShaderCode.Length };
+
+            if (shader.ShaderType == ShaderType_Mesh && SystemFindSubString(shader.Name, parameters->MeshShaderFunction) != -1)
+            {
+                psoDesc.MS = byteCodeData;
+            }
+        }
+            
+        if (!psoDesc.MS.innerObject.pShaderBytecode)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find shader function '%s'", parameters->MeshShaderFunction);
+        }
+    }
+    
+
+    if (parameters->MeshShaderFunction)
+    {
+        auto shaderByteCode = GetDirectX12ShaderFunctionByteCode(shaderLibraryData, ShaderType_Mesh, parameters->MeshShaderFunction);
+
+        if (!shaderByteCode.pShaderBytecode)
+        {
+            return ELEM_HANDLE_NULL;
+        }
+
+        psoDesc.MS = shaderByteCode;
+    }
+    
+    if (parameters->PixelShaderFunction)
+    {
+        auto shaderByteCode = GetDirectX12ShaderFunctionByteCode(shaderLibraryData, ShaderType_Pixel, parameters->PixelShaderFunction);
+
+        if (!shaderByteCode.pShaderBytecode)
+        {
+            return ELEM_HANDLE_NULL;
+        }
+
+        psoDesc.PS = shaderByteCode;
+    }
 
     psoDesc.RenderTargets = renderTargets;
     psoDesc.SampleDesc = sampleDesc;
@@ -382,39 +447,24 @@ ElemPipelineState DirectX12CompileComputePipelineState(ElemGraphicsDevice graphi
     auto shaderLibraryData= GetDirectX12ShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
 
-    D3D12_SHADER_BYTECODE computeFunction;
-
-    if (parameters->ComputeShaderFunction)
-    {
-        const Shader* shader = nullptr;
-
-        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
-        {
-            if (SystemFindSubString(shaderLibraryData->GraphicsShaders[i].Name, parameters->ComputeShaderFunction) != -1)
-            {
-                shader = &shaderLibraryData->GraphicsShaders[i];
-                break;
-            }
-        }
-            
-        if (shader)
-        {
-            computeFunction = { .pShaderBytecode = shader->ShaderCode.Pointer, .BytecodeLength = shader->ShaderCode.Length };
-        }
-        else
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find compute shader function '%s'", parameters->ComputeShaderFunction);
-            return ELEM_HANDLE_NULL;
-        }
-    }
-
     // TODO: Use the new pso model
     ComPtr<ID3D12PipelineState> pipelineState;
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 
     psoDesc.pRootSignature = graphicsDeviceData->RootSignature.Get();
-    psoDesc.CS = computeFunction;
+    
+    if (parameters->ComputeShaderFunction)
+    {
+        auto shaderByteCode = GetDirectX12ShaderFunctionByteCode(shaderLibraryData, ShaderType_Compute, parameters->ComputeShaderFunction);
+
+        if (!shaderByteCode.pShaderBytecode)
+        {
+            return ELEM_HANDLE_NULL;
+        }
+
+        psoDesc.CS = shaderByteCode;
+    }
 
 	AssertIfFailed(graphicsDeviceData->Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(pipelineState.ReleaseAndGetAddressOf())));
 
