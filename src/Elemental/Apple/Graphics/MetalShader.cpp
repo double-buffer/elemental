@@ -10,6 +10,12 @@
 #define METAL_MAX_LIBRARIES UINT16_MAX
 #define METAL_MAX_PIPELINESTATES UINT16_MAX
 
+struct MetalShaderFunctionData
+{
+    NS::SharedPtr<MTL::Function> Function;
+    MetalShaderMetaData MetaData;
+};
+
 SystemDataPool<MetalShaderLibraryData, SystemDataPoolDefaultFull> metalShaderLibraryPool;
 SystemDataPool<MetalPipelineStateData, MetalPipelineStateDataFull> metalPipelineStatePool;
 
@@ -69,6 +75,41 @@ bool CheckMetalCommandEncoderType(const MetalCommandListData* commandListData, M
     return true;
 }
 
+MetalShaderFunctionData GetMetalShaderFunction(MetalShaderLibraryData* shaderLibraryData, ShaderType shaderType, const char* function)
+{
+    SystemAssert(function);
+    MetalShaderFunctionData result = {};
+
+    for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
+    {
+        auto shader = shaderLibraryData->Shaders[i];
+
+        if (shader.ShaderType == shaderType && SystemFindSubString(shader.Name, function) != -1)
+        {
+            result.Function = NS::TransferPtr(shaderLibraryData->GraphicsShaders[i]->newFunction(NS::String::string(function, NS::UTF8StringEncoding)));
+            
+            for (uint32_t j = 0; j < shader.Metadata.Length; j++)
+            {
+                auto metaData = shader.Metadata[j];
+
+                if (metaData.Type == ShaderMetadataType_ThreadGroupSize)
+                {
+                    result.MetaData.ThreadSizeX = metaData.Value[0];
+                    result.MetaData.ThreadSizeY = metaData.Value[1];
+                    result.MetaData.ThreadSizeZ = metaData.Value[2];
+                }
+            }
+        }
+    }
+        
+    if (!result.Function)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find shader function '%s'", function);
+    }
+
+    return result;
+}
+
 ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitMetalShaderLibraryMemory();
@@ -109,8 +150,6 @@ ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, El
         
         for (uint32_t i = 0; i < shaders.Length; i++)
         {
-            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Shader: %s", shaders[i].Name);
-
             auto dispatchData = dispatch_data_create(shaders[i].ShaderCode.Pointer, shaders[i].ShaderCode.Length, nullptr, nullptr);
 
             NS::Error* errorPointer;
@@ -159,64 +198,38 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     SystemAssert(parameters);
     SystemAssert(parameters->ShaderLibrary != ELEM_HANDLE_NULL);
 
-    auto shaderLibraryData= GetMetalShaderLibraryData(parameters->ShaderLibrary);
+    auto shaderLibraryData = GetMetalShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
 
     auto pipelineStateDescriptor = NS::TransferPtr(MTL::MeshRenderPipelineDescriptor::alloc()->init());
 
-    NS::SharedPtr<MTL::Function> meshShaderFunction;
-    NS::SharedPtr<MTL::Function> pixelShaderFunction;
+    MetalShaderMetaData meshShaderMetaData = {};
 
-    uint32_t meshThreadGroupSizeX, meshThreadGroupSizeY, meshThreadGroupSizeZ = 0u;
-
-    // TODO: Get the correct shader based on the function name
     if (parameters->MeshShaderFunction)
     {
-        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
-        {
-            meshShaderFunction = NS::TransferPtr(shaderLibraryData->GraphicsShaders[i]->newFunction(NS::String::string(parameters->MeshShaderFunction, NS::UTF8StringEncoding)));
+        auto functionData = GetMetalShaderFunction(shaderLibraryData, ShaderType_Mesh, parameters->MeshShaderFunction);
 
-            if (meshShaderFunction)
-            {
-                // TODO: Get correct metadata here it is just for test
-                meshThreadGroupSizeX = shaderLibraryData->Shaders[i].Metadata[0].Value[0];
-                meshThreadGroupSizeY = shaderLibraryData->Shaders[i].Metadata[0].Value[1];
-                meshThreadGroupSizeZ = shaderLibraryData->Shaders[i].Metadata[0].Value[2];
-                break;
-            }
-        }
-            
-        if (meshShaderFunction)
+        if (!functionData.Function)
         {
-            pipelineStateDescriptor->setMeshFunction(meshShaderFunction.get());
+            return ELEM_HANDLE_NULL;
         }
-        else
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find mesh shader function '%s'", parameters->MeshShaderFunction);
-        }
+
+        pipelineStateDescriptor->setMeshFunction(functionData.Function.get());
+        meshShaderMetaData.ThreadSizeX = functionData.MetaData.ThreadSizeX;
+        meshShaderMetaData.ThreadSizeY = functionData.MetaData.ThreadSizeY;
+        meshShaderMetaData.ThreadSizeZ = functionData.MetaData.ThreadSizeZ;
     }
 
     if (parameters->PixelShaderFunction)
     {
-        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
-        {
-            pixelShaderFunction = NS::TransferPtr(shaderLibraryData->GraphicsShaders[i]->newFunction(NS::String::string(parameters->PixelShaderFunction, NS::UTF8StringEncoding)));
+        auto functionData = GetMetalShaderFunction(shaderLibraryData, ShaderType_Pixel, parameters->PixelShaderFunction);
 
-            if (pixelShaderFunction)
-            {
-                break;
-            }
+        if (!functionData.Function)
+        {
+            return ELEM_HANDLE_NULL;
+        }
 
-        }
-            
-        if (pixelShaderFunction)
-        {
-            pipelineStateDescriptor->setFragmentFunction(pixelShaderFunction.get());
-        }
-        else
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find pixel shader function '%s'", parameters->PixelShaderFunction);
-        }
+        pipelineStateDescriptor->setFragmentFunction(functionData.Function.get());
     }
         
     for (uint32_t i = 0; i < parameters->TextureFormats.Length; i++)
@@ -291,9 +304,7 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     
     auto handle = SystemAddDataPoolItem(metalPipelineStatePool, {
         .RenderPipelineState = pipelineState,
-        .ThreadSizeX = meshThreadGroupSizeX,
-        .ThreadSizeY = meshThreadGroupSizeY,
-        .ThreadSizeZ = meshThreadGroupSizeZ,
+        .MeshShaderMetaData = meshShaderMetaData
     }); 
 
     SystemAddDataPoolItemFull(metalPipelineStatePool, handle, {
@@ -318,33 +329,21 @@ ElemPipelineState MetalCompileComputePipelineState(ElemGraphicsDevice graphicsDe
 
     auto pipelineStateDescriptor = NS::TransferPtr(MTL::ComputePipelineDescriptor::alloc()->init());
 
-    NS::SharedPtr<MTL::Function> computeFunction;
+    MetalShaderMetaData computeShaderMetaData = {};
 
-    // TODO: Ideally we should have only one mtl lib and get the function from it.
-    // TODO: Amplification shader
-    // TODO: Change that
     if (parameters->ComputeShaderFunction)
     {
-        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
-        {
-            computeFunction = NS::TransferPtr(shaderLibraryData->GraphicsShaders[i]->newFunction(NS::String::string(parameters->ComputeShaderFunction, NS::UTF8StringEncoding)));
+        auto functionData = GetMetalShaderFunction(shaderLibraryData, ShaderType_Compute, parameters->ComputeShaderFunction);
 
-            if (computeFunction)
-            {
-                break;
-            }
-
-        }
-            
-        if (computeFunction)
+        if (!functionData.Function)
         {
-            pipelineStateDescriptor->setComputeFunction(computeFunction.get());
-        }
-        else
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find compute shader function '%s'", parameters->ComputeShaderFunction);
             return ELEM_HANDLE_NULL;
         }
+
+        pipelineStateDescriptor->setComputeFunction(functionData.Function.get());
+        computeShaderMetaData.ThreadSizeX = functionData.MetaData.ThreadSizeX;
+        computeShaderMetaData.ThreadSizeY = functionData.MetaData.ThreadSizeY;
+        computeShaderMetaData.ThreadSizeZ = functionData.MetaData.ThreadSizeZ;
     }
 
     // TODO: Review this!
@@ -372,10 +371,7 @@ ElemPipelineState MetalCompileComputePipelineState(ElemGraphicsDevice graphicsDe
     
     auto handle = SystemAddDataPoolItem(metalPipelineStatePool, {
         .ComputePipelineState = pipelineState,
-        // TODO: Get correct metadata here it is just for test
-        .ThreadSizeX = shaderLibraryData->Shaders[0].Metadata[0].Value[0],
-        .ThreadSizeY = shaderLibraryData->Shaders[0].Metadata[0].Value[1],
-        .ThreadSizeZ = shaderLibraryData->Shaders[0].Metadata[0].Value[2],
+        .ComputeShaderMetaData = computeShaderMetaData
     }); 
 
     SystemAddDataPoolItemFull(metalPipelineStatePool, handle, {
@@ -480,5 +476,5 @@ void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCount
 
     auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
     computeCommandEncoder->dispatchThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), 
-                                                MTL::Size(pipelineStateData->ThreadSizeX, pipelineStateData->ThreadSizeY, pipelineStateData->ThreadSizeZ));
+                                                MTL::Size(pipelineStateData->ComputeShaderMetaData.ThreadSizeX, pipelineStateData->ComputeShaderMetaData.ThreadSizeY, pipelineStateData->ComputeShaderMetaData.ThreadSizeZ));
 }

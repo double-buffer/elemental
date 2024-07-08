@@ -411,7 +411,7 @@ ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
     }; 
 }
 
-ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
+ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
@@ -541,7 +541,7 @@ void EnsureMetalResourceBarrier(ElemCommandList commandList)
     commandQueueData->ResourceBarrierTypes = 0;
 }
 
-void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor sourceDescriptor, ElemGraphicsResourceDescriptor destinationDescriptor, const ElemGraphicsResourceBarrierOptions* options)
+void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options)
 {
     // TODO: Deffer until needed the waits
 

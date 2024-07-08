@@ -30,6 +30,8 @@ MemoryArena MetalGraphicsMemoryArena;
 SystemDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull> metalGraphicsDevicePool;
 
 bool MetalDebugLayerEnabled = false;
+bool metalDebugGpuValidationEnabled = false;
+bool MetalDebugBarrierInfoEnabled = false;
 
 void* MetalDebugReportCallback(void* arg) 
 {
@@ -253,6 +255,26 @@ void FreeMetalArgumentBufferHandle(MetalArgumentBuffer argumentBuffer, uint64_t 
 void MetalEnableGraphicsDebugLayer()
 {
     MetalDebugLayerEnabled = true;
+}
+
+void MetalSetGraphicsOptions(const ElemGraphicsOptions* options)
+{
+    SystemAssert(options);
+
+    if (options->EnableDebugLayer)
+    {
+        MetalDebugLayerEnabled = options->EnableDebugLayer;
+    }
+
+    if (options->EnableGpuValidation)
+    {
+        metalDebugGpuValidationEnabled = options->EnableGpuValidation;
+    }
+
+    if (options->EnableDebugBarrierInfo)
+    {
+        MetalDebugBarrierInfoEnabled = options->EnableDebugBarrierInfo;
+    }
 }
 
 ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices()

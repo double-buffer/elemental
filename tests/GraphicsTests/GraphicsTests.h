@@ -4,6 +4,7 @@
 
 #ifndef _WIN32
 #define MAX_PATH 255
+#define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
 #endif
 
 #define ASSERT_LOG_NOERROR() { TestInitLog(); ASSERT_FALSE_MSG(testHasLogErrors, testErrorLogs); }

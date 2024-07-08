@@ -136,7 +136,7 @@ ElemDataSpan ReadFile(const char* filename)
     };
 }
 
-static inline void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
+void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
 {
     if (testPrintLogs)
     {
@@ -319,9 +319,9 @@ void TestBarrierCheckSyncTypeToString(char* destination, TestBarrierCheckSyncTyp
 {
     switch (syncType) 
     {
-        case SyncType_None: sprintf(destination, "None"); break;
-        case SyncType_Compute: sprintf(destination, "Compute"); break;
-        default: sprintf(destination, "Unknown"); 
+        case SyncType_None: snprintf(destination, 255, "None"); break;
+        case SyncType_Compute: snprintf(destination, 255, "Compute"); break;
+        default: snprintf(destination, 255, "Unknown"); 
     }
 }
 
@@ -329,10 +329,10 @@ void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAcces
 {
     switch (accessType) 
     {
-        case AccessType_NoAccess: sprintf(destination, "NoAccess"); break;
-        case AccessType_Read: sprintf(destination, "Read"); break;
-        case AccessType_Write: sprintf(destination, "Write"); break;
-        default: sprintf(destination, "Unknown"); 
+        case AccessType_NoAccess: snprintf(destination, 255, "NoAccess"); break;
+        case AccessType_Read: snprintf(destination, 255, "Read"); break;
+        case AccessType_Write: snprintf(destination, 255, "Write"); break;
+        default: snprintf(destination, 255, "Unknown"); 
     }
 }
 

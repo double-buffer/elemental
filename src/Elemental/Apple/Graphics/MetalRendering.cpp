@@ -28,8 +28,7 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
 
-        auto descriptorData = MetalGetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget);
-        auto textureData = GetMetalResourceData(descriptorData.Resource); 
+        auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         auto renderTargetDescriptor = renderPassDescriptor->colorAttachments()->object(i);
@@ -101,8 +100,7 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[0];
 
-        auto descriptorData = MetalGetGraphicsResourceDescriptorInfo(renderTargetParameters.RenderTarget);
-        auto textureData = GetMetalResourceData(descriptorData.Resource); 
+        auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         ElemViewport viewport = 
@@ -189,5 +187,5 @@ void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, 
     auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
     renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), 
                                                MTL::Size(32, 1, 1), 
-                                               MTL::Size(pipelineStateData->ThreadSizeX, pipelineStateData->ThreadSizeY, pipelineStateData->ThreadSizeZ));
+                                               MTL::Size(pipelineStateData->MeshShaderMetaData.ThreadSizeX, pipelineStateData->MeshShaderMetaData.ThreadSizeY, pipelineStateData->MeshShaderMetaData.ThreadSizeZ));
 }

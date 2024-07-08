@@ -233,26 +233,6 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
 
     if (parameters->MeshShaderFunction)
     {
-        for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
-        {
-            auto shader = shaderLibraryData->GraphicsShaders[i];
-            auto byteCodeData = D3D12_SHADER_BYTECODE { .pShaderBytecode = shader.ShaderCode.Pointer, .BytecodeLength = shader.ShaderCode.Length };
-
-            if (shader.ShaderType == ShaderType_Mesh && SystemFindSubString(shader.Name, parameters->MeshShaderFunction) != -1)
-            {
-                psoDesc.MS = byteCodeData;
-            }
-        }
-            
-        if (!psoDesc.MS.innerObject.pShaderBytecode)
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find shader function '%s'", parameters->MeshShaderFunction);
-        }
-    }
-    
-
-    if (parameters->MeshShaderFunction)
-    {
         auto shaderByteCode = GetDirectX12ShaderFunctionByteCode(shaderLibraryData, ShaderType_Mesh, parameters->MeshShaderFunction);
 
         if (!shaderByteCode.pShaderBytecode)

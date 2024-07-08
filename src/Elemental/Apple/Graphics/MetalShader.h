@@ -11,13 +11,20 @@ struct MetalShaderLibraryData
     ReadOnlySpan<Shader> Shaders;
 };
 
+struct MetalShaderMetaData
+{
+    uint32_t ThreadSizeX;
+    uint32_t ThreadSizeY;
+    uint32_t ThreadSizeZ;
+};
+
 struct MetalPipelineStateData
 {
     NS::SharedPtr<MTL::RenderPipelineState> RenderPipelineState;
     NS::SharedPtr<MTL::ComputePipelineState> ComputePipelineState;
-    uint32_t ThreadSizeX;
-    uint32_t ThreadSizeY;
-    uint32_t ThreadSizeZ;
+    MetalShaderMetaData AmplificaitonShaderMetaData;
+    MetalShaderMetaData MeshShaderMetaData;
+    MetalShaderMetaData ComputeShaderMetaData;
 };
 
 struct MetalPipelineStateDataFull

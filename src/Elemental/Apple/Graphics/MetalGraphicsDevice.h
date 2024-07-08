@@ -27,6 +27,7 @@ struct MetalGraphicsDeviceDataFull
 
 extern MemoryArena MetalGraphicsMemoryArena;
 extern bool MetalDebugLayerEnabled;
+extern bool MetalDebugBarrierInfoEnabled;
 
 MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
@@ -35,7 +36,8 @@ uint32_t CreateMetalArgumentBufferHandleForTexture(MetalArgumentBuffer argumentB
 uint32_t CreateMetalArgumentBufferHandleForBuffer(MetalArgumentBuffer argumentBuffer, MTL::Buffer* buffer, uint32_t length);
 void FreeMetalArgumentBufferHandle(MetalArgumentBuffer argumentBuffer, uint64_t handle);
 
-void MetalEnableGraphicsDebugLayer();
+void MetalSetGraphicsOptions(const ElemGraphicsOptions* options);
+
 ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices();
 ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void MetalFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
