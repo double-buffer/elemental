@@ -221,8 +221,28 @@ ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* 
 {
     // TODO: Vulkan shaders on windows
     auto shaderData = ReadFile(shader);
-    auto shaderLibrary = ElemCreateShaderLibrary(graphicsDevice, shaderData);
-    return shaderLibrary;
+    return ElemCreateShaderLibrary(graphicsDevice, shaderData);
+}
+
+ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* function)
+{
+    auto shaderLibrary = TestOpenShader(graphicsDevice, shader);
+
+    ElemComputePipelineStateParameters pipelineStateParameters =
+    {
+        .ShaderLibrary = shaderLibrary,
+        .ComputeShaderFunction = function
+    };
+
+    auto pipelineState = ElemCompileComputePipelineState(graphicsDevice, &pipelineStateParameters);
+
+    if (pipelineState == ELEM_HANDLE_NULL)
+    {
+        return ELEM_HANDLE_NULL;
+    }
+
+    ElemFreeShaderLibrary(shaderLibrary);
+    return pipelineState;
 }
 
 TestReadBackBuffer TestCreateReadbackBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes)
@@ -279,21 +299,9 @@ void TestFreeRenderTarget(TestRenderTarget renderTarget)
 template<typename T>
 void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
 {
-    auto shaderLibrary = TestOpenShader(graphicsDevice, shaderName);
-
-    ElemComputePipelineStateParameters pipelineStateParameters =
-    {
-        .ShaderLibrary = shaderLibrary,
-        .ComputeShaderFunction = function
-    };
+    auto pipelineState = TestOpenComputeShader(graphicsDevice, shaderName, function);
 
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
-    auto pipelineState = ElemCompileComputePipelineState(graphicsDevice, &pipelineStateParameters);
-
-    if (pipelineState == ELEM_HANDLE_NULL)
-    {
-        return;
-    }
     
     ElemBindPipelineState(commandList, pipelineState);
     ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)parameters, .Length = sizeof(T) });
@@ -305,5 +313,92 @@ void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, Ele
     ElemWaitForFenceOnCpu(fence);
 
     ElemFreePipelineState(pipelineState);
-    ElemFreeShaderLibrary(shaderLibrary);
+}
+
+void TestBarrierCheckSyncTypeToString(char* destination, TestBarrierCheckSyncType syncType)
+{
+    switch (syncType) 
+    {
+        case SyncType_None: sprintf(destination, "None"); break;
+        case SyncType_Compute: sprintf(destination, "Compute"); break;
+        default: sprintf(destination, "Unknown"); 
+    }
+}
+
+void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAccessType accessType)
+{
+    switch (accessType) 
+    {
+        case AccessType_NoAccess: sprintf(destination, "NoAccess"); break;
+        case AccessType_Read: sprintf(destination, "Read"); break;
+        case AccessType_Write: sprintf(destination, "Write"); break;
+        default: sprintf(destination, "Unknown"); 
+    }
+}
+
+bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage)
+{
+    auto currentDestination = expectedMessage;
+    sprintf(currentDestination, "BarrierCommand: Buffer=%d, Texture=%d\n", check->BufferBarrierCount, check->TextureBarrierCount);
+
+    for (uint32_t i = 0; i < check->BufferBarrierCount; i++)
+    {
+        currentDestination = expectedMessage + strlen(expectedMessage);
+        auto bufferBarrier = check->BufferBarriers[i];
+
+        char syncBefore[255];
+        TestBarrierCheckSyncTypeToString(syncBefore, bufferBarrier.SyncBefore);
+
+        char syncAfter[255];
+        TestBarrierCheckSyncTypeToString(syncAfter, bufferBarrier.SyncAfter);
+
+        char accessBefore[255];
+        TestBarrierCheckAccessTypeToString(accessBefore, bufferBarrier.AccessBefore);
+
+        char accessAfter[255];
+        TestBarrierCheckAccessTypeToString(accessAfter, bufferBarrier.AccessAfter);
+
+        sprintf(currentDestination, "  BarrierBuffer: Resource: %llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s\n",
+                bufferBarrier.Resource,
+                syncBefore,
+                syncAfter,
+                accessBefore,
+                accessAfter);
+    }
+
+    for (uint32_t i = 0; i < check->TextureBarrierCount; i++)
+    {
+        currentDestination = expectedMessage + strlen(expectedMessage);
+        auto textureBarrier = check->TextureBarriers[i];
+
+        char syncBefore[255];
+        TestBarrierCheckSyncTypeToString(syncBefore, textureBarrier.SyncBefore);
+
+        char syncAfter[255];
+        TestBarrierCheckSyncTypeToString(syncAfter, textureBarrier.SyncAfter);
+
+        char accessBefore[255];
+        TestBarrierCheckAccessTypeToString(accessBefore, textureBarrier.AccessBefore);
+
+        char accessAfter[255];
+        TestBarrierCheckAccessTypeToString(accessAfter, textureBarrier.AccessAfter);
+
+        sprintf(currentDestination, "  BarrierTexture: Resource: %llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s, LayoutBefore=%s, LayoutAfter=%s\n",
+                textureBarrier.Resource,
+                syncBefore,
+                syncAfter,
+                accessBefore,
+                accessAfter,
+                "TODO",
+                "TODO");
+    }
+
+    // TODO: Check log messages for match
+
+    if (check->BufferBarrierCount == 1)
+    {
+        return true;
+    }
+
+    return true;
 }

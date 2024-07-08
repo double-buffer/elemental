@@ -41,8 +41,8 @@ UTEST(GraphicsDevice, CreateGraphicsDevice)
 
     ASSERT_NE(0u, graphicsDeviceInfo.DeviceId);
 
-    char deviceName[255];
-    strcpy(deviceName, graphicsDeviceInfo.DeviceName);
+    char deviceName[MAX_PATH];
+    CopyString(deviceName, MAX_PATH, graphicsDeviceInfo.DeviceName, strlen(graphicsDeviceInfo.DeviceName));
         
     // Act
     ElemGraphicsDeviceOptions options = { .DeviceId = graphicsDeviceInfo.DeviceId };

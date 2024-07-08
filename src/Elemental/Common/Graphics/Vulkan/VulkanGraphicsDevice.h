@@ -36,12 +36,13 @@ struct VulkanGraphicsDeviceDataFull
 extern MemoryArena VulkanGraphicsMemoryArena;
 extern VkInstance VulkanInstance;
 extern bool VulkanDebugLayerEnabled;
+extern bool VulkanDebugBarrierInfoEnabled;
 
 VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
-void VulkanEnableGraphicsDebugLayer();
-void VulkanEnableGpuValidation();
+void VulkanSetGraphicsOptions(const ElemGraphicsOptions* options);
+
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices();
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);

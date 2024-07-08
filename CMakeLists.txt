@@ -66,7 +66,7 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_NAME_DIR "@rpath")
 
 if (TEST_BUILD)
-    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-O0>)
+    #add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-O0>)
 
     # TODO: Investigate why is doesn't work on windows
      

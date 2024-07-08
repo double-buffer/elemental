@@ -6,6 +6,7 @@
 // TODO: Render on a render target texture
 // TODO: Check command list type when dispatch mesh
 // TODO: Multiple config for rendering
+// TODO: Test Barrier log
 
 void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor)
 {
@@ -110,6 +111,7 @@ UTEST(Rendering, DispatchMesh)
 
     TestFreeReadbackBuffer(readbackBuffer);
     TestFreeRenderTarget(renderTarget);
+    ElemFreePipelineState(meshShaderPipeline);
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
 

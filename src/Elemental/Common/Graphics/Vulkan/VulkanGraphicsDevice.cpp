@@ -9,6 +9,7 @@ SystemDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull> vulkanGra
 
 bool VulkanDebugLayerEnabled = false;
 bool vulkanDebugGpuValidationEnabled = false;
+bool VulkanDebugBarrierInfoEnabled = false;
 VkInstance VulkanInstance = nullptr;
 VkDebugReportCallbackEXT vulkanDebugCallback = nullptr;
 
@@ -233,14 +234,24 @@ VkPipelineLayout CreateVulkanPipelineLayout(VkDevice graphicsDevice)
     return pipelineLayout;
 }
 
-void VulkanEnableGraphicsDebugLayer()
+void VulkanSetGraphicsOptions(const ElemGraphicsOptions* options)
 {
-    VulkanDebugLayerEnabled = true;
-}
+    SystemAssert(options);
 
-void VulkanEnableGpuValidation()
-{
-    vulkanDebugGpuValidationEnabled = true;
+    if (options->EnableDebugLayer)
+    {
+        VulkanDebugLayerEnabled = options->EnableDebugLayer;
+    }
+
+    if (options->EnableGpuValidation)
+    {
+        vulkanDebugGpuValidationEnabled = options->EnableGpuValidation;
+    }
+
+    if (options->EnableDebugBarrierInfo)
+    {
+        VulkanDebugBarrierInfoEnabled = options->EnableDebugBarrierInfo;
+    }
 }
 
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices()

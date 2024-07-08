@@ -25,6 +25,7 @@ struct DirectX12DescriptorHeapStorage
 MemoryArena DirectX12MemoryArena;
 bool DirectX12DebugLayerEnabled = false;
 bool directX12DebugGpuValidationEnabled = false;
+bool DirectX12DebugBarrierInfoEnabled = false;
 ComPtr<IDXGIFactory6> DxgiFactory; 
 ComPtr<IDXGIInfoQueue> DxgiInfoQueue;
 
@@ -293,14 +294,24 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     return rootSignature;
 }
 
-void DirectX12EnableGraphicsDebugLayer()
+void DirectX12SetGraphicsOptions(const ElemGraphicsOptions* options)
 {
-    DirectX12DebugLayerEnabled = true;
-}
+    SystemAssert(options);
 
-void DirectX12EnableGpuValidation()
-{
-    directX12DebugGpuValidationEnabled = true;
+    if (options->EnableDebugLayer)
+    {
+        DirectX12DebugLayerEnabled = options->EnableDebugLayer;
+    }
+
+    if (options->EnableGpuValidation)
+    {
+        directX12DebugGpuValidationEnabled = options->EnableGpuValidation;
+    }
+
+    if (options->EnableDebugBarrierInfo)
+    {
+        DirectX12DebugBarrierInfoEnabled = options->EnableDebugBarrierInfo;
+    }
 }
 
 ElemGraphicsDeviceInfoSpan DirectX12GetAvailableGraphicsDevices()
@@ -425,51 +436,24 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     graphicsDeviceData->Device.Reset();
     graphicsDeviceData->RootSignature.Reset();
 
-    auto releaseMemory = false;
-
     if (SystemGetDataPoolItemCount(directX12GraphicsDevicePool) == 1)
     {
-        if (directX12DebugInterface)
-        {
-            directX12DebugInterface.Reset();
-            directX12DebugInterface = nullptr;
-        }
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing DirectX12");
+    }
 
-        if (DxgiFactory)
-        {
-            DxgiFactory.Reset();
-            DxgiFactory = nullptr;
-        }
-
-        if (directX12DeviceFactory)
-        {
-            directX12DeviceFactory.Reset();
-            directX12DeviceFactory = nullptr;
-        }
-
+    if (graphicsDeviceDataFull->DebugInfoQueue)
+    {
         if (dxgiDebugInterface)
         {
             AssertIfFailed(dxgiDebugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, (DXGI_DEBUG_RLO_FLAGS)(DXGI_DEBUG_RLO_IGNORE_INTERNAL | DXGI_DEBUG_RLO_DETAIL)));
         }
 
-        releaseMemory = true;
-    }
-
-    if (graphicsDeviceDataFull->DebugInfoQueue)
-    {
         graphicsDeviceDataFull->DebugInfoQueue->UnregisterMessageCallback(graphicsDeviceDataFull->DebugCallBackCookie);
         graphicsDeviceDataFull->DebugInfoQueue.Reset();
     }
     
     SystemFreeMemoryArena(graphicsDeviceData->MemoryArena);
     SystemRemoveDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
-
-    if (releaseMemory)
-    {
-        SystemFreeMemoryArena(DirectX12MemoryArena);
-        DirectX12MemoryArena = {};
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing DirectX12");
-    }
 }
 
 ElemGraphicsDeviceInfo DirectX12GetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)

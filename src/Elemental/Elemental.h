@@ -433,6 +433,8 @@ typedef struct
     bool EnableDebugLayer;
     // Enable GPU validation if debug layer is enabled.
     bool EnableGpuValidation;
+    // Enable debug logging of barriers.
+    bool EnableDebugBarrierInfo;
     // Prefer using Vulkan API if set to true.
     bool PreferVulkan;
 } ElemGraphicsOptions;

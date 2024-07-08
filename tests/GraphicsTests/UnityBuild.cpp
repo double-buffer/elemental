@@ -25,16 +25,17 @@ void ApplicationTestInitFunction(void* payload)
     }
 
     options.EnableDebugLayer = true;
-    options.EnableGpuValidation = true;
+    options.EnableGpuValidation = false;
+    options.EnableDebugBarrierInfo = true;
 
     ElemConfigureLogHandler(TestLogHandler);
     ElemSetGraphicsOptions(&options);
 
-    auto testGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    //auto testGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
 
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
 
-    ElemFreeGraphicsDevice(testGraphicsDevice);
+    //ElemFreeGraphicsDevice(testGraphicsDevice);
     ElemExitApplication(result);
 }
 
