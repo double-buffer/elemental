@@ -34,7 +34,7 @@
     }; \
 \
     char test_##name##ExpectedMessage[1024]; \
-    auto test_##name = TestDebugLogBarrier(&test_##name##Params, test_##name##ExpectedMessage);
+    auto test_##name = TestDebugLogBarrier(&test_##name##Params, test_##name##ExpectedMessage, 1024);
 
 #define ASSERT_BARRIER(name) ASSERT_TRUE_MSG(test_##name, test_##name##ExpectedMessage)
 
@@ -124,6 +124,4 @@ void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, Ele
 
 void TestBarrierCheckSyncTypeToString(char* destination, TestBarrierCheckSyncType syncType);
 void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAccessType accessType);
-bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage);
-void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAccessType accessType);
-bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage);
+bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage, uint32_t messageLength);

@@ -9,6 +9,9 @@ bool workingTestHasLogErrors = false;
 char workingTestErrorLogs[2048];
 uint32_t currentTestErrorLogsIndex;
 
+char testDebugLogs[2048];
+uint32_t currentTestDebugLogsIndex;
+
 bool testHasLogErrors = false;
 char testErrorLogs[2048];
 
@@ -67,7 +70,7 @@ ElemDataSpan ReadFile(const char* filename)
 
     if (file == NULL) 
     {
-        return (ElemDataSpan) 
+        return
         {
             .Items = NULL,
             .Length = 0
@@ -78,7 +81,7 @@ ElemDataSpan ReadFile(const char* filename)
     {
         fclose(file);
 
-        return (ElemDataSpan) 
+        return
         {
             .Items = NULL,
             .Length = 0
@@ -91,7 +94,7 @@ ElemDataSpan ReadFile(const char* filename)
     {
         fclose(file);
 
-        return (ElemDataSpan) 
+        return 
         {
             .Items = NULL,
             .Length = 0
@@ -106,7 +109,7 @@ ElemDataSpan ReadFile(const char* filename)
     {
         fclose(file);
 
-        return (ElemDataSpan) 
+        return
         {
             .Items = NULL,
             .Length = 0
@@ -120,7 +123,7 @@ ElemDataSpan ReadFile(const char* filename)
         free(buffer);
         fclose(file);
 
-        return (ElemDataSpan) 
+        return
         {
             .Items = NULL,
             .Length = 0
@@ -129,7 +132,7 @@ ElemDataSpan ReadFile(const char* filename)
 
     fclose(file);
 
-    return (ElemDataSpan) 
+    return
     {
         .Items = buffer,
         .Length = (uint32_t)bytesRead
@@ -197,6 +200,15 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
         CopyString(logCopyDestination, 2048, message, strlen(message) + 1);
         currentTestErrorLogsIndex += strlen(message);
     }
+    else if (messageType == ElemLogMessageType_Debug)
+    {
+        char tmpMessage[2048];
+        snprintf(tmpMessage, 2048, "%s\n", message);
+        
+        char* logCopyDestination = testDebugLogs + currentTestDebugLogsIndex;
+        CopyString(logCopyDestination, 2048, tmpMessage, strlen(tmpMessage) + 1);
+        currentTestDebugLogsIndex += strlen(tmpMessage);
+    }
 }
 
 void TestInitLog()
@@ -215,6 +227,7 @@ void TestInitLog()
 
     workingTestHasLogErrors = false;
     currentTestErrorLogsIndex = 0u;
+    currentTestDebugLogsIndex = 0u;
 }
 
 ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader)
@@ -336,10 +349,10 @@ void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAcces
     }
 }
 
-bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage)
+bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage, uint32_t messageLength)
 {
     auto currentDestination = expectedMessage;
-    sprintf(currentDestination, "BarrierCommand: Buffer=%d, Texture=%d\n", check->BufferBarrierCount, check->TextureBarrierCount);
+    snprintf(currentDestination, messageLength, "BarrierCommand: Buffer=%d, Texture=%d\n", check->BufferBarrierCount, check->TextureBarrierCount);
 
     for (uint32_t i = 0; i < check->BufferBarrierCount; i++)
     {
@@ -358,7 +371,7 @@ bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage)
         char accessAfter[255];
         TestBarrierCheckAccessTypeToString(accessAfter, bufferBarrier.AccessAfter);
 
-        sprintf(currentDestination, "  BarrierBuffer: Resource: %llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s\n",
+        snprintf(currentDestination, messageLength, "  BarrierBuffer: Resource=%llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s\n",
                 bufferBarrier.Resource,
                 syncBefore,
                 syncAfter,
@@ -383,7 +396,7 @@ bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage)
         char accessAfter[255];
         TestBarrierCheckAccessTypeToString(accessAfter, textureBarrier.AccessAfter);
 
-        sprintf(currentDestination, "  BarrierTexture: Resource: %llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s, LayoutBefore=%s, LayoutAfter=%s\n",
+        snprintf(currentDestination, messageLength, "  BarrierTexture: Resource=%llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s, LayoutBefore=%s, LayoutAfter=%s\n",
                 textureBarrier.Resource,
                 syncBefore,
                 syncAfter,
@@ -393,12 +406,10 @@ bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage)
                 "TODO");
     }
 
-    // TODO: Check log messages for match
+    auto result = (strstr(testDebugLogs, expectedMessage) != NULL);
 
-    if (check->BufferBarrierCount == 1)
-    {
-        return true;
-    }
+    printf("### %s ###", testDebugLogs);
+    currentTestDebugLogsIndex = 0u;
 
-    return true;
+    return result;
 }

@@ -132,7 +132,6 @@ void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE
         return;
     }
 
-    auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", description);
 }
 

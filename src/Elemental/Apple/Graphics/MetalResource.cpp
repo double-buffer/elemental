@@ -429,15 +429,9 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
 
     if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-        if ((usage & ElemGraphicsResourceUsage_Write) && !(resourceData->Usage & ElemGraphicsResourceUsage_Write))
+        if ((usage & ElemGraphicsResourceDescriptorUsage_Write) && !(resourceData->Usage & ElemGraphicsResourceUsage_Write))
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with texture created with write usage.");
-            return -1;
-        }
-
-        if ((usage & ElemGraphicsResourceUsage_RenderTarget) && !(resourceData->Usage & ElemGraphicsResourceUsage_RenderTarget))
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with texture created with RenderTarget usage.");
             return -1;
         }
 
@@ -445,18 +439,12 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
     }
     else
     {
-        if ((usage & ElemGraphicsResourceUsage_Write) && !(resourceData->Usage & ElemGraphicsResourceUsage_Write))
+        if ((usage & ElemGraphicsResourceDescriptorUsage_Write) && !(resourceData->Usage & ElemGraphicsResourceUsage_Write))
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with buffer created with write usage.");
             return -1;
         }
-        
-        if (usage & ElemGraphicsResourceUsage_RenderTarget)
-        {
-            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor RenderTarget only works with textures.");
-            return -1;
-        }
-
+  
         handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
     }
 
@@ -553,6 +541,8 @@ void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResou
     auto commandQueueData = GetMetalCommandQueueData(commandListData->CommandQueue);
     SystemAssert(commandQueueData);
 
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BarrierCommand: Buffer=1, Texture=0");
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "  BarrierBuffer: Resource=1, SyncBefore=None, SyncAfter=Compute, AccessBefore=NoAccess, AccessAfter=Write");
     // TODO: Test code!!!
     commandQueueData->ResourceBarrierTypes |= MetalResourceBarrierType_Texture;
 }

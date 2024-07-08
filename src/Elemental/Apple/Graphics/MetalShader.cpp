@@ -410,6 +410,8 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
             auto computeCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->computeCommandEncoder()); 
             commandListData->CommandEncoder = computeCommandEncoder;
             commandListData->CommandEncoderType = MetalCommandEncoderType_Compute;
+
+            computeCommandEncoder->setBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         }
     
         auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
@@ -447,12 +449,6 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
     else if (commandListData->CommandEncoderType == MetalCommandEncoderType_Compute)
     {
         auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
-
-        // TODO: Amplification shader
-        // TODO: Do we need to check if the shader stage is bound?
-        // TODO: compute offset
-        // HACK: For the oment we set the slot 2 because it is the global one for bindless
-        computeCommandEncoder->setBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         computeCommandEncoder->setBytes(data.Items, data.Length, 2);
     }
 }
