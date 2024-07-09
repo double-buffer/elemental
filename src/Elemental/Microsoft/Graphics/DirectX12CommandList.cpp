@@ -238,11 +238,14 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     commandListPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
     commandListPoolItem->CommandList->SetComputeRootSignature(graphicsDeviceData->RootSignature.Get());
 
+    auto resourceBarrierPool = CreateResourceBarrierPool(DirectX12MemoryArena);
+
     auto handle = SystemAddDataPoolItem(directX12CommandListPool, {
         .DeviceObject = commandListPoolItem->CommandList,
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
         .CommandListPoolItem = commandListPoolItem,
-        .GraphicsDevice = commandQueueData->GraphicsDevice
+        .GraphicsDevice = commandQueueData->GraphicsDevice,
+        .ResourceBarrierPool = resourceBarrierPool
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
@@ -306,6 +309,7 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
 
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
+        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);
     }

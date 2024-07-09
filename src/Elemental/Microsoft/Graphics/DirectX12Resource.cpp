@@ -268,7 +268,6 @@ D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemGraphicsResourc
 	}*/
 }
 
-
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -681,14 +680,4 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
 void DirectX12ProcessGraphicsResourceDeleteQueue(void)
 {
     ProcessResourceDeleteQueue();
-}
-
-void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options)
-{
-    if (DirectX12DebugBarrierInfoEnabled)
-    {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BarrierCommand: Buffer=1, Texture=4");
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "  BarrierBuffer: Resource: 1, SyncBefore=Compute, SyncAfter=Compute, AccessBefore=Read, AccessAfter=Write");
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "  TextureBuffer: Resource: 1, SyncBefore=Compute, SyncAfter=Compute, AccessBefore=Read, AccessAfter=Write, LayoutBefore=Read, LayoutAfter=RenderTarget");
-    }
 }

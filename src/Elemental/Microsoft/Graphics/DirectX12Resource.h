@@ -41,7 +41,7 @@ DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGrap
 
 ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
 DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format);
-            
+
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 

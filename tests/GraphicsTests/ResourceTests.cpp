@@ -679,6 +679,8 @@ UTEST(Resource, GetGraphicsResourceDescriptorInfo_WithInvalidDescriptor)
     ASSERT_EQ_MSG(descriptorInfo.Resource, 0u, "Resource should be equals to 0.");
 }
 
+// TODO: Split barrier tests
+// TODO: Test multiple resources
 UTEST(Resource, GraphicsResourceBarrier_BufferReadAfterWrite) 
 {
     // Arrange

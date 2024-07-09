@@ -10,7 +10,7 @@ char workingTestErrorLogs[2048];
 uint32_t currentTestErrorLogsIndex;
 
 char testDebugLogs[2048];
-uint32_t currentTestDebugLogsIndex;
+uint32_t currentTestDebugLogsIndex = 0;
 
 bool testHasLogErrors = false;
 char testErrorLogs[2048];
@@ -197,17 +197,18 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
         workingTestHasLogErrors = true;
 
         char* logCopyDestination = workingTestErrorLogs + currentTestErrorLogsIndex;
-        CopyString(logCopyDestination, 2048, message, strlen(message) + 1);
+        CopyString(logCopyDestination, 2048 - currentTestErrorLogsIndex, message, strlen(message) + 1);
         currentTestErrorLogsIndex += strlen(message);
     }
     else if (messageType == ElemLogMessageType_Debug)
     {
         char tmpMessage[2048];
         snprintf(tmpMessage, 2048, "%s\n", message);
+        auto tmpMessageLength = strlen(tmpMessage);
         
         char* logCopyDestination = testDebugLogs + currentTestDebugLogsIndex;
-        CopyString(logCopyDestination, 2048, tmpMessage, strlen(tmpMessage) + 1);
-        currentTestDebugLogsIndex += strlen(tmpMessage);
+        CopyString(logCopyDestination, 2048 - currentTestDebugLogsIndex, tmpMessage, tmpMessageLength + 1);
+        currentTestDebugLogsIndex += tmpMessageLength;
     }
 }
 
@@ -407,8 +408,6 @@ bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage, u
     }
 
     auto result = (strstr(testDebugLogs, expectedMessage) != NULL);
-
-    printf("### %s ###", testDebugLogs);
     currentTestDebugLogsIndex = 0u;
 
     return result;

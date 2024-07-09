@@ -11,6 +11,7 @@
 #include "Graphics/DirectX12CommandList.cpp"
 #include "Graphics/DirectX12SwapChain.cpp"
 #include "Graphics/DirectX12Resource.cpp"
+#include "Graphics/DirectX12ResourceBarrier.cpp"
 #include "Graphics/DirectX12Shader.cpp"
 #include "Graphics/DirectX12Rendering.cpp"
 
@@ -24,6 +25,7 @@
 #include "Graphics/ShaderReader.cpp"
 #include "Graphics/ResourceDeleteQueue.cpp"
 #include "Graphics/CommandAllocatorPool.cpp"
+#include "Graphics/ResourceBarrier.cpp"
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
 #include "Graphics/SwapChain.cpp"

@@ -3,6 +3,7 @@
 #include "Elemental.h"
 #include "SystemSpan.h"
 #include "Graphics/CommandAllocatorPool.h"
+#include "Graphics/ResourceBarrier.h"
 
 enum DirectX12PipelineStateType
 {
@@ -37,6 +38,7 @@ struct DirectX12CommandListData
     DirectX12PipelineStateType PipelineStateType;
     ElemGraphicsDevice GraphicsDevice;
     bool IsCommitted;
+    ResourceBarrierPool ResourceBarrierPool;
 };
 
 struct DirectX12CommandListDataFull
