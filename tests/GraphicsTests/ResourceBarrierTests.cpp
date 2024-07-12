@@ -4,54 +4,45 @@
 
 // TODO: Test barriers with compute/render encoders and different parameters
 // TODO: Test barriers inside the same encoder and different encoder
-// TODO: Test Write to write barriers
-// TODO: Test multiple resources
+// TODO: Test Burrer/Texture barriers
 
-UTEST(Resource, GraphicsResourceBarrier_BufferReadAfterWrite) 
+// TODO: Test All commands that can insert barriers.
+//  Candidates:
+//      - DispatchCompute
+//      - DispatchMesh
+//      - BeginRenderPass
+//      - EndRenderPass
+
+UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWrite) 
 {
     // Arrange
     int32_t elementCount = 1000000;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (elementCount + (threadSize - 1)) / threadSize;
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(8), nullptr);
-
-    auto gpuBufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsResourceUsage_Write, nullptr);
-    auto gpuBuffer = ElemCreateGraphicsResource(graphicsHeap, 0, &gpuBufferInfo);
-    auto gpuBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
-    auto gpuBufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
-
-    auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto gpuBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsHeapType_Readback);
 
     auto writeBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteBufferData");
     auto readBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadBufferData");
 
-    int32_t writeParameters[] = { gpuBufferWriteDescriptor, 0, elementCount };
-    int32_t readParameters[] = { gpuBufferReadDescriptor, readbackBuffer.Descriptor, elementCount };
-
-    uint32_t threadSize = 16;
-
     // Act
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    ElemGraphicsResourceBarrier(commandList, gpuBufferWriteDescriptor, nullptr);
-
-    ElemBindPipelineState(commandList, writeBufferDataPipelineState);
-    ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)writeParameters, .Length = ARRAYSIZE(writeParameters) * sizeof(int32_t) });
-    ElemDispatchCompute(commandList, (elementCount + (threadSize - 1)) / threadSize, 1, 1);
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.WriteDescriptor, nullptr);
+    TestDispatchCompute(commandList, writeBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.WriteDescriptor, 0, elementCount });
 
     INIT_ASSERT_BARRIER(dispatch1, BARRIER_ARRAY(
-        BUFFER_BARRIER(gpuBuffer, SyncType_None, SyncType_Compute, AccessType_NoAccess, AccessType_Write)
+        BUFFER_BARRIER(gpuBuffer.Buffer, SyncType_None, SyncType_Compute, AccessType_NoAccess, AccessType_Write)
     ));
 
-    ElemGraphicsResourceBarrier(commandList, gpuBufferReadDescriptor, nullptr);
-
-    ElemBindPipelineState(commandList, readBufferDataPipelineState);
-    ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)readParameters, .Length = ARRAYSIZE(readParameters) * sizeof(int32_t) });
-    ElemDispatchCompute(commandList, (elementCount + (threadSize - 1)) / threadSize, 1, 1);
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.ReadDescriptor, nullptr);
+    TestDispatchCompute(commandList, readBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.ReadDescriptor, readbackBuffer.WriteDescriptor, elementCount });
 
     INIT_ASSERT_BARRIER(dispatch2, BARRIER_ARRAY(
-        BUFFER_BARRIER(gpuBuffer, SyncType_Compute, SyncType_Compute, AccessType_Write, AccessType_Read)
+        BUFFER_BARRIER(gpuBuffer.Buffer, SyncType_Compute, SyncType_Compute, AccessType_Write, AccessType_Read)
     ));
 
     ElemCommitCommandList(commandList);
@@ -63,9 +54,8 @@ UTEST(Resource, GraphicsResourceBarrier_BufferReadAfterWrite)
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);
-    TestFreeReadbackBuffer(readbackBuffer);
-    ElemFreeGraphicsResource(gpuBuffer, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
+    TestFreeGpuBuffer(gpuBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
 
@@ -81,56 +71,47 @@ UTEST(Resource, GraphicsResourceBarrier_BufferReadAfterWrite)
     }
 }
 
-UTEST(Resource, GraphicsResourceBarrier_BufferWriteAfterWrite) 
+UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferWriteAfterWrite) 
 {
     // Arrange
     int32_t elementCount = 1000000;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (elementCount + (threadSize - 1)) / threadSize;
     int32_t addOffset = 28;
 
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(8), nullptr);
-
-    auto gpuBufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsResourceUsage_Write, nullptr);
-    auto gpuBuffer = ElemCreateGraphicsResource(graphicsHeap, 0, &gpuBufferInfo);
-    auto gpuBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
-    auto gpuBufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
-
-    auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto gpuBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsHeapType_Readback);
 
     auto writeBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteBufferData");
     auto writeAddBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteAddBufferData");
     auto readBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadBufferData");
 
-    int32_t writeParameters[3] = { gpuBufferWriteDescriptor, 0, elementCount };
-    int32_t writeAddParameters[3] = { gpuBufferWriteDescriptor, addOffset, elementCount };
-    int32_t readParameters[3] = { gpuBufferReadDescriptor, readbackBuffer.Descriptor, elementCount };
-
-    uint32_t threadSize = 16;
-
     // Act
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    ElemGraphicsResourceBarrier(commandList, gpuBufferWriteDescriptor, nullptr);
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.WriteDescriptor, nullptr);
+    TestDispatchCompute(commandList, writeBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.WriteDescriptor, 0, elementCount });
 
-    ElemBindPipelineState(commandList, writeBufferDataPipelineState);
-    ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)writeParameters, .Length = 3 * sizeof(int32_t) });
-    ElemDispatchCompute(commandList, (elementCount + (threadSize - 1)) / threadSize, 1, 1);
+    INIT_ASSERT_BARRIER(dispatch1, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer.Buffer, SyncType_None, SyncType_Compute, AccessType_NoAccess, AccessType_Write)
+    ));
    
-    ElemGraphicsResourceBarrier(commandList, gpuBufferWriteDescriptor, nullptr);
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.WriteDescriptor, nullptr);
+    TestDispatchCompute(commandList, writeAddBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.WriteDescriptor, addOffset, elementCount });
 
-    ElemBindPipelineState(commandList, writeAddBufferDataPipelineState);
-    ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)writeAddParameters, .Length = 3 * sizeof(int32_t) });
-    ElemDispatchCompute(commandList, (elementCount + (threadSize - 1)) / threadSize, 1, 1);
+    INIT_ASSERT_BARRIER(dispatch2, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer.Buffer, SyncType_Compute, SyncType_Compute, AccessType_Write, AccessType_Write)
+    ));
 
-    // TODO: Assert debug barrier
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.ReadDescriptor, nullptr);
+    TestDispatchCompute(commandList, readBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.ReadDescriptor, readbackBuffer.WriteDescriptor, elementCount });
 
-    ElemGraphicsResourceBarrier(commandList, gpuBufferReadDescriptor, nullptr);
-
-    ElemBindPipelineState(commandList, readBufferDataPipelineState);
-    ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)readParameters, .Length = 3 * sizeof(int32_t) });
-    ElemDispatchCompute(commandList, (elementCount + (threadSize - 1)) / threadSize, 1, 1);
+    INIT_ASSERT_BARRIER(dispatch3, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer.Buffer, SyncType_Compute, SyncType_Compute, AccessType_Write, AccessType_Read)
+    ));
 
     ElemCommitCommandList(commandList);
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
@@ -142,17 +123,91 @@ UTEST(Resource, GraphicsResourceBarrier_BufferWriteAfterWrite)
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeAddBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);
-    TestFreeReadbackBuffer(readbackBuffer);
-    ElemFreeGraphicsResource(gpuBuffer, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
+    TestFreeGpuBuffer(gpuBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
 
     ASSERT_LOG_NOERROR();
+    ASSERT_BARRIER(dispatch1);
+    ASSERT_BARRIER(dispatch2);
+    ASSERT_BARRIER(dispatch3);
+
     auto intData = (int32_t*)bufferData.Items;
 
     for (int32_t i = 0; i < elementCount; i++)
     {
         ASSERT_EQ_MSG(intData[i], elementCount - i - 1 + addOffset, "Compute shader data is invalid.");
+    }
+}
+
+UTEST(ResourceBarrier, GraphicsResourceBarrier_DifferentBuffers) 
+{
+    // Arrange
+    int32_t elementCount = 1000000;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (elementCount + (threadSize - 1)) / threadSize;
+
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    auto gpuBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto gpuBuffer2 = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsHeapType_Readback);
+
+    auto writeBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteBufferData");
+    auto readBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadBufferData");
+
+    // Act
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.WriteDescriptor, nullptr);
+    TestDispatchCompute(commandList, writeBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.WriteDescriptor, 0, elementCount });
+
+    INIT_ASSERT_BARRIER(dispatch1, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer.Buffer, SyncType_None, SyncType_Compute, AccessType_NoAccess, AccessType_Write)
+    ));
+   
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.ReadDescriptor, nullptr);
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer2.WriteDescriptor, nullptr);
+    TestDispatchCompute(commandList, readBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.ReadDescriptor, gpuBuffer2.WriteDescriptor, elementCount });
+
+    INIT_ASSERT_BARRIER(dispatch2, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer.Buffer, SyncType_Compute, SyncType_Compute, AccessType_Write, AccessType_Read),
+        BUFFER_BARRIER(gpuBuffer2.Buffer, SyncType_None, SyncType_Compute, AccessType_NoAccess, AccessType_Write)
+    ));
+
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer2.ReadDescriptor, nullptr);
+    TestDispatchCompute(commandList, readBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer2.ReadDescriptor, readbackBuffer.WriteDescriptor, elementCount });
+
+    INIT_ASSERT_BARRIER(dispatch3, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer2.Buffer, SyncType_Compute, SyncType_Compute, AccessType_Write, AccessType_Read)
+    ));
+
+    ElemCommitCommandList(commandList);
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+
+    ElemFreePipelineState(readBufferDataPipelineState);
+    ElemFreePipelineState(writeBufferDataPipelineState);
+    TestFreeGpuBuffer(gpuBuffer);
+    TestFreeGpuBuffer(gpuBuffer2);
+    TestFreeGpuBuffer(readbackBuffer);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_BARRIER(dispatch1);
+    ASSERT_BARRIER(dispatch2);
+    ASSERT_BARRIER(dispatch3);
+
+    auto intData = (int32_t*)bufferData.Items;
+
+    for (int32_t i = 0; i < elementCount; i++)
+    {
+        ASSERT_EQ_MSG(intData[i], elementCount - i - 1, "Compute shader data is invalid.");
     }
 }

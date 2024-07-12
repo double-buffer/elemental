@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include <initializer_list> 
 
 #ifndef _WIN32
 #define MAX_PATH 255
@@ -51,11 +52,12 @@ enum TestBarrierCheckAccessType
     AccessType_Write
 };
 
-struct TestReadBackBuffer
+struct TestGpuBuffer
 {
     ElemGraphicsHeap GraphicsHeap;
     ElemGraphicsResource Buffer;
-    ElemGraphicsResourceDescriptor Descriptor;
+    ElemGraphicsResourceDescriptor ReadDescriptor;
+    ElemGraphicsResourceDescriptor WriteDescriptor;
 };
 
 struct TestRenderTarget
@@ -113,11 +115,14 @@ void TestInitLog();
 ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader);
 ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* function);
 
-TestReadBackBuffer TestCreateReadbackBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes);
-void TestFreeReadbackBuffer(TestReadBackBuffer readbackBuffer);
+TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_Gpu);
+void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer);
 
 TestRenderTarget TestCreateRenderTarget(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format);
 void TestFreeRenderTarget(TestRenderTarget renderTarget);
+
+template<typename T>
+void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipelineState, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, std::initializer_list<T> parameters);
 
 template<typename T>
 void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);

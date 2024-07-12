@@ -79,15 +79,15 @@ UTEST(Shader, DispatchCompute)
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, 64 * sizeof(uint32_t));
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 64 * sizeof(uint32_t), ElemGraphicsHeapType_Readback);
 
     // Act
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "ShaderTests.shader", "TestCompute", 1, 1, 1, &readbackBuffer.Descriptor);
+    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "ShaderTests.shader", "TestCompute", 1, 1, 1, &readbackBuffer.WriteDescriptor);
 
     // Assert
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
-    TestFreeReadbackBuffer(readbackBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
 

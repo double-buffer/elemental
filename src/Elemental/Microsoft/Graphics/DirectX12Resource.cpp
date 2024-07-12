@@ -327,6 +327,8 @@ void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap)
     // BUG: For the moment we need to call this method after the free swapchain that 
     // flush the queue. We need to be able to see if all the heap resources have been freed before calling this method.
     graphicsHeapData->DeviceObject.Reset();
+        
+    SystemRemoveDataPoolItem(directX12GraphicsHeapPool, graphicsHeap);
 }
 
 ElemGraphicsResourceInfo DirectX12CreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options)

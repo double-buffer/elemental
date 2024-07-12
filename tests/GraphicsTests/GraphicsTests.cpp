@@ -259,32 +259,35 @@ ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const
     return pipelineState;
 }
 
-TestReadBackBuffer TestCreateReadbackBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes)
+TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType)
 {
     ElemGraphicsHeapOptions heapOptions =
     {
-        .HeapType = ElemGraphicsHeapType_Readback
+        .HeapType = heapType
     };
 
-    auto readBackGraphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &heapOptions);
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &heapOptions);
 
-    auto bufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Write, nullptr); 
-    auto buffer = ElemCreateGraphicsResource(readBackGraphicsHeap, 0, &bufferInfo);
-    auto bufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
+    auto gpuBufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Write, nullptr);
+    auto gpuBuffer = ElemCreateGraphicsResource(graphicsHeap, 0, &gpuBufferInfo);
+    auto gpuBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
+    auto gpuBufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
 
     return
     {
-        .GraphicsHeap = readBackGraphicsHeap,
-        .Buffer = buffer,
-        .Descriptor = bufferWriteDescriptor
+        .GraphicsHeap = graphicsHeap,
+        .Buffer = gpuBuffer,
+        .ReadDescriptor = gpuBufferReadDescriptor,
+        .WriteDescriptor = gpuBufferWriteDescriptor
     };
 }
 
-void TestFreeReadbackBuffer(TestReadBackBuffer readbackBuffer)
+void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer)
 {
-    ElemFreeGraphicsResourceDescriptor(readbackBuffer.Descriptor, nullptr);
-    ElemFreeGraphicsResource(readbackBuffer.Buffer, nullptr);
-    ElemFreeGraphicsHeap(readbackBuffer.GraphicsHeap);
+    ElemFreeGraphicsResourceDescriptor(gpuBuffer.WriteDescriptor, nullptr);
+    ElemFreeGraphicsResourceDescriptor(gpuBuffer.ReadDescriptor, nullptr);
+    ElemFreeGraphicsResource(gpuBuffer.Buffer, nullptr);
+    ElemFreeGraphicsHeap(gpuBuffer.GraphicsHeap);
 }
 
 TestRenderTarget TestCreateRenderTarget(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format)
@@ -308,6 +311,15 @@ void TestFreeRenderTarget(TestRenderTarget renderTarget)
     ElemFreeGraphicsResourceDescriptor(renderTarget.ReadDescriptor, nullptr);
     ElemFreeGraphicsResource(renderTarget.Texture, nullptr);
     ElemFreeGraphicsHeap(renderTarget.GraphicsHeap);
+}
+
+template<typename T>
+void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipelineState, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, std::initializer_list<T> parameters)
+{
+    ElemBindPipelineState(commandList, pipelineState);
+    ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)parameters.begin(), .Length = (uint32_t)(parameters.size() * sizeof(T)) });
+
+    ElemDispatchCompute(commandList, threadGroupSizeX, threadGroupSizeY, threadGroupSizeZ);
 }
 
 template<typename T>
@@ -372,8 +384,8 @@ bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage, u
         char accessAfter[255];
         TestBarrierCheckAccessTypeToString(accessAfter, bufferBarrier.AccessAfter);
 
-        snprintf(currentDestination, messageLength, "  BarrierBuffer: Resource=%llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s\n",
-                bufferBarrier.Resource,
+        snprintf(currentDestination, messageLength, "  BarrierBuffer: Resource=%u, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s\n",
+                (uint32_t)bufferBarrier.Resource,
                 syncBefore,
                 syncAfter,
                 accessBefore,

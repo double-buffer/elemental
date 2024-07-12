@@ -48,12 +48,12 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float));
-    uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.Descriptor };
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "RenderingTests.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
-    TestFreeReadbackBuffer(readbackBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
     TestFreeRenderTarget(renderTarget);
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
@@ -104,12 +104,12 @@ UTEST(Rendering, DispatchMesh)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateReadbackBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float));
-    uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.Descriptor };
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "RenderingTests.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
-    TestFreeReadbackBuffer(readbackBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
     TestFreeRenderTarget(renderTarget);
     ElemFreePipelineState(meshShaderPipeline);
     ElemFreeCommandQueue(commandQueue);

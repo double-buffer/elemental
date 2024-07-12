@@ -53,8 +53,6 @@ void FreeResourceBarrierPool(ResourceBarrierPool barrierPool)
 
 void EnqueueBarrier(ResourceBarrierPool barrierPool, const ResourceBarrierItem* resourceBarrier)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Enqueueing barrier");
-    
     SystemAssert(barrierPool != ELEM_HANDLE_NULL);
 
     auto barrierPoolData = SystemGetDataPoolItem(resourceBarrierDataPool, barrierPool);

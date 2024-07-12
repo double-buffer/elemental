@@ -946,6 +946,7 @@ ElemAPI ElemPipelineState ElemCompileComputePipelineState(ElemGraphicsDevice gra
  * Releases resources associated with a pipeline state.
  * @param pipelineState The pipeline state to free.
  */
+// TODO: Add the options with a fence???
 ElemAPI void ElemFreePipelineState(ElemPipelineState pipelineState);
 
 /**
