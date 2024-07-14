@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Elemental.h"
+#include "../Elemental.h"
 #include "SystemMemory.h"
 
 typedef ElemHandle ResourceBarrierPool;
@@ -36,16 +36,6 @@ struct ResourceBarriers
 {
     ReadOnlySpan<ResourceBarrierItem> BufferBarriers;
     ReadOnlySpan<ResourceBarrierItem> TextureBarriers;
-};
-
-struct ResourceBarrierPoolData
-{
-    uint32_t BarrierCount;
-    ResourceBarrierItem Barriers[GRAPHICS_MAX_RESOURCEBARRIER];
-
-    // TODO: Last sync and access should be stored per resources
-    ResourceBarrierSyncType LastSyncType;
-    ResourceBarrierAccessType LastAccessType;
 };
 
 ResourceBarrierPool CreateResourceBarrierPool(MemoryArena memoryArena);

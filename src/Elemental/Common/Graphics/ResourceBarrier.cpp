@@ -5,6 +5,25 @@
 #include "SystemLogging.h"
 
 #define GRAPHICS_MAX_RESOURCEBARRIERPOOL 64
+#define GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES 128
+
+struct ResourceBarrierResourceStatus
+{
+    ElemGraphicsResource Resource;
+    ResourceBarrierSyncType LastSyncType;
+    ResourceBarrierAccessType LastAccessType;
+};
+
+struct ResourceBarrierPoolData
+{
+    uint32_t BarrierCount;
+    ResourceBarrierItem Barriers[GRAPHICS_MAX_RESOURCEBARRIER];
+
+    // TODO: Review that later, for the moment we do a linear search on the resource because per command list
+    // we shouldn't have too much associated resources that have barriers
+    uint32_t ResourceStatusCount;
+    ResourceBarrierResourceStatus ResourceStatus[GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES];
+};
 
 SystemDataPool<ResourceBarrierPoolData, SystemDataPoolDefaultFull> resourceBarrierDataPool;
 
@@ -35,6 +54,19 @@ ReadOnlySpan<char> ResourceBarrierAccessTypeToString(MemoryArena memoryArena, Re
         case AccessType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Unknown"); 
     }
+}
+
+ResourceBarrierResourceStatus* GetResourceBarrierResourceStatus(ResourceBarrierPoolData* poolData, ElemGraphicsResource resource)
+{
+    for (uint32_t i = 0; i < poolData->ResourceStatusCount; i++)
+    {
+        if (poolData->ResourceStatus[i].Resource == resource)
+        {
+            return &poolData->ResourceStatus[i];
+        }
+    }
+
+    return nullptr;
 }
 
 ResourceBarrierPool CreateResourceBarrierPool(MemoryArena memoryArena)
@@ -77,29 +109,43 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
     for (uint32_t i = 0; i < barrierPoolData->BarrierCount; i++)
     {
         auto barrierItem = barrierPoolData->Barriers[i];
+        auto resourceStatus = GetResourceBarrierResourceStatus(barrierPoolData, barrierItem.Resource);
 
         if (barrierItem.Type == ElemGraphicsResourceType_Buffer)
         {
-            if (barrierItem.SyncBefore == SyncType_None && barrierPoolData->LastSyncType != SyncType_None)
+            if (resourceStatus)
             {
-                barrierItem.SyncBefore = barrierPoolData->LastSyncType;
+                if (barrierItem.SyncBefore == SyncType_None && resourceStatus->LastSyncType != SyncType_None)
+                {
+                    barrierItem.SyncBefore = resourceStatus->LastSyncType;
+                }
+                
+                if (barrierItem.AccessBefore == AccessType_NoAccess && resourceStatus->LastAccessType != AccessType_NoAccess)
+                {
+                    barrierItem.AccessBefore = resourceStatus->LastAccessType;
+                }
             }
 
             if (barrierItem.SyncAfter == SyncType_None)
             {
                 barrierItem.SyncAfter = currentStage;
             }
-            
-            if (barrierItem.AccessBefore == AccessType_NoAccess && barrierPoolData->LastAccessType != AccessType_NoAccess)
-            {
-                barrierItem.AccessBefore = barrierPoolData->LastAccessType;
-            }
-    
-            // TODO: Should be per resource
-            barrierPoolData->LastAccessType = barrierItem.AccessAfter;
 
             bufferBarriers[bufferBarrierCount++] = barrierItem;
         }
+
+        if (!resourceStatus)
+        {
+            resourceStatus = &barrierPoolData->ResourceStatus[barrierPoolData->ResourceStatusCount++];
+
+            *resourceStatus = 
+            {
+                .Resource = barrierItem.Resource,
+            };
+        }
+
+        resourceStatus->LastSyncType = currentStage;
+        resourceStatus->LastAccessType = barrierItem.AccessAfter;
     }
 
     if (logBarrierInfo)
@@ -120,9 +166,6 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
     }
 
     barrierPoolData->BarrierCount = 0;
-
-    // TODO: Should be per resource
-    barrierPoolData->LastSyncType = currentStage;
 
     return 
     {

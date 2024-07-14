@@ -208,6 +208,6 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_DifferentBuffers)
 
     for (int32_t i = 0; i < elementCount; i++)
     {
-        ASSERT_EQ_MSG(intData[i], elementCount - i - 1, "Compute shader data is invalid.");
+        ASSERT_EQ_MSG(intData[i], i, "Compute shader data is invalid.");
     }
 }
