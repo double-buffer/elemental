@@ -90,6 +90,8 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
 
         //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
         // See: https://github.com/TheRealMJP/MemPoolTest/blob/8d7a5b9af5e6f1fe4ff3a35ba51aeb7924183ae2/SampleFramework12/v1.04/Graphics/GraphicsTypes.h#L461
+
+        // We will need to enqueue the barrier item manually because the normal function doesn't have access to the render target layout.
         D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
         renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
         renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
@@ -106,6 +108,8 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
 
         commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
+    
+        //InsertDirectX12ResourceBarriersIfNeeded(commandList, SyncType_Compute);
         
         if (i == 0 && parameters->Viewports.Length == 0)
         {

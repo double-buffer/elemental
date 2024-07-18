@@ -21,6 +21,14 @@ enum ResourceBarrierAccessType
     AccessType_Write
 };
 
+enum ResourceBarrierLayoutType
+{
+    LayoutType_Undefined,
+    LayoutType_Read,
+    LayoutType_Write,
+    LayoutType_RenderTarget
+};
+
 struct ResourceBarrierItem
 {
     ElemGraphicsResourceType Type;
@@ -29,7 +37,8 @@ struct ResourceBarrierItem
     ResourceBarrierSyncType SyncAfter; 
     ResourceBarrierAccessType AccessBefore;
     ResourceBarrierAccessType AccessAfter;
-    // TODO: Layouts
+    ResourceBarrierLayoutType LayoutBefore;
+    ResourceBarrierLayoutType LayoutAfter;
 };
 
 struct ResourceBarriers

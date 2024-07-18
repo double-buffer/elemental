@@ -12,6 +12,7 @@ struct ResourceBarrierResourceStatus
     ElemGraphicsResource Resource;
     ResourceBarrierSyncType LastSyncType;
     ResourceBarrierAccessType LastAccessType;
+    ResourceBarrierLayoutType LastLayoutType;
 };
 
 struct ResourceBarrierPoolData
@@ -53,6 +54,17 @@ ReadOnlySpan<char> ResourceBarrierAccessTypeToString(MemoryArena memoryArena, Re
         case AccessType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
         case AccessType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Unknown"); 
+    }
+}
+
+ReadOnlySpan<char> ResourceBarrierLayoutTypeToString(MemoryArena memoryArena, ResourceBarrierLayoutType layoutType)
+{
+    switch (layoutType) 
+    {
+        case LayoutType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
+        case LayoutType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
+        case LayoutType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
+        default: return SystemDuplicateBuffer<char>(memoryArena, "Undefined"); 
     }
 }
 
@@ -105,6 +117,9 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
 
     auto bufferBarrierCount = 0u;
     auto bufferBarriers = SystemPushArray<ResourceBarrierItem>(memoryArena, GRAPHICS_MAX_RESOURCEBARRIER);
+    
+    auto textureBarrierCount = 0u;
+    auto textureBarriers = SystemPushArray<ResourceBarrierItem>(memoryArena, GRAPHICS_MAX_RESOURCEBARRIER);
 
     for (uint32_t i = 0; i < barrierPoolData->BarrierCount; i++)
     {
@@ -113,6 +128,7 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
 
         if (barrierItem.Type == ElemGraphicsResourceType_Buffer)
         {
+            // TODO: Process status in a separate functions?
             if (resourceStatus)
             {
                 if (barrierItem.SyncBefore == SyncType_None && resourceStatus->LastSyncType != SyncType_None)
@@ -133,6 +149,33 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
 
             bufferBarriers[bufferBarrierCount++] = barrierItem;
         }
+        else
+        {
+            if (resourceStatus)
+            {
+                if (barrierItem.SyncBefore == SyncType_None && resourceStatus->LastSyncType != SyncType_None)
+                {
+                    barrierItem.SyncBefore = resourceStatus->LastSyncType;
+                }
+                
+                if (barrierItem.AccessBefore == AccessType_NoAccess && resourceStatus->LastAccessType != AccessType_NoAccess)
+                {
+                    barrierItem.AccessBefore = resourceStatus->LastAccessType;
+                }
+
+                if (barrierItem.LayoutBefore == LayoutType_Undefined && resourceStatus->LastLayoutType != LayoutType_Undefined)
+                {
+                    barrierItem.LayoutBefore = resourceStatus->LastLayoutType;
+                }
+            }
+
+            if (barrierItem.SyncAfter == SyncType_None)
+            {
+                barrierItem.SyncAfter = currentStage;
+            }
+
+            textureBarriers[textureBarrierCount++] = barrierItem;
+        }
 
         if (!resourceStatus)
         {
@@ -146,11 +189,12 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
 
         resourceStatus->LastSyncType = currentStage;
         resourceStatus->LastAccessType = barrierItem.AccessAfter;
+        resourceStatus->LastLayoutType = barrierItem.LayoutAfter;
     }
-
-    if (logBarrierInfo)
+    
+    if (logBarrierInfo && (bufferBarrierCount > 0 || textureBarrierCount > 0))
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BarrierCommand: Buffer=%d, Texture=0", bufferBarrierCount);
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BarrierCommand: Buffer=%d, Texture=%d", bufferBarrierCount, textureBarrierCount);
 
         for (uint32_t i = 0; i < bufferBarrierCount; i++)
         {
@@ -162,13 +206,26 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
                                     ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessBefore).Pointer,
                                     ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessAfter).Pointer);
         }
-        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "  TextureBuffer: Resource: 1, SyncBefore=Compute, SyncAfter=Compute, AccessBefore=Read, AccessAfter=Write, LayoutBefore=Read, LayoutAfter=RenderTarget");
+
+        for (uint32_t i = 0; i < textureBarrierCount; i++)
+        {
+            auto barrierItem = textureBarriers[i];
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "  BarrierTexture: Resource=%d, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s, LayoutBefore=%s, LayoutAfter=%s", 
+                                    barrierItem.Resource,
+                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.SyncBefore).Pointer,
+                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.SyncAfter).Pointer,
+                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessBefore).Pointer,
+                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessAfter).Pointer,
+                                    ResourceBarrierLayoutTypeToString(stackMemoryArena, barrierItem.LayoutBefore).Pointer,
+                                    ResourceBarrierLayoutTypeToString(stackMemoryArena, barrierItem.LayoutAfter).Pointer);
+        }
     }
 
     barrierPoolData->BarrierCount = 0;
 
     return 
     {
-        .BufferBarriers = bufferBarriers.Slice(0, bufferBarrierCount)
+        .BufferBarriers = bufferBarriers.Slice(0, bufferBarrierCount),
+        .TextureBarriers = textureBarriers.Slice(0, textureBarrierCount)
     };
 }

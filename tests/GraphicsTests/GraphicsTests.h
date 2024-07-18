@@ -20,18 +20,40 @@
         .AccessAfter = accessAfter \
     }
 
+#define TEXTURE_BARRIER(resource, syncBefore, syncAfter, accessBefore, accessAfter, layoutBefore, layoutAfter) \
+    { \
+        .Resource = resource, \
+        .SyncBefore = syncBefore, \
+        .SyncAfter = syncAfter, \
+        .AccessBefore = accessBefore, \
+        .AccessAfter = accessAfter, \
+        .LayoutBefore = layoutBefore, \
+        .LayoutAfter = layoutAfter \
+    }
+
+#define BARRIER_ARRAY_EMPTY() \
+    {\
+        { .Resource = 0 } \
+    }
+
 #define BARRIER_ARRAY(...) \
     {\
         __VA_ARGS__ \
     }
 
-#define INIT_ASSERT_BARRIER(name, bufferBarriers) \
+#define BARRIER_ARRAY_IS_EMPTY(array) \
+    (array[0].Resource == 0)
+
+#define INIT_ASSERT_BARRIER(name, bufferBarriers, textureBarriers) \
     TestBarrierCheckBuffer test_##name##BufferBarriers[] = bufferBarriers; \
+    TestBarrierCheckTexture test_##name##TextureBarriers[] = textureBarriers; \
 \
     TestBarrierCheck test_##name##Params = \
     { \
-        .BufferBarrierCount = ARRAYSIZE(test_##name##BufferBarriers), \
-        .BufferBarriers = test_##name##BufferBarriers \
+        .BufferBarrierCount = BARRIER_ARRAY_IS_EMPTY(test_##name##BufferBarriers) ? 0u : (uint32_t)ARRAYSIZE(test_##name##BufferBarriers), \
+        .BufferBarriers = test_##name##BufferBarriers, \
+        .TextureBarrierCount = BARRIER_ARRAY_IS_EMPTY(test_##name##TextureBarriers) ? 0u : (uint32_t)ARRAYSIZE(test_##name##TextureBarriers), \
+        .TextureBarriers = test_##name##TextureBarriers \
     }; \
 \
     char test_##name##ExpectedMessage[1024]; \
@@ -52,6 +74,14 @@ enum TestBarrierCheckAccessType
     AccessType_Write
 };
 
+enum TestBarrierCheckLayoutType
+{
+    LayoutType_Undefined,
+    LayoutType_Read,
+    LayoutType_Write,
+    LayoutType_RenderTarget
+};
+
 struct TestGpuBuffer
 {
     ElemGraphicsHeap GraphicsHeap;
@@ -60,11 +90,12 @@ struct TestGpuBuffer
     ElemGraphicsResourceDescriptor WriteDescriptor;
 };
 
-struct TestRenderTarget
+struct TestGpuTexture
 {
     ElemGraphicsHeap GraphicsHeap;
     ElemGraphicsResource Texture;
     ElemGraphicsResourceDescriptor ReadDescriptor;
+    ElemGraphicsResourceDescriptor WriteDescriptor;
     ElemGraphicsFormat Format;
 };
 
@@ -84,7 +115,8 @@ struct TestBarrierCheckTexture
     TestBarrierCheckSyncType SyncAfter; 
     TestBarrierCheckAccessType AccessBefore;
     TestBarrierCheckAccessType AccessAfter;
-    // TODO: Layouts
+    TestBarrierCheckLayoutType LayoutBefore;
+    TestBarrierCheckLayoutType LayoutAfter;
 };
 
 struct TestBarrierCheck
@@ -118,8 +150,8 @@ ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const
 TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_Gpu);
 void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer);
 
-TestRenderTarget TestCreateRenderTarget(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format);
-void TestFreeRenderTarget(TestRenderTarget renderTarget);
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format);
+void TestFreeGpuTexture(TestGpuTexture texture);
 
 template<typename T>
 void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipelineState, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, std::initializer_list<T> parameters);

@@ -41,3 +41,34 @@ void TestReadBufferData(uint2 threadId: SV_DispatchThreadID)
         destinationBuffer[threadId.x] = testBuffer[parameters.ElementCount - threadId.x - 1];
     }
 }
+
+[shader("compute")]
+[numthreads(16, 16, 1)]
+void TestWriteTextureData(uint2 threadId: SV_DispatchThreadID)
+{
+    RWTexture2D<float4> destinationTexture = ResourceDescriptorHeap[parameters.TestDescriptor1];
+
+    uint width, height;
+    destinationTexture.GetDimensions(width, height);
+        
+    if (threadId.x < width && threadId.y < height)
+    {
+        destinationTexture[threadId.xy] = float4(threadId, 0.5, 1.0);
+    }
+}
+
+[shader("compute")]
+[numthreads(16, 16, 1)]
+void TestReadTextureData(uint2 threadId: SV_DispatchThreadID)
+{
+    Texture2D<float4> sourceTexture = ResourceDescriptorHeap[parameters.TestDescriptor1];
+
+    uint width, height;
+    sourceTexture.GetDimensions(width, height);
+
+    if (threadId.x < width && threadId.y < height)
+    {
+        RWStructuredBuffer<float4> destinationBuffer = ResourceDescriptorHeap[parameters.TestDescriptor2];
+        destinationBuffer[threadId.y * width + threadId.x] = sourceTexture[threadId.xy];
+    }
+}

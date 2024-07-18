@@ -175,7 +175,7 @@ void InitSample(void* payload)
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->Window = ElemCreateWindow(NULL);
 
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .EnableGpuValidation = false, .PreferVulkan = applicationPayload->PreferVulkan });
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .EnableGpuValidation = false, .EnableDebugBarrierInfo = true, .PreferVulkan = applicationPayload->PreferVulkan });
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
     applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);

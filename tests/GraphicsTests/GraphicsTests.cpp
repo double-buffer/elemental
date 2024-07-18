@@ -290,27 +290,30 @@ void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer)
     ElemFreeGraphicsHeap(gpuBuffer.GraphicsHeap);
 }
 
-TestRenderTarget TestCreateRenderTarget(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format)
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format)
 {
-    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 16, 16, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget, nullptr);
+    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, 1, format, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_Write | ElemGraphicsResourceUsage_RenderTarget), nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, textureInfo.SizeInBytes, nullptr);
     auto texture = ElemCreateGraphicsResource(graphicsHeap, 0, &textureInfo);
     auto textureReadDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
+    auto textureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
 
     return
     {
         .GraphicsHeap = graphicsHeap,
         .Texture = texture,
         .ReadDescriptor = textureReadDescriptor,
+        .WriteDescriptor = textureWriteDescriptor,
         .Format = format
     };
 }
 
-void TestFreeRenderTarget(TestRenderTarget renderTarget)
+void TestFreeGpuTexture(TestGpuTexture texture)
 {
-    ElemFreeGraphicsResourceDescriptor(renderTarget.ReadDescriptor, nullptr);
-    ElemFreeGraphicsResource(renderTarget.Texture, nullptr);
-    ElemFreeGraphicsHeap(renderTarget.GraphicsHeap);
+    ElemFreeGraphicsResourceDescriptor(texture.ReadDescriptor, nullptr);
+    ElemFreeGraphicsResourceDescriptor(texture.WriteDescriptor, nullptr);
+    ElemFreeGraphicsResource(texture.Texture, nullptr);
+    ElemFreeGraphicsHeap(texture.GraphicsHeap);
 }
 
 template<typename T>
@@ -362,6 +365,17 @@ void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAcces
     }
 }
 
+void TestBarrierCheckLayoutTypeToString(char* destination, TestBarrierCheckLayoutType layoutType)
+{
+    switch (layoutType) 
+    {
+        case LayoutType_Read: snprintf(destination, 255, "Read"); break;
+        case LayoutType_Write: snprintf(destination, 255, "Write"); break;
+        case LayoutType_RenderTarget: snprintf(destination, 255, "RenderTarget"); break;
+        default: snprintf(destination, 255, "Undefined"); 
+    }
+}
+
 bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage, uint32_t messageLength)
 {
     auto currentDestination = expectedMessage;
@@ -409,14 +423,20 @@ bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage, u
         char accessAfter[255];
         TestBarrierCheckAccessTypeToString(accessAfter, textureBarrier.AccessAfter);
 
-        snprintf(currentDestination, messageLength, "  BarrierTexture: Resource=%llu, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s, LayoutBefore=%s, LayoutAfter=%s\n",
-                textureBarrier.Resource,
+        char layoutBefore[255];
+        TestBarrierCheckLayoutTypeToString(layoutBefore, textureBarrier.LayoutBefore);
+
+        char layoutAfter[255];
+        TestBarrierCheckLayoutTypeToString(layoutAfter, textureBarrier.LayoutAfter);
+
+        snprintf(currentDestination, messageLength, "  BarrierTexture: Resource=%u, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s, LayoutBefore=%s, LayoutAfter=%s\n",
+                (uint32_t)textureBarrier.Resource,
                 syncBefore,
                 syncAfter,
                 accessBefore,
                 accessAfter,
-                "TODO",
-                "TODO");
+                layoutBefore,
+                layoutAfter);
     }
 
     auto result = (strstr(testDebugLogs, expectedMessage) != NULL);

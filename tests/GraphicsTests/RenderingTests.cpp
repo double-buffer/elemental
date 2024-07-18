@@ -37,7 +37,7 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateRenderTarget(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT);
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT);
 
     // Act
     TestBeginClearRenderPass(commandList, renderTarget.Texture, { .Red = 1.0f, .Green = 0.5f, .Blue = 0.25f, .Alpha = 0.95f });
@@ -54,7 +54,7 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
     TestFreeGpuBuffer(readbackBuffer);
-    TestFreeRenderTarget(renderTarget);
+    TestFreeGpuTexture(renderTarget);
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
 
@@ -78,7 +78,7 @@ UTEST(Rendering, DispatchMesh)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateRenderTarget(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT);
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT);
 
     auto shaderLibrary = TestOpenShader(graphicsDevice, "RenderingTests.shader");
 
@@ -110,7 +110,7 @@ UTEST(Rendering, DispatchMesh)
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
     TestFreeGpuBuffer(readbackBuffer);
-    TestFreeRenderTarget(renderTarget);
+    TestFreeGpuTexture(renderTarget);
     ElemFreePipelineState(meshShaderPipeline);
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);

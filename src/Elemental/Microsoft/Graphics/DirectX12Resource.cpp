@@ -549,7 +549,7 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
     if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-        if (usage == ElemGraphicsResourceDescriptorUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
+        if (usage == ElemGraphicsResourceDescriptorUsage_Write && (resourceUsage & ElemGraphicsResourceUsage_Write) == 0)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with texture created with write usage.");
             return -1;
@@ -557,7 +557,7 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
     }
     else
     {
-        if (usage == ElemGraphicsResourceDescriptorUsage_Write && resourceUsage != ElemGraphicsResourceUsage_Write)
+        if (usage == ElemGraphicsResourceDescriptorUsage_Write && (resourceUsage & ElemGraphicsResourceUsage_Write) == 0)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with buffer created with write usage.");
             return -1;
