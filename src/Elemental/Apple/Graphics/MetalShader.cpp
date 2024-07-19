@@ -2,6 +2,7 @@
 #include "MetalGraphicsDevice.h"
 #include "MetalCommandList.h"
 #include "MetalResource.h"
+#include "MetalResourceBarrier.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -400,8 +401,11 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
 
     if (commandListData->CommandEncoderType == MetalCommandEncoderType_Render)
     {
-        auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
-        renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
+        if (commandListData->PipelineState != pipelineState)
+        {
+            auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+            renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
+        }
     }
     else
     {
@@ -410,12 +414,16 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
             auto computeCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->computeCommandEncoder()); 
             commandListData->CommandEncoder = computeCommandEncoder;
             commandListData->CommandEncoderType = MetalCommandEncoderType_Compute;
+            commandListData->PipelineState = ELEM_HANDLE_NULL;
 
             computeCommandEncoder->setBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         }
     
-        auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
-        computeCommandEncoder->setComputePipelineState(pipelineStateData->ComputePipelineState.get());
+        if (commandListData->PipelineState != pipelineState)
+        {
+            auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
+            computeCommandEncoder->setComputePipelineState(pipelineStateData->ComputePipelineState.get());
+        }
     }
         
     commandListData->PipelineState = pipelineState;
@@ -466,6 +474,8 @@ void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCount
     }
 
     SystemAssert(commandListData->CommandEncoder);
+    
+    InsertMetalResourceBarriersIfNeeded(commandList, SyncType_Compute);
 
     auto pipelineStateData = GetMetalPipelineStateData(commandListData->PipelineState);
     SystemAssert(pipelineStateData);

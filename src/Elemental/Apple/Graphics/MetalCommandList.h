@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include "Graphics/ResourceBarrier.h"
 
 enum MetalCommandEncoderType
 {
@@ -42,6 +43,7 @@ struct MetalCommandListData
     MetalCommandEncoderType CommandEncoderType;
     ElemPipelineState PipelineState;
     bool IsCommitted;
+    ResourceBarrierPool ResourceBarrierPool;
 };
 
 struct MetalCommandListDataFull

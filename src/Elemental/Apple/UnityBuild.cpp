@@ -16,9 +16,11 @@
 #include "Graphics/MetalShader.cpp"
 #include "Graphics/MetalRendering.cpp"
 #include "Graphics/MetalResource.cpp"
+#include "Graphics/MetalResourceBarrier.cpp"
 
 #include "Graphics/ShaderReader.cpp"
 #include "Graphics/ResourceDeleteQueue.cpp"
+#include "Graphics/ResourceBarrier.cpp"
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
 #include "Graphics/SwapChain.cpp"

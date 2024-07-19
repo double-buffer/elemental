@@ -252,11 +252,6 @@ void FreeMetalArgumentBufferHandle(MetalArgumentBuffer argumentBuffer, uint64_t 
     } while (!SystemAtomicCompareExchange(storage->FreeListIndex, storage->FreeListIndex, handle));
 }
 
-void MetalEnableGraphicsDebugLayer()
-{
-    MetalDebugLayerEnabled = true;
-}
-
 void MetalSetGraphicsOptions(const ElemGraphicsOptions* options)
 {
     SystemAssert(options);

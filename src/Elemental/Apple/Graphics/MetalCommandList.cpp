@@ -178,12 +178,15 @@ ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCom
         metalCommandBuffer->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
     }
     
+    auto resourceBarrierPool = CreateResourceBarrierPool(MetalGraphicsMemoryArena);
+    
     auto handle = SystemAddDataPoolItem(metalCommandListPool, {
         .DeviceObject = metalCommandBuffer,
         .GraphicsDevice = commandQueueData->GraphicsDevice,
         .CommandQueue = commandQueue,
         .CommandEncoderType = MetalCommandEncoderType_None,
-        .IsCommitted = false
+        .IsCommitted = false,
+        .ResourceBarrierPool = resourceBarrierPool
     }); 
 
     SystemAddDataPoolItemFull(metalCommandListPool, handle, {
@@ -234,7 +237,8 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
 
         commandListData->DeviceObject->commit();
         commandListData->DeviceObject.reset();
-
+        
+        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
         SystemRemoveDataPoolItem(metalCommandListPool, commandLists.Items[i]);
     }
 

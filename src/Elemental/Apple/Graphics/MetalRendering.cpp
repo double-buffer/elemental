@@ -2,6 +2,7 @@
 #include "MetalCommandList.h"
 #include "MetalShader.h"
 #include "MetalResource.h"
+#include "MetalResourceBarrier.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
@@ -89,8 +90,9 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     
     commandListData->CommandEncoder = renderCommandEncoder;
     commandListData->CommandEncoderType = MetalCommandEncoderType_Render;
+    commandListData->PipelineState = ELEM_HANDLE_NULL;
     
-    EnsureMetalResourceBarrier(commandList);
+    //EnsureMetalResourceBarrier(commandList);
 
     if (parameters->Viewports.Length > 0)
     {

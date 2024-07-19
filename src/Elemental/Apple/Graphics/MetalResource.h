@@ -39,8 +39,6 @@ MetalResourceDataFull* GetMetalResourceDataFull(ElemGraphicsResource resource);
 
 MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format);
 
-void EnsureMetalResourceBarrier(ElemCommandList commandList);
-
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void MetalFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
@@ -57,7 +55,5 @@ ElemGraphicsResourceDescriptorInfo MetalGetGraphicsResourceDescriptorInfo(ElemGr
 void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
 void MetalProcessGraphicsResourceDeleteQueue();
-
-void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
 
 ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);
