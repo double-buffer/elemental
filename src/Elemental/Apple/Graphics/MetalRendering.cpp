@@ -92,7 +92,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     commandListData->CommandEncoderType = MetalCommandEncoderType_Render;
     commandListData->PipelineState = ELEM_HANDLE_NULL;
     
-    //EnsureMetalResourceBarrier(commandList);
+    // TODO: Wrong sync type
+    //InsertMetalResourceBarriersIfNeeded(commandList, SyncType_Compute);
 
     if (parameters->Viewports.Length > 0)
     {
