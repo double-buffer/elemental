@@ -8,8 +8,7 @@ namespace Elemental;
 /// <param name="function">The function where the log was triggered.</param>
 /// <param name="message">The log message.</param>
 [NativeMarshalling(typeof(LogHandlerMarshaller))]
-[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void LogHandler(ReadOnlySpan<byte> function, ReadOnlySpan<byte> message);
+public delegate void LogHandler(LogMessageType messageType, LogMessageCategory category, ReadOnlySpan<byte> function, ReadOnlySpan<byte> message);
 
 [CustomMarshaller(typeof(LogHandler), MarshalMode.ManagedToUnmanagedIn, typeof(LogHandlerMarshaller))]
 internal static unsafe class LogHandlerMarshaller
@@ -17,14 +16,15 @@ internal static unsafe class LogHandlerMarshaller
     internal sealed unsafe record InterceptorEntry
     {
         public required LogHandler Callback { get; init; }
-        public required GCHandle Handle { get; init; }
+        //public required GCHandle Handle { get; init; }
     }
 
     private static InterceptorEntry? _interceptorEntry;
 
-    private static unsafe void Interceptor(byte* function, byte* message)
+    private static unsafe void Interceptor(LogMessageType messageType, LogMessageCategory category, byte* function, byte* message)
     {
-        if (_interceptorEntry == null || function != null || message != null)
+        Console.WriteLine("Pouet");
+        if (_interceptorEntry == null || function == null || message == null)
         {
             return;
         }
@@ -49,18 +49,21 @@ internal static unsafe class LogHandlerMarshaller
 
         messageCounter++;
 
-        _interceptorEntry.Callback(new ReadOnlySpan<byte>(function, functionCounter), new ReadOnlySpan<byte>(message, messageCounter));
+        _interceptorEntry.Callback(messageType, category, new ReadOnlySpan<byte>(function, functionCounter), new ReadOnlySpan<byte>(message, messageCounter));
     }
 
     public static nint ConvertToUnmanaged(LogHandler managed)
     {
         // TODO: Unallocate handle
-        var interceptorDelegate = Interceptor;
-        var handle = GCHandle.Alloc(interceptorDelegate);
-        var unmanaged = Marshal.GetFunctionPointerForDelegate(interceptorDelegate);
+        //var interceptorDelegate = Interceptor;
+        //var handle = GCHandle.Alloc(interceptorDelegate);
+        //var unmanaged = Marshal.GetFunctionPointerForDelegate(interceptorDelegate);
+        
+        // TODO: Try to avoid all of that
+        delegate* <LogMessageType, LogMessageCategory, byte*, byte*, void> unmanaged = &Interceptor;
 
-        _interceptorEntry = new InterceptorEntry { Callback = managed, Handle = handle };
-        return unmanaged;
+        _interceptorEntry = new InterceptorEntry { Callback = managed };
+        return (nint)unmanaged;
     }
 
     public static void Free(nint _)

@@ -197,6 +197,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         foreach (var function in functions)
         {
+            Console.WriteLine($"Generating Service Function: {function.Name}");
             var containsStringParameters = GenerateServiceFunction(compilation, serviceName, stringBuilder, function, generateStringParameters: false);
             
             if (containsStringParameters)
@@ -418,7 +419,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             var srcFieldName = "resultUnsafe";
             var destFieldName = "result";
 
-            if (function.ReturnType.GetDisplayName().Contains("Span"))
+            if (function.ReturnType.GetDisplayName().Contains("Span") && function.ReturnType.GetDisplayName() != "ElemDataSpan")
             {
                 structType = returnTypeMarshalling as CppClass;
                 destFieldName = "result[i]";
@@ -757,7 +758,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 stringBuilder.Append($"{parameterType} {parameterName}");
                 parametersDeclaration.Append($"{MapTypeToUnmanaged(parameterType)} {parameterName}");
                 parametersValue.Append($"{MapValueToUnmanaged(parameterType, parameterName)}");
-                parameterChecks.Append($" || {parameterName} != null");
+                parameterChecks.Append($" || {parameterName} == null");
             }
 
             stringBuilder.AppendLine(");");
