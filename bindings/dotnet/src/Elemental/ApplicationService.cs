@@ -46,20 +46,22 @@ ApplicationPathCounter++;
     /// </summary>
     /// <param name="parameters">Configuration and handlers for the application lifecycle.</param>
     /// <returns>Status code indicating success or error.</returns>
-    public unsafe int RunApplication<T>(in RunApplicationParameters<T> parameters)
+    public unsafe int RunApplication<T>(in RunApplicationParameters<T> parameters) where T : unmanaged
     {
         fixed (byte* ApplicationNamePinned = parameters.ApplicationName)
         {
-        fixed (void* payloadPinnedPinned = &parameters.Payload)
-        {
             var parametersUnsafe = new RunApplicationParametersUnsafe();
             parametersUnsafe.ApplicationName = ApplicationNamePinned;
-            parametersUnsafe.InitHandler = (void*)Marshal.GetFunctionPointerForDelegate(parameters.InitHandler);
-            parametersUnsafe.FreeHandler = (void*)Marshal.GetFunctionPointerForDelegate(parameters.FreeHandler);
-            parametersUnsafe.Payload = payloadPinnedPinned;
+            parametersUnsafe.InitHandler = ApplicationHandlerMarshaller<T>.ConvertToUnmanaged(parameters.InitHandler);
+            //parametersUnsafe.FreeHandler = ApplicationHandlerMarshaller<T>.ConvertToUnmanaged(parameters.FreeHandler);
+
+            var ptr = Marshal.AllocHGlobal(Marshal.SizeOf(parameters.Payload));
+            Marshal.StructureToPtr(parameters.Payload, ptr, true);
+            parametersUnsafe.Payload = ptr;
+
+            Console.WriteLine($"Ptr: {parametersUnsafe.Payload}");
 
             return ApplicationServiceInterop.RunApplication(parametersUnsafe);
-        }
         }
     }
 
