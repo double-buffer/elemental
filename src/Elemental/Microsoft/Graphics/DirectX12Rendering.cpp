@@ -1,4 +1,5 @@
 #include "DirectX12Rendering.h"
+#include "DirectX12ResourceBarrier.h"
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
 #include "DirectX12Resource.h"
@@ -88,28 +89,15 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
             .EndingAccess = { .Type = endAccessType }
         };
 
-        //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
-        // See: https://github.com/TheRealMJP/MemPoolTest/blob/8d7a5b9af5e6f1fe4ff3a35ba51aeb7924183ae2/SampleFramework12/v1.04/Graphics/GraphicsTypes.h#L461
+        ResourceBarrierItem resourceBarrier =
+        {
+            .Type = ElemGraphicsResourceType_Texture2D,
+            .Resource = renderTargetParameters.RenderTarget,
+            .AfterAccess = ElemGraphicsResourceBarrierAccessType_RenderTarget,
+            .AfterLayout = ElemGraphicsResourceBarrierLayoutType_RenderTarget
+        };
 
-        // We will need to enqueue the barrier item manually because the normal function doesn't have access to the render target layout.
-        D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
-        renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
-        renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
-        renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_NONE;
-        renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_RENDER_TARGET;
-        renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-        renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_ALL; // TODO: Should use sync render target?
-        renderTargetBarrier.pResource = textureData->DeviceObject.Get();
-
-        D3D12_BARRIER_GROUP textureBarriersGroup;
-        textureBarriersGroup = {};
-        textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
-        textureBarriersGroup.NumBarriers = 1;
-        textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
-
-        commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
-    
-        //InsertDirectX12ResourceBarriersIfNeeded(commandList, SyncType_Compute);
+        EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
         
         if (i == 0 && parameters->Viewports.Length == 0)
         {
@@ -132,6 +120,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         ElemSetViewports(commandList, parameters->Viewports);
     }
 
+    InsertDirectX12ResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_RenderTarget);
     commandListData->DeviceObject->BeginRenderPass(renderTargetDescList.Length, renderTargetDescList.Pointer, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
 }
 
@@ -158,27 +147,21 @@ void DirectX12EndRenderPass(ElemCommandList commandList)
         auto textureData = GetDirectX12GraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
-        //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
         if (textureData->IsPresentTexture)
         {
-            D3D12_TEXTURE_BARRIER renderTargetBarrier = {};
-            renderTargetBarrier.AccessBefore = D3D12_BARRIER_ACCESS_RENDER_TARGET;
-            renderTargetBarrier.LayoutBefore = D3D12_BARRIER_LAYOUT_RENDER_TARGET;
-            renderTargetBarrier.SyncBefore = D3D12_BARRIER_SYNC_RENDER_TARGET;
-            renderTargetBarrier.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
-            renderTargetBarrier.LayoutAfter = D3D12_BARRIER_LAYOUT_PRESENT;
-            renderTargetBarrier.SyncAfter = D3D12_BARRIER_SYNC_NONE;
-            renderTargetBarrier.pResource = textureData->DeviceObject.Get();
+            ResourceBarrierItem resourceBarrier =
+            {
+                .Type = ElemGraphicsResourceType_Texture2D,
+                .Resource = renderTargetParameters.RenderTarget,
+                .AfterAccess = ElemGraphicsResourceBarrierAccessType_NoAccess,
+                .AfterLayout = ElemGraphicsResourceBarrierLayoutType_Present
+            };
 
-            D3D12_BARRIER_GROUP textureBarriersGroup;
-            textureBarriersGroup = {};
-            textureBarriersGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
-            textureBarriersGroup.NumBarriers = 1;
-            textureBarriersGroup.pTextureBarriers = &renderTargetBarrier;
-
-            commandListData->DeviceObject->Barrier(1, &textureBarriersGroup);
+            EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
         }
     }
+    
+    InsertDirectX12ResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_None);
 }
 
 void DirectX12SetViewports(ElemCommandList commandList, ElemViewportSpan viewports)

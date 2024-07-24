@@ -538,7 +538,7 @@ void DirectX12DispatchCompute(ElemCommandList commandList, uint32_t threadGroupC
         return;
     }
 
-    InsertDirectX12ResourceBarriersIfNeeded(commandList, SyncType_Compute);
+    InsertDirectX12ResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_Compute);
 
     commandListData->DeviceObject->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

@@ -179,7 +179,7 @@ void InitSample(void* payload)
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
     applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
-    applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) {.FrameLatency = 1, .UpdatePayload = payload });
+    applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .FrameLatency = 1, .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), NULL);
@@ -400,21 +400,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTextureReadDescriptor, NULL);
 
-    // TODO: Here we will issue barriers, with the set Barrier function but Begin render pass will also issue a barrier.
-    // We will defer the barrier submittions so you can call ElemSetResourceBarriers Multiple time if needed
-    // When a function that actually send a command to the GPU will be processed. We will call an internal submit barrier call
-    // that will send in batch the pending barriers. 
-    // This code should be common like the command list management. 
-    // This design allow us to manager the render target transitions separately while keeping good performance by batching barriers.
-    // It would be nice that we could transition the resource to RTV manually if needed and that the begin render pass doesn't insert
-    // a barrier in that case.
-
-    // TODO: If we specify automatically the barriers for RTV and DSV, it means we don't have control on the after sync point.
-    // For example, a RTV texture may be used in a mesh shader for displacement mapping. It we do that automatically, we don't now which 
-    // stage will require it and we will need to specify an after sync that is too generic and so less performant.
-
-    // TODO: For present, because it is not a resource Descriptor and is an edge case, we could do it automatically?
-
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
         {
@@ -466,7 +451,7 @@ int main(int argc, const char* argv[])
 
     ElemRunApplication(&(ElemRunApplicationParameters)
     {
-        .ApplicationName = "Hello Inputs",
+        .ApplicationName = "Hello Compute",
         .InitHandler = InitSample,
         .FreeHandler = FreeSample,
         .Payload = &payload

@@ -8,28 +8,6 @@
 // TODO: Multiple config for rendering
 // TODO: Test Barrier log
 
-void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor)
-{
-    ElemRenderPassRenderTarget renderPassRenderTarget = 
-    {
-        .RenderTarget = renderTarget,
-        .ClearColor = clearColor,
-        .LoadAction = ElemRenderPassLoadAction_Clear
-    };
-
-    ElemBeginRenderPassParameters parameters =
-    {
-        .RenderTargets =
-        { 
-            .Items = &renderPassRenderTarget,
-            .Length = 1
-        }
-    };
-
-    // Act
-    ElemBeginRenderPass(commandList, &parameters);
-}
-
 UTEST(Rendering, RenderPassClearRenderTarget) 
 {
     // Arrange
@@ -79,19 +57,7 @@ UTEST(Rendering, DispatchMesh)
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
     auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT);
-
-    auto shaderLibrary = TestOpenShader(graphicsDevice, "RenderingTests.shader");
-
-    ElemGraphicsPipelineStateParameters parameters =
-    {
-        .ShaderLibrary = shaderLibrary,
-        .MeshShaderFunction = "MeshShader",
-        .PixelShaderFunction = "PixelShader",
-        .TextureFormats = { .Items = &renderTarget.Format, .Length = 1 }
-    };
-
-    auto meshShaderPipeline = ElemCompileGraphicsPipelineState(graphicsDevice, &parameters);
-    ElemFreeShaderLibrary(shaderLibrary);
+    auto meshShaderPipeline = TestOpenMeshShader(graphicsDevice, "RenderingTests.shader", "MeshShader", "PixelShader", renderTarget.Format);
 
     // Act
     TestBeginClearRenderPass(commandList, renderTarget.Texture, { .Red = 0.0f, .Green = 0.0f, .Blue = 1.0f, .Alpha = 1.0f });

@@ -32,11 +32,8 @@ void ApplicationTestInitFunction(void* payload)
     ElemConfigureLogHandler(TestLogHandler);
     ElemSetGraphicsOptions(&options);
 
-    //auto testGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
-
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
 
-    //ElemFreeGraphicsDevice(testGraphicsDevice);
     ElemExitApplication(result);
 }
 

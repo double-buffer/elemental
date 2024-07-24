@@ -400,6 +400,30 @@ typedef enum
     ElemGraphicsResourceDescriptorUsage_Write = 0x01
 } ElemGraphicsResourceDescriptorUsage;
 
+typedef enum
+{
+    ElemGraphicsResourceBarrierSyncType_None,
+    ElemGraphicsResourceBarrierSyncType_Compute,
+    ElemGraphicsResourceBarrierSyncType_RenderTarget
+} ElemGraphicsResourceBarrierSyncType;
+
+typedef enum
+{
+    ElemGraphicsResourceBarrierAccessType_NoAccess,
+    ElemGraphicsResourceBarrierAccessType_Read,
+    ElemGraphicsResourceBarrierAccessType_Write,
+    ElemGraphicsResourceBarrierAccessType_RenderTarget
+} ElemGraphicsResourceBarrierAccessType;
+
+typedef enum 
+{
+    ElemGraphicsResourceBarrierLayoutType_Undefined,
+    ElemGraphicsResourceBarrierLayoutType_Read,
+    ElemGraphicsResourceBarrierLayoutType_Write,
+    ElemGraphicsResourceBarrierLayoutType_RenderTarget,
+    ElemGraphicsResourceBarrierLayoutType_Present
+} ElemGraphicsResourceBarrierLayoutType;
+
 /**
  * Enumerates render pass load actions.
  */
@@ -680,7 +704,12 @@ typedef struct
 
 typedef struct
 {
-    uint32_t Reserved;
+    ElemGraphicsResourceBarrierSyncType BeforeSync;
+    ElemGraphicsResourceBarrierSyncType AfterSync;
+    ElemGraphicsResourceBarrierAccessType BeforeAccess;
+    ElemGraphicsResourceBarrierAccessType AfterAccess;
+    ElemGraphicsResourceBarrierLayoutType BeforeLayout;
+    ElemGraphicsResourceBarrierLayoutType AfterLayout;
 } ElemGraphicsResourceBarrierOptions;
 
 /**
@@ -736,7 +765,6 @@ typedef struct
     ElemGraphicsResource RenderTarget;
 
     // Color to clear the render target with if the load action is clear.
-
     ElemColor ClearColor;
     // Action to take when loading data into the render target at the beginning of a render pass.
     ElemRenderPassLoadAction LoadAction;

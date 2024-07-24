@@ -10,9 +10,9 @@
 struct ResourceBarrierResourceStatus
 {
     ElemGraphicsResource Resource;
-    ResourceBarrierSyncType LastSyncType;
-    ResourceBarrierAccessType LastAccessType;
-    ResourceBarrierLayoutType LastLayoutType;
+    ElemGraphicsResourceBarrierSyncType LastSyncType;
+    ElemGraphicsResourceBarrierAccessType LastAccessType;
+    ElemGraphicsResourceBarrierLayoutType LastLayoutType;
 };
 
 struct ResourceBarrierPoolData
@@ -36,34 +36,37 @@ void InitResourceBarrierPoolMemory(MemoryArena memoryArena)
     }
 }
 
-ReadOnlySpan<char> ResourceBarrierSyncTypeToString(MemoryArena memoryArena, ResourceBarrierSyncType syncType)
+ReadOnlySpan<char> ResourceBarrierSyncTypeToString(MemoryArena memoryArena, ElemGraphicsResourceBarrierSyncType syncType)
 {
     switch (syncType) 
     {
-        case SyncType_None: return SystemDuplicateBuffer<char>(memoryArena, "None"); 
-        case SyncType_Compute: return SystemDuplicateBuffer<char>(memoryArena, "Compute");
+        case ElemGraphicsResourceBarrierSyncType_None: return SystemDuplicateBuffer<char>(memoryArena, "None"); 
+        case ElemGraphicsResourceBarrierSyncType_Compute: return SystemDuplicateBuffer<char>(memoryArena, "Compute");
+        case ElemGraphicsResourceBarrierSyncType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Unknown"); 
     }
 }
 
-ReadOnlySpan<char> ResourceBarrierAccessTypeToString(MemoryArena memoryArena, ResourceBarrierAccessType accessType)
+ReadOnlySpan<char> ResourceBarrierAccessTypeToString(MemoryArena memoryArena, ElemGraphicsResourceBarrierAccessType accessType)
 {
     switch (accessType) 
     {
-        case AccessType_NoAccess: return SystemDuplicateBuffer<char>(memoryArena, "NoAccess"); 
-        case AccessType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
-        case AccessType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
+        case ElemGraphicsResourceBarrierAccessType_NoAccess: return SystemDuplicateBuffer<char>(memoryArena, "NoAccess"); 
+        case ElemGraphicsResourceBarrierAccessType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
+        case ElemGraphicsResourceBarrierAccessType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
+        case ElemGraphicsResourceBarrierAccessType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Unknown"); 
     }
 }
 
-ReadOnlySpan<char> ResourceBarrierLayoutTypeToString(MemoryArena memoryArena, ResourceBarrierLayoutType layoutType)
+ReadOnlySpan<char> ResourceBarrierLayoutTypeToString(MemoryArena memoryArena, ElemGraphicsResourceBarrierLayoutType layoutType)
 {
     switch (layoutType) 
     {
-        case LayoutType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
-        case LayoutType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
-        case LayoutType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
+        case ElemGraphicsResourceBarrierLayoutType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
+        case ElemGraphicsResourceBarrierLayoutType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
+        case ElemGraphicsResourceBarrierLayoutType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
+        case ElemGraphicsResourceBarrierLayoutType_Present: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Undefined"); 
     }
 }
@@ -105,7 +108,7 @@ void EnqueueBarrier(ResourceBarrierPool barrierPool, const ResourceBarrierItem* 
     barrierPoolData->Barriers[barrierPoolData->BarrierCount++] = *resourceBarrier;
 }
 
-ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrierPool barrierPool, ResourceBarrierSyncType currentStage, bool logBarrierInfo)
+ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrierPool barrierPool, ElemGraphicsResourceBarrierSyncType currentStage, bool logBarrierInfo)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemAssert(barrierPool != ELEM_HANDLE_NULL);
@@ -131,20 +134,20 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
             // TODO: Process status in a separate functions?
             if (resourceStatus)
             {
-                if (barrierItem.SyncBefore == SyncType_None && resourceStatus->LastSyncType != SyncType_None)
+                if (barrierItem.BeforeSync == ElemGraphicsResourceBarrierSyncType_None && resourceStatus->LastSyncType != ElemGraphicsResourceBarrierSyncType_None)
                 {
-                    barrierItem.SyncBefore = resourceStatus->LastSyncType;
+                    barrierItem.BeforeSync = resourceStatus->LastSyncType;
                 }
                 
-                if (barrierItem.AccessBefore == AccessType_NoAccess && resourceStatus->LastAccessType != AccessType_NoAccess)
+                if (barrierItem.BeforeAccess == ElemGraphicsResourceBarrierAccessType_NoAccess && resourceStatus->LastAccessType != ElemGraphicsResourceBarrierAccessType_NoAccess)
                 {
-                    barrierItem.AccessBefore = resourceStatus->LastAccessType;
+                    barrierItem.BeforeAccess = resourceStatus->LastAccessType;
                 }
             }
 
-            if (barrierItem.SyncAfter == SyncType_None)
+            if (barrierItem.AfterSync == ElemGraphicsResourceBarrierSyncType_None)
             {
-                barrierItem.SyncAfter = currentStage;
+                barrierItem.AfterSync = currentStage;
             }
 
             bufferBarriers[bufferBarrierCount++] = barrierItem;
@@ -153,25 +156,25 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
         {
             if (resourceStatus)
             {
-                if (barrierItem.SyncBefore == SyncType_None && resourceStatus->LastSyncType != SyncType_None)
+                if (barrierItem.BeforeSync == ElemGraphicsResourceBarrierSyncType_None && resourceStatus->LastSyncType != ElemGraphicsResourceBarrierSyncType_None)
                 {
-                    barrierItem.SyncBefore = resourceStatus->LastSyncType;
+                    barrierItem.BeforeSync = resourceStatus->LastSyncType;
                 }
                 
-                if (barrierItem.AccessBefore == AccessType_NoAccess && resourceStatus->LastAccessType != AccessType_NoAccess)
+                if (barrierItem.BeforeAccess == ElemGraphicsResourceBarrierAccessType_NoAccess && resourceStatus->LastAccessType != ElemGraphicsResourceBarrierAccessType_NoAccess)
                 {
-                    barrierItem.AccessBefore = resourceStatus->LastAccessType;
+                    barrierItem.BeforeAccess = resourceStatus->LastAccessType;
                 }
 
-                if (barrierItem.LayoutBefore == LayoutType_Undefined && resourceStatus->LastLayoutType != LayoutType_Undefined)
+                if (barrierItem.BeforeLayout == ElemGraphicsResourceBarrierLayoutType_Undefined && resourceStatus->LastLayoutType != ElemGraphicsResourceBarrierLayoutType_Undefined)
                 {
-                    barrierItem.LayoutBefore = resourceStatus->LastLayoutType;
+                    barrierItem.BeforeLayout = resourceStatus->LastLayoutType;
                 }
             }
 
-            if (barrierItem.SyncAfter == SyncType_None)
+            if (barrierItem.AfterSync == ElemGraphicsResourceBarrierSyncType_None)
             {
-                barrierItem.SyncAfter = currentStage;
+                barrierItem.AfterSync = currentStage;
             }
 
             textureBarriers[textureBarrierCount++] = barrierItem;
@@ -188,8 +191,8 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
         }
 
         resourceStatus->LastSyncType = currentStage;
-        resourceStatus->LastAccessType = barrierItem.AccessAfter;
-        resourceStatus->LastLayoutType = barrierItem.LayoutAfter;
+        resourceStatus->LastAccessType = barrierItem.AfterAccess;
+        resourceStatus->LastLayoutType = barrierItem.AfterLayout;
     }
     
     if (logBarrierInfo && (bufferBarrierCount > 0 || textureBarrierCount > 0))
@@ -201,10 +204,10 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
             auto barrierItem = bufferBarriers[i];
             SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "  BarrierBuffer: Resource=%d, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s", 
                                     barrierItem.Resource,
-                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.SyncBefore).Pointer,
-                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.SyncAfter).Pointer,
-                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessBefore).Pointer,
-                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessAfter).Pointer);
+                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.BeforeSync).Pointer,
+                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.AfterSync).Pointer,
+                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.BeforeAccess).Pointer,
+                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AfterAccess).Pointer);
         }
 
         for (uint32_t i = 0; i < textureBarrierCount; i++)
@@ -212,12 +215,12 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
             auto barrierItem = textureBarriers[i];
             SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "  BarrierTexture: Resource=%d, SyncBefore=%s, SyncAfter=%s, AccessBefore=%s, AccessAfter=%s, LayoutBefore=%s, LayoutAfter=%s", 
                                     barrierItem.Resource,
-                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.SyncBefore).Pointer,
-                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.SyncAfter).Pointer,
-                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessBefore).Pointer,
-                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AccessAfter).Pointer,
-                                    ResourceBarrierLayoutTypeToString(stackMemoryArena, barrierItem.LayoutBefore).Pointer,
-                                    ResourceBarrierLayoutTypeToString(stackMemoryArena, barrierItem.LayoutAfter).Pointer);
+                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.BeforeSync).Pointer,
+                                    ResourceBarrierSyncTypeToString(stackMemoryArena, barrierItem.AfterSync).Pointer,
+                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.BeforeAccess).Pointer,
+                                    ResourceBarrierAccessTypeToString(stackMemoryArena, barrierItem.AfterAccess).Pointer,
+                                    ResourceBarrierLayoutTypeToString(stackMemoryArena, barrierItem.BeforeLayout).Pointer,
+                                    ResourceBarrierLayoutTypeToString(stackMemoryArena, barrierItem.AfterLayout).Pointer);
         }
     }
 

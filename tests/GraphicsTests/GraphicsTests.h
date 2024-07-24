@@ -61,27 +61,6 @@
 
 #define ASSERT_BARRIER(name) ASSERT_TRUE_MSG(test_##name, test_##name##ExpectedMessage)
 
-enum TestBarrierCheckSyncType
-{
-    SyncType_None,
-    SyncType_Compute
-};
-
-enum TestBarrierCheckAccessType
-{
-    AccessType_NoAccess,
-    AccessType_Read,
-    AccessType_Write
-};
-
-enum TestBarrierCheckLayoutType
-{
-    LayoutType_Undefined,
-    LayoutType_Read,
-    LayoutType_Write,
-    LayoutType_RenderTarget
-};
-
 struct TestGpuBuffer
 {
     ElemGraphicsHeap GraphicsHeap;
@@ -102,21 +81,21 @@ struct TestGpuTexture
 struct TestBarrierCheckBuffer
 {
     ElemGraphicsResource Resource;
-    TestBarrierCheckSyncType SyncBefore; 
-    TestBarrierCheckSyncType SyncAfter; 
-    TestBarrierCheckAccessType AccessBefore;
-    TestBarrierCheckAccessType AccessAfter;
+    ElemGraphicsResourceBarrierSyncType SyncBefore; 
+    ElemGraphicsResourceBarrierSyncType SyncAfter; 
+    ElemGraphicsResourceBarrierAccessType AccessBefore;
+    ElemGraphicsResourceBarrierAccessType AccessAfter;
 };
 
 struct TestBarrierCheckTexture
 {
     ElemGraphicsResource Resource;
-    TestBarrierCheckSyncType SyncBefore; 
-    TestBarrierCheckSyncType SyncAfter; 
-    TestBarrierCheckAccessType AccessBefore;
-    TestBarrierCheckAccessType AccessAfter;
-    TestBarrierCheckLayoutType LayoutBefore;
-    TestBarrierCheckLayoutType LayoutAfter;
+    ElemGraphicsResourceBarrierSyncType SyncBefore; 
+    ElemGraphicsResourceBarrierSyncType SyncAfter; 
+    ElemGraphicsResourceBarrierAccessType AccessBefore;
+    ElemGraphicsResourceBarrierAccessType AccessAfter;
+    ElemGraphicsResourceBarrierLayoutType LayoutBefore;
+    ElemGraphicsResourceBarrierLayoutType LayoutAfter;
 };
 
 struct TestBarrierCheck
@@ -146,6 +125,7 @@ void TestInitLog();
 
 ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader);
 ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* function);
+ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, ElemGraphicsFormat renderTargetFormat);
 
 TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_Gpu);
 void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer);
@@ -159,6 +139,8 @@ void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipeline
 template<typename T>
 void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);
 
-void TestBarrierCheckSyncTypeToString(char* destination, TestBarrierCheckSyncType syncType);
-void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAccessType accessType);
+void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor);
+
+void TestBarrierCheckSyncTypeToString(char* destination, ElemGraphicsResourceBarrierSyncType syncType);
+void TestBarrierCheckAccessTypeToString(char* destination, ElemGraphicsResourceBarrierAccessType accessType);
 bool TestDebugLogBarrier(const TestBarrierCheck* check, char* expectedMessage, uint32_t messageLength);

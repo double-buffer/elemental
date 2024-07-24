@@ -4,37 +4,43 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-D3D12_BARRIER_SYNC ConvertToDirectX12BarrierSync(ResourceBarrierSyncType syncType)
+D3D12_BARRIER_SYNC ConvertToDirectX12BarrierSync(ElemGraphicsResourceBarrierSyncType syncType)
 {
     switch (syncType) 
     {
-        case SyncType_None:
+        case ElemGraphicsResourceBarrierSyncType_None:
             return D3D12_BARRIER_SYNC_NONE;
 
-        case SyncType_Compute:
+        case ElemGraphicsResourceBarrierSyncType_Compute:
             return D3D12_BARRIER_SYNC_COMPUTE_SHADING;
+
+        case ElemGraphicsResourceBarrierSyncType_RenderTarget:
+            return D3D12_BARRIER_SYNC_RENDER_TARGET;
     }
 }
 
-D3D12_BARRIER_ACCESS ConvertToDirectX12BarrierAccess(ResourceBarrierAccessType accessType)
+D3D12_BARRIER_ACCESS ConvertToDirectX12BarrierAccess(ElemGraphicsResourceBarrierAccessType accessType)
 {
     // TODO: Recheck the correct accesses
     // Maybe we can pass more info to the function to compute more precides accesses (or in the common code)
 
     switch (accessType) 
     {
-        case AccessType_NoAccess:
+        case ElemGraphicsResourceBarrierAccessType_NoAccess:
             return D3D12_BARRIER_ACCESS_NO_ACCESS;
 
-        case AccessType_Read:
+        case ElemGraphicsResourceBarrierAccessType_Read:
             return D3D12_BARRIER_ACCESS_COMMON;
 
-        case AccessType_Write:
+        case ElemGraphicsResourceBarrierAccessType_RenderTarget:
+            return D3D12_BARRIER_ACCESS_RENDER_TARGET;
+
+        case ElemGraphicsResourceBarrierAccessType_Write:
             return D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
     }
 }
 
-D3D12_BARRIER_LAYOUT ConvertToDirectX12BarrierLayout(ResourceBarrierLayoutType layoutType)
+D3D12_BARRIER_LAYOUT ConvertToDirectX12BarrierLayout(ElemGraphicsResourceBarrierLayoutType layoutType)
 {
     // TODO: Recheck the correct layouts
     // Maybe we can pass more info to the function to compute more precides layouts (or in the common code)
@@ -42,21 +48,24 @@ D3D12_BARRIER_LAYOUT ConvertToDirectX12BarrierLayout(ResourceBarrierLayoutType l
 
     switch (layoutType) 
     {
-        case LayoutType_Undefined:
+        case ElemGraphicsResourceBarrierLayoutType_Undefined:
             return D3D12_BARRIER_LAYOUT_UNDEFINED;
 
-        case LayoutType_Read:
+        case ElemGraphicsResourceBarrierLayoutType_Read:
             return D3D12_BARRIER_LAYOUT_COMMON;
 
-        case LayoutType_Write:
+        case ElemGraphicsResourceBarrierLayoutType_Write:
             return D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
 
-        case LayoutType_RenderTarget:
+        case ElemGraphicsResourceBarrierLayoutType_RenderTarget:
             return D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+
+        case ElemGraphicsResourceBarrierLayoutType_Present:
+            return D3D12_BARRIER_LAYOUT_PRESENT;
     }
 }
 
-void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ResourceBarrierSyncType currentStage)
+void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraphicsResourceBarrierSyncType currentStage)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     
@@ -98,10 +107,10 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, Resour
 
             directX12BufferBarrier->pResource = graphicsResourceData->DeviceObject.Get();
             directX12BufferBarrier->Size = graphicsResourceData->Width;
-            directX12BufferBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.SyncBefore);
-            directX12BufferBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.SyncAfter);
-            directX12BufferBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.AccessBefore);
-            directX12BufferBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AccessAfter);
+            directX12BufferBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync);
+            directX12BufferBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync);
+            directX12BufferBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess);
+            directX12BufferBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess);
         }
     }
 
@@ -127,12 +136,12 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, Resour
             SystemAssert(graphicsResourceData);
 
             directX12TextureBarrier->pResource = graphicsResourceData->DeviceObject.Get();
-            directX12TextureBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.SyncBefore);
-            directX12TextureBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.SyncAfter);
-            directX12TextureBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.AccessBefore);
-            directX12TextureBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AccessAfter);
-            directX12TextureBarrier->LayoutBefore = ConvertToDirectX12BarrierLayout(barrier.LayoutBefore);
-            directX12TextureBarrier->LayoutAfter = ConvertToDirectX12BarrierLayout(barrier.LayoutAfter);
+            directX12TextureBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync);
+            directX12TextureBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync);
+            directX12TextureBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess);
+            directX12TextureBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess);
+            directX12TextureBarrier->LayoutBefore = ConvertToDirectX12BarrierLayout(barrier.BeforeLayout);
+            directX12TextureBarrier->LayoutAfter = ConvertToDirectX12BarrierLayout(barrier.AfterLayout);
         }
     }
 
@@ -153,10 +162,32 @@ void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsR
     {
         .Type = resourceInfo.Type,
         .Resource = descriptorInfo.Resource,
-        .AccessAfter = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? AccessType_Write : AccessType_Read,
-        .LayoutAfter = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? LayoutType_Write : LayoutType_Read
-        // TODO: Options
+        .AfterAccess = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierAccessType_Write : ElemGraphicsResourceBarrierAccessType_Read,
+        .AfterLayout = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierLayoutType_Write : ElemGraphicsResourceBarrierLayoutType_Read
     };
+
+    if (options)
+    {
+        if (options->BeforeSync != ElemGraphicsResourceBarrierSyncType_None)
+        {
+            resourceBarrier.BeforeSync = options->BeforeSync;
+        }
+
+        if (options->AfterSync != ElemGraphicsResourceBarrierSyncType_None)
+        {
+            resourceBarrier.AfterSync = options->AfterSync;
+        }
+
+        if (options->BeforeAccess != ElemGraphicsResourceBarrierAccessType_NoAccess)
+        {
+            resourceBarrier.BeforeAccess = options->BeforeAccess;
+        }
+
+        if (options->AfterAccess != ElemGraphicsResourceBarrierAccessType_NoAccess)
+        {
+            resourceBarrier.AfterAccess = options->AfterAccess;
+        }
+    }
 
     EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
 }

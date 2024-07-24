@@ -259,6 +259,29 @@ ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const
     return pipelineState;
 }
 
+ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, ElemGraphicsFormat renderTargetFormat)
+{
+    auto shaderLibrary = TestOpenShader(graphicsDevice, shader);
+
+    ElemGraphicsPipelineStateParameters pipelineStateParameters =
+    {
+        .ShaderLibrary = shaderLibrary,
+        .MeshShaderFunction = meshShaderFunction,
+        .PixelShaderFunction = pixelShaderFunction,
+        .TextureFormats = { .Items = &renderTargetFormat, .Length = 1 }
+    };
+
+    auto pipelineState = ElemCompileGraphicsPipelineState(graphicsDevice, &pipelineStateParameters);
+
+    if (pipelineState == ELEM_HANDLE_NULL)
+    {
+        return ELEM_HANDLE_NULL;
+    }
+
+    ElemFreeShaderLibrary(shaderLibrary);
+    return pipelineState;
+}
+
 TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType)
 {
     ElemGraphicsHeapOptions heapOptions =
@@ -344,34 +367,58 @@ void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, Ele
     ElemFreePipelineState(pipelineState);
 }
 
-void TestBarrierCheckSyncTypeToString(char* destination, TestBarrierCheckSyncType syncType)
+void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor)
+{
+    ElemRenderPassRenderTarget renderPassRenderTarget = 
+    {
+        .RenderTarget = renderTarget,
+        .ClearColor = clearColor,
+        .LoadAction = ElemRenderPassLoadAction_Clear
+    };
+
+    ElemBeginRenderPassParameters parameters =
+    {
+        .RenderTargets =
+        { 
+            .Items = &renderPassRenderTarget,
+            .Length = 1
+        }
+    };
+
+    // Act
+    ElemBeginRenderPass(commandList, &parameters);
+}
+
+void TestBarrierCheckSyncTypeToString(char* destination, ElemGraphicsResourceBarrierSyncType syncType)
 {
     switch (syncType) 
     {
-        case SyncType_None: snprintf(destination, 255, "None"); break;
-        case SyncType_Compute: snprintf(destination, 255, "Compute"); break;
+        case ElemGraphicsResourceBarrierSyncType_None: snprintf(destination, 255, "None"); break;
+        case ElemGraphicsResourceBarrierSyncType_Compute: snprintf(destination, 255, "Compute"); break;
+        case ElemGraphicsResourceBarrierSyncType_RenderTarget: snprintf(destination, 255, "RenderTarget"); break;
         default: snprintf(destination, 255, "Unknown"); 
     }
 }
 
-void TestBarrierCheckAccessTypeToString(char* destination, TestBarrierCheckAccessType accessType)
+void TestBarrierCheckAccessTypeToString(char* destination, ElemGraphicsResourceBarrierAccessType accessType)
 {
     switch (accessType) 
     {
-        case AccessType_NoAccess: snprintf(destination, 255, "NoAccess"); break;
-        case AccessType_Read: snprintf(destination, 255, "Read"); break;
-        case AccessType_Write: snprintf(destination, 255, "Write"); break;
+        case ElemGraphicsResourceBarrierAccessType_NoAccess: snprintf(destination, 255, "NoAccess"); break;
+        case ElemGraphicsResourceBarrierAccessType_Read: snprintf(destination, 255, "Read"); break;
+        case ElemGraphicsResourceBarrierAccessType_Write: snprintf(destination, 255, "Write"); break;
+        case ElemGraphicsResourceBarrierAccessType_RenderTarget: snprintf(destination, 255, "RenderTarget"); break;
         default: snprintf(destination, 255, "Unknown"); 
     }
 }
 
-void TestBarrierCheckLayoutTypeToString(char* destination, TestBarrierCheckLayoutType layoutType)
+void TestBarrierCheckLayoutTypeToString(char* destination, ElemGraphicsResourceBarrierLayoutType layoutType)
 {
     switch (layoutType) 
     {
-        case LayoutType_Read: snprintf(destination, 255, "Read"); break;
-        case LayoutType_Write: snprintf(destination, 255, "Write"); break;
-        case LayoutType_RenderTarget: snprintf(destination, 255, "RenderTarget"); break;
+        case ElemGraphicsResourceBarrierLayoutType_Read: snprintf(destination, 255, "Read"); break;
+        case ElemGraphicsResourceBarrierLayoutType_Write: snprintf(destination, 255, "Write"); break;
+        case ElemGraphicsResourceBarrierLayoutType_RenderTarget: snprintf(destination, 255, "RenderTarget"); break;
         default: snprintf(destination, 255, "Undefined"); 
     }
 }

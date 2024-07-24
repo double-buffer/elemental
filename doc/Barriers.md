@@ -10,6 +10,16 @@
 - [x] For sync points, only support Mesh and Pixel stages.
 - [ ] Do we provide in the options a way to control accesses so we can control the cache flushes.
 - [ ] After EndRenderPass, do we restore the previous layout and accesses or revert to read?
+- [x] Do we allow the change of sync before or access before? (all is automated for now),
+      The scenario that would need this is when you have multiple command lists in a single execute.
+      In that case you cannot know the order of the command lists but user knows it!
+
+      We need to be carreful with the scenario: One command list write a texture with compute.
+      And another one inserted after use it as a render target. In that case, how can we override the access,
+      before? Can we pass the sync and access options to rendertarget parameters?
+
+- [ ] Do we foresee a function that can commit the pending barriers manually? Normally we do it automatically,
+      but it can be useful.
 
 ## Examples
 
