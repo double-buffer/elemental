@@ -28,5 +28,7 @@ struct ResourceBarriers
 ResourceBarrierPool CreateResourceBarrierPool(MemoryArena memoryArena);
 void FreeResourceBarrierPool(ResourceBarrierPool barrierPool);
 
+void EnqueueBarrier(ResourceBarrierPool barrierPool, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
 void EnqueueBarrier(ResourceBarrierPool barrierPool, const ResourceBarrierItem* resourceBarrier);
+
 ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrierPool barrierPool, ElemGraphicsResourceBarrierSyncType currentStage, bool logBarrierInfo);

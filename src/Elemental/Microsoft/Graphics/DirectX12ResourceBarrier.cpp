@@ -155,39 +155,5 @@ void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsR
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
 
-    auto descriptorInfo = DirectX12GetGraphicsResourceDescriptorInfo(descriptor);
-    auto resourceInfo = DirectX12GetGraphicsResourceInfo(descriptorInfo.Resource);
-    
-    ResourceBarrierItem resourceBarrier =
-    {
-        .Type = resourceInfo.Type,
-        .Resource = descriptorInfo.Resource,
-        .AfterAccess = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierAccessType_Write : ElemGraphicsResourceBarrierAccessType_Read,
-        .AfterLayout = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierLayoutType_Write : ElemGraphicsResourceBarrierLayoutType_Read
-    };
-
-    if (options)
-    {
-        if (options->BeforeSync != ElemGraphicsResourceBarrierSyncType_None)
-        {
-            resourceBarrier.BeforeSync = options->BeforeSync;
-        }
-
-        if (options->AfterSync != ElemGraphicsResourceBarrierSyncType_None)
-        {
-            resourceBarrier.AfterSync = options->AfterSync;
-        }
-
-        if (options->BeforeAccess != ElemGraphicsResourceBarrierAccessType_NoAccess)
-        {
-            resourceBarrier.BeforeAccess = options->BeforeAccess;
-        }
-
-        if (options->AfterAccess != ElemGraphicsResourceBarrierAccessType_NoAccess)
-        {
-            resourceBarrier.AfterAccess = options->AfterAccess;
-        }
-    }
-
-    EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
+    EnqueueBarrier(commandListData->ResourceBarrierPool, descriptor, options);
 }

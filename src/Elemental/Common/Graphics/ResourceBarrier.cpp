@@ -98,13 +98,62 @@ void FreeResourceBarrierPool(ResourceBarrierPool barrierPool)
     SystemRemoveDataPoolItem(resourceBarrierDataPool, barrierPool);
 }
 
+void EnqueueBarrier(ResourceBarrierPool barrierPool, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options)
+{
+    auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
+    auto resourceInfo = ElemGetGraphicsResourceInfo(descriptorInfo.Resource);
+    
+    ResourceBarrierItem resourceBarrier =
+    {
+        .Type = resourceInfo.Type,
+        .Resource = descriptorInfo.Resource,
+        .AfterAccess = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierAccessType_Write : ElemGraphicsResourceBarrierAccessType_Read,
+        .AfterLayout = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierLayoutType_Write : ElemGraphicsResourceBarrierLayoutType_Read
+    };
+
+    if (options)
+    {
+        if (options->BeforeSync != ElemGraphicsResourceBarrierSyncType_None)
+        {
+            resourceBarrier.BeforeSync = options->BeforeSync;
+        }
+
+        if (options->AfterSync != ElemGraphicsResourceBarrierSyncType_None)
+        {
+            resourceBarrier.AfterSync = options->AfterSync;
+        }
+
+        if (options->BeforeAccess != ElemGraphicsResourceBarrierAccessType_NoAccess)
+        {
+            resourceBarrier.BeforeAccess = options->BeforeAccess;
+        }
+
+        if (options->AfterAccess != ElemGraphicsResourceBarrierAccessType_NoAccess)
+        {
+            resourceBarrier.AfterAccess = options->AfterAccess;
+        }
+
+        if (options->BeforeLayout != ElemGraphicsResourceBarrierLayoutType_Undefined)
+        {
+            resourceBarrier.BeforeLayout = options->BeforeLayout;
+        }
+
+        if (options->AfterLayout != ElemGraphicsResourceBarrierLayoutType_Undefined)
+        {
+            resourceBarrier.AfterLayout = options->AfterLayout;
+        }
+    }
+
+    EnqueueBarrier(barrierPool, &resourceBarrier);
+}
+
 void EnqueueBarrier(ResourceBarrierPool barrierPool, const ResourceBarrierItem* resourceBarrier)
 {
     SystemAssert(barrierPool != ELEM_HANDLE_NULL);
 
     auto barrierPoolData = SystemGetDataPoolItem(resourceBarrierDataPool, barrierPool);
     SystemAssert(barrierPoolData);
-
+  
     barrierPoolData->Barriers[barrierPoolData->BarrierCount++] = *resourceBarrier;
 }
 

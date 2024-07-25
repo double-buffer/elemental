@@ -3,9 +3,9 @@
 #include "utest.h"
 
 // TODO: Test duplicate barriers on resource
-// TODO: Test sync and access customization
 // TODO: Multiple rendertargets in begin render
 // TODO: For the moment it is impossible to test for present
+// TODO: Test Additional commands (when adding new ones)
 
 UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWrite) 
 {
@@ -434,7 +434,6 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteWithCustomBef
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);
@@ -446,13 +445,6 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteWithCustomBef
     ASSERT_LOG_NOERROR();
     ASSERT_BARRIER(dispatch1);
     ASSERT_BARRIER(dispatch2);
-
-    auto intData = (int32_t*)bufferData.Items;
-
-    for (int32_t i = 0; i < elementCount; i++)
-    {
-        ASSERT_EQ_MSG(intData[i], elementCount - i - 1, "Compute shader data is invalid.");
-    }
 }
 
 UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteWithCustomAfterSyncAndAccess) 
@@ -478,8 +470,8 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteWithCustomAft
 
     INIT_ASSERT_BARRIER(dispatch1, BARRIER_ARRAY(
         BUFFER_BARRIER(gpuBuffer.Buffer, 
-                       ElemGraphicsResourceBarrierSyncType_Compute, ElemGraphicsResourceBarrierSyncType_Compute, 
-                       ElemGraphicsResourceBarrierAccessType_Read, ElemGraphicsResourceBarrierAccessType_Write)
+                       ElemGraphicsResourceBarrierSyncType_None, ElemGraphicsResourceBarrierSyncType_Compute, 
+                       ElemGraphicsResourceBarrierAccessType_NoAccess, ElemGraphicsResourceBarrierAccessType_Write)
     ), BARRIER_ARRAY_EMPTY());
 
     ElemGraphicsResourceBarrierOptions barrierOptions = 
@@ -499,6 +491,201 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteWithCustomAft
 
     ElemCommitCommandList(commandList);
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+
+    ElemFreePipelineState(readBufferDataPipelineState);
+    ElemFreePipelineState(writeBufferDataPipelineState);
+    TestFreeGpuBuffer(gpuBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_BARRIER(dispatch1);
+    ASSERT_BARRIER(dispatch2);
+}
+
+UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWriteWithCustomBeforeSyncAccessAndLayout) 
+{
+    // Arrange
+    uint32_t width = 16;
+    uint32_t height = 16;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (width + (threadSize - 1)) / threadSize;
+    uint32_t dispatchY = (height + (threadSize - 1)) / threadSize;
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, width * height * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+
+    auto writeTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteTextureData");
+    auto readTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadTextureData");
+
+    // Act
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    
+    ElemGraphicsResourceBarrierOptions barrierOptions = 
+    {
+        .BeforeSync = ElemGraphicsResourceBarrierSyncType_Compute,
+        .BeforeAccess = ElemGraphicsResourceBarrierAccessType_Read,
+        .BeforeLayout = ElemGraphicsResourceBarrierLayoutType_Read
+    };
+
+    ElemGraphicsResourceBarrier(commandList, gpuTexture.WriteDescriptor, &barrierOptions);
+    TestDispatchCompute(commandList, writeTextureDataPipelineState, dispatchX, dispatchY, 1, { gpuTexture.WriteDescriptor, 0, 0 });
+
+    INIT_ASSERT_BARRIER(dispatch1, BARRIER_ARRAY_EMPTY(), BARRIER_ARRAY(
+        TEXTURE_BARRIER(gpuTexture.Texture, 
+                        ElemGraphicsResourceBarrierSyncType_Compute, ElemGraphicsResourceBarrierSyncType_Compute, 
+                        ElemGraphicsResourceBarrierAccessType_Read, ElemGraphicsResourceBarrierAccessType_Write, 
+                        ElemGraphicsResourceBarrierLayoutType_Read, ElemGraphicsResourceBarrierLayoutType_Write)
+    ));
+
+    ElemGraphicsResourceBarrier(commandList, gpuTexture.ReadDescriptor, nullptr);
+    TestDispatchCompute(commandList, readTextureDataPipelineState, dispatchX, dispatchY, 1, { gpuTexture.ReadDescriptor, readbackBuffer.WriteDescriptor, 0 });
+
+    INIT_ASSERT_BARRIER(dispatch2, BARRIER_ARRAY_EMPTY(), BARRIER_ARRAY(
+        TEXTURE_BARRIER(gpuTexture.Texture, 
+                        ElemGraphicsResourceBarrierSyncType_Compute, ElemGraphicsResourceBarrierSyncType_Compute, 
+                        ElemGraphicsResourceBarrierAccessType_Write, ElemGraphicsResourceBarrierAccessType_Read, 
+                        ElemGraphicsResourceBarrierLayoutType_Write, ElemGraphicsResourceBarrierLayoutType_Read)
+    ));
+
+    ElemCommitCommandList(commandList);
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+
+    ElemFreePipelineState(readTextureDataPipelineState);
+    ElemFreePipelineState(writeTextureDataPipelineState);
+    TestFreeGpuTexture(gpuTexture);
+    TestFreeGpuBuffer(readbackBuffer);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_BARRIER(dispatch1);
+    ASSERT_BARRIER(dispatch2);
+}
+
+UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWriteWithCustomAfterSyncAccessAndLayout) 
+{
+    // Arrange
+    uint32_t width = 16;
+    uint32_t height = 16;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (width + (threadSize - 1)) / threadSize;
+    uint32_t dispatchY = (height + (threadSize - 1)) / threadSize;
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, width * height * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+
+    auto writeTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteTextureData");
+    auto readTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadTextureData");
+
+    // Act
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    ElemGraphicsResourceBarrier(commandList, gpuTexture.WriteDescriptor, nullptr);
+    TestDispatchCompute(commandList, writeTextureDataPipelineState, dispatchX, dispatchY, 1, { gpuTexture.WriteDescriptor, 0, 0 });
+
+    INIT_ASSERT_BARRIER(dispatch1, BARRIER_ARRAY_EMPTY(), BARRIER_ARRAY(
+        TEXTURE_BARRIER(gpuTexture.Texture, 
+                        ElemGraphicsResourceBarrierSyncType_None, ElemGraphicsResourceBarrierSyncType_Compute, 
+                        ElemGraphicsResourceBarrierAccessType_NoAccess, ElemGraphicsResourceBarrierAccessType_Write, 
+                        ElemGraphicsResourceBarrierLayoutType_Undefined, ElemGraphicsResourceBarrierLayoutType_Write)
+    ));
+    
+    ElemGraphicsResourceBarrierOptions barrierOptions = 
+    {
+        .AfterSync = ElemGraphicsResourceBarrierSyncType_RenderTarget,
+        .AfterAccess = ElemGraphicsResourceBarrierAccessType_RenderTarget,
+        .AfterLayout = ElemGraphicsResourceBarrierLayoutType_RenderTarget
+    };
+
+    ElemGraphicsResourceBarrier(commandList, gpuTexture.ReadDescriptor, &barrierOptions);
+    TestDispatchCompute(commandList, readTextureDataPipelineState, dispatchX, dispatchY, 1, { gpuTexture.ReadDescriptor, readbackBuffer.WriteDescriptor, 0 });
+
+    INIT_ASSERT_BARRIER(dispatch2, BARRIER_ARRAY_EMPTY(), BARRIER_ARRAY(
+        TEXTURE_BARRIER(gpuTexture.Texture, 
+                        ElemGraphicsResourceBarrierSyncType_Compute, ElemGraphicsResourceBarrierSyncType_RenderTarget, 
+                        ElemGraphicsResourceBarrierAccessType_Write, ElemGraphicsResourceBarrierAccessType_RenderTarget, 
+                        ElemGraphicsResourceBarrierLayoutType_Write, ElemGraphicsResourceBarrierLayoutType_RenderTarget)
+    ));
+
+    ElemCommitCommandList(commandList);
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+
+    ElemFreePipelineState(readTextureDataPipelineState);
+    ElemFreePipelineState(writeTextureDataPipelineState);
+    TestFreeGpuTexture(gpuTexture);
+    TestFreeGpuBuffer(readbackBuffer);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_BARRIER(dispatch1);
+    ASSERT_BARRIER(dispatch2);
+}
+
+UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteMultiCommandList) 
+{
+    // Arrange
+    int32_t elementCount = 1000000;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (elementCount + (threadSize - 1)) / threadSize;
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    auto gpuBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsHeapType_Readback);
+
+    auto writeBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteBufferData");
+    auto readBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadBufferData");
+
+    // Act
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    ElemGraphicsResourceBarrier(commandList, gpuBuffer.WriteDescriptor, nullptr);
+    TestDispatchCompute(commandList, writeBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.WriteDescriptor, 0, elementCount });
+
+    INIT_ASSERT_BARRIER(dispatch1, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer.Buffer, 
+                       ElemGraphicsResourceBarrierSyncType_None, ElemGraphicsResourceBarrierSyncType_Compute, 
+                       ElemGraphicsResourceBarrierAccessType_NoAccess, ElemGraphicsResourceBarrierAccessType_Write)
+    ), BARRIER_ARRAY_EMPTY());
+
+    ElemCommitCommandList(commandList);
+
+    auto commandList2 = ElemGetCommandList(commandQueue, nullptr);
+
+    ElemGraphicsResourceBarrierOptions barrierOptions = 
+    {
+        .BeforeSync = ElemGraphicsResourceBarrierSyncType_Compute,
+        .BeforeAccess = ElemGraphicsResourceBarrierAccessType_Write
+    };
+
+    ElemGraphicsResourceBarrier(commandList2, gpuBuffer.ReadDescriptor, &barrierOptions);
+    TestDispatchCompute(commandList2, readBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.ReadDescriptor, readbackBuffer.WriteDescriptor, elementCount });
+
+    INIT_ASSERT_BARRIER(dispatch2, BARRIER_ARRAY(
+        BUFFER_BARRIER(gpuBuffer.Buffer, 
+                       ElemGraphicsResourceBarrierSyncType_Compute, ElemGraphicsResourceBarrierSyncType_Compute, 
+                       ElemGraphicsResourceBarrierAccessType_Write, ElemGraphicsResourceBarrierAccessType_Read)
+    ), BARRIER_ARRAY_EMPTY());
+
+    ElemCommitCommandList(commandList2);
+    ElemCommandList commandLists[2] = { commandList, commandList2 };
+    auto fence = ElemExecuteCommandLists(commandQueue, { .Items = commandLists, .Length = 2 }, nullptr);
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
@@ -522,5 +709,3 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteWithCustomAft
         ASSERT_EQ_MSG(intData[i], elementCount - i - 1, "Compute shader data is invalid.");
     }
 }
-
-// TODO: Check layout

@@ -21,6 +21,9 @@
 - [ ] Do we foresee a function that can commit the pending barriers manually? Normally we do it automatically,
       but it can be useful.
 
+- [ ] Does the after customization makes any sense? For before, it is useful when multiple executecommandlist but after
+      I don't have a scenario.
+
 ## Examples
 
 All using the same command list.
