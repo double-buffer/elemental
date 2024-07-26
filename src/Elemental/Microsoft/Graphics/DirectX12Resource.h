@@ -9,6 +9,7 @@ struct DirectX12GraphicsHeapData
     ElemGraphicsDevice GraphicsDevice;
 };
 
+// TODO: To review we don't use it!!!
 struct DirectX12GraphicsHeapDataFull
 {
     D3D12_HEAP_DESC HeapDescription;

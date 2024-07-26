@@ -11,7 +11,7 @@
 #include "volk.h"
 
 #define VULKAN_MAX_DEVICES 10u
-#define VULKAN_MAX_RESOURCES 1000000
+#define VULKAN_MAX_RESOURCES 500000
 
 struct VulkanGraphicsDeviceData
 {
@@ -31,6 +31,9 @@ struct VulkanGraphicsDeviceDataFull
     uint32_t CurrentComputeCommandQueueIndex;
     uint32_t CopyCommandQueueIndex;
     uint32_t CurrentCopyCommandQueueIndex;
+    uint32_t GpuMemoryTypeIndex;
+    uint32_t GpuUploadMemoryTypeIndex;
+    uint32_t ReadBackMemoryTypeIndex;
 };
 
 extern MemoryArena VulkanGraphicsMemoryArena;

@@ -29,6 +29,7 @@ struct VulkanCommandListData
 {
     VkCommandBuffer DeviceObject;
     ElemGraphicsDevice GraphicsDevice;
+    bool IsCommitted;
     CommandAllocatorPoolItem<VkCommandPool, VkCommandBuffer>* CommandAllocatorPoolItem;
     CommandListPoolItem<VkCommandBuffer>* CommandListPoolItem;
 };

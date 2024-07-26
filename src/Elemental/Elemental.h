@@ -366,7 +366,8 @@ typedef enum
 typedef enum
 {
     ElemGraphicsHeapType_Gpu = 0,
-    ElemGraphicsHeapType_Readback = 1
+    ElemGraphicsHeapType_GpuUpload = 1,
+    ElemGraphicsHeapType_Readback = 2
 } ElemGraphicsHeapType;
 
 /**

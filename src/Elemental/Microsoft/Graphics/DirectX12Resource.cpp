@@ -280,13 +280,20 @@ ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, 
 
     D3D12_HEAP_PROPERTIES heapProperties =
     {
-        .Type = D3D12_HEAP_TYPE_GPU_UPLOAD,
+        .Type = D3D12_HEAP_TYPE_DEFAULT,
 		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
     };
 
-    if (options && options->HeapType == ElemGraphicsHeapType_Readback)
+    if (options)
     {
-        heapProperties = graphicsDeviceData->Device->GetCustomHeapProperties(0, D3D12_HEAP_TYPE_READBACK);
+        if (options->HeapType == ElemGraphicsHeapType_GpuUpload)
+        {
+            heapProperties.Type = D3D12_HEAP_TYPE_GPU_UPLOAD;
+        }
+        else if (options->HeapType == ElemGraphicsHeapType_Readback)
+        {
+            heapProperties = graphicsDeviceData->Device->GetCustomHeapProperties(0, D3D12_HEAP_TYPE_READBACK);
+        }
     }
 
     D3D12_HEAP_DESC heapDesc = 
@@ -679,7 +686,7 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
     directX12ResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 
-void DirectX12ProcessGraphicsResourceDeleteQueue(void)
+void DirectX12ProcessGraphicsResourceDeleteQueue()
 {
     ProcessResourceDeleteQueue();
 }

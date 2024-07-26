@@ -369,6 +369,40 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         queueCreateInfos[i] = queueCreateInfo;
     }
 
+    int32_t gpuMemoryTypeIndex = -1;
+    int32_t gpuUploadMemoryTypeIndex = -1;
+    int32_t readBackMemoryTypeIndex = -1;
+
+    for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++)
+    {
+        auto memoryPropertyFlags = deviceMemoryProperties.memoryTypes[i].propertyFlags;
+
+        if ((memoryPropertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) && 
+            (memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0)
+        {
+            gpuMemoryTypeIndex = i;
+        }
+        if ((memoryPropertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) && 
+            (memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
+        {
+            gpuUploadMemoryTypeIndex = i;
+        }
+        else if ((memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) && 
+                 (memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && 
+                 (memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT))
+        {
+            readBackMemoryTypeIndex = i;
+        }
+
+        // TODO: Later we will need that to implement IOGraphicsQueue
+        /*
+        else if ((memoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memoryPropertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+        {
+        }*/
+    }
+
+    SystemAssert(gpuMemoryTypeIndex != -1 && gpuUploadMemoryTypeIndex != -1 && readBackMemoryTypeIndex != -1);
+
     VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     createInfo.queueCreateInfoCount = 3;
     createInfo.pQueueCreateInfos = queueCreateInfos;
@@ -376,9 +410,10 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     const char* extensions[] =
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_MESH_SHADER_EXTENSION_NAME,
         VK_KHR_PRESENT_ID_EXTENSION_NAME,
         VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+        VK_EXT_MESH_SHADER_EXTENSION_NAME,
+        VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME
     };
 
     createInfo.ppEnabledExtensionNames = extensions;
@@ -418,6 +453,9 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     meshFeatures.taskShader = true;
     meshFeatures.meshShaderQueries = true;
 
+    VkPhysicalDeviceHostImageCopyFeaturesEXT hostImageCopyFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT };
+    hostImageCopyFeatures.hostImageCopy = true;
+
     VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
     presentIdFeatures.presentId = true;
     
@@ -430,6 +468,9 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features13.pNext = &presentIdFeatures;
     presentIdFeatures.pNext = &presentWaitFeatures;
     presentWaitFeatures.pNext = &meshFeatures;
+
+    // TODO: Test Features
+    meshFeatures.pNext = &hostImageCopyFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
@@ -448,7 +489,10 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         .DeviceMemoryProperties = deviceMemoryProperties,
         .RenderCommandQueueIndex = renderCommandQueueIndex,
         .ComputeCommandQueueIndex = computeCommandQueueIndex,
-        .CopyCommandQueueIndex = copyCommandQueueIndex
+        .CopyCommandQueueIndex = copyCommandQueueIndex,
+        .GpuMemoryTypeIndex = (uint32_t)gpuMemoryTypeIndex,
+        .GpuUploadMemoryTypeIndex = (uint32_t)gpuUploadMemoryTypeIndex,
+        .ReadBackMemoryTypeIndex = (uint32_t)readBackMemoryTypeIndex
     });
 
     return handle;
@@ -467,6 +511,7 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     vkDestroyPipelineLayout(graphicsDeviceData->Device, graphicsDeviceData->PipelineLayout, nullptr);
     vkDestroyDevice(graphicsDeviceData->Device, nullptr);
         
+    SystemRemoveDataPoolItem(vulkanGraphicsDevicePool, graphicsDevice);
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing Vulkan");
 }
 

@@ -1,12 +1,13 @@
 #pragma once
 
 #include "Elemental.h"
+#include "Graphics/ShaderReader.h"
 #include "SystemSpan.h"
 #include "volk.h"
 
 struct VulkanShaderLibraryData
 {
-    ReadOnlySpan<VkShaderModule> GraphicsShaders;
+    ReadOnlySpan<Shader> GraphicsShaders; // HACK: This should be temporary, in the future DX12 should only libs for all stages
 };
 
 struct VulkanShaderLibraryDataFull

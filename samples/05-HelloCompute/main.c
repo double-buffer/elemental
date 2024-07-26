@@ -457,4 +457,4 @@ int main(int argc, const char* argv[])
         .Payload = &payload
     });
 }
-
+Resource.FreeGraphicsResource_WithFenceExecuted

@@ -3,7 +3,10 @@
 #include "utest.h"
 
 // TODO: Add a test for texture2D uav + rendertarget
+// TODO: Add a test for gpupload heap can only be used for buffers
 // TODO: Test all formats
+// TODO: Test Texture format required
+// TODO: Test Format SRGB not allowed to Texture UAV
 
 UTEST(Resource, CreateBufferGraphicsResource) 
 {
@@ -284,7 +287,7 @@ UTEST(Resource, CreateTexture2DResourceInfo_RenderTargetWrite)
     auto width = 128u;
     auto height = 256u;
     auto mipLevels = 5u;
-    auto format = ElemGraphicsFormat_B8G8R8A8_SRGB;
+    auto format = ElemGraphicsFormat_B8G8R8A8_UNORM;
     ElemGraphicsResourceInfoOptions options = { .DebugName = "TestTexture2D" };
 
     // Act
@@ -310,7 +313,13 @@ UTEST(Resource, GetGraphicsResourceDataSpan_WithBuffer)
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_GpuUpload
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
     auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 

@@ -5,35 +5,39 @@
 
 struct VulkanGraphicsHeapData
 {
-    ComPtr<ID3D12Heap1> DeviceObject;
-};
-
-struct VulkanGraphicsHeapDataFull
-{
+    VkDeviceMemory DeviceObject;
+    uint64_t SizeInBytes;
     ElemGraphicsDevice GraphicsDevice;
 };
 
 struct VulkanGraphicsResourceData
 {
-    VkImage DeviceObject;
+    VkBuffer BufferDeviceObject;
+    VkImage TextureDeviceObject;
+    ElemGraphicsResourceType Type;
     VkFormat Format;
+    ElemGraphicsFormat InternalFormat;
     bool IsPresentTexture;
     uint32_t Width;
     uint32_t Height;
+    uint32_t MipLevels;
+    ElemGraphicsResourceUsage Usage;
+    void* CpuDataPointer;
 };
 
 struct VulkanGraphicsResourceDataFull
 {
     ElemGraphicsDevice GraphicsDevice;
+    ElemGraphicsHeap GraphicsHeap;
+    uint64_t GraphicsHeapOffset;
 };
 
 VulkanGraphicsHeapData* GetVulkanGraphicsHeapData(ElemGraphicsHeap graphicsHeap);
-VulkanGraphicsHeapDataFull* GetVulkanGraphicsHeapDataFull(ElemGraphicsHeap graphicsHeap);
 
 VulkanGraphicsResourceData* GetVulkanGraphicsResourceData(ElemGraphicsResource resource);
 VulkanGraphicsResourceDataFull* GetVulkanGraphicsResourceDataFull(ElemGraphicsResource resource);
 
-ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, VkFormat format, uint32_t width, uint32_t height, bool isPresentTexture);
+ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, const ElemGraphicsResourceInfo* resourceInfo, bool isPresentTexture);
 
 ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void VulkanFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);

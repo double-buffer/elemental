@@ -11,6 +11,7 @@ SystemDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull> vulkanCommand
 SystemDataPool<VulkanCommandListData, VulkanCommandListDataFull> vulkanCommandListPool;
 
 thread_local CommandAllocatorDevicePool<VkCommandPool, VkCommandBuffer> threadVulkanDeviceCommandPools[VULKAN_MAX_DEVICES];
+thread_local bool threadVulkanCommandBufferCommitted = true;
 
 void InitVulkanCommandListMemory()
 {
@@ -173,6 +174,9 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
 
     vkDestroySemaphore(graphicsDeviceData->Device, commandQueueData->Fence, nullptr);
     
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
+    threadVulkanDeviceCommandPools[graphicsIdUnpacked.Index] = {};
+
     SystemRemoveDataPoolItem(vulkanCommandQueuePool, commandQueue);
 }
 
@@ -186,6 +190,12 @@ void VulkanResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
 
 ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
+    if (!threadVulkanCommandBufferCommitted)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot get a command list if commit was not called on the same thread.");
+        return ELEM_HANDLE_NULL;
+    }
+
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueData = GetVulkanCommandQueueData(commandQueue);
@@ -197,7 +207,8 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadVulkanDeviceCommandPools[commandQueueData->GraphicsDevice], 
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
+    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadVulkanDeviceCommandPools[graphicsIdUnpacked.Index], 
                                                                 graphicsDeviceData->CommandAllocationGeneration, 
                                                                 commandQueueData->CommandAllocatorQueueType);
 
@@ -273,6 +284,8 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
 
     SystemAddDataPoolItemFull(vulkanCommandListPool, handle, {
     });
+    
+    threadVulkanCommandBufferCommitted = false;
 
     return handle;
 }
@@ -285,6 +298,9 @@ void VulkanCommitCommandList(ElemCommandList commandList)
     SystemAssert(commandListData);
 
     AssertIfFailed(vkEndCommandBuffer(commandListData->DeviceObject));
+    
+    commandListData->IsCommitted = true;
+    threadVulkanCommandBufferCommitted = true;
 }
 
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
@@ -312,41 +328,59 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         submitStageMasks[i] = (commandQueue->CommandQueueType == CommandQueueType_Compute) ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     }
 */
+    bool hasError = false;
     auto vulkanCommandBuffers = SystemPushArray<VkCommandBuffer>(stackMemoryArena, commandLists.Length);
 
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetVulkanCommandListData(commandLists.Items[i]);
+
+        if (!commandListData->IsCommitted)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Commandlist needs to be committed before executing it.");
+            hasError = true;
+            break;
+        }
+
         vulkanCommandBuffers[i] = commandListData->DeviceObject;
     }
     
     auto fenceValue = SystemAtomicAdd(commandQueueData->FenceValue, 1) + 1;
 
+    if (!hasError)
+    {
+        VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+        //timelineInfo.waitSemaphoreValueCount = (uint32_t)fenceToWaitCount;
+        //timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
+        timelineInfo.signalSemaphoreValueCount = 1;
+        timelineInfo.pSignalSemaphoreValues = &fenceValue;
+
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        //submitInfo.waitSemaphoreCount = (uint32_t)fenceToWaitCount;
+        //submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &commandQueueData->Fence;
+        submitInfo.commandBufferCount = (uint32_t)commandLists.Length;
+        submitInfo.pCommandBuffers = vulkanCommandBuffers.Pointer;
+        //submitInfo.pWaitDstStageMask = submitStageMasks;
+        submitInfo.pNext = &timelineInfo;
+
+        AssertIfFailed(vkQueueSubmit(commandQueueData->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
+    }
+
     auto fence = ElemFence();
     fence.CommandQueue = commandQueue;
     fence.FenceValue = fenceValue;
 
-    VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
-    //timelineInfo.waitSemaphoreValueCount = (uint32_t)fenceToWaitCount;
-    //timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
-    timelineInfo.signalSemaphoreValueCount = 1;
-    timelineInfo.pSignalSemaphoreValues = &fenceValue;
-
-    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-    //submitInfo.waitSemaphoreCount = (uint32_t)fenceToWaitCount;
-    //submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &commandQueueData->Fence;
-    submitInfo.commandBufferCount = (uint32_t)commandLists.Length;
-    submitInfo.pCommandBuffers = vulkanCommandBuffers.Pointer;
-    //submitInfo.pWaitDstStageMask = submitStageMasks;
-    submitInfo.pNext = &timelineInfo;
-
-    AssertIfFailed(vkQueueSubmit(commandQueueData->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
-
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetVulkanCommandListData(commandLists.Items[i]);
+        
+        if (!commandListData->IsCommitted)
+        {
+            VulkanCommitCommandList(commandLists.Items[i]);
+        }
+
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
 
@@ -390,5 +424,26 @@ void VulkanWaitForFenceOnCpu(ElemFence fence)
 
 bool VulkanIsFenceCompleted(ElemFence fence)
 {
-    return false;
+    SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
+
+    auto commandQueueToWaitData = GetVulkanCommandQueueData(fence.CommandQueue);
+    auto commandQueueToWaitDataFull = GetVulkanCommandQueueDataFull(fence.CommandQueue);
+
+    if (!commandQueueToWaitData)
+    {
+        return true;
+    }
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandQueueToWaitData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    if (fence.FenceValue > commandQueueToWaitData->LastCompletedFenceValue) 
+    {
+        uint64_t semaphoreValue;
+        vkGetSemaphoreCounterValue(graphicsDeviceData->Device, commandQueueToWaitData->Fence, &semaphoreValue);
+
+        commandQueueToWaitData->LastCompletedFenceValue = SystemMax(commandQueueToWaitData->LastCompletedFenceValue, semaphoreValue);
+    }
+
+    return fence.FenceValue <= commandQueueToWaitData->LastCompletedFenceValue;
 }

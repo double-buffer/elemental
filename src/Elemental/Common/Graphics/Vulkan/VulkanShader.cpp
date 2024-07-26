@@ -52,31 +52,7 @@ ElemShaderLibrary VulkanCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, E
     SystemAssert(graphicsDeviceData);
 
     auto dataSpan = Span<uint8_t>(shaderLibraryData.Items, shaderLibraryData.Length); 
-    auto shaderCount = *(uint32_t*)dataSpan.Pointer;
-    dataSpan = dataSpan.Slice(sizeof(uint32_t));
-
-    // HACK: This is bad to allocate this here but this should be temporary
-    auto graphicsShaderData = SystemPushArray<VkShaderModule>(VulkanGraphicsMemoryArena, shaderCount);
-
-    for (uint32_t i = 0; i < shaderCount; i++)
-    {
-        auto size = *(uint32_t*)dataSpan.Pointer;
-        dataSpan = dataSpan.Slice(sizeof(uint32_t));
-
-        // TODO: Debug
-        auto dest = SystemPushArray<uint8_t>(VulkanGraphicsMemoryArena, size);
-        SystemCopyBuffer(dest, ReadOnlySpan<uint8_t>(dataSpan.Pointer, size));
-
-        VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-        createInfo.codeSize = (size_t)size;
-        createInfo.pCode = reinterpret_cast<const uint32_t*>(dataSpan.Pointer); // TODO: Get rid of the reinterpret_cast
-
-        VkShaderModule shaderModule = nullptr;
-        AssertIfFailed(vkCreateShaderModule(graphicsDeviceData->Device, &createInfo, 0, &shaderModule));
-
-        graphicsShaderData[i] = shaderModule;
-        dataSpan = dataSpan.Slice(size);
-    }
+    auto graphicsShaderData = ReadShaders(VulkanGraphicsMemoryArena, dataSpan);
 
     auto handle = SystemAddDataPoolItem(vulkanShaderLibraryPool, {
         .GraphicsShaders = graphicsShaderData

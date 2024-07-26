@@ -60,7 +60,17 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
 
     for (uint32_t i = 0; i < swapchainImageCount; i++)
     {
-        swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], swapChainDataFull->VulkanFormat, width, height, true);
+        ElemGraphicsResourceInfo resourceInfo = 
+        {
+            .Type = ElemGraphicsResourceType_Texture2D,
+            .Width = width,
+            .Height = height,
+            .MipLevels = 1,
+            .Format = swapChainData->Format,
+            .Usage = ElemGraphicsResourceUsage_RenderTarget
+        };
+
+        swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], &resourceInfo, true);
     }
 }
 
@@ -502,6 +512,7 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     AssertIfFailed(vkQueuePresentKHR(commandQueueData->DeviceObject, &presentInfo));
     
     VulkanResetCommandAllocation(swapChainData->GraphicsDevice);
+    VulkanProcessGraphicsResourceDeleteQueue();
     swapChainData->PresentId++;
 }
 
