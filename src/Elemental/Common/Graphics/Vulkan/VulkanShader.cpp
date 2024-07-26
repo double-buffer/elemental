@@ -67,21 +67,7 @@ ElemShaderLibrary VulkanCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, E
 
 void VulkanFreeShaderLibrary(ElemShaderLibrary shaderLibrary)
 {
-    SystemAssert(shaderLibrary != ELEM_HANDLE_NULL);
-
-    auto shaderLibraryData = GetVulkanShaderLibraryData(shaderLibrary);
-    SystemAssert(shaderLibraryData);
-
-    auto shaderLibraryDataFull = GetVulkanShaderLibraryDataFull(shaderLibrary);
-    SystemAssert(shaderLibraryDataFull);
-
-    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(shaderLibraryDataFull->GraphicsDevice);
-    SystemAssert(graphicsDeviceData);
-
-    for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
-    {
-        vkDestroyShaderModule(graphicsDeviceData->Device, shaderLibraryData->GraphicsShaders[i], nullptr);
-    }
+    // TODO: Free data
 }
 
 ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters)
@@ -106,15 +92,26 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
     uint32_t stagesCount = 2;
 
     VkPipelineShaderStageCreateInfo stages[3] = {};
+
+    VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+    moduleCreateInfo.pCode = (uint32_t*)shaderLibraryData->GraphicsShaders[0].ShaderCode.Pointer;
+    moduleCreateInfo.codeSize = shaderLibraryData->GraphicsShaders[0].ShaderCode.Length;
+
     stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stages[0].stage = VK_SHADER_STAGE_MESH_BIT_EXT;
-    stages[0].module = shaderLibraryData->GraphicsShaders[0];
+    //stages[0].module = shaderLibraryData->GraphicsShaders[0];
     stages[0].pName = parameters->MeshShaderFunction;
+    stages[0].pNext = &moduleCreateInfo;
+
+    VkShaderModuleCreateInfo moduleCreateInfo2 = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+    moduleCreateInfo2.pCode = (uint32_t*)shaderLibraryData->GraphicsShaders[1].ShaderCode.Pointer;
+    moduleCreateInfo2.codeSize = shaderLibraryData->GraphicsShaders[1].ShaderCode.Length;
 
     stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stages[1].module = shaderLibraryData->GraphicsShaders[1];
+    //stages[1].module = shaderLibraryData->GraphicsShaders[1];
     stages[1].pName = parameters->PixelShaderFunction;
+    stages[1].pNext = &moduleCreateInfo2;
     
     // TODO: Amplification shader 
     

@@ -412,6 +412,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_KHR_PRESENT_ID_EXTENSION_NAME,
         VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+        VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
         VK_EXT_MESH_SHADER_EXTENSION_NAME,
         VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME
     };
@@ -448,6 +449,9 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features13.synchronization2 = true;
     features13.dynamicRendering = true;
 
+    VkPhysicalDeviceMaintenance5FeaturesKHR maintenance5 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR };
+    maintenance5.maintenance5 = true;
+
     VkPhysicalDeviceMeshShaderFeaturesEXT meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
     meshFeatures.meshShader = true;
     meshFeatures.taskShader = true;
@@ -468,9 +472,10 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features13.pNext = &presentIdFeatures;
     presentIdFeatures.pNext = &presentWaitFeatures;
     presentWaitFeatures.pNext = &meshFeatures;
+    meshFeatures.pNext = &maintenance5;
 
     // TODO: Test Features
-    meshFeatures.pNext = &hostImageCopyFeatures;
+    maintenance5.pNext = &hostImageCopyFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
