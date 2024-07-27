@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include "VulkanCommandList.h"
 #include "Graphics/ShaderReader.h"
 #include "SystemSpan.h"
 #include "volk.h"
@@ -18,6 +19,7 @@ struct VulkanShaderLibraryDataFull
 struct VulkanPipelineStateData
 {
     VkPipeline PipelineState;
+    VulkanPipelineStateType PipelineStateType;
     ElemGraphicsDevice GraphicsDevice;
 };
 

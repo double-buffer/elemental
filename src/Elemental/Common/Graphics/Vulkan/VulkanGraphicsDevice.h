@@ -34,6 +34,7 @@ struct VulkanGraphicsDeviceDataFull
     uint32_t GpuMemoryTypeIndex;
     uint32_t GpuUploadMemoryTypeIndex;
     uint32_t ReadBackMemoryTypeIndex;
+    VkDescriptorSetLayout ResourceDescriptorSetLayout;
 };
 
 extern MemoryArena VulkanGraphicsMemoryArena;

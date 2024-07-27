@@ -10,6 +10,8 @@ void InitDirectXShaderCompiler()
 {
     if (!directXShaderCompilerLibrary.Handle)
     {
+        // BUG: For the moment we need to get rid of DXIL.dll in the windows SDK folder to load the correct
+        // dll on windows
         directXShaderCompilerLibrary = SystemLoadLibrary("dxcompiler");
 
         if (directXShaderCompilerLibrary.Handle != nullptr)
@@ -34,11 +36,6 @@ bool ProcessDirectXShaderCompilerLogOutput(MemoryArena memoryArena, ComPtr<IDxcR
         {
             auto currentLogType = ElemToolsMessageType_Information;
             auto line = SystemDuplicateBuffer(memoryArena, lines[i]);
-
-            if (line.Length == 0 || (targetGraphicsApi != ElemToolsGraphicsApi_DirectX12 && SystemFindSubString(line, "DXIL signing library") != -1))
-            {
-                continue;
-            }
 
             if (SystemFindSubString(line, "warning:") != -1)
             {
@@ -242,6 +239,13 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
             {
                 auto dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(dxilShaderType), targetGraphicsApi, functionDescription.Name, options);
    
+                auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
+
+                if (hasErrors)
+                {
+                    continue;
+                }
+
                 ComPtr<IDxcBlob> shaderByteCodeComPtr;
                 AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
 

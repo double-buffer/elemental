@@ -26,6 +26,11 @@ VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDeb
         messageType = ElemLogMessageType_Warning;
     }
 
+    if (SystemFindSubString(pMessage, "VK_EXT_mutable_descriptor_type") != -1)
+    {
+        return VK_FALSE;
+    }
+
     SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", pMessage);
 
     return VK_FALSE;
@@ -148,7 +153,7 @@ void InitVulkan()
     if (VulkanDebugLayerEnabled && isSdkInstalled)
     {
         VkDebugReportCallbackCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
-        debugCreateInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
+        debugCreateInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
         debugCreateInfo.pfnCallback = VulkanDebugReportCallback;
 
         AssertIfFailed(vkCreateDebugReportCallbackEXT(VulkanInstance, &debugCreateInfo, 0, &vulkanDebugCallback));
@@ -214,8 +219,14 @@ VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice
     return SystemGetDataPoolItemFull(vulkanGraphicsDevicePool, graphicsDevice);
 }
 
-VkPipelineLayout CreateVulkanPipelineLayout(VkDevice graphicsDevice)
+void CreateVulkanPipelineLayout(ElemGraphicsDevice graphicsDevice)
 {
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
+
     VkPipelineLayoutCreateInfo layoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	layoutCreateInfo.pSetLayouts = nullptr;
 	layoutCreateInfo.setLayoutCount = 0;
@@ -228,10 +239,45 @@ VkPipelineLayout CreateVulkanPipelineLayout(VkDevice graphicsDevice)
     layoutCreateInfo.pPushConstantRanges = &push_constant;
     layoutCreateInfo.pushConstantRangeCount = 1;
 
-    VkPipelineLayout pipelineLayout;
-	AssertIfFailed(vkCreatePipelineLayout(graphicsDevice, &layoutCreateInfo, 0, &pipelineLayout));
+    VkDescriptorType resourceDescriptorTypes[] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE }; 
 
-    return pipelineLayout;
+    VkMutableDescriptorTypeListEXT descriptorSetTypeList = 
+    { 
+        .pDescriptorTypes = resourceDescriptorTypes,
+        .descriptorTypeCount = ARRAYSIZE(resourceDescriptorTypes)
+    };
+
+    VkMutableDescriptorTypeCreateInfoEXT mutableDescriptorTypeCreateInfo = { VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT };
+    mutableDescriptorTypeCreateInfo.pMutableDescriptorTypeLists = &descriptorSetTypeList;
+    mutableDescriptorTypeCreateInfo.mutableDescriptorTypeListCount = 1;
+
+    VkDescriptorBindingFlags descriptorBindingFlags = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | 
+                                                      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | 
+                                                      VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfo descriptorBindingFlagsCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+	descriptorBindingFlagsCreateInfo.bindingCount = 1;
+	descriptorBindingFlagsCreateInfo.pBindingFlags = &descriptorBindingFlags;
+    descriptorBindingFlagsCreateInfo.pNext = &mutableDescriptorTypeCreateInfo;
+
+	VkDescriptorSetLayoutBinding descriptorBinding = {};
+	descriptorBinding.binding = 0;
+	descriptorBinding.descriptorType = VK_DESCRIPTOR_TYPE_MUTABLE_EXT;
+	descriptorBinding.descriptorCount = VULKAN_MAX_RESOURCES;
+	descriptorBinding.stageFlags = VK_SHADER_STAGE_ALL;
+
+	VkDescriptorSetLayoutCreateInfo descriptorSetCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+	descriptorSetCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+	descriptorSetCreateInfo.bindingCount = 1;
+	descriptorSetCreateInfo.pBindings = &descriptorBinding;
+	descriptorSetCreateInfo.pNext = &descriptorBindingFlagsCreateInfo;
+
+	AssertIfFailed(vkCreateDescriptorSetLayout(graphicsDeviceData->Device, &descriptorSetCreateInfo, 0, &graphicsDeviceDataFull->ResourceDescriptorSetLayout));
+
+    layoutCreateInfo.pSetLayouts = &graphicsDeviceDataFull->ResourceDescriptorSetLayout;
+    layoutCreateInfo.setLayoutCount = 1;
+
+	AssertIfFailed(vkCreatePipelineLayout(graphicsDeviceData->Device, &layoutCreateInfo, 0, &graphicsDeviceData->PipelineLayout));
 }
 
 void VulkanSetGraphicsOptions(const ElemGraphicsOptions* options)
@@ -414,7 +460,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
         VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
         VK_EXT_MESH_SHADER_EXTENSION_NAME,
-        VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME
+        VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME
     };
 
     createInfo.ppEnabledExtensionNames = extensions;
@@ -457,8 +503,8 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     meshFeatures.taskShader = true;
     meshFeatures.meshShaderQueries = true;
 
-    VkPhysicalDeviceHostImageCopyFeaturesEXT hostImageCopyFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT };
-    hostImageCopyFeatures.hostImageCopy = true;
+    VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT mutableDescriptorFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT };
+    mutableDescriptorFeatures.mutableDescriptorType = true;
 
     VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
     presentIdFeatures.presentId = true;
@@ -475,17 +521,14 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     meshFeatures.pNext = &maintenance5;
 
     // TODO: Test Features
-    maintenance5.pNext = &hostImageCopyFeatures;
+    maintenance5.pNext = &mutableDescriptorFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
     volkLoadDevice(device);
 
-    auto pipelineLayout = CreateVulkanPipelineLayout(device);
-
     auto handle = SystemAddDataPoolItem(vulkanGraphicsDevicePool, {
         .Device = device,
-        .PipelineLayout = pipelineLayout
     }); 
 
     SystemAddDataPoolItemFull(vulkanGraphicsDevicePool, handle, {
@@ -500,6 +543,8 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         .ReadBackMemoryTypeIndex = (uint32_t)readBackMemoryTypeIndex
     });
 
+    CreateVulkanPipelineLayout(handle);
+
     return handle;
 }
 
@@ -513,6 +558,7 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
+    vkDestroyDescriptorSetLayout(graphicsDeviceData->Device, graphicsDeviceDataFull->ResourceDescriptorSetLayout, nullptr);
     vkDestroyPipelineLayout(graphicsDeviceData->Device, graphicsDeviceData->PipelineLayout, nullptr);
     vkDestroyDevice(graphicsDeviceData->Device, nullptr);
         

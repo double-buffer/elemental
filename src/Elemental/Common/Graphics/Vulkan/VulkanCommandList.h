@@ -5,6 +5,12 @@
 #include "SystemSpan.h"
 #include "volk.h"
 
+enum VulkanPipelineStateType
+{
+    VulkanPipelineStateType_Graphics,
+    VulkanPipelineStateType_Compute
+};
+
 // TODO: Review data
 struct VulkanCommandQueueData
 {
@@ -32,6 +38,7 @@ struct VulkanCommandListData
     bool IsCommitted;
     CommandAllocatorPoolItem<VkCommandPool, VkCommandBuffer>* CommandAllocatorPoolItem;
     CommandListPoolItem<VkCommandBuffer>* CommandListPoolItem;
+    VulkanPipelineStateType PipelineStateType;
 };
 
 struct VulkanCommandListDataFull

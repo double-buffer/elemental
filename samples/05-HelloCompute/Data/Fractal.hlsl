@@ -89,10 +89,6 @@ float ComputeMandelbrotSet(float2 position)
 [numthreads(16, 16, 1)]
 void Fractal(uint3 threadId: SV_DispatchThreadID)
 {
-    // TODO: We need to find a way to do that in vulkan
-    // The solution for now will be to generate some compatibility code
-
-    #ifndef __spirv__
     RWTexture2D<float4> renderTexture = ResourceDescriptorHeap[parameters.RenderTextureIndex];
 
     // TODO: This is slower, pass the width and height!
@@ -117,5 +113,4 @@ void Fractal(uint3 threadId: SV_DispatchThreadID)
         
         renderTexture[threadId.xy] = float4(color, 1.0);
     }
-    #endif
 }

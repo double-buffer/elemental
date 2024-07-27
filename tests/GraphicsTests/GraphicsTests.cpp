@@ -139,6 +139,42 @@ ElemDataSpan ReadFile(const char* filename)
     };
 }
 
+const char* ReplaceShaderFilenameForVulkan(const char* original) 
+{
+    // Find the position of the dot in the original string
+    const char* dot = strrchr(original, '.');
+    if (!dot) {
+        // If no dot is found, return the original string
+        return original;
+    }
+
+    // Calculate lengths of different parts
+    size_t baseLength = dot - original;
+    size_t suffixLength = strlen(dot);
+    const char* appendStr = "_vulkan";
+    size_t appendStrLength = strlen(appendStr);
+
+    // Allocate memory for the new string
+    size_t newLength = baseLength + appendStrLength + suffixLength + 1;
+    char* newString = (char*)malloc(newLength);
+    if (!newString) {
+        // Handle memory allocation failure
+        return NULL;
+    }
+
+    // Copy the base part
+    strncpy(newString, original, baseLength);
+    newString[baseLength] = '\0'; // Null-terminate the base part
+
+    // Append the "_vulkan" string
+    strcat(newString, appendStr);
+
+    // Append the suffix part
+    strcat(newString, dot);
+
+    return newString;
+}
+
 void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
 {
     if (testPrintLogs)
@@ -233,7 +269,11 @@ void TestInitLog()
 
 ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader)
 {
-    // TODO: Vulkan shaders on windows
+    if (testForceVulkanApi)
+    {
+        shader = ReplaceShaderFilenameForVulkan(shader);
+    }
+
     auto shaderData = ReadFile(shader);
     return ElemCreateShaderLibrary(graphicsDevice, shaderData);
 }

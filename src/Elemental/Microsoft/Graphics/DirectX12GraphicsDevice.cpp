@@ -86,6 +86,9 @@ void InitDirectX12()
     }
 
     AssertIfFailed(CreateDXGIFactory2(dxgiCreateFactoryFlags, IID_PPV_ARGS(DxgiFactory.GetAddressOf())));
+
+    // HACK: Remove this when DXIL signing is fully open source!
+    AssertIfFailed(directX12DeviceFactory->EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, nullptr));
 }
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice)

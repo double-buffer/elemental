@@ -5,7 +5,7 @@
 // TODO: Validate dispatch thread group count
 // TODO: Cannot push constant before binding pso
 
-UTEST(Shader, CreateComputePipelineState) 
+UTEST(Shader, CompileComputePipelineState) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
@@ -30,7 +30,7 @@ UTEST(Shader, CreateComputePipelineState)
     ASSERT_NE(ELEM_HANDLE_NULL, pipelineState);
 }
 
-UTEST(Shader, CreateComputePipelineStateFunctionNotExist) 
+UTEST(Shader, CompileComputePipelineStateFunctionNotExist) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);

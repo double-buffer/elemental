@@ -1,18 +1,17 @@
 #=======================================================================
 # DirectX Shader Compiler
 #=======================================================================
-set(DXC_VERSION_OFFICIAL "v1.8.2405")
-set(DXC_VERSION_CUSTOM "v2024-06-11")
+set(DXC_VERSION_CUSTOM "v2024-07-27")
 
 add_library(dxc INTERFACE)
 
 if(WIN32)
-    get_github_release("microsoft/DirectXShaderCompiler" ${DXC_VERSION_OFFICIAL} "dxc_*.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/")
-    target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/inc/dxc/)
+    get_github_release("double-buffer/shader-compilers-bin" ${DXC_VERSION_CUSTOM} "windows_dxc_*_x64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/")
+    target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/include/dxc/)
 
     function(copy_dxc_to_target target)
         file(GLOB DXC_DLLS 
-             "${CMAKE_BINARY_DIR}/external/shader-compilers/dxc/bin/x64/*.dll")
+             "${CMAKE_BINARY_DIR}/external/shader-compilers/dxc/lib/*.dll")
         foreach(DLL ${DXC_DLLS})
             get_filename_component(DLL_NAME "${DLL}" NAME)
             add_custom_command(TARGET ${target} POST_BUILD
@@ -22,7 +21,7 @@ if(WIN32)
         endforeach()
     endfunction()
 elseif(LINUX)
-    get_github_release("microsoft/DirectXShaderCompiler" ${DXC_VERSION_OFFICIAL} "linux_dxc_*.x86_64.tar.gz" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/")
+    get_github_release("double-buffer/shader-compilers-bin" ${DXC_VERSION_CUSTOM} "linux_dxc_*_x64.zip" "${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/")
     target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/shader-compilers/dxc/include/dxc/)
     target_include_directories(dxc INTERFACE ./DirectX-Headers/include/directx/)
 

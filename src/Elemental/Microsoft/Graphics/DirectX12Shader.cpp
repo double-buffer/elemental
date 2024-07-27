@@ -77,11 +77,12 @@ D3D12_SHADER_BYTECODE GetDirectX12ShaderFunctionByteCode(DirectX12ShaderLibraryD
     for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
     {
         auto shader = shaderLibraryData->GraphicsShaders[i];
-        auto byteCodeData = D3D12_SHADER_BYTECODE { .pShaderBytecode = shader.ShaderCode.Pointer, .BytecodeLength = shader.ShaderCode.Length };
 
         if (shader.ShaderType == shaderType && SystemFindSubString(shader.Name, function) != -1)
         {
+            auto byteCodeData = D3D12_SHADER_BYTECODE { .pShaderBytecode = shader.ShaderCode.Pointer, .BytecodeLength = shader.ShaderCode.Length };
             result = byteCodeData;
+            break;
         }
     }
         
