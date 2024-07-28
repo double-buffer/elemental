@@ -1,6 +1,8 @@
 #include "VulkanShader.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
+#include "VulkanResource.h"
+#include "VulkanResourceBarrier.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -236,7 +238,7 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
     dynamicState.pDynamicStates = dynamicStates;
     createInfo.pDynamicState = &dynamicState;
 
-    VkFormat formats[] = {VK_FORMAT_B8G8R8A8_SRGB};
+    VkFormat formats[] = { ConvertToVulkanTextureFormat(parameters->TextureFormats.Items[0]) }; // TODO: Fill Correct Back Buffer Format 
 
     VkPipelineRenderingCreateInfo renderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
     renderingCreateInfo.colorAttachmentCount = 1; // TODO: Change that
@@ -328,14 +330,19 @@ void VulkanBindPipelineState(ElemCommandList commandList, ElemPipelineState pipe
     auto commandListData = GetVulkanCommandListData(commandList);
     SystemAssert(commandListData);
 
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
     auto pipelineStateData = GetVulkanPipelineStateData(pipelineState);
     SystemAssert(pipelineStateData);
 
     commandListData->PipelineStateType = pipelineStateData->PipelineStateType;
 
-    vkCmdBindPipeline(commandListData->DeviceObject, 
-                      (pipelineStateData->PipelineStateType == VulkanPipelineStateType_Graphics) ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, 
-                      pipelineStateData->PipelineState);
+    auto bindPoint = (pipelineStateData->PipelineStateType == VulkanPipelineStateType_Graphics) ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
+
+    VkDescriptorSet descriptorSets = { graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorSet };
+    vkCmdBindDescriptorSets(commandListData->DeviceObject, bindPoint, graphicsDeviceData->PipelineLayout, 0, 1, &descriptorSets, 0, nullptr);
+    vkCmdBindPipeline(commandListData->DeviceObject, bindPoint, pipelineStateData->PipelineState);
 }
 
 void VulkanPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data)
@@ -363,5 +370,6 @@ void VulkanDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCoun
         return;
     }
 
+    InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_Compute);
     vkCmdDispatch(commandListData->DeviceObject, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

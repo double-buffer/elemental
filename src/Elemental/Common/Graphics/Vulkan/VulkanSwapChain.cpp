@@ -502,8 +502,8 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     presentIdInfo.pPresentIds = &swapChainData->PresentId;
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-    presentInfo.waitSemaphoreCount = 0;
-    presentInfo.pWaitSemaphores = nullptr;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &commandQueueData->PresentSemaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &swapChainData->DeviceObject;
     presentInfo.pImageIndices = &swapChainData->CurrentImageIndex;

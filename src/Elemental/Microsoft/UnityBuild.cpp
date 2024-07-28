@@ -19,6 +19,7 @@
 #include "Graphics/Vulkan/VulkanCommandList.cpp"
 #include "Graphics/Vulkan/VulkanSwapChain.cpp"
 #include "Graphics/Vulkan/VulkanResource.cpp"
+#include "Graphics/Vulkan/VulkanResourceBarrier.cpp"
 #include "Graphics/Vulkan/VulkanShader.cpp"
 #include "Graphics/Vulkan/VulkanRendering.cpp"
 

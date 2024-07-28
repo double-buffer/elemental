@@ -22,7 +22,8 @@
       but it can be useful.
 
 - [ ] Does the after customization makes any sense? For before, it is useful when multiple executecommandlist but after
-      I don't have a scenario.
+      I don't have a scenario. One possible scenario for sync: To be able to control the sync point for render. (Mesh stage vs Pixel Stage)
+      For access and layout I don't know :')
 
 ## Examples
 

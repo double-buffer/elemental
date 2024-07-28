@@ -11,13 +11,22 @@
 #include "volk.h"
 
 #define VULKAN_MAX_DEVICES 10u
-#define VULKAN_MAX_RESOURCES 500000
+#define VULKAN_MAX_RESOURCES 400000
+
+struct VulkanDescriptorHeapStorage;
+
+struct VulkanDescriptorHeap
+{
+    VulkanDescriptorHeapStorage* Storage;
+};
 
 struct VulkanGraphicsDeviceData
 {
     VkDevice Device;
+    MemoryArena MemoryArena;
     VkPipelineLayout PipelineLayout;
     uint64_t CommandAllocationGeneration;
+    VulkanDescriptorHeap ResourceDescriptorHeap;
 };
 
 struct VulkanGraphicsDeviceDataFull
@@ -46,6 +55,9 @@ VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphic
 VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
 void VulkanSetGraphicsOptions(const ElemGraphicsOptions* options);
+
+uint32_t CreateVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap);
+void FreeVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap, uint32_t handle);
 
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices();
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);

@@ -3,6 +3,8 @@
 #include "Elemental.h"
 #include <initializer_list> 
 
+#define TESTLOG_LENGTH 4096
+
 #ifndef _WIN32
 #define MAX_PATH 255
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
@@ -111,7 +113,7 @@ struct TestBarrierCheck
 extern bool testPrintLogs;
 extern bool testForceVulkanApi;
 extern bool testHasLogErrors;
-extern char testErrorLogs[2048];
+extern char testErrorLogs[TESTLOG_LENGTH];
 extern uint32_t currentTestErrorLogsIndex;
 
 uint64_t TestMegaBytesToBytes(uint64_t value);

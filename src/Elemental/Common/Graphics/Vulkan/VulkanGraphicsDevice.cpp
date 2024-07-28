@@ -4,6 +4,20 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
+struct VulkanDescriptorHeapFreeListItem
+{
+    uint32_t Next;
+};
+
+struct VulkanDescriptorHeapStorage
+{
+    VkDescriptorPool DescriptorPool;
+    VkDescriptorSet DescriptorSet;
+    Span<VulkanDescriptorHeapFreeListItem> Items;
+    uint32_t CurrentIndex;
+    uint32_t FreeListIndex;
+};
+
 MemoryArena VulkanGraphicsMemoryArena;
 SystemDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull> vulkanGraphicsDevicePool;
 
@@ -186,6 +200,90 @@ ElemGraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(MemoryArena memoryArena
     };
 }
 
+VulkanDescriptorHeap CreateVulkanDescriptorHeap(VkDevice graphicsDevice, MemoryArena memoryArena, VkDescriptorSetLayout descriptorSetLayout, uint32_t length)
+{
+    VkDescriptorPoolSize poolSizes[]
+    {
+        {VK_DESCRIPTOR_TYPE_MUTABLE_EXT, length }
+    };
+
+    VkDescriptorPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+    createInfo.poolSizeCount = ARRAYSIZE(poolSizes);
+    createInfo.pPoolSizes = poolSizes;
+    createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    createInfo.maxSets = ARRAYSIZE(poolSizes);
+
+    VkDescriptorPool descriptorPool;
+    AssertIfFailed(vkCreateDescriptorPool(graphicsDevice, &createInfo, nullptr, &descriptorPool));
+
+    VkDescriptorSetVariableDescriptorCountAllocateInfo descriptorSetLayoutCount = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO };
+    descriptorSetLayoutCount.descriptorSetCount = 1;
+    descriptorSetLayoutCount.pDescriptorCounts = &length;
+    
+    VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+    allocateInfo.pSetLayouts = &descriptorSetLayout;
+    allocateInfo.descriptorSetCount = 1;
+    allocateInfo.descriptorPool = descriptorPool;
+    allocateInfo.pNext = &descriptorSetLayoutCount;
+
+    VkDescriptorSet descriptorSet;
+    AssertIfFailed(vkAllocateDescriptorSets(graphicsDevice, &allocateInfo, &descriptorSet));
+
+    auto descriptorStorage = SystemPushStruct<VulkanDescriptorHeapStorage>(memoryArena);
+    descriptorStorage->DescriptorPool = descriptorPool;
+    descriptorStorage->DescriptorSet = descriptorSet;
+    descriptorStorage->Items = SystemPushArray<VulkanDescriptorHeapFreeListItem>(memoryArena, length);
+    descriptorStorage->CurrentIndex = 0;
+    descriptorStorage->FreeListIndex = UINT32_MAX;
+
+    return
+    {
+        .Storage = descriptorStorage
+    };
+}
+
+void FreeVulkanDescriptorHeap(VkDevice device, VulkanDescriptorHeap descriptorHeap)
+{
+    SystemAssert(descriptorHeap.Storage);
+    vkDestroyDescriptorPool(device, descriptorHeap.Storage->DescriptorPool, nullptr);
+}
+
+uint32_t CreateVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap)
+{            
+    SystemAssert(descriptorHeap.Storage);
+
+    auto storage = descriptorHeap.Storage;
+    auto descriptorIndex = UINT32_MAX;
+
+    do
+    {
+        if (storage->FreeListIndex == UINT32_MAX)
+        {
+            descriptorIndex = UINT32_MAX;
+            break;
+        }
+        
+        descriptorIndex = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, descriptorIndex, storage->Items[storage->FreeListIndex].Next));
+
+    if (descriptorIndex == UINT32_MAX)
+    {
+        descriptorIndex = SystemAtomicAdd(storage->CurrentIndex, 1);
+    }
+
+    return descriptorIndex;
+}
+
+void FreeVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap, uint32_t handle)
+{
+    auto storage = descriptorHeap.Storage;
+
+    do
+    {
+        storage->Items[handle].Next = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, storage->FreeListIndex, handle));
+}
+
 bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
 {
     VkPhysicalDeviceFeatures deviceFeatures;
@@ -239,7 +337,7 @@ void CreateVulkanPipelineLayout(ElemGraphicsDevice graphicsDevice)
     layoutCreateInfo.pPushConstantRanges = &push_constant;
     layoutCreateInfo.pushConstantRangeCount = 1;
 
-    VkDescriptorType resourceDescriptorTypes[] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE }; 
+    VkDescriptorType resourceDescriptorTypes[] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }; 
 
     VkMutableDescriptorTypeListEXT descriptorSetTypeList = 
     { 
@@ -519,16 +617,17 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     presentIdFeatures.pNext = &presentWaitFeatures;
     presentWaitFeatures.pNext = &meshFeatures;
     meshFeatures.pNext = &maintenance5;
-
-    // TODO: Test Features
     maintenance5.pNext = &mutableDescriptorFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
     volkLoadDevice(device);
+    
+    auto memoryArena = SystemAllocateMemoryArena();
 
     auto handle = SystemAddDataPoolItem(vulkanGraphicsDevicePool, {
         .Device = device,
+        .MemoryArena = memoryArena
     }); 
 
     SystemAddDataPoolItemFull(vulkanGraphicsDevicePool, handle, {
@@ -544,6 +643,12 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     });
 
     CreateVulkanPipelineLayout(handle);
+    
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(handle);
+    auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(handle);
+
+    auto resourceDescriptorHeap = CreateVulkanDescriptorHeap(graphicsDeviceData->Device, memoryArena, graphicsDeviceDataFull->ResourceDescriptorSetLayout, VULKAN_MAX_RESOURCES);
+    graphicsDeviceData->ResourceDescriptorHeap = resourceDescriptorHeap;
 
     return handle;
 }
@@ -557,6 +662,8 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
+
+    FreeVulkanDescriptorHeap(graphicsDeviceData->Device, graphicsDeviceData->ResourceDescriptorHeap);
 
     vkDestroyDescriptorSetLayout(graphicsDeviceData->Device, graphicsDeviceDataFull->ResourceDescriptorSetLayout, nullptr);
     vkDestroyPipelineLayout(graphicsDeviceData->Device, graphicsDeviceData->PipelineLayout, nullptr);

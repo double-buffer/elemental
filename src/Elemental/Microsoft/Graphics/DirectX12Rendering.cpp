@@ -81,7 +81,6 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
                 break;
         }
 
-        // TODO: Group the barriers with a barrier system
         renderTargetDescList[i] =
         {
             .cpuDescriptor = textureData->RtvHandle,

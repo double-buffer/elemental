@@ -115,6 +115,11 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
     VkSemaphore fence;
     AssertIfFailed(vkCreateSemaphore(graphicsDeviceData->Device, &createInfo, NULL, &fence));
 
+    createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
+    VkSemaphore presentSemaphore;
+    AssertIfFailed(vkCreateSemaphore(graphicsDeviceData->Device, &createInfo, NULL, &presentSemaphore));
+
     if (VulkanDebugLayerEnabled && options && options->DebugName)
     {
         VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
@@ -135,6 +140,7 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
         .GraphicsDevice = graphicsDevice,
         .Fence = fence,
         .FenceValue = 0,
+        .PresentSemaphore = presentSemaphore,
         .LastCompletedFenceValue = 0,
     }); 
 
@@ -172,6 +178,7 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
     }
     // TODO: Free allocators and command buffers
 
+    vkDestroySemaphore(graphicsDeviceData->Device, commandQueueData->PresentSemaphore, nullptr);
     vkDestroySemaphore(graphicsDeviceData->Device, commandQueueData->Fence, nullptr);
     
     auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
@@ -269,6 +276,8 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
 
         AssertIfFailed(vkSetDebugUtilsObjectNameEXT(graphicsDeviceData->Device, &nameInfo)); 
     } 
+    
+    auto resourceBarrierPool = CreateResourceBarrierPool(VulkanGraphicsMemoryArena);
 
     VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -278,8 +287,10 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
     auto handle = SystemAddDataPoolItem(vulkanCommandListPool, {
         .DeviceObject = commandListPoolItem->CommandList,
         .GraphicsDevice = commandQueueData->GraphicsDevice,
+        .CommandQueue = commandQueue,
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
-        .CommandListPoolItem = commandListPoolItem
+        .CommandListPoolItem = commandListPoolItem,
+        .ResourceBarrierPool = resourceBarrierPool
     }); 
 
     SystemAddDataPoolItemFull(vulkanCommandListPool, handle, {
@@ -349,17 +360,29 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
 
     if (!hasError)
     {
+        uint32_t signalCount = 1u;
+
+        if (commandQueueData->SignalPresentSemaphore)
+        {
+            signalCount = 2u;
+            commandQueueData->SignalPresentSemaphore = false;
+        }
+
+        uint64_t signalValues[] = { fenceValue, 0u };
+
         VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
         //timelineInfo.waitSemaphoreValueCount = (uint32_t)fenceToWaitCount;
         //timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
-        timelineInfo.signalSemaphoreValueCount = 1;
-        timelineInfo.pSignalSemaphoreValues = &fenceValue;
+        timelineInfo.signalSemaphoreValueCount = signalCount;
+        timelineInfo.pSignalSemaphoreValues = signalValues;
+
+        VkSemaphore signalSemaphores[] = { commandQueueData->Fence, commandQueueData->PresentSemaphore };
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         //submitInfo.waitSemaphoreCount = (uint32_t)fenceToWaitCount;
         //submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &commandQueueData->Fence;
+        submitInfo.signalSemaphoreCount = signalCount;
+        submitInfo.pSignalSemaphores = signalSemaphores;
         submitInfo.commandBufferCount = (uint32_t)commandLists.Length;
         submitInfo.pCommandBuffers = vulkanCommandBuffers.Pointer;
         //submitInfo.pWaitDstStageMask = submitStageMasks;
@@ -383,6 +406,7 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
 
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
+        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
         // TODO: Release VkCommandBuffer?
         SystemRemoveDataPoolItem(vulkanCommandListPool, commandLists.Items[i]);

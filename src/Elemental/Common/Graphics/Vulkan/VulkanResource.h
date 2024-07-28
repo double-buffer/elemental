@@ -10,11 +10,13 @@ struct VulkanGraphicsHeapData
     ElemGraphicsDevice GraphicsDevice;
 };
 
+// TODO: Review data usage!
 struct VulkanGraphicsResourceData
 {
     VkBuffer BufferDeviceObject;
     VkImage TextureDeviceObject;
     ElemGraphicsResourceType Type;
+    VkImageView RenderTargetImageView;
     VkFormat Format;
     ElemGraphicsFormat InternalFormat;
     bool IsPresentTexture;
@@ -37,6 +39,7 @@ VulkanGraphicsHeapData* GetVulkanGraphicsHeapData(ElemGraphicsHeap graphicsHeap)
 VulkanGraphicsResourceData* GetVulkanGraphicsResourceData(ElemGraphicsResource resource);
 VulkanGraphicsResourceDataFull* GetVulkanGraphicsResourceDataFull(ElemGraphicsResource resource);
 
+VkFormat ConvertToVulkanTextureFormat(ElemGraphicsFormat format);
 ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, const ElemGraphicsResourceInfo* resourceInfo, bool isPresentTexture);
 
 ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);

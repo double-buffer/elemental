@@ -6,14 +6,14 @@ bool testPrintLogs = true;
 bool testForceVulkanApi = false;
 
 bool workingTestHasLogErrors = false;
-char workingTestErrorLogs[2048];
+char workingTestErrorLogs[TESTLOG_LENGTH];
 uint32_t currentTestErrorLogsIndex;
 
-char testDebugLogs[2048];
+char testDebugLogs[TESTLOG_LENGTH];
 uint32_t currentTestDebugLogsIndex = 0;
 
 bool testHasLogErrors = false;
-char testErrorLogs[2048];
+char testErrorLogs[TESTLOG_LENGTH];
 
 uint64_t TestMegaBytesToBytes(uint64_t value)
 {
@@ -233,17 +233,17 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
         workingTestHasLogErrors = true;
 
         char* logCopyDestination = workingTestErrorLogs + currentTestErrorLogsIndex;
-        CopyString(logCopyDestination, 2048 - currentTestErrorLogsIndex, message, strlen(message) + 1);
+        CopyString(logCopyDestination, TESTLOG_LENGTH - currentTestErrorLogsIndex, message, strlen(message) + 1);
         currentTestErrorLogsIndex += strlen(message);
     }
     else if (messageType == ElemLogMessageType_Debug)
     {
-        char tmpMessage[2048];
-        snprintf(tmpMessage, 2048, "%s\n", message);
+        char tmpMessage[TESTLOG_LENGTH];
+        snprintf(tmpMessage, TESTLOG_LENGTH, "%s\n", message);
         auto tmpMessageLength = strlen(tmpMessage);
         
         char* logCopyDestination = testDebugLogs + currentTestDebugLogsIndex;
-        CopyString(logCopyDestination, 2048 - currentTestDebugLogsIndex, tmpMessage, tmpMessageLength + 1);
+        CopyString(logCopyDestination, TESTLOG_LENGTH - currentTestDebugLogsIndex, tmpMessage, tmpMessageLength + 1);
         currentTestDebugLogsIndex += tmpMessageLength;
     }
 }
@@ -259,7 +259,7 @@ void TestInitLog()
     testHasLogErrors = workingTestHasLogErrors;
 
     char* logCopyDestination = testErrorLogs;
-    CopyString(logCopyDestination, 2048, workingTestErrorLogs, strlen(workingTestErrorLogs) + 1);
+    CopyString(logCopyDestination, TESTLOG_LENGTH, workingTestErrorLogs, strlen(workingTestErrorLogs) + 1);
     currentTestErrorLogsIndex += strlen(workingTestErrorLogs);
 
     workingTestHasLogErrors = false;

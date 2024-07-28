@@ -66,7 +66,7 @@ ReadOnlySpan<char> ResourceBarrierLayoutTypeToString(MemoryArena memoryArena, El
         case ElemGraphicsResourceBarrierLayoutType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
         case ElemGraphicsResourceBarrierLayoutType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
         case ElemGraphicsResourceBarrierLayoutType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
-        case ElemGraphicsResourceBarrierLayoutType_Present: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
+        case ElemGraphicsResourceBarrierLayoutType_Present: return SystemDuplicateBuffer<char>(memoryArena, "Present");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Undefined"); 
     }
 }

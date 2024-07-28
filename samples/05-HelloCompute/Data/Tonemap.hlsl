@@ -57,10 +57,6 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
 [shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
-    #ifndef __spirv__
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[parameters.RenderTextureIndex];
     return renderTexture.Load(int3(input.Position.xy, 0));
-    #endif
-
-    return float4(0.0, 1.0, 0.0, 1.0);
 }

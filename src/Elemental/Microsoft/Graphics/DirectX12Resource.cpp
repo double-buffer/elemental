@@ -646,12 +646,8 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
         graphicsDeviceData->Device->CreateUnorderedAccessView(resourceData->DeviceObject.Get(), nullptr, &uavViewDesc, descriptorHandle);
     }
 
-    // TODO: Error message if combinasions
-    
     auto index = ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
 
-    // BUG: Because we have 2 separate descriptor heaps the index is not correct here
-    // We need to find another way to map that
     directX12ResourceDescriptorInfos[index].Resource = resource;
     directX12ResourceDescriptorInfos[index].Usage = usage;
 

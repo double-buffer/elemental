@@ -534,7 +534,7 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_WriteWithTexture2DWrite)
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Write, nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_UNORM, ElemGraphicsResourceUsage_Write, nullptr);
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act

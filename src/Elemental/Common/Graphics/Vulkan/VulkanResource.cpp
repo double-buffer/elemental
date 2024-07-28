@@ -10,12 +10,19 @@
 SystemDataPool<VulkanGraphicsHeapData, SystemDataPoolDefaultFull> vulkanGraphicsHeapPool;
 SystemDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull> vulkanGraphicsResourcePool;
 
+// TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
+Span<ElemGraphicsResourceDescriptorInfo> vulkanResourceDescriptorInfos;
+// TODO: To refactor 
+Span<VkImageView> vulkanResourceDescriptorImageViews;
+
 void InitVulkanResourceMemory()
 {
     if (!vulkanGraphicsHeapPool.Storage)
     {
         vulkanGraphicsHeapPool = SystemCreateDataPool<VulkanGraphicsHeapData, SystemDataPoolDefaultFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_GRAPHICSHEAP);
         vulkanGraphicsResourcePool = SystemCreateDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
+        vulkanResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
+        vulkanResourceDescriptorImageViews = SystemPushArray<VkImageView>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
     }
 }
 
@@ -82,15 +89,35 @@ ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphics
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
+    auto vulkanTextureFormat = ConvertToVulkanTextureFormat(resourceInfo->Format);
+    
+    VkImageView renderTargetImageView = {};
+
+    if (resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget)
+    {
+        VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        createInfo.image = resource;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = vulkanTextureFormat;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        createInfo.subresourceRange.layerCount = 1;
+
+        AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &renderTargetImageView));
+    }
+
     auto handle = SystemAddDataPoolItem(vulkanGraphicsResourcePool, {
         .TextureDeviceObject = resource,
         .Type = ElemGraphicsResourceType_Texture2D,
-        .Format = ConvertToVulkanTextureFormat(resourceInfo->Format),
+        .RenderTargetImageView = renderTargetImageView,
+        .Format = vulkanTextureFormat,
         .InternalFormat = resourceInfo->Format,
         .IsPresentTexture = isPresentTexture,
         .Width = resourceInfo->Width,
         .Height = resourceInfo->Height,
-        .MipLevels = resourceInfo->MipLevels
+        .MipLevels = resourceInfo->MipLevels,
+        .Usage = resourceInfo->Usage
     }); 
 
     SystemAddDataPoolItemFull(vulkanGraphicsResourcePool, handle, {
@@ -147,12 +174,7 @@ VkBuffer CreateVulkanBuffer(ElemGraphicsDevice graphicsDevice, const ElemGraphic
 
     VkBufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     createInfo.size = resourceInfo->Width;
-    createInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    if (resourceInfo->Usage & ElemGraphicsResourceUsage_Write)
-    {
-        createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    }
+    createInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
     VkBuffer buffer;
     AssertIfFailed(vkCreateBuffer(graphicsDeviceData->Device, &createInfo, nullptr, &buffer));
@@ -397,8 +419,13 @@ void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGra
         {
             vkDestroyBuffer(graphicsDeviceData->Device, resourceData->BufferDeviceObject, nullptr);
         }
+    
+        if (resourceData->Usage & ElemGraphicsResourceUsage_RenderTarget)
+        {
+            vkDestroyImageView(graphicsDeviceData->Device, resourceData->RenderTargetImageView, nullptr);
+        }
 
-        if (resourceData->TextureDeviceObject)
+        if (resourceData->TextureDeviceObject && !resourceData->IsPresentTexture)
         {
             vkDestroyImage(graphicsDeviceData->Device, resourceData->TextureDeviceObject, nullptr);
         }
@@ -463,36 +490,140 @@ ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 
 ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
-/*    VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    createInfo.image = resource;
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = format;
-    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
-    createInfo.subresourceRange.layerCount = 1;
+    SystemAssert(resource != ELEM_HANDLE_NULL);
 
-    VkImageView imageView;
-    AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &imageView));*/
-    return {};
+    auto resourceData = GetVulkanGraphicsResourceData(resource);
+    SystemAssert(resourceData);
+
+    auto resourceUsage = resourceData->Usage;
+
+    if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        if (usage == ElemGraphicsResourceDescriptorUsage_Write && (resourceUsage & ElemGraphicsResourceUsage_Write) == 0)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with texture created with write usage.");
+            return -1;
+        }
+    }
+    else
+    {
+        if (usage == ElemGraphicsResourceDescriptorUsage_Write && (resourceUsage & ElemGraphicsResourceUsage_Write) == 0)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor write only works with buffer created with write usage.");
+            return -1;
+        }
+    }
+
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
+    SystemAssert(resourceDataFull);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto textureMipIndex = 0u;
+
+    if (options)
+    {
+        textureMipIndex = options->TextureMipIndex;
+    }
+
+    auto descriptorHeap = graphicsDeviceData->ResourceDescriptorHeap;
+    auto descriptorHandle = CreateVulkanDescriptorHandle(descriptorHeap);
+
+    VkWriteDescriptorSet descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+    descriptor.dstSet = descriptorHeap.Storage->DescriptorSet;
+    descriptor.dstBinding = 0;
+    descriptor.dstArrayElement = descriptorHandle;
+    descriptor.descriptorCount = 1;
+
+    if (resourceData->Type == ElemGraphicsResourceType_Buffer)
+    {
+        VkDescriptorBufferInfo bufferInfo = {};
+        bufferInfo.buffer = resourceData->BufferDeviceObject;
+        bufferInfo.range = resourceData->Width;
+
+        descriptor.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptor.pBufferInfo = &bufferInfo;
+    }
+    else
+    {
+        VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        createInfo.image = resourceData->TextureDeviceObject;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = resourceData->Format;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = textureMipIndex;
+        createInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkImageView imageView;
+        AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &imageView));
+
+        VkDescriptorImageInfo imageInfo = {};
+        imageInfo.imageView = imageView;
+        imageInfo.imageLayout = (usage == ElemGraphicsResourceDescriptorUsage_Read) ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+
+        descriptor.descriptorType = (usage == ElemGraphicsResourceDescriptorUsage_Read) ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        descriptor.pImageInfo = &imageInfo;
+    
+        vulkanResourceDescriptorImageViews[descriptorHandle] = imageView;
+    }
+
+    vkUpdateDescriptorSets(graphicsDeviceData->Device, 1, &descriptor, 0, nullptr);
+
+    vulkanResourceDescriptorInfos[descriptorHandle].Resource = resource;
+    vulkanResourceDescriptorInfos[descriptorHandle].Usage = usage;
+
+    return descriptorHandle;
 }
 
 ElemGraphicsResourceDescriptorInfo VulkanGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor)
 {
-    return {};
+    if (descriptor == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor is invalid.");
+        return {};
+    }
+
+    return vulkanResourceDescriptorInfos[descriptor];
 }
 
 void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
 {
-    //vkDestroyImageView(graphicsDeviceData->Device, resourceData->ImageView, nullptr);
+    if (descriptor == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Resource Descriptor is invalid.");
+        return;
+    }
+
+    if (options && options->FencesToWait.Length > 0)
+    {
+        EnqueueResourceDeleteEntry(VulkanGraphicsMemoryArena, descriptor, ResourceDeleteType_Descriptor, options->FencesToWait);
+        return;
+    }
+
+    if (vulkanResourceDescriptorInfos[descriptor].Resource != ELEM_HANDLE_NULL)
+    {
+        auto resourceData = GetVulkanGraphicsResourceData(vulkanResourceDescriptorInfos[descriptor].Resource);
+        SystemAssert(resourceData);
+
+        auto resourceDataFull = GetVulkanGraphicsResourceDataFull(vulkanResourceDescriptorInfos[descriptor].Resource);
+        SystemAssert(resourceDataFull);
+
+        if (resourceData->Type != ElemGraphicsResourceType_Buffer)
+        {
+            auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
+            SystemAssert(graphicsDeviceData);
+
+            vkDestroyImageView(graphicsDeviceData->Device, vulkanResourceDescriptorImageViews[descriptor], nullptr);
+            vulkanResourceDescriptorImageViews[descriptor] = {};
+        }
+    }
+
+    vulkanResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 
 void VulkanProcessGraphicsResourceDeleteQueue()
 {
     ProcessResourceDeleteQueue();
-}
-
-// TODO: To move to separate file!!!
-void VulkanGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options)
-{
 }
