@@ -475,7 +475,7 @@ void MetalDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCount
 
     SystemAssert(commandListData->CommandEncoder);
     
-    InsertMetalResourceBarriersIfNeeded(commandList, SyncType_Compute);
+    InsertMetalResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_Compute);
 
     auto pipelineStateData = GetMetalPipelineStateData(commandListData->PipelineState);
     SystemAssert(pipelineStateData);

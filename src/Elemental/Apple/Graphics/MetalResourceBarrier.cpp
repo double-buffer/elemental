@@ -4,7 +4,7 @@
 #include "MetalCommandList.h"
 #include "SystemFunctions.h"
 
-void InsertMetalResourceBarriersIfNeeded(ElemCommandList commandList, ResourceBarrierSyncType currentStage)
+void InsertMetalResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraphicsResourceBarrierSyncType currentStage)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
@@ -100,8 +100,8 @@ void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResou
     {
         .Type = resourceInfo.Type,
         .Resource = descriptorInfo.Resource,
-        .AccessAfter = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? AccessType_Write : AccessType_Read,
-        .LayoutAfter = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? LayoutType_Write : LayoutType_Read
+        .AfterAccess = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierAccessType_Write : ElemGraphicsResourceBarrierAccessType_Read,
+        .AfterLayout = (descriptorInfo.Usage & ElemGraphicsResourceDescriptorUsage_Write) ? ElemGraphicsResourceBarrierLayoutType_Write : ElemGraphicsResourceBarrierLayoutType_Read
         // TODO: Options
     };
 
