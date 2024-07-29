@@ -1,5 +1,35 @@
 namespace Elemental;
 
+internal class InitApplicationHandler<T> where T : unmanaged
+{
+    public static ApplicationHandler<T>? _interceptorEntry;
+
+    public static void Interceptor(ref T payload)
+    {
+        if (_interceptorEntry == null)
+        {
+            return;
+        }
+
+        _interceptorEntry(ref payload);
+    }
+}
+
+internal static class FreeApplicationHandler<T> where T : unmanaged
+{
+    public static ApplicationHandler<T>? _interceptorEntry;
+
+    public static void Interceptor(ref T payload)
+    {
+        if (_interceptorEntry == null)
+        {
+            return;
+        }
+
+        _interceptorEntry(ref payload);
+    }
+}
+
 /// <summary>
 /// Holds parameters for running an application, including initialization and cleanup routines.
 /// </summary>
@@ -34,6 +64,6 @@ internal unsafe struct RunApplicationParametersUnsafe
 
     public nint FreeHandler { get; set; }
 
-    public nint Payload;
+    public nint Payload { get; set; }
 }
 
