@@ -2,6 +2,8 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
+// TODO: Implement commit memory for big data pools
+
 #define SYSTEM_DATAPOOL_INDEX_EMPTY UINT32_MAX
 
 template<typename T>

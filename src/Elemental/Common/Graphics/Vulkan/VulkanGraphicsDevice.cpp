@@ -553,9 +553,9 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
 
     const char* extensions[] =
     {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_PRESENT_ID_EXTENSION_NAME,
-        VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME, // TODO: To review
+        VK_KHR_PRESENT_ID_EXTENSION_NAME, // TODO: To review
+        VK_KHR_PRESENT_WAIT_EXTENSION_NAME, // TODO: To review
         VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
         VK_EXT_MESH_SHADER_EXTENSION_NAME,
         VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME
