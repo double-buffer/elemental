@@ -15,54 +15,21 @@
 
 typedef struct
 {
-    float TranslateLeft;
-    float TranslateRight;
-    float TranslateUp;
-    float TranslateDown;
-    float RotateSideLeft;
-    float RotateSideRight;
-    float ZoomIn;
-    float ZoomOut;
-
-    float Touch;
-    float TouchReleased;
-    float TouchTranslateLeft;
-    float TouchTranslateRight;
-    float TouchTranslateUp;
-    float TouchTranslateDown;
-    float TouchPositionX;
-    float TouchPositionY;
-
-    float Touch2;
-    float Touch2PositionX;
-    float Touch2PositionY;
-    
-    float TouchRotateSide;
-    float TriangleColor;
-    float ShowCursor;
-    float ExitApp;
-} InputActions;
-
-typedef struct
-{
     uint32_t RenderTextureIndex;
-    uint32_t TriangeColor;
     float Zoom;
-    float FractalAnimation;
-    Matrix3x3 Transform;
+    uint32_t Padding[2];
+    SampleMatrix3x3 Transform;
 } ShaderParameters;
 
 typedef struct
 {
-    Vector2 TranslationDelta;
+    SampleVector2 TranslationDelta;
     float RotationDelta;
-    Vector2 RotationTouch;
-    Vector2 CurrentTranslationSpeed;
+    SampleVector2 RotationTouch;
+    SampleVector2 CurrentTranslationSpeed;
     float PreviousTouchDistance;
     float PreviousTouchAngle;
     float Zoom;
-    float FractalAnimation;
-    float FractalAnimationDirection;
 } GameState;
 
 // TODO: Group common variables into separate structs
@@ -82,63 +49,12 @@ typedef struct
     ElemPipelineState GraphicsPipeline;
     ElemPipelineState ComputePipeline;
     ShaderParameters ShaderParameters;
-    InputActions InputActions;
-    InputActionBindingSpan InputActionBindings;
+    SampleStandardInputActions InputActions;
+    SampleInputActionBindingSpan InputActionBindings;
     GameState GameState;
 } ApplicationPayload;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
-
-void RegisterInputBindings(ApplicationPayload* applicationPayload)
-{
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyD, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyW, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateUp);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyS, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateDown);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyQ, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyE, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyZ, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyX, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeySpacebar, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyF1, 0, InputActionBindingType_ReleasedSwitch, &applicationPayload->InputActions.ShowCursor);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_KeyEscape, 0, InputActionBindingType_Released, &applicationPayload->InputActions.ExitApp);
-
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.Touch);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseLeftButton, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseLeftButton, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseRightButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchRotateSide);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateUp);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseAxisYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateDown);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseWheelPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseWheelNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_MouseMiddleButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
-
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_GamepadLeftStickXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_GamepadLeftStickXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_GamepadLeftStickYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateUp);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_GamepadLeftStickYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TranslateDown);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_GamepadLeftStickButton, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputID_GamepadLeftTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputID_GamepadRightTrigger, 0, InputActionBindingType_Value, &applicationPayload->InputActions.RotateSideRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputID_GamepadLeftShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomOut);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputID_GamepadRightShoulder, 0, InputActionBindingType_Value, &applicationPayload->InputActions.ZoomIn);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputID_GamepadButtonA, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TriangleColor);
-
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_Touch, 0, InputActionBindingType_Value, &applicationPayload->InputActions.Touch);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchXNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateLeft);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchXPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateRight);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchYNegative, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateUp);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchYPositive, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchTranslateDown);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchXAbsolutePosition, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchPositionX);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchYAbsolutePosition, 0, InputActionBindingType_Value, &applicationPayload->InputActions.TouchPositionY);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_Touch, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchXAbsolutePosition, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2PositionX);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_TouchYAbsolutePosition, 1, InputActionBindingType_Value, &applicationPayload->InputActions.Touch2PositionY);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_Touch, 0, InputActionBindingType_Released, &applicationPayload->InputActions.TouchReleased);
-    SampleRegisterInputActionBinding(&applicationPayload->InputActionBindings, ElemInputId_Touch, 0, InputActionBindingType_DoubleReleasedSwitch, &applicationPayload->InputActions.TriangleColor);
-}
 
 // NOTE: Here we can reuse memory and delete resources directly because we use the default latency for the swapchain that
 // is set to 1. So it means the GPU is not using the resources while this code is executed.
@@ -148,13 +64,10 @@ void CreateRenderTexture(ApplicationPayload* applicationPayload, uint32_t width,
 {
     if (applicationPayload->RenderTexture != ELEM_HANDLE_NULL)
     {
-        // TODO: Can we provide an utility function for spans?
-        ElemFreeGraphicsResource(applicationPayload->RenderTexture, &(ElemFreeGraphicsResourceOptions) { 
-            .FencesToWait = (ElemFenceSpan) { .Items = (ElemFence[]){ applicationPayload->LastExecutionFence }, .Length = 1 } 
-        });
-
         ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureReadDescriptor, NULL);
         ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTextureWriteDescriptor, NULL);
+
+        ElemFreeGraphicsResource(applicationPayload->RenderTexture, NULL);
     }
 
     printf("Creating render texture...\n");
@@ -210,13 +123,12 @@ void InitSample(void* payload)
 
     ElemFreeShaderLibrary(shaderLibrary);
 
-    applicationPayload->ShaderParameters.Transform = CreateIdentityMatrix();
+    applicationPayload->ShaderParameters.Transform = SampleCreateIdentityMatrix();
     applicationPayload->InputActions.ShowCursor = true;
     applicationPayload->GameState.Zoom = 1.0f;
     applicationPayload->GameState.RotationDelta = 0.0f;
-    applicationPayload->GameState.FractalAnimationDirection = 1.0f;
 
-    RegisterInputBindings(applicationPayload);
+    SampleRegisterStandardInputBindings(&applicationPayload->InputActionBindings, &applicationPayload->InputActions);
     
     SampleStartFrameMeasurement();
 }
@@ -245,7 +157,7 @@ void ResetTouchParameters(GameState* gameState)
     gameState->PreviousTouchAngle = 0.0f;   
 }
 
-void UpdateGameState(GameState* gameState, InputActions* inputActions, float deltaTimeInSeconds)
+void UpdateGameState(GameState* gameState, SampleStandardInputActions* inputActions, float deltaTimeInSeconds)
 {
     gameState->TranslationDelta = V2Zero; 
 
@@ -256,11 +168,11 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
     {
         if (inputActions->Touch2)
         {
-            Vector2 touchPosition = (Vector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
-            Vector2 touchPosition2 = (Vector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
+            SampleVector2 touchPosition = (SampleVector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
+            SampleVector2 touchPosition2 = (SampleVector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
 
-            Vector2 diffVector = SubstractV2(touchPosition, touchPosition2);
-            float distance = MagnitudeV2(diffVector);
+            SampleVector2 diffVector = SampleSubstractV2(touchPosition, touchPosition2);
+            float distance = SampleMagnitudeV2(diffVector);
             float angle = atan2(diffVector.X, diffVector.Y);
 
             if (gameState->PreviousTouchDistance != 0.0f)
@@ -270,7 +182,7 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
 
             if (gameState->PreviousTouchAngle != 0.0f)
             {
-                rotationDeltaZ = -NormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
+                rotationDeltaZ = -SampleNormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
             }
 
             gameState->PreviousTouchDistance = distance;
@@ -298,20 +210,20 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
     }
     else
     {
-        Vector2 direction = NormalizeV2((Vector2) 
+        SampleVector2 direction = SampleNormalizeV2((SampleVector2) 
         { 
             .X = (inputActions->TranslateRight - inputActions->TranslateLeft),
             .Y = (inputActions->TranslateDown - inputActions->TranslateUp),
         });
 
-        if (MagnitudeSquaredV2(direction))
+        if (SampleMagnitudeSquaredV2(direction))
         {
-            Vector2 acceleration = AddV2(MulScalarV2(direction, ROTATION_ACCELERATION), MulScalarV2(InverseV2(gameState->CurrentTranslationSpeed), ROTATION_FRICTION));
+            SampleVector2 acceleration = SampleAddV2(SampleMulScalarV2(direction, ROTATION_ACCELERATION), SampleMulScalarV2(SampleInverseV2(gameState->CurrentTranslationSpeed), ROTATION_FRICTION));
 
             ResetTouchParameters(gameState);
 
-            gameState->TranslationDelta = AddV2(MulScalarV2(acceleration, 0.5f * pow2f(deltaTimeInSeconds)), MulScalarV2(gameState->CurrentTranslationSpeed, deltaTimeInSeconds));
-            gameState->CurrentTranslationSpeed = AddV2(MulScalarV2(acceleration, deltaTimeInSeconds), gameState->CurrentTranslationSpeed);
+            gameState->TranslationDelta = SampleAddV2(SampleMulScalarV2(acceleration, 0.5f * SamplePow2f(deltaTimeInSeconds)), SampleMulScalarV2(gameState->CurrentTranslationSpeed, deltaTimeInSeconds));
+            gameState->CurrentTranslationSpeed = SampleAddV2(SampleMulScalarV2(acceleration, deltaTimeInSeconds), gameState->CurrentTranslationSpeed);
         }
 
         rotationDeltaZ = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 1 * deltaTimeInSeconds;
@@ -330,19 +242,8 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
         }
     }
 
-    gameState->TranslationDelta = MulScalarV2(gameState->TranslationDelta, gameState->Zoom);
+    gameState->TranslationDelta = SampleMulScalarV2(gameState->TranslationDelta, gameState->Zoom);
     gameState->RotationDelta = rotationDeltaZ;
-
-    gameState->FractalAnimation += 0.00001f * deltaTimeInSeconds * gameState->FractalAnimationDirection;
-
-    if (gameState->FractalAnimation > 0.05f)
-    {
-        gameState->FractalAnimationDirection = -1.0f;
-    }
-    else if (gameState->FractalAnimation < 0.0f)
-    {
-        gameState->FractalAnimationDirection = 1.0f;
-    }
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
@@ -356,7 +257,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     applicationPayload->ShaderParameters.RenderTextureIndex = applicationPayload->RenderTextureWriteDescriptor;
 
-    InputActions* inputActions = &applicationPayload->InputActions;
+    SampleStandardInputActions* inputActions = &applicationPayload->InputActions;
     SampleUpdateInputActions(&applicationPayload->InputActionBindings);
 
     if (inputActions->ExitApp)
@@ -376,12 +277,10 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     GameState* gameState = &applicationPayload->GameState;
     UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
 
-    Matrix3x3 transformMatrix = MulMatrix3x3(CreateTranslationMatrix(gameState->TranslationDelta.X, gameState->TranslationDelta.Y), CreateRotationMatrix(gameState->RotationDelta));
+    SampleMatrix3x3 transformMatrix = SampleMulMatrix3x3(SampleCreateTranslationMatrix(gameState->TranslationDelta.X, gameState->TranslationDelta.Y), SampleCreateRotationMatrix(gameState->RotationDelta));
 
-    applicationPayload->ShaderParameters.Transform = MulMatrix3x3(applicationPayload->ShaderParameters.Transform, transformMatrix);
+    applicationPayload->ShaderParameters.Transform = SampleMulMatrix3x3(applicationPayload->ShaderParameters.Transform, transformMatrix);
     applicationPayload->ShaderParameters.Zoom = gameState->Zoom;
-    applicationPayload->ShaderParameters.TriangeColor = inputActions->TriangleColor;
-    applicationPayload->ShaderParameters.FractalAnimation = gameState->FractalAnimation;
 
     // TODO: Do an example with another compute queue to demonstrate fences?
 

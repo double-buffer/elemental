@@ -525,6 +525,11 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWriteWithCustomBe
     auto readTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadTextureData");
 
     // Act
+    auto previousCommandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemGraphicsResourceBarrier(previousCommandList, gpuTexture.ReadDescriptor, nullptr);
+    TestDispatchCompute(previousCommandList, writeTextureDataPipelineState, dispatchX, dispatchY, 1, { gpuTexture.WriteDescriptor, 0, 0 });
+    ElemCommitCommandList(previousCommandList);
+
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
     
     ElemGraphicsResourceBarrierOptions barrierOptions = 
@@ -555,7 +560,9 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWriteWithCustomBe
     ));
 
     ElemCommitCommandList(commandList);
-    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+    
+    ElemCommandList commandLists[2] = { previousCommandList, commandList };
+    auto fence = ElemExecuteCommandLists(commandQueue, { .Items = commandLists, .Length = 2 }, nullptr);
 
     // Assert
     ElemWaitForFenceOnCpu(fence);

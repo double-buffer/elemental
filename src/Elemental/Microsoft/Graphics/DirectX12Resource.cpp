@@ -216,8 +216,6 @@ D3D12_RESOURCE_DESC1 CreateDirectX12BufferDescription(const ElemGraphicsResource
 
 D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemGraphicsResourceInfo* resourceInfo)
 {
-    // TODO: other resourceInfo
-
     SystemAssert(resourceInfo);
     
 	return 
@@ -237,35 +235,6 @@ D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemGraphicsResourc
         .Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
         .Flags = ConvertToDirectX12ResourceFlags(resourceInfo->Usage)
     };
-
-    /*
-    D3D12_RESOURCE_DIMENSION Dimension;
-    UINT64 Alignment;
-    UINT64 Width;
-    UINT Height;
-    UINT16 DepthOrArraySize;
-    UINT16 MipLevels;
-    DXGI_FORMAT Format;
-    DXGI_SAMPLE_DESC SampleDesc;
-    D3D12_TEXTURE_LAYOUT Layout;
-    D3D12_RESOURCE_FLAGS Flags;
-    D3D12_MIP_REGION SamplerFeedbackMipRegion;
-    */
-    /*
-	if (usage == GraphicsTextureUsage::RenderTarget && textureFormat == GraphicsTextureFormat::Depth32Float)
-	{
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-	}
-
-	else if (usage == GraphicsTextureUsage::RenderTarget) 
-	{
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-	}
-
-	else if (usage == GraphicsTextureUsage::ShaderWrite) 
-	{
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-	}*/
 }
 
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options)
@@ -280,8 +249,7 @@ ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, 
 
     D3D12_HEAP_PROPERTIES heapProperties =
     {
-        .Type = D3D12_HEAP_TYPE_DEFAULT,
-		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        .Type = D3D12_HEAP_TYPE_DEFAULT
     };
 
     if (options)

@@ -68,7 +68,7 @@ typedef struct
 
 typedef struct
 {
-    Vector4 RotationQuaternion;
+    SampleVector4 RotationQuaternion;
     float Zoom;
     float AspectRatio;
     uint32_t TriangeColor;
@@ -76,9 +76,9 @@ typedef struct
 
 typedef struct
 {
-    Vector3 RotationDelta;
-    Vector2 RotationTouch;
-    Vector3 CurrentRotationSpeed;
+    SampleVector3 RotationDelta;
+    SampleVector2 RotationTouch;
+    SampleVector3 CurrentRotationSpeed;
     float PreviousTouchDistance;
     float PreviousTouchAngle;
     float Zoom;
@@ -185,7 +185,7 @@ void InitSample(void* payload)
         .TextureFormats = { .Items = (ElemGraphicsFormat[]) { swapChainInfo.Format }, .Length = 1 }
     });
 
-    applicationPayload->ShaderParameters.RotationQuaternion = (Vector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
+    applicationPayload->ShaderParameters.RotationQuaternion = (SampleVector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
     applicationPayload->InputActions.ShowCursor = true;
 
     RegisterInputBindings(applicationPayload);
@@ -279,11 +279,11 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
     {
         if (inputActions->Touch2)
         {
-            Vector2 touchPosition = (Vector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
-            Vector2 touchPosition2 = (Vector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
+            SampleVector2 touchPosition = (SampleVector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
+            SampleVector2 touchPosition2 = (SampleVector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
 
-            Vector2 diffVector = SubstractV2(touchPosition, touchPosition2);
-            float distance = MagnitudeV2(diffVector);
+            SampleVector2 diffVector = SampleSubstractV2(touchPosition, touchPosition2);
+            float distance = SampleMagnitudeV2(diffVector);
             float angle = atan2(diffVector.X, diffVector.Y);
 
             if (gameState->PreviousTouchDistance != 0.0f)
@@ -293,7 +293,7 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
 
             if (gameState->PreviousTouchAngle != 0.0f)
             {
-                gameState->RotationDelta.Z = -NormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
+                gameState->RotationDelta.Z = -SampleNormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
             }
 
             gameState->PreviousTouchDistance = distance;
@@ -321,36 +321,36 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
     }
     else
     {
-        Vector3 direction = NormalizeV3((Vector3) 
+        SampleVector3 direction = SampleNormalizeV3((SampleVector3) 
         { 
             .X = (inputActions->RotateUp - inputActions->RotateDown),
             .Y = (inputActions->RotateLeft - inputActions->RotateRight),
             .Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight)
         });
 
-        if (MagnitudeSquaredV3(direction))
+        if (SampleMagnitudeSquaredV3(direction))
         {
-            Vector3 acceleration = AddV3(MulScalarV3(direction, ROTATION_ACCELERATION), MulScalarV3(InverseV3(gameState->CurrentRotationSpeed), ROTATION_FRICTION));
+            SampleVector3 acceleration = SampleAddV3(SampleMulScalarV3(direction, ROTATION_ACCELERATION), SampleMulScalarV3(SampleInverseV3(gameState->CurrentRotationSpeed), ROTATION_FRICTION));
 
             ResetTouchParameters(gameState);
-            gameState->RotationDelta = AddV3(MulScalarV3(acceleration, 0.5f * pow2f(deltaTimeInSeconds)), MulScalarV3(gameState->CurrentRotationSpeed, deltaTimeInSeconds));
-            gameState->CurrentRotationSpeed = AddV3(MulScalarV3(acceleration, deltaTimeInSeconds), gameState->CurrentRotationSpeed);
+            gameState->RotationDelta = SampleAddV3(SampleMulScalarV3(acceleration, 0.5f * SamplePow2f(deltaTimeInSeconds)), SampleMulScalarV3(gameState->CurrentRotationSpeed, deltaTimeInSeconds));
+            gameState->CurrentRotationSpeed = SampleAddV3(SampleMulScalarV3(acceleration, deltaTimeInSeconds), gameState->CurrentRotationSpeed);
         }
     }
 
-    if (MagnitudeSquaredV2(gameState->RotationTouch) > 0)
+    if (SampleMagnitudeSquaredV2(gameState->RotationTouch) > 0)
     {
-        if (MagnitudeV2(gameState->RotationTouch) > ROTATION_TOUCH_MAX_DELTA)
+        if (SampleMagnitudeV2(gameState->RotationTouch) > ROTATION_TOUCH_MAX_DELTA)
         {
-            gameState->RotationTouch = MulScalarV2(NormalizeV2(gameState->RotationTouch), ROTATION_TOUCH_MAX_DELTA);
+            gameState->RotationTouch = SampleMulScalarV2(SampleNormalizeV2(gameState->RotationTouch), ROTATION_TOUCH_MAX_DELTA);
         }
 
-        gameState->RotationDelta = AddV3(gameState->RotationDelta, (Vector3){ gameState->RotationTouch.X, gameState->RotationTouch.Y, 0.0f });
+        gameState->RotationDelta = SampleAddV3(gameState->RotationDelta, (SampleVector3){ gameState->RotationTouch.X, gameState->RotationTouch.Y, 0.0f });
 
-        Vector2 inverse = MulScalarV2(NormalizeV2(InverseV2(gameState->RotationTouch)), ROTATION_TOUCH_DECREASE_SPEED);
-        gameState->RotationTouch = AddV2(gameState->RotationTouch, inverse);
+        SampleVector2 inverse = SampleMulScalarV2(SampleNormalizeV2(SampleInverseV2(gameState->RotationTouch)), ROTATION_TOUCH_DECREASE_SPEED);
+        gameState->RotationTouch = SampleAddV2(gameState->RotationTouch, inverse);
 
-        if (MagnitudeV2(gameState->RotationTouch) < 0.001f)
+        if (SampleMagnitudeV2(gameState->RotationTouch) < 0.001f)
         {
             ResetTouchParameters(gameState);
         }
@@ -384,10 +384,13 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     GameState* gameState = &applicationPayload->GameState;
     UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
 
-    if (MagnitudeSquaredV3(gameState->RotationDelta))
+    if (SampleMagnitudeSquaredV3(gameState->RotationDelta))
     {
-        Vector4 rotationQuaternion = MulQuat(CreateQuaternion((Vector3){ 1, 0, 0 }, gameState->RotationDelta.X), MulQuat(CreateQuaternion((Vector3){ 0, 0, 1 }, gameState->RotationDelta.Z), CreateQuaternion((Vector3){ 0, 1, 0 }, gameState->RotationDelta.Y)));
-        applicationPayload->ShaderParameters.RotationQuaternion = MulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
+        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 1, 0, 0 }, gameState->RotationDelta.X), 
+                                                         SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 0, 0, 1 }, gameState->RotationDelta.Z),
+                                                                       SampleCreateQuaternion((SampleVector3){ 0, 1, 0 }, gameState->RotationDelta.Y)));
+
+        applicationPayload->ShaderParameters.RotationQuaternion = SampleMulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
 
     float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);

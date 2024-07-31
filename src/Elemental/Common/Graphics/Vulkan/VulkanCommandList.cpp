@@ -316,29 +316,40 @@ void VulkanCommitCommandList(ElemCommandList commandList)
 
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
-    // TODO: Wait for fences if any
-
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueData = GetVulkanCommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
-/*
-    VkPipelineStageFlags submitStageMasks[MAX_VULKAN_COMMAND_BUFFERS];
-    VkSemaphore waitSemaphores[MAX_VULKAN_COMMAND_BUFFERS];
-    uint64_t waitSemaphoreValues[MAX_VULKAN_COMMAND_BUFFERS];
 
-    for (int32_t i = 0; i < fenceToWaitCount; i++)
+    Span<VkPipelineStageFlags> submitStageMasks = {};
+    Span<VkSemaphore> waitSemaphores = {};
+    Span<uint64_t> waitSemaphoreValues = {};
+
+    if (options && options->FencesToWait.Length > 0)
     {
-        auto fenceToWait = fencesToWait[i];
-        auto commandQueueToWait = (VulkanCommandQueue*)fenceToWait.CommandQueuePointer;
+        submitStageMasks = SystemPushArray<VkPipelineStageFlags>(stackMemoryArena, options->FencesToWait.Length);
+        waitSemaphores = SystemPushArray<VkSemaphore>(stackMemoryArena, options->FencesToWait.Length);
+        waitSemaphoreValues = SystemPushArray<uint64_t>(stackMemoryArena, options->FencesToWait.Length);
 
-        waitSemaphores[i] = commandQueueToWait->TimelineSemaphore;
-        waitSemaphoreValues[i] = commandQueueToWait->FenceValue;
-        submitStageMasks[i] = (commandQueue->CommandQueueType == CommandQueueType_Compute) ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+        for (uint32_t i = 0; i < options->FencesToWait.Length; i++)
+        {
+            auto fenceToWait = options->FencesToWait.Items[i];
+
+            auto commandQueueToWaitData = GetVulkanCommandQueueData(fenceToWait.CommandQueue);
+
+            submitStageMasks[i] = VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT | VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            waitSemaphores[i] = commandQueueToWaitData->Fence;
+            waitSemaphoreValues[i] = fenceToWait.FenceValue;
+    
+            if (VulkanDebugBarrierInfoEnabled)
+            {
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%d, Value=%d)", fenceToWait.CommandQueue, fenceToWait.FenceValue);
+            }
+        }
     }
-*/
+
     bool hasError = false;
     auto vulkanCommandBuffers = SystemPushArray<VkCommandBuffer>(stackMemoryArena, commandLists.Length);
 
@@ -371,21 +382,21 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         uint64_t signalValues[] = { fenceValue, 0u };
 
         VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
-        //timelineInfo.waitSemaphoreValueCount = (uint32_t)fenceToWaitCount;
-        //timelineInfo.pWaitSemaphoreValues = (fenceToWaitCount > 0) ? waitSemaphoreValues : nullptr;
+        timelineInfo.waitSemaphoreValueCount = waitSemaphoreValues.Length;
+        timelineInfo.pWaitSemaphoreValues = waitSemaphoreValues.Pointer;
         timelineInfo.signalSemaphoreValueCount = signalCount;
         timelineInfo.pSignalSemaphoreValues = signalValues;
 
         VkSemaphore signalSemaphores[] = { commandQueueData->Fence, commandQueueData->PresentSemaphore };
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        //submitInfo.waitSemaphoreCount = (uint32_t)fenceToWaitCount;
-        //submitInfo.pWaitSemaphores = (fenceToWaitCount > 0) ? waitSemaphores : nullptr;
+        submitInfo.waitSemaphoreCount = waitSemaphores.Length;
+        submitInfo.pWaitSemaphores = waitSemaphores.Pointer;
         submitInfo.signalSemaphoreCount = signalCount;
         submitInfo.pSignalSemaphores = signalSemaphores;
         submitInfo.commandBufferCount = (uint32_t)commandLists.Length;
         submitInfo.pCommandBuffers = vulkanCommandBuffers.Pointer;
-        //submitInfo.pWaitDstStageMask = submitStageMasks;
+        submitInfo.pWaitDstStageMask = submitStageMasks.Pointer;
         submitInfo.pNext = &timelineInfo;
 
         AssertIfFailed(vkQueueSubmit(commandQueueData->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
@@ -408,7 +419,6 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
         FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
-        // TODO: Release VkCommandBuffer?
         SystemRemoveDataPoolItem(vulkanCommandListPool, commandLists.Items[i]);
     }
 

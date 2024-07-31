@@ -1,9 +1,7 @@
 struct ShaderParameters
 {
     uint32_t RenderTextureIndex;
-    uint32_t TriangleColor;
     float Zoom;
-    float Time;
     float3x3 Transform;
 };
 
@@ -28,17 +26,7 @@ float2 random2(float2 uv)
     float x = hash(uv + float2(1.0, 0.0));
     float y = hash(uv + float2(0.0, 1.0));
     
-    //return (float2(x, y) * 2.0 - 1.0) * 0.1;
-
-    if (parameters.TriangleColor)
-    {
-        return 0.0;
-        return (float2(x, y) * 2.0 - 1.0) * 1.0;
-    }
-    else
-    {
-        return (float2(x, y) * 2.0 - 1.0) * 0.5;
-    }
+    return (float2(x, y) * 2.0 - 1.0) * 0.5;
 }
 
 #define MAX_ITERATIONS 500
@@ -47,8 +35,8 @@ float2 random2(float2 uv)
 float ComputeJuliaSet(float2 position)
 {
     float2 Z = position;
-    //float2 C = float2(-0.8, 0.153) + float2(0, parameters.Time);
-    float2 C = float2(-0.8, 0.16);// + float2(0, parameters.Time);
+    //float2 C = float2(-0.8, 0.153);
+    float2 C = float2(-0.8, 0.16);
 
     uint iteration;
 

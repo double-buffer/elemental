@@ -85,3 +85,62 @@ UTEST(CommandList, ExecuteCommandListFenceIsValid)
     ElemFreeCommandQueue(commandQueue);
     ElemFreeGraphicsDevice(graphicsDevice);
 }
+
+UTEST(CommandList, ExecuteCommandListWaitForFence) 
+{
+    // Arrange
+    int32_t elementCount = 1000000;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (elementCount + (threadSize - 1)) / threadSize;
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    auto gpuBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsHeapType_Readback);
+
+    auto writeBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "CommandListTests.shader", "TestWriteBufferData");
+    auto readBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "CommandListTests.shader", "TestReadBufferData");
+
+    // Act
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    TestDispatchCompute(commandList, writeBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.WriteDescriptor, 0, elementCount });
+    ElemCommitCommandList(commandList);
+    auto testFence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    auto commandList2 = ElemGetCommandList(commandQueue, nullptr);
+
+    TestDispatchCompute(commandList2, readBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.ReadDescriptor, readbackBuffer.WriteDescriptor, elementCount });
+    ElemCommitCommandList(commandList2);
+    
+    ElemExecuteCommandListOptions executeOptions =
+    {
+        .FencesToWait = { .Items = &testFence, .Length = 1 }
+    };
+
+    auto fence = ElemExecuteCommandList(commandQueue, commandList2, &executeOptions);
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+
+    ElemFreePipelineState(readBufferDataPipelineState);
+    ElemFreePipelineState(writeBufferDataPipelineState);
+    TestFreeGpuBuffer(gpuBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    char logString[255];
+    snprintf(logString, 255, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%u, Value=%u)", (uint32_t)testFence.CommandQueue, (uint32_t)testFence.FenceValue);
+    ASSERT_LOG_MESSAGE_DEBUG(logString);
+
+    auto intData = (int32_t*)bufferData.Items;
+
+    for (int32_t i = 0; i < elementCount; i++)
+    {
+        ASSERT_EQ_MSG(intData[i], elementCount - i - 1, "Compute shader data is invalid.");
+    }
+}
