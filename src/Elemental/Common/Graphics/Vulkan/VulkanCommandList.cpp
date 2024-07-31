@@ -338,6 +338,7 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
             auto fenceToWait = options->FencesToWait.Items[i];
 
             auto commandQueueToWaitData = GetVulkanCommandQueueData(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitData);
 
             submitStageMasks[i] = VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT | VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             waitSemaphores[i] = commandQueueToWaitData->Fence;

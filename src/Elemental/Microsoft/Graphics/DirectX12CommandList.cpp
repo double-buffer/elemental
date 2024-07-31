@@ -267,14 +267,32 @@ void DirectX12CommitCommandList(ElemCommandList commandList)
 
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
 
+    if (options && options->FencesToWait.Length > 0)
+    {
+        for (uint32_t i = 0; i < options->FencesToWait.Length; i++)
+        {
+            auto fenceToWait = options->FencesToWait.Items[i];
+
+            auto commandQueueToWaitData = GetDirectX12CommandQueueData(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitData);
+
+            auto commandQueueToWaitDataFull = GetDirectX12CommandQueueDataFull(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitDataFull);
+
+	        AssertIfFailed(commandQueueData->DeviceObject->Wait(commandQueueToWaitDataFull->Fence.Get(), fenceToWait.FenceValue));
+    
+            if (DirectX12DebugBarrierInfoEnabled)
+            {
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%d, Value=%d)", fenceToWait.CommandQueue, fenceToWait.FenceValue);
+            }
+        }
+    }
+
     bool hasError = false;
-
-    // TODO: Wait for fences if any
-
-    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto commandListsToExecute = SystemPushArray<ID3D12CommandList*>(stackMemoryArena, commandLists.Length);
 
     for (uint32_t i = 0; i < commandLists.Length; i++)
