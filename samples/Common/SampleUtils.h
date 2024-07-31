@@ -16,6 +16,16 @@
     #include "TargetConditionals.h"
 #endif
 
+uint64_t SampleMegaBytesToBytes(uint64_t value)
+{
+    return value * 1024 * 1024;
+}
+
+uint64_t SampleGygaBytesToBytes(uint64_t value)
+{
+    return SampleMegaBytesToBytes(value) * 1024;
+}
+
 // -----------------------------------------------------------------------------
 // I/O Functions
 // -----------------------------------------------------------------------------

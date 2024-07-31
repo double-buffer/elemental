@@ -2,6 +2,8 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
+// TODO: Implement commit memory for big data pools
+
 #define SYSTEM_DATAPOOL_INDEX_EMPTY UINT32_MAX
 
 template<typename T>
@@ -21,12 +23,6 @@ struct SystemDataPoolStorage
     uint32_t CurrentIndex;
     uint32_t FreeListIndex;
     uint32_t ItemCount;
-};
-
-struct SystemDataPoolHandle
-{
-    uint32_t Index;
-    uint32_t Version;
 };
 
 ElemHandle PackSystemDataPoolHandle(SystemDataPoolHandle handle)

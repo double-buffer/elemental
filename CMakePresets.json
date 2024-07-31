@@ -17,6 +17,17 @@
             "binaryDir": "${sourceDir}/build"
         },
         {
+            "name": "test",
+            "displayName": "Test config",
+            "description": "Build for the current platform using ninja",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "TEST_BUILD": "ON"
+            },
+            "binaryDir": "${sourceDir}/build-test"
+        },
+        {
             "name": "release",
             "inherits": "default",
             "displayName": "Release",
@@ -51,6 +62,10 @@
         {
             "name": "default",
             "configurePreset": "default"
+        },
+        {
+            "name": "test",
+            "configurePreset": "test"
         },
         {
             "name": "release",

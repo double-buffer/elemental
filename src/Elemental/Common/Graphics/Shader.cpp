@@ -16,6 +16,11 @@ ElemAPI ElemPipelineState ElemCompileGraphicsPipelineState(ElemGraphicsDevice gr
     DispatchReturnGraphicsFunction(CompileGraphicsPipelineState, graphicsDevice, parameters);
 }
 
+ElemAPI ElemPipelineState ElemCompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters)
+{
+    DispatchReturnGraphicsFunction(CompileComputePipelineState, graphicsDevice, parameters);
+}
+
 ElemAPI void ElemFreePipelineState(ElemPipelineState pipelineState)
 {
     DispatchGraphicsFunction(FreePipelineState, pipelineState);
@@ -29,4 +34,9 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
 ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data)
 {
     DispatchGraphicsFunction(PushPipelineStateConstants, commandList, offsetInBytes, data);
+}
+
+ElemAPI void ElemDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
+    DispatchGraphicsFunction(DispatchCompute, commandList, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

@@ -24,7 +24,10 @@ struct DirectX12DescriptorHeapStorage
 
 MemoryArena DirectX12MemoryArena;
 bool DirectX12DebugLayerEnabled = false;
+bool directX12DebugGpuValidationEnabled = false;
+bool DirectX12DebugBarrierInfoEnabled = false;
 ComPtr<IDXGIFactory6> DxgiFactory; 
+ComPtr<IDXGIInfoQueue> DxgiInfoQueue;
 
 SystemDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull> directX12GraphicsDevicePool;
 
@@ -53,6 +56,7 @@ void InitDirectX12()
             SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init DirectX12 Debug Mode.");
 
             AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebugInterface.GetAddressOf())));
+            AssertIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(DxgiInfoQueue.GetAddressOf())));
             dxgiCreateFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
             AssertIfFailed(directX12DeviceFactory->GetConfigurationInterface(CLSID_D3D12Debug, IID_PPV_ARGS(directX12DebugInterface.GetAddressOf())));
@@ -60,8 +64,13 @@ void InitDirectX12()
             if (directX12DebugInterface)
             {
                 directX12DebugInterface->EnableDebugLayer();
-                directX12DebugInterface->SetEnableGPUBasedValidation(true);
                 directX12DebugInterface->SetEnableAutoName(true);
+                
+                if (directX12DebugGpuValidationEnabled)
+                {
+                    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init DirectX12 GPU validation.");
+                    directX12DebugInterface->SetEnableGPUBasedValidation(true);
+                }
 
                 directX12DebugInitialized = true;
             }
@@ -77,6 +86,9 @@ void InitDirectX12()
     }
 
     AssertIfFailed(CreateDXGIFactory2(dxgiCreateFactoryFlags, IID_PPV_ARGS(DxgiFactory.GetAddressOf())));
+
+    // HACK: Remove this when DXIL signing is fully open source!
+    AssertIfFailed(directX12DeviceFactory->EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, nullptr));
 }
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
@@ -123,7 +135,6 @@ void DirectX12DebugReportCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE
         return;
     }
 
-    auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", description);
 }
 
@@ -171,21 +182,21 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
     return false;
 }
 
-DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> graphicsDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t length)
+DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> graphicsDevice, MemoryArena memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t length)
 {
     D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = 
     {
         .Type = type,
         .NumDescriptors = length,
-        .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE
+        .Flags = flags
     };
 
     ComPtr<ID3D12DescriptorHeap> descriptorHeap;
     AssertIfFailed(graphicsDevice->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(descriptorHeap.GetAddressOf())));
 
-    auto descriptorStorage = SystemPushStruct<DirectX12DescriptorHeapStorage>(DirectX12MemoryArena);
+    auto descriptorStorage = SystemPushStruct<DirectX12DescriptorHeapStorage>(memoryArena);
     descriptorStorage->DescriptorHeap = descriptorHeap;
-    descriptorStorage->Items = SystemPushArray<DirectX12DescriptorHeapFreeListItem>(DirectX12MemoryArena, length);
+    descriptorStorage->Items = SystemPushArray<DirectX12DescriptorHeapFreeListItem>(memoryArena, length);
     descriptorStorage->DescriptorHandleSize = graphicsDevice->GetDescriptorHandleIncrementSize(type);
     descriptorStorage->CurrentIndex = 0;
     descriptorStorage->FreeListIndex = UINT32_MAX;
@@ -243,13 +254,29 @@ void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12
     } while (!SystemAtomicCompareExchange(storage->FreeListIndex, storage->FreeListIndex, indexToDelete));
 }
 
+uint32_t ConvertDirectX12DescriptorHandleToIndex(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle)
+{
+    auto storage = descriptorHeap.Storage;
+    auto heapStart = storage->DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+    return (handle.ptr - heapStart.ptr) / storage->DescriptorHandleSize;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE ConvertDirectX12DescriptorIndexToHandle(DirectX12DescriptorHeap descriptorHeap, uint32_t index)
+{
+    auto handle = descriptorHeap.Storage->DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    handle.ptr += index * descriptorHeap.Storage->DescriptorHandleSize;
+
+    return handle;
+}
+
 ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> graphicsDevice)
 {
     D3D12_ROOT_PARAMETER1 rootParameters[1];
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     rootParameters[0].Constants.ShaderRegister = 0;
     rootParameters[0].Constants.RegisterSpace = 0;
-    rootParameters[0].Constants.Num32BitValues = 16;
+    rootParameters[0].Constants.Num32BitValues = 24;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -258,7 +285,7 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     rootSignatureDesc.Desc_1_1.pParameters = rootParameters;
     rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
     rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
-    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;// TODO: To activate later D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
     ComPtr<ID3DBlob> serializedRootSignature;
     AssertIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, serializedRootSignature.GetAddressOf(), nullptr));
@@ -269,9 +296,24 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     return rootSignature;
 }
 
-void DirectX12EnableGraphicsDebugLayer()
+void DirectX12SetGraphicsOptions(const ElemGraphicsOptions* options)
 {
-    DirectX12DebugLayerEnabled = true;
+    SystemAssert(options);
+
+    if (options->EnableDebugLayer)
+    {
+        DirectX12DebugLayerEnabled = options->EnableDebugLayer;
+    }
+
+    if (options->EnableGpuValidation)
+    {
+        directX12DebugGpuValidationEnabled = options->EnableGpuValidation;
+    }
+
+    if (options->EnableDebugBarrierInfo)
+    {
+        DirectX12DebugBarrierInfoEnabled = options->EnableDebugBarrierInfo;
+    }
 }
 
 ElemGraphicsDeviceInfoSpan DirectX12GetAvailableGraphicsDevices()
@@ -355,19 +397,27 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
         }
     }
 
-    auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, DIRECTX12_MAX_RTVS);
+    // TODO: Don't enable it by default
+    //AssertIfFailed(device->SetStablePowerState(true));
+
+    auto memoryArena = SystemAllocateMemoryArena();
+
+    auto resourceDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_RESOURCES);
+    auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
 
     auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
         .Device = device,
-        .RootSignature = rootSignature
+        .RootSignature = rootSignature,
+        .ResourceDescriptorHeap = resourceDescriptorHeap,
+        .RTVDescriptorHeap = rtvDescriptorHeap,
+        .MemoryArena = memoryArena
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
         .AdapterDescription = adapterDescription,
         .DebugInfoQueue = debugInfoQueue,
         .DebugCallBackCookie = debugCallBackCookie,
-        .RTVDescriptorHeap = rtvDescriptorHeap
     });
 
     return handle;
@@ -383,47 +433,29 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     auto graphicsDeviceDataFull = GetDirectX12GraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
-    FreeDirectX12DescriptorHeap(graphicsDeviceDataFull->RTVDescriptorHeap);
+    FreeDirectX12DescriptorHeap(graphicsDeviceData->ResourceDescriptorHeap);
+    FreeDirectX12DescriptorHeap(graphicsDeviceData->RTVDescriptorHeap);
     graphicsDeviceData->Device.Reset();
     graphicsDeviceData->RootSignature.Reset();
 
-    SystemRemoveDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
-
-    if (SystemGetDataPoolItemCount(directX12GraphicsDevicePool) == 0)
+    if (SystemGetDataPoolItemCount(directX12GraphicsDevicePool) == 1)
     {
-        if (directX12DebugInterface)
-        {
-            directX12DebugInterface.Reset();
-            directX12DebugInterface = nullptr;
-        }
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing DirectX12");
+    }
 
-        if (DxgiFactory)
-        {
-            DxgiFactory.Reset();
-            DxgiFactory = nullptr;
-        }
-
-        if (directX12DeviceFactory)
-        {
-            directX12DeviceFactory.Reset();
-            directX12DeviceFactory = nullptr;
-        }
-
+    if (graphicsDeviceDataFull->DebugInfoQueue)
+    {
         if (dxgiDebugInterface)
         {
             AssertIfFailed(dxgiDebugInterface->ReportLiveObjects(DXGI_DEBUG_ALL, (DXGI_DEBUG_RLO_FLAGS)(DXGI_DEBUG_RLO_IGNORE_INTERNAL | DXGI_DEBUG_RLO_DETAIL)));
-    
-            if (graphicsDeviceDataFull->DebugInfoQueue)
-            {
-                graphicsDeviceDataFull->DebugInfoQueue->UnregisterMessageCallback(graphicsDeviceDataFull->DebugCallBackCookie);
-                graphicsDeviceDataFull->DebugInfoQueue.Reset();
-            }
         }
 
-        SystemFreeMemoryArena(DirectX12MemoryArena);
-        DirectX12MemoryArena = {};
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Releasing DirectX12");
+        graphicsDeviceDataFull->DebugInfoQueue->UnregisterMessageCallback(graphicsDeviceDataFull->DebugCallBackCookie);
+        graphicsDeviceDataFull->DebugInfoQueue.Reset();
     }
+    
+    SystemFreeMemoryArena(graphicsDeviceData->MemoryArena);
+    SystemRemoveDataPoolItem(directX12GraphicsDevicePool, graphicsDevice);
 }
 
 ElemGraphicsDeviceInfo DirectX12GetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice)

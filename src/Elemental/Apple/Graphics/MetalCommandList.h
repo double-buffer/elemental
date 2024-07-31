@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include "Graphics/ResourceBarrier.h"
 
 enum MetalCommandEncoderType
 {
@@ -9,22 +10,40 @@ enum MetalCommandEncoderType
     MetalCommandEncoderType_Compute = 2
 };
 
+enum MetalResourceBarrierType
+{
+    MetalResourceBarrierType_None = 0,
+    MetalResourceBarrierType_Buffer = 1,
+    MetalResourceBarrierType_Texture = 2,
+    MetalResourceBarrierType_RenderTarget = 4,
+    MetalResourceBarrierType_Fence = 8,
+};
+
 struct MetalCommandQueueData
 {
     NS::SharedPtr<MTL::CommandQueue> DeviceObject;
+    NS::SharedPtr<MTL::Fence> ResourceFence;
+    NS::SharedPtr<MTL::SharedEvent> QueueEvent;
+    uint64_t FenceValue;
+    uint32_t ResourceBarrierTypes;
+    ElemGraphicsDevice GraphicsDevice;
 };
 
 struct MetalCommandQueueDataFull
 {
-    ElemGraphicsDevice GraphicsDevice;
+    uint64_t LastCompletedFenceValue;
 };
 
 struct MetalCommandListData
 {
     NS::SharedPtr<MTL::CommandBuffer> DeviceObject;
     NS::SharedPtr<MTL::CommandEncoder> CommandEncoder;
+    ElemGraphicsDevice GraphicsDevice;
+    ElemCommandQueue CommandQueue;
     MetalCommandEncoderType CommandEncoderType;
+    ElemPipelineState PipelineState;
     bool IsCommitted;
+    ResourceBarrierPool ResourceBarrierPool;
 };
 
 struct MetalCommandListDataFull
@@ -48,3 +67,4 @@ void MetalCommitCommandList(ElemCommandList commandList);
 
 ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void MetalWaitForFenceOnCpu(ElemFence fence);
+bool MetalIsFenceCompleted(ElemFence fence);

@@ -6,6 +6,7 @@ struct Win32WindowData
 {
     HWND WindowHandle;
     uint32_t MonitorRefreshRate;
+    ComPtr<IDXGIOutput> Output;
 };
 
 struct Win32WindowDataFull

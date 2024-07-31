@@ -1,7 +1,7 @@
 #include "DirectX12SwapChain.h"
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
-#include "DirectX12Texture.h"
+#include "DirectX12Resource.h"
 #include "Inputs/Inputs.h"
 #include "../Win32Application.h"
 #include "../Win32Window.h"
@@ -10,6 +10,9 @@
 #include "SystemMemory.h"
 
 #define DIRECTX12_MAX_SWAPCHAINS 10u
+
+// TODO: Without FPS limit we can maybe debug UAV Barrier
+#define ENABLE_TEARING 0
 
 SystemDataPool<DirectX12SwapChainData, DirectX12SwapChainDataFull> directX12SwapChainPool;
 
@@ -49,7 +52,7 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
         ComPtr<ID3D12Resource> backBuffer;
         AssertIfFailed(swapChainData->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
 
-        swapChainData->BackBufferTextures[i] = CreateDirectX12TextureFromResource(swapChainDataFull->GraphicsDevice, backBuffer, true);
+        swapChainData->BackBufferTextures[i] = CreateDirectX12GraphicsResourceFromResource(swapChainDataFull->GraphicsDevice, ElemGraphicsResourceType_Texture2D, backBuffer, true);
     }
 }
 
@@ -77,16 +80,24 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
     {
         if (swapChainData->BackBufferTextures[i] != ELEM_HANDLE_NULL)
         {
-            DirectX12FreeTexture(swapChainData->BackBufferTextures[i]);
+            DirectX12FreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
         }
     } 
-
+    #if ENABLE_TEARING
+    AssertIfFailed(swapChainData->DeviceObject->ResizeBuffers(DIRECTX12_MAX_SWAPCHAIN_BUFFERS, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING));
+    #else
     AssertIfFailed(swapChainData->DeviceObject->ResizeBuffers(DIRECTX12_MAX_SWAPCHAIN_BUFFERS, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
+    #endif
     CreateDirectX12SwapChainRenderTargetViews(swapChain);
 }
 
+uint64_t currentDxgiMessageCount = 0;
+
+uint64_t lastVsyncCounter;
+
 void CheckDirectX12AvailableSwapChain(ElemHandle handle)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemAssert(handle != ELEM_HANDLE_NULL);
 
     auto swapChainData = GetDirectX12SwapChainData(handle);
@@ -95,7 +106,36 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
     auto windowData = GetWin32WindowData(swapChainData->Window);
     SystemAssert(windowData);
 
-    if (WaitForSingleObjectEx(swapChainData->WaitHandle, 0, true) == WAIT_OBJECT_0)
+    if (DirectX12DebugLayerEnabled)
+    {
+        auto messageCount = DxgiInfoQueue->GetNumStoredMessages(DXGI_DEBUG_ALL);
+
+        for (uint64_t i = currentDxgiMessageCount; i < messageCount; i++)
+		{
+			SIZE_T messageLength;
+			AssertIfFailed(DxgiInfoQueue->GetMessage(DXGI_DEBUG_ALL, i, nullptr, &messageLength));
+
+			auto messageData = (DXGI_INFO_QUEUE_MESSAGE*)SystemPushArray<uint8_t>(stackMemoryArena, messageLength).Pointer;
+			// get the message and push its description into the vector
+			AssertIfFailed(DxgiInfoQueue->GetMessage(DXGI_DEBUG_ALL, i, messageData, &messageLength));
+
+            auto messageType = ElemLogMessageType_Debug;
+
+            if (messageData->Severity == DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING)
+            {
+                messageType = ElemLogMessageType_Warning;
+            }
+            else if(messageData->Severity == DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR || messageData->Severity == DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION)
+            {
+                messageType = ElemLogMessageType_Error;
+            }
+
+            SystemLogMessage(messageType, ElemLogMessageCategory_Graphics, "%s", messageData->pDescription);
+            currentDxgiMessageCount = messageCount;
+		}
+    }
+
+    if (WaitForSingleObjectEx(swapChainData->WaitHandle, 1000, false) == WAIT_OBJECT_0)
     {
         // TODO: First calculation of firt delta time. For the moment it is done again the creation of swap chain time.
 
@@ -111,52 +151,78 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
         // TODO: Test with framelatency > 1
 
         LARGE_INTEGER syncQPCTime;
+        uint64_t vSyncDelta = 1;
         
         // TODO: What happens if frame rendering goes further than refresh rate. Default latency is one so if we take longer, there will be 
         // dirctly a frame available. 
         // The wait will be ok directly and so the getframestats will contains the stat of the last present which maybe the same of the previous one of the frame that took
         // too much time. And maybe the previous present will not be presented yet.
-        if (SUCCEEDED(swapChainData->DeviceObject->GetFrameStatistics(&stats)))
+
+        //windowData->Output->WaitForVBlank();
+
+
+        if (SUCCEEDED(swapChainData->DeviceObject->GetFrameStatistics(&stats)) && stats.PresentRefreshCount > 0)
         {
-            syncQPCTime.QuadPart= stats.SyncQPCTime.QuadPart - Win32PerformanceCounterStart;
+            syncQPCTime.QuadPart = stats.SyncQPCTime.QuadPart;
+
+            if (lastVsyncCounter > 0)
+            {
+                vSyncDelta = stats.PresentRefreshCount - lastVsyncCounter;
+            }
+                      
+            lastVsyncCounter = stats.PresentRefreshCount;
+            //SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Last Present: %u, %d - %d %d", stats.SyncQPCTime.QuadPart, stats.PresentCount, vSyncDelta, stats.PresentRefreshCount);
         }
         else 
         {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Frame statistics failed");
             LARGE_INTEGER currentTimestamp;
             QueryPerformanceCounter(&currentTimestamp);
 
             syncQPCTime.QuadPart = currentTimestamp.QuadPart - Win32PerformanceCounterStart;
         }
 
-        double refreshInterval = 1.0 / windowData->MonitorRefreshRate;
+        double refreshInterval = (1.0 / windowData->MonitorRefreshRate);
         double intervalTicks = refreshInterval * ticksPerSecond;
 
         LARGE_INTEGER nextVSyncQPCTime;
         nextVSyncQPCTime.QuadPart = syncQPCTime.QuadPart + (LONGLONG)intervalTicks;
 
         double nextPresentTimestampInSeconds = nextVSyncQPCTime.QuadPart / ticksPerSecond;
+      
 
         // TODO: If delta time is above a thresold, take the delta time based on target FPS
-        auto deltaTime = (nextVSyncQPCTime.QuadPart - swapChainData->PreviousTargetPresentationTimestamp.QuadPart) / ticksPerSecond;
+        auto deltaTime = vSyncDelta * refreshInterval;//(nextVSyncQPCTime.QuadPart - swapChainData->PreviousTargetPresentationTimestamp.QuadPart) / ticksPerSecond;
         swapChainData->PreviousTargetPresentationTimestamp = nextVSyncQPCTime;
+
+        if (vSyncDelta > 1)
+        {
+            SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Missed %d VSync! Delta time is %f ms", vSyncDelta - 1, deltaTime * 1000);
+        }
         // END TIMING CALCULATION
 
         ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
+        auto sizeChanged = false;
+
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
             ResizeDirectX12SwapChain(handle, windowSize.Width, windowSize.Height);
+            sizeChanged = true;
         }
-
+        
         swapChainData->PresentCalled = false;
         auto backBufferTexture = swapChainData->BackBufferTextures[swapChainData->DeviceObject->GetCurrentBackBufferIndex()];
 
         ElemSwapChainUpdateParameters updateParameters
         {
             .SwapChainInfo = DirectX12GetSwapChainInfo(handle),
-            .BackBufferTexture = backBufferTexture,
+            .BackBufferRenderTarget = backBufferTexture,
+            //.DeltaTimeInSeconds = 1.0f / swapChainData->TargetFPS,
             .DeltaTimeInSeconds = deltaTime,
-            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds
+                //TODO: Fix next present it is wrong now
+            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds,
+            .SizeChanged = sizeChanged
         };
         
         swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
@@ -167,6 +233,29 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
             SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Present was not called during update.");
             DirectX12PresentSwapChain(handle);
         }
+
+        #if ENABLE_TEARING
+        LARGE_INTEGER currentCounter;
+        QueryPerformanceCounter(&currentCounter);
+
+        LARGE_INTEGER remainingTime;
+        remainingTime.QuadPart = -(nextVSyncQPCTime.QuadPart - currentCounter.QuadPart); 
+
+        auto testDebug = (remainingTime.QuadPart / ticksPerSecond) * 1000.0;
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for: %f, Next Present: %u, Current: %u", testDebug, nextVSyncQPCTime.QuadPart, currentCounter.QuadPart);
+
+        if (testDebug > -20 && testDebug < 0)
+        {
+            SystemAssert(SetWaitableTimerEx(swapChainData->TimerHandle, &remainingTime, 0, nullptr, nullptr, nullptr, FALSE));
+
+            if (WaitForSingleObject(swapChainData->TimerHandle, INFINITE) != WAIT_OBJECT_0) 
+            {
+            }
+
+            QueryPerformanceCounter(&currentCounter);
+            //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "After Wait: %u", currentCounter.QuadPart);
+        }
+        #endif
     }
 }
 
@@ -186,7 +275,8 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     auto windowRenderSize = ElemGetWindowRenderSize(window);
     auto width = windowRenderSize.Width;
     auto height = windowRenderSize.Height;
-    auto format = DXGI_FORMAT_B8G8R8A8_UNORM; // TODO: Enumerate compatible formats first
+    //auto format = DXGI_FORMAT_B8G8R8A8_UNORM; // TODO: Enumerate compatible formats first
+    auto format = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO: Enumerate compatible formats first
     auto frameLatency = 1u;
 
     auto targetFPS = windowData->MonitorRefreshRate;
@@ -216,7 +306,10 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         }
     }
 
-    // TODO: Support VRR
+    // TODO: Do we want a vsync parameter? 
+    // TODO: Maybe we can go on allowtearing with present 0 and Sleep the remaining of the frame to sync nearly with vsync?
+    // On non VRR displays this can maybe cause some tearing...
+
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc =
     {
         .Width = width,
@@ -227,18 +320,16 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .BufferCount = DIRECTX12_MAX_SWAPCHAIN_BUFFERS,
         .Scaling = DXGI_SCALING_STRETCH,
         .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
-        .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
-        .Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT
-    };
-
-    // TODO: Support Fullscreen exclusive in the future?
-    DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapChainFullScreenDesc =
-    {
-        .Windowed = true
+        //.AlphaMode = DXGI_ALPHA_MODE_IGNORE,
+        #if ENABLE_TEARING
+        .Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
+        #else
+        .Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT        
+        #endif
     };
 
     ComPtr<IDXGISwapChain4> swapChain;
-    AssertIfFailedReturnNullHandle(DxgiFactory->CreateSwapChainForHwnd(commandQueueData->DeviceObject.Get(), windowData->WindowHandle, &swapChainDesc, &swapChainFullScreenDesc, nullptr, (IDXGISwapChain1**)swapChain.GetAddressOf()));  
+    AssertIfFailedReturnNullHandle(DxgiFactory->CreateSwapChainForHwnd(commandQueueData->DeviceObject.Get(), windowData->WindowHandle, &swapChainDesc, nullptr, nullptr, (IDXGISwapChain1**)swapChain.GetAddressOf()));  
     AssertIfFailedReturnNullHandle(DxgiFactory->MakeWindowAssociation(windowData->WindowHandle, DXGI_MWA_NO_ALT_ENTER));
 
     if (options && options->Format == ElemSwapChainFormat_HighDynamicRange)
@@ -254,6 +345,9 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     LARGE_INTEGER creationTimestamp;
     QueryPerformanceCounter(&creationTimestamp);
 
+    auto timerHandle = CreateWaitableTimerEx(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+    SystemAssert(timerHandle);
+
     auto handle = SystemAddDataPoolItem(directX12SwapChainPool, {
         .DeviceObject = swapChain,
         .CommandQueue = commandQueue,
@@ -262,10 +356,11 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .UpdateHandler = updateHandler,
         .UpdatePayload = updatePayload,
         .PreviousTargetPresentationTimestamp = {},
+        .TimerHandle = timerHandle,
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
-        .Format = ElemTextureFormat_B8G8R8A8_SRGB, // TODO: change that
+        .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
     }); 
@@ -294,7 +389,7 @@ void DirectX12FreeSwapChain(ElemSwapChain swapChain)
     {
         if (swapChainData->BackBufferTextures[i])
         {
-            DirectX12FreeTexture(swapChainData->BackBufferTextures[i]);
+            DirectX12FreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
         }
     }
 
@@ -361,7 +456,13 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     auto vsyncInteval = windowData->MonitorRefreshRate / swapChainData->TargetFPS;
 
     // TODO: Control the next vsync for frame pacing (eg: running at 30fps on a 120hz screen)
-    AssertIfFailed(swapChainData->DeviceObject->Present(vsyncInteval, 0));
+    //AssertIfFailed(swapChainData->DeviceObject->Present(vsyncInteval, 0));
+    #if ENABLE_TEARING
+    AssertIfFailed(swapChainData->DeviceObject->Present(0, DXGI_PRESENT_ALLOW_TEARING));
+    #else
+    AssertIfFailed(swapChainData->DeviceObject->Present(1, 0));
+    #endif
     
     DirectX12ResetCommandAllocation(swapChainDataFull->GraphicsDevice);
+    DirectX12ProcessGraphicsResourceDeleteQueue();
 }

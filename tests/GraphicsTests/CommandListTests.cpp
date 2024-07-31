@@ -2,100 +2,145 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+// TODO: Test operation that can execute only on certain queue types
+// TODO: Test mutli threading create command list
+// TODO: Test also one / multi thread with multiple frame in flight (if we don't use swapchain it can grow dynamically)
+// TODO: Test Fences, assign a buffer counter at each step and check the result
+// TODO: Test WaitForFenceOnCpu
+// TODO: Test IsFenceCompleted()
+
 UTEST(CommandList, GetCommandList) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    ElemCommandListOptions options = { .DebugName = "GetCommandList" };
 
     // Act
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, &options);
 
     // Assert
     ElemCommitCommandList(commandList);
-    ElemFreeCommandQueue(commandQueue);
 
-    ASSERT_NE(ELEM_HANDLE_NULL, commandQueue);
-    ASSERT_NE(ELEM_HANDLE_NULL, commandList);
-    ASSERT_FALSE(testHasLogErrors);
+    ASSERT_NE(commandQueue, ELEM_HANDLE_NULL);
+    ASSERT_NE(commandList, ELEM_HANDLE_NULL);
+    ASSERT_LOG_NOERROR();
+
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
 UTEST(CommandList, GetCommandListWithoutPreviousCommittedOnSameThread) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    ElemGetCommandList(commandQueue, nullptr);
+    ElemCommandListOptions options = { .DebugName = "GetCommandListWithoutPreviousCommittedOnSameThread" };
+    auto commandList1 = ElemGetCommandList(commandQueue, &options);
 
     // Act
-    ElemGetCommandList(commandQueue, nullptr);
+    ElemGetCommandList(commandQueue, &options);
 
     // Assert
+    ASSERT_LOG_MESSAGE("Cannot get a command list if commit was not called on the same thread.");
+    ElemCommitCommandList(commandList1);
     ElemFreeCommandQueue(commandQueue);
-
-    ASSERT_TRUE(testHasLogErrors);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
 UTEST(CommandList, ExecuteCommandListWithoutCommit) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemCommandListOptions options = { .DebugName = "ExecuteCommandListWithoutCommit" };
+    auto commandList = ElemGetCommandList(commandQueue, &options);
 
     // Act
     ElemExecuteCommandList(commandQueue, commandList, nullptr);
 
     // Assert
+    ASSERT_LOG_MESSAGE("Commandlist needs to be committed before executing it.");
     ElemFreeCommandQueue(commandQueue);
-
-    ASSERT_TRUE(testHasLogErrors);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
-UTEST(CommandList, ExecuteCommandListWithoutInsertFence) 
+UTEST(CommandList, ExecuteCommandListFenceIsValid) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemCommandListOptions options = { .DebugName = "ExecuteCommandListFenceIsValid" };
+    auto commandList = ElemGetCommandList(commandQueue, &options);
     ElemCommitCommandList(commandList);
 
     // Act
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
 
     // Assert
-    ElemFreeCommandQueue(commandQueue);
+    ASSERT_LOG_NOERROR();
+    ASSERT_EQ(fence.CommandQueue, commandQueue);
+    ASSERT_GT(fence.FenceValue, 0u);
 
-    ASSERT_FALSE(testHasLogErrors);
-    ASSERT_EQ(ELEM_HANDLE_NULL, fence.CommandQueue);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 }
 
-UTEST(CommandList, ExecuteCommandListWithInsertFence) 
+UTEST(CommandList, ExecuteCommandListWaitForFence) 
 {
     // Arrange
-    InitLog();
-    auto graphicsDevice = GetSharedGraphicsDevice();
+    int32_t elementCount = 1000000;
+    uint32_t threadSize = 16;
+    uint32_t dispatchX = (elementCount + (threadSize - 1)) / threadSize;
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
-    auto commandList = ElemGetCommandList(commandQueue, nullptr);
-    ElemCommitCommandList(commandList);
+
+    auto gpuBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t));
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, elementCount * sizeof(uint32_t), ElemGraphicsHeapType_Readback);
+
+    auto writeBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "CommandListTests.shader", "TestWriteBufferData");
+    auto readBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "CommandListTests.shader", "TestReadBufferData");
 
     // Act
-    ElemExecuteCommandListOptions executeOptions = { .FenceAwaitableOnCpu = true }; 
-    auto fence = ElemExecuteCommandList(commandQueue, commandList, &executeOptions);
-    ElemWaitForFenceOnCpu(fence);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    TestDispatchCompute(commandList, writeBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.WriteDescriptor, 0, elementCount });
+    ElemCommitCommandList(commandList);
+    auto testFence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    auto commandList2 = ElemGetCommandList(commandQueue, nullptr);
+
+    TestDispatchCompute(commandList2, readBufferDataPipelineState, dispatchX, 1, 1, { gpuBuffer.ReadDescriptor, readbackBuffer.WriteDescriptor, elementCount });
+    ElemCommitCommandList(commandList2);
+    
+    ElemExecuteCommandListOptions executeOptions =
+    {
+        .FencesToWait = { .Items = &testFence, .Length = 1 }
+    };
+
+    auto fence = ElemExecuteCommandList(commandQueue, commandList2, &executeOptions);
 
     // Assert
+    ElemWaitForFenceOnCpu(fence);
+    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+
+    ElemFreePipelineState(readBufferDataPipelineState);
+    ElemFreePipelineState(writeBufferDataPipelineState);
+    TestFreeGpuBuffer(gpuBuffer);
+    TestFreeGpuBuffer(readbackBuffer);
     ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
 
-    ASSERT_FALSE(testHasLogErrors);
-    ASSERT_NE(ELEM_HANDLE_NULL, fence.CommandQueue);
+    ASSERT_LOG_NOERROR();
+
+    char logString[255];
+    snprintf(logString, 255, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%u, Value=%u)", (uint32_t)testFence.CommandQueue, (uint32_t)testFence.FenceValue);
+    ASSERT_LOG_MESSAGE_DEBUG(logString);
+
+    auto intData = (int32_t*)bufferData.Items;
+
+    for (int32_t i = 0; i < elementCount; i++)
+    {
+        ASSERT_EQ_MSG(intData[i], elementCount - i - 1, "Compute shader data is invalid.");
+    }
 }
-
-// TODO: Test Cannot wait fence on cpu if flag was not passed
-// TODO: Test mutli threading create command list
-// TODO: Test also one / multi thread with multiple frame in flight (if we don't use swapchain it can grow dynamically)
-// TODO: Test Fences, assign a buffer counter at each step and check the result

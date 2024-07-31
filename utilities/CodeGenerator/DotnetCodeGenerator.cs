@@ -197,6 +197,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         foreach (var function in functions)
         {
+            Console.WriteLine($"Generating Service Function: {function.Name}");
             var containsStringParameters = GenerateServiceFunction(compilation, serviceName, stringBuilder, function, generateStringParameters: false);
             
             if (containsStringParameters)
@@ -418,7 +419,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             var srcFieldName = "resultUnsafe";
             var destFieldName = "result";
 
-            if (function.ReturnType.GetDisplayName().Contains("Span"))
+            if (function.ReturnType.GetDisplayName().Contains("Span") && function.ReturnType.GetDisplayName() != "ElemDataSpan")
             {
                 structType = returnTypeMarshalling as CppClass;
                 destFieldName = "result[i]";
@@ -624,52 +625,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             }
             else
             {
-                if (typeDefType.Comment != null)
-                {
-                    GenerateComment(stringBuilder, typeDefType.Comment, 0);
-                }
-                
-                var needToDispose = (compilation.FindByName<CppFunction>($"ElemFree{typeName}") != null);
-                
-                stringBuilder.Append($"public readonly ref struct {typeName}");
-
-                if (needToDispose)
-                {
-                    stringBuilder.AppendLine(" : IDisposable");
-                }
-                else
-                {
-                    stringBuilder.AppendLine();
-                }
-
-                stringBuilder.AppendLine("{");
-                
-                Indent(stringBuilder);
-                stringBuilder.AppendLine($"private {MapType(compilation, canonicalType)} Value {{ get; }}");
-
-                if (needToDispose)
-                {
-                    stringBuilder.AppendLine();
-                    Indent(stringBuilder);
-                    stringBuilder.AppendLine("///<summary>");
-                    Indent(stringBuilder);
-                    stringBuilder.AppendLine("/// Disposes the handler.");
-                    Indent(stringBuilder);
-                    stringBuilder.AppendLine("///</summary>");
-
-                    Indent(stringBuilder);
-                    stringBuilder.AppendLine("public void Dispose()");
-                    Indent(stringBuilder);
-                    stringBuilder.AppendLine("{");
-
-                    Indent(stringBuilder, 2);
-                    stringBuilder.AppendLine($"{moduleName}ServiceInterop.Free{typeName.Replace("Elemental", string.Empty)}(this);");
-
-                    Indent(stringBuilder);
-                    stringBuilder.AppendLine("}");
-                }
-
-                stringBuilder.AppendLine("}");
+                GenerateTypedef(compilation, canonicalType, typeName, stringBuilder, typeDefType, moduleName);
             }
         }
         else if (type.TypeKind == CppTypeKind.Enum)
@@ -698,7 +654,6 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         if (result.Success)
         {
-            Console.WriteLine("ok");
             stringBuilder.Append("##MARSHALLER##");
             stringBuilder.AppendLine("[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
             stringBuilder.Append($"public delegate {result.Groups[1].Value.Trim()} {typeName}(");
@@ -757,7 +712,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 stringBuilder.Append($"{parameterType} {parameterName}");
                 parametersDeclaration.Append($"{MapTypeToUnmanaged(parameterType)} {parameterName}");
                 parametersValue.Append($"{MapValueToUnmanaged(parameterType, parameterName)}");
-                parameterChecks.Append($" || {parameterName} != null");
+                parameterChecks.Append($" || {parameterName} == null");
             }
 
             stringBuilder.AppendLine(");");
@@ -778,6 +733,56 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 stringBuilder.Replace("##PARAMETER_CHECKS##", parameterChecks.ToString());
             }
         }
+    }
+    
+    private void GenerateTypedef(CppCompilation compilation, CppType canonicalType, string typeName, StringBuilder stringBuilder, CppTypedef typeDefType, string moduleName)
+    {
+        if (typeDefType.Comment != null)
+        {
+            GenerateComment(stringBuilder, typeDefType.Comment, 0);
+        }
+
+        var needToDispose = (compilation.FindByName<CppFunction>($"ElemFree{typeName}") != null);
+
+        stringBuilder.Append($"public readonly record struct {typeName}");
+
+        if (needToDispose)
+        {
+            stringBuilder.AppendLine(" : IDisposable");
+        }
+        else
+        {
+            stringBuilder.AppendLine();
+        }
+
+        stringBuilder.AppendLine("{");
+
+        Indent(stringBuilder);
+        stringBuilder.AppendLine($"private {MapType(compilation, canonicalType)} Value {{ get; }}");
+
+        if (needToDispose)
+        {
+            stringBuilder.AppendLine();
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("///<summary>");
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("/// Disposes the handler.");
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("///</summary>");
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("public void Dispose()");
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("{");
+
+            Indent(stringBuilder, 2);
+            stringBuilder.AppendLine($"{moduleName}ServiceInterop.Free{typeName.Replace("Elemental", string.Empty)}(this);");
+
+            Indent(stringBuilder);
+            stringBuilder.AppendLine("}");
+        }
+
+        stringBuilder.AppendLine("}");
     }
 
     private void GenerateEnum(CppType type, string typeName, StringBuilder stringBuilder)

@@ -1,7 +1,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
-#include "VulkanTexture.h"
+#include "VulkanResource.h"
 #include "Inputs/Inputs.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
@@ -60,11 +60,21 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
 
     for (uint32_t i = 0; i < swapchainImageCount; i++)
     {
-        swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], swapChainDataFull->VulkanFormat, width, height, true);
+        ElemGraphicsResourceInfo resourceInfo = 
+        {
+            .Type = ElemGraphicsResourceType_Texture2D,
+            .Width = width,
+            .Height = height,
+            .MipLevels = 1,
+            .Format = swapChainData->Format,
+            .Usage = ElemGraphicsResourceUsage_RenderTarget
+        };
+
+        swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], &resourceInfo, true);
     }
 }
 
-VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, VkSurfaceKHR windowSurface, VkSwapchainCreateInfoKHR* swapChainCreateInfo)
+VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, VkSurfaceKHR windowSurface, VkSwapchainCreateInfoKHR* swapChainCreateInfo, VkSwapchainKHR oldSwapChain)
 {
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
@@ -94,11 +104,11 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
     swapChainCreateInfo->preTransform = surfaceCapabilities.currentTransform;
     swapChainCreateInfo->compositeAlpha = compositeAlpha;
     swapChainCreateInfo->flags = 0;
+    swapChainCreateInfo->oldSwapchain = oldSwapChain;
 
     VkSwapchainKHR swapChain;
     AssertIfFailed(vkCreateSwapchainKHR(graphicsDeviceData->Device, swapChainCreateInfo, nullptr, &swapChain));
 
-    swapChainCreateInfo->oldSwapchain = swapChain;
 
     return swapChain;
 }
@@ -139,12 +149,12 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     swapChainCreateInfo->imageExtent.width = width;
     swapChainCreateInfo->imageExtent.height = height;
     
-    swapChainData->DeviceObject = CreateVulkanSwapChainObject(swapChainData->CommandQueue, swapChainData->WindowSurface, swapChainCreateInfo);
+    swapChainData->DeviceObject = CreateVulkanSwapChainObject(swapChainData->CommandQueue, swapChainData->WindowSurface, swapChainCreateInfo, oldSwapChain);
 
-    for (int32_t i = 0; i < 3; i++)
+    for (uint32_t i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
     {
         auto texture = swapChainData->BackBufferTextures[i];
-        VulkanFreeTexture(texture);
+        VulkanFreeGraphicsResource(texture, nullptr);
     }
 
     vkDestroySwapchainKHR(graphicsDeviceData->Device, oldSwapChain, nullptr);
@@ -193,9 +203,12 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
 
     ElemWindowSize windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
+    auto sizeChanged = false;
+
     if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
     {
         ResizeVulkanSwapChain(handle, windowSize.Width, windowSize.Height);
+        sizeChanged = true;
     }
 
     AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, VK_NULL_HANDLE, swapChainData->BackBufferAcquireFence, &swapChainData->CurrentImageIndex));
@@ -203,14 +216,15 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     vkResetFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFence);
 
     swapChainData->PresentCalled = false;
-    auto backBufferTexture = swapChainData->BackBufferTextures[swapChainData->CurrentImageIndex];
+    auto backBuffer = swapChainData->BackBufferTextures[swapChainData->CurrentImageIndex];
 
     ElemSwapChainUpdateParameters updateParameters
     {
         .SwapChainInfo = VulkanGetSwapChainInfo(handle),
-        .BackBufferTexture = backBufferTexture,
+        .BackBufferRenderTarget = backBuffer,
         .DeltaTimeInSeconds = deltaTime,
-        .NextPresentTimestampInSeconds = 1.0f//nextPresentTimestampInSeconds
+        .NextPresentTimestampInSeconds = 1.0f,//nextPresentTimestampInSeconds
+        .SizeChanged = sizeChanged
     };
     
     swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
@@ -370,7 +384,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     swapChainCreateInfo.imageExtent.width = width;
     swapChainCreateInfo.imageExtent.height = height;
 
-    auto swapChain = CreateVulkanSwapChainObject(commandQueueData->GraphicsDevice, windowSurface, &swapChainCreateInfo);
+    auto swapChain = CreateVulkanSwapChainObject(commandQueueData->GraphicsDevice, windowSurface, &swapChainCreateInfo, nullptr);
 
     VkFence acquireFence;
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -394,7 +408,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
-        .Format = ElemTextureFormat_B8G8R8A8_SRGB, // TODO: change that
+        .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
     });
@@ -439,10 +453,10 @@ void VulkanFreeSwapChain(ElemSwapChain swapChain)
 
     for (int i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
     {
-        auto textureData = GetVulkanTextureData(swapChainData->BackBufferTextures[i]);
+        auto textureData = GetVulkanGraphicsResourceData(swapChainData->BackBufferTextures[i]);
         SystemAssert(textureData);
 
-        VulkanFreeTexture(swapChainData->BackBufferTextures[i]);
+        VulkanFreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
     }
 
     vkDestroySwapchainKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, nullptr);
@@ -484,16 +498,13 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     auto commandQueueData = GetVulkanCommandQueueData(swapChainData->CommandQueue);
     SystemAssert(commandQueueData);
 
-    // HACK: We should set the release semaphore to the latest command buffer
-    // Otherwise, the results maybe undefined?
-
     VkPresentIdKHR presentIdInfo = { VK_STRUCTURE_TYPE_PRESENT_ID_KHR };
     presentIdInfo.swapchainCount = 1;
     presentIdInfo.pPresentIds = &swapChainData->PresentId;
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-    presentInfo.waitSemaphoreCount = 0;
-    presentInfo.pWaitSemaphores = nullptr;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &commandQueueData->PresentSemaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &swapChainData->DeviceObject;
     presentInfo.pImageIndices = &swapChainData->CurrentImageIndex;
@@ -502,6 +513,7 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     AssertIfFailed(vkQueuePresentKHR(commandQueueData->DeviceObject, &presentInfo));
     
     VulkanResetCommandAllocation(swapChainData->GraphicsDevice);
+    VulkanProcessGraphicsResourceDeleteQueue();
     swapChainData->PresentId++;
 }
 

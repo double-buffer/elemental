@@ -10,7 +10,6 @@
 #define AssertIfFailedReturnNullHandle(expression) SystemAssertReturnNullHandle(SUCCEEDED((expression)))
 #define ComPtr CComPtr
 #undef _WIN32
-#include <Carbon/Carbon.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -29,7 +28,6 @@
 #include <codecvt>
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <iostream>
 #include <cstdlib>
 

@@ -3,25 +3,35 @@
 var applicationService = new ApplicationService();
 applicationService.ConfigureLogHandler(DefaultLogHandlers.ConsoleLogHandler);
 
-using var application = applicationService.CreateApplication("Hello Window"u8);
-
-using var window = applicationService.CreateWindow(application, new WindowOptions
+applicationService.RunApplication<TestPayload>(new ()
 {
-    Title = "Hello Window!"u8
-});
-
-applicationService.RunApplication(application, (status) =>
-{
-    if (status == ApplicationStatus.Closing)
+    ApplicationName = "Hello Window"u8,
+    InitHandler = InitSample,
+    FreeHandler = FreeSample,
+    Payload = new TestPayload
     {
-        Console.WriteLine("Closing Application...");
-        return false;
+        Test = 28
     }
-
-    var renderSize = applicationService.GetWindowRenderSize(window);
-    applicationService.SetWindowTitle(window, $"Hello window! (Current RenderSize: Width={renderSize.Width}, Height={renderSize.Height}, UIScale={renderSize.UIScale}, State={renderSize.WindowState})");
-
-    Thread.Sleep(5);
-
-    return true;
 });
+
+void InitSample(ref TestPayload payload) 
+{
+    var systemInfo = applicationService.GetSystemInfo();
+
+    Console.WriteLine($"Path: {System.Text.Encoding.UTF8.GetString(systemInfo.ApplicationPath)}");
+
+    payload.Window = applicationService.CreateWindow();
+    Console.WriteLine($"Test: {payload.Test}");
+}
+
+void FreeSample(ref TestPayload payload) 
+{
+    payload.Window.Dispose();
+    Console.WriteLine("Exit Sample");
+}
+
+record struct TestPayload 
+{
+    public Window Window { get; set; }
+    public int Test { get; set; }
+}

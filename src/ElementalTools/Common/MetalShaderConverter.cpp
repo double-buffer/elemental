@@ -49,6 +49,26 @@ bool ProcessMetalShaderConverterLogOutput(MemoryArena memoryArena, ComPtr<IDxcRe
     return hasErrors;
 }
 
+IRShaderStage ConvertShaderTypeToMetalShaderStage(ShaderType shaderType)
+{
+    switch (shaderType)
+    {
+        case ShaderType_Amplification:
+            return IRShaderStage::IRShaderStageAmplification;
+
+        case ShaderType_Mesh:
+            return IRShaderStage::IRShaderStageMesh;
+
+        case ShaderType_Pixel:
+            return IRShaderStage::IRShaderStageFragment;
+
+        case ShaderType_Compute:
+        case ShaderType_Library:
+        case ShaderType_Unknown:
+            return IRShaderStage::IRShaderStageCompute;
+    };
+}
+
 bool CheckDxilShaderDataHeader(ReadOnlySpan<uint8_t> data, const char* headerValue)
 {
     for (uint32_t i = 0; i < 4; i++)
@@ -96,7 +116,7 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
         {
             .ShaderRegister = 0,
             .RegisterSpace = 0,
-            .Num32BitValues = 16
+            .Num32BitValues = 24
         },
         .ShaderVisibility = IRShaderVisibilityAll
     };
@@ -131,22 +151,14 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
     }  
     else
     {
-        auto dataSpan = Span<uint8_t>((uint8_t*)shaderCode.Pointer, shaderCode.Length);
-        auto shaderCount = *(uint32_t*)dataSpan.Pointer;
-        dataSpan = dataSpan.Slice(sizeof(uint32_t));
+        auto shaderParts = ReadShaderParts(stackMemoryArena, shaderCode);
+        auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, shaderParts.Length);
 
-        // HACK: For dx the first one is the lib, we need to refactor this
-        auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, shaderCount + 1);
-
-        for (uint32_t i = 1; i < shaderCount + 1; i++)
+        for (uint32_t i = 0; i < shaderParts.Length; i++)
         {
-            auto size = *(uint32_t*)dataSpan.Pointer;
-            dataSpan = dataSpan.Slice(sizeof(uint32_t));
+            auto shaderPart = shaderParts[i];
 
-            auto dxilShaderData = ReadOnlySpan<uint8_t>(dataSpan.Pointer, size);
-            dataSpan = dataSpan.Slice(size);
-
-            IRObject* pDXIL = IRObjectCreateFromDXIL(dxilShaderData.Pointer, dxilShaderData.Length, IRBytecodeOwnershipNone);
+            IRObject* pDXIL = IRObjectCreateFromDXIL(shaderPart.ShaderCode.Pointer, shaderPart.ShaderCode.Length, IRBytecodeOwnershipNone);
 
             // Compile DXIL to Metal IR:
             IRError* pError = nullptr;
@@ -171,19 +183,11 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
             }
 
             // TODO: We need to have shader parts
-            auto result = IRObjectGetMetalLibBinary(pOutIR, IRShaderStageAmplification, pMetallib);
-            auto shaderType = ShaderType_Amplification;
+            auto result = IRObjectGetMetalLibBinary(pOutIR, ConvertShaderTypeToMetalShaderStage(shaderPart.ShaderType), pMetallib);
 
             if (!result)
             {
-                result = IRObjectGetMetalLibBinary(pOutIR, IRShaderStageMesh, pMetallib);
-                shaderType = ShaderType_Mesh;
-            }
-
-            if (!result)
-            {
-                result = IRObjectGetMetalLibBinary(pOutIR, IRShaderStageFragment, pMetallib);
-                shaderType = ShaderType_Pixel;
+                // TODO: Error
             }
 
             size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
@@ -192,7 +196,9 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
 
             outputShaderDataList[i] = 
             {
-                .ShaderType = shaderType, 
+                .ShaderType = shaderPart.ShaderType, 
+                .Name = SystemDuplicateBuffer(stackMemoryArena, shaderPart.Name), 
+                .Metadata = shaderPart.Metadata,
                 .ShaderCode = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, shaderByteCode)
             };
         }

@@ -2,8 +2,15 @@
 
 #include "Elemental.h"
 #include "Graphics/CommandAllocatorPool.h"
+#include "Graphics/ResourceBarrier.h"
 #include "SystemSpan.h"
 #include "volk.h"
+
+enum VulkanPipelineStateType
+{
+    VulkanPipelineStateType_Graphics,
+    VulkanPipelineStateType_Compute
+};
 
 // TODO: Review data
 struct VulkanCommandQueueData
@@ -14,6 +21,8 @@ struct VulkanCommandQueueData
     ElemGraphicsDevice GraphicsDevice;
     VkSemaphore Fence;
     uint64_t FenceValue;
+    VkSemaphore PresentSemaphore;
+    bool SignalPresentSemaphore;
     uint64_t LastCompletedFenceValue;
 };
 
@@ -29,8 +38,12 @@ struct VulkanCommandListData
 {
     VkCommandBuffer DeviceObject;
     ElemGraphicsDevice GraphicsDevice;
+    ElemCommandQueue CommandQueue;
+    bool IsCommitted;
     CommandAllocatorPoolItem<VkCommandPool, VkCommandBuffer>* CommandAllocatorPoolItem;
     CommandListPoolItem<VkCommandBuffer>* CommandListPoolItem;
+    VulkanPipelineStateType PipelineStateType;
+    ResourceBarrierPool ResourceBarrierPool;
 };
 
 struct VulkanCommandListDataFull
@@ -53,3 +66,4 @@ void VulkanCommitCommandList(ElemCommandList commandList);
 
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void VulkanWaitForFenceOnCpu(ElemFence fence);
+bool VulkanIsFenceCompleted(ElemFence fence);

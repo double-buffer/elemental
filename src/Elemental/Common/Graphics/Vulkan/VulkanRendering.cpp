@@ -1,6 +1,8 @@
 #include "VulkanRendering.h"
+#include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
-#include "VulkanTexture.h"
+#include "VulkanResource.h"
+#include "VulkanResourceBarrier.h"
 #include "SystemLogging.h"
 #include "SystemFunctions.h"
 
@@ -29,7 +31,7 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetVulkanTextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetVulkanGraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
         
         VkAttachmentLoadOp loadOperation;
@@ -76,39 +78,22 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         renderingAttachments[i] =
         {
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-            .imageView = textureData->ImageView,
+            .imageView = textureData->RenderTargetImageView,
             .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
             .loadOp = loadOperation,
             .storeOp = storeOperation,
             .clearValue = clearValue
         };
-
-        //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
-        if (textureData->IsPresentTexture)
+        
+        ResourceBarrierItem resourceBarrier =
         {
-            VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-            barrier.srcAccessMask = VK_ACCESS_NONE_KHR;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-            barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = textureData->DeviceObject;
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-            barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            .Type = ElemGraphicsResourceType_Texture2D,
+            .Resource = renderTargetParameters.RenderTarget,
+            .AfterAccess = ElemGraphicsResourceBarrierAccessType_RenderTarget,
+            .AfterLayout = ElemGraphicsResourceBarrierLayoutType_RenderTarget
+        };
 
-            VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
-            dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-            dependencyInfo.bufferMemoryBarrierCount = 0;
-            dependencyInfo.pBufferMemoryBarriers = nullptr;
-            dependencyInfo.imageMemoryBarrierCount = 1;
-            dependencyInfo.pImageMemoryBarriers = &barrier;
-
-            vkCmdPipelineBarrier2(commandListData->DeviceObject, &dependencyInfo);
-        }
+        EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
 
         if (i == 0)
         {
@@ -148,6 +133,7 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
     renderingInfo.colorAttachmentCount = renderingAttachments.Length;
     renderingInfo.pColorAttachments = renderingAttachments.Pointer;
 
+    InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_RenderTarget);
     vkCmdBeginRendering(commandListData->DeviceObject, &renderingInfo);
 }
 
@@ -160,6 +146,13 @@ void VulkanEndRenderPass(ElemCommandList commandList)
 
     auto commandListDataFull = GetVulkanCommandListDataFull(commandList);
     SystemAssert(commandListDataFull);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto commandQueueData = GetVulkanCommandQueueData(commandListData->CommandQueue);
+    SystemAssert(commandQueueData);
+
     auto parameters = &commandListDataFull->CurrentRenderPassParameters;
 
     vkCmdEndRendering(commandListData->DeviceObject);
@@ -169,37 +162,26 @@ void VulkanEndRenderPass(ElemCommandList commandList)
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
         SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetVulkanTextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetVulkanGraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
-        // TODO: Handle texture accesses, currently we only handle the image layout
-        //⚠️ : All barrier stuff will have a common logic and will try to maximize the grouping of barriers!!!
         if (textureData->IsPresentTexture)
         {
-            VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-            barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
-            barrier.dstAccessMask = VK_ACCESS_2_NONE_KHR;
-            barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = textureData->DeviceObject;
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-            barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            ResourceBarrierItem resourceBarrier =
+            {
+                .Type = ElemGraphicsResourceType_Texture2D,
+                .Resource = renderTargetParameters.RenderTarget,
+                .AfterAccess = ElemGraphicsResourceBarrierAccessType_NoAccess,
+                .AfterLayout = ElemGraphicsResourceBarrierLayoutType_Present
+            };
 
-            VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
-            dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-            dependencyInfo.bufferMemoryBarrierCount = 0;
-            dependencyInfo.pBufferMemoryBarriers = nullptr;
-            dependencyInfo.imageMemoryBarrierCount = 1;
-            dependencyInfo.pImageMemoryBarriers = &barrier;
+            EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
 
-            vkCmdPipelineBarrier2(commandListData->DeviceObject, &dependencyInfo);
+            commandQueueData->SignalPresentSemaphore = true;
         }
     }
+    
+    InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_None);
 }
 
 void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)

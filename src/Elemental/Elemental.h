@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------
 // Elemental Library
-// Version: 1.0.0-dev4
+// Version: 1.0.0-dev5
 //
 // MIT License
 //
@@ -36,7 +36,7 @@
 #define UseLoader
 #endif
 
-#define ELEM_VERSION_LABEL "1.0.0-dev4"
+#define ELEM_VERSION_LABEL "1.0.0-dev5"
 
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
@@ -210,6 +210,8 @@ typedef void (*ElemLogHandlerPtr)(ElemLogMessageType messageType, ElemLogMessage
  */
 ElemAPI void ElemConfigureLogHandler(ElemLogHandlerPtr logHandler);
 
+// TODO: Do a ElemGetLastError() function?
+
 /**
  * Retrieves system-related information, such as platform and application path.
  *
@@ -302,9 +304,19 @@ typedef ElemHandle ElemCommandList;
 typedef ElemHandle ElemSwapChain;
 
 /**
- * Handle that represents a texture.
+ * Handle that represents a graphics heap.
  */
-typedef ElemHandle ElemTexture;
+typedef ElemHandle ElemGraphicsHeap;
+
+/**
+ * Handle that represents a graphics resource.
+ */
+typedef ElemHandle ElemGraphicsResource;
+
+/**
+ * Handle that represents a graphics resource descriptor.
+ */
+typedef int32_t ElemGraphicsResourceDescriptor;
 
 /**
  * Handle that represents a shader library.
@@ -351,14 +363,67 @@ typedef enum
     ElemSwapChainFormat_HighDynamicRange = 1
 } ElemSwapChainFormat;
 
+typedef enum
+{
+    ElemGraphicsHeapType_Gpu = 0,
+    ElemGraphicsHeapType_GpuUpload = 1,
+    ElemGraphicsHeapType_Readback = 2
+} ElemGraphicsHeapType;
+
 /**
- * Enumerates texture formats.
+ * Enumerates graphics formats.
  */
 typedef enum
 {
-    // Standard 8-bit BGRA format using sRGB color space.
-    ElemTextureFormat_B8G8R8A8_SRGB
-} ElemTextureFormat;
+    ElemGraphicsFormat_Raw,
+    ElemGraphicsFormat_B8G8R8A8_SRGB,
+    ElemGraphicsFormat_B8G8R8A8_UNORM,
+    ElemGraphicsFormat_R16G16B16A16_FLOAT,
+    ElemGraphicsFormat_R32G32B32A32_FLOAT,
+} ElemGraphicsFormat;
+
+typedef enum
+{
+    ElemGraphicsResourceType_Buffer,
+    ElemGraphicsResourceType_Texture2D
+} ElemGraphicsResourceType;
+
+typedef enum
+{
+    ElemGraphicsResourceUsage_Read = 0x00,
+    ElemGraphicsResourceUsage_Write = 0x01,
+    ElemGraphicsResourceUsage_RenderTarget = 0x02
+} ElemGraphicsResourceUsage;
+
+typedef enum
+{
+    ElemGraphicsResourceDescriptorUsage_Read = 0x00,
+    ElemGraphicsResourceDescriptorUsage_Write = 0x01
+} ElemGraphicsResourceDescriptorUsage;
+
+typedef enum
+{
+    ElemGraphicsResourceBarrierSyncType_None,
+    ElemGraphicsResourceBarrierSyncType_Compute,
+    ElemGraphicsResourceBarrierSyncType_RenderTarget
+} ElemGraphicsResourceBarrierSyncType;
+
+typedef enum
+{
+    ElemGraphicsResourceBarrierAccessType_NoAccess,
+    ElemGraphicsResourceBarrierAccessType_Read,
+    ElemGraphicsResourceBarrierAccessType_Write,
+    ElemGraphicsResourceBarrierAccessType_RenderTarget
+} ElemGraphicsResourceBarrierAccessType;
+
+typedef enum 
+{
+    ElemGraphicsResourceBarrierLayoutType_Undefined,
+    ElemGraphicsResourceBarrierLayoutType_Read,
+    ElemGraphicsResourceBarrierLayoutType_Write,
+    ElemGraphicsResourceBarrierLayoutType_RenderTarget,
+    ElemGraphicsResourceBarrierLayoutType_Present
+} ElemGraphicsResourceBarrierLayoutType;
 
 /**
  * Enumerates render pass load actions.
@@ -391,6 +456,10 @@ typedef struct
 {
     // Enable debugging features if set to true.
     bool EnableDebugLayer;
+    // Enable GPU validation if debug layer is enabled.
+    bool EnableGpuValidation;
+    // Enable debug logging of barriers.
+    bool EnableDebugBarrierInfo;
     // Prefer using Vulkan API if set to true.
     bool PreferVulkan;
 } ElemGraphicsOptions;
@@ -488,10 +557,6 @@ typedef struct
  */
 typedef struct
 {
-    // TODO: Do we need that? This was foreseen for metal because SharedEvent may be slower
-    // But it would be great to avoid this flag.
-    // If set to true, CPU can wait on the fence.
-    bool FenceAwaitableOnCpu;
     // Fences that the execution should wait on before starting.
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
@@ -523,7 +588,7 @@ typedef struct
     // Aspect ratio of the swap chain.
     float AspectRatio;
     // Format of the textures used in the swap chain.
-    ElemTextureFormat Format;
+    ElemGraphicsFormat Format;
 } ElemSwapChainInfo;
 
 /**
@@ -533,32 +598,86 @@ typedef struct
 {
     // Information about the swap chain's configuration.
     ElemSwapChainInfo SwapChainInfo;
-    // Back buffer texture for the swap chain.
-    ElemTexture BackBufferTexture;
+    // Back buffer render target for the swap chain.
+    ElemGraphicsResource BackBufferRenderTarget;
     // Time since the last frame was presented, in seconds.
     double DeltaTimeInSeconds; 
     // Timestamp for when the next frame is expected to be presented, in seconds.
     double NextPresentTimestampInSeconds;
+    // True if the size of the swapchain has changed from the previous update.
+    bool SizeChanged;
 } ElemSwapChainUpdateParameters;
+
+/**
+ * Options for creating a graphics heap.
+ */
+typedef struct
+{
+    // Type of the graphics heap. Default to GPU.
+    ElemGraphicsHeapType HeapType;
+    // Optional debug name for the graphics heap.
+    const char* DebugName;
+} ElemGraphicsHeapOptions;
+
+typedef struct
+{
+    const char* DebugName;
+} ElemGraphicsResourceInfoOptions;
+
+// TODO: Mip Levels
+typedef struct
+{
+    ElemGraphicsResourceType Type;
+    uint32_t Width;
+    uint32_t Height;
+    uint32_t MipLevels;
+    ElemGraphicsFormat Format;
+    uint32_t Alignment;
+    uint32_t SizeInBytes;
+    ElemGraphicsResourceUsage Usage;
+    const char* DebugName;
+} ElemGraphicsResourceInfo;
+
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsResourceOptions;
+
+typedef struct
+{
+    uint32_t TextureMipIndex;
+} ElemGraphicsResourceDescriptorOptions;
+
+typedef struct
+{
+    ElemGraphicsResource Resource;
+    ElemGraphicsResourceDescriptorUsage Usage;
+    uint32_t TextureMipIndex;
+} ElemGraphicsResourceDescriptorInfo;
+
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsResourceDescriptorOptions;
 
 /**
  * Represents a collection of texture formats.
  */
 typedef struct
 {
-    // Pointer to an array of ElemTextureFormat.
-    ElemTextureFormat* Items;
+    // Pointer to an array of ElemGraphicsFormat.
+    ElemGraphicsFormat* Items;
     // Number of items in the array.
     uint32_t Length;
-} ElemTextureFormatSpan;
+} ElemGraphicsFormatSpan;
 
 /**
  * Parameters for creating a graphics pipeline state.
  */
 typedef struct
 {
-    // Optional debug name for the pipeline state.
-    const char* DebugName;
     // Shader library containing the shaders.
     ElemShaderLibrary ShaderLibrary;
     // Function name of the mesh shader in the shader library.
@@ -566,8 +685,33 @@ typedef struct
     // Function name of the pixel shader in the shader library.
     const char* PixelShaderFunction;
     // Supported texture formats for the pipeline state.
-    ElemTextureFormatSpan TextureFormats;
+    ElemGraphicsFormatSpan TextureFormats;
+    // Optional debug name for the pipeline state.
+    const char* DebugName;
 } ElemGraphicsPipelineStateParameters;
+
+/**
+ * Parameters for creating a compute pipeline state.
+ */
+typedef struct
+{
+    // Shader library containing the shaders.
+    ElemShaderLibrary ShaderLibrary;
+    // Function name of the mesh shader in the shader library.
+    const char* ComputeShaderFunction;
+    // Optional debug name for the pipeline state.
+    const char* DebugName;
+} ElemComputePipelineStateParameters;
+
+typedef struct
+{
+    ElemGraphicsResourceBarrierSyncType BeforeSync;
+    ElemGraphicsResourceBarrierSyncType AfterSync;
+    ElemGraphicsResourceBarrierAccessType BeforeAccess;
+    ElemGraphicsResourceBarrierAccessType AfterAccess;
+    ElemGraphicsResourceBarrierLayoutType BeforeLayout;
+    ElemGraphicsResourceBarrierLayoutType AfterLayout;
+} ElemGraphicsResourceBarrierOptions;
 
 /**
  * Represents RGBA color.
@@ -619,8 +763,8 @@ typedef struct
  */
 typedef struct
 {
-    // Render target texture.
-    ElemTexture RenderTarget;
+    ElemGraphicsResource RenderTarget;
+
     // Color to clear the render target with if the load action is clear.
     ElemColor ClearColor;
     // Action to take when loading data into the render target at the beginning of a render pass.
@@ -686,6 +830,7 @@ ElemAPI void ElemFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);
  * @param graphicsDevice The graphics device to query.
  * @return A structure containing detailed information about the device.
  */
+// TODO: Add IsHdrSupported
 ElemAPI ElemGraphicsDeviceInfo ElemGetGraphicsDeviceInfo(ElemGraphicsDevice graphicsDevice);
 
 /**
@@ -746,6 +891,7 @@ ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCom
  * @param fence The fence to wait on.
  */
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
+ElemAPI bool ElemIsFenceCompleted(ElemFence fence);
 
 /**
  * Creates a swap chain for a window, allowing rendered frames to be presented to the screen.
@@ -784,6 +930,23 @@ ElemAPI void ElemSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLaten
  */
 ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 
+ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
+ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
+
+ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
+ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
+
+ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
+ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
+ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
+ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
+
+ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
+ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
+ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
+
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(void);
+
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.
  * @param graphicsDevice The device on which to create the shader library.
@@ -806,10 +969,13 @@ ElemAPI void ElemFreeShaderLibrary(ElemShaderLibrary shaderLibrary);
  */
 ElemAPI ElemPipelineState ElemCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters);
 
+ElemAPI ElemPipelineState ElemCompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters);
+
 /**
  * Releases resources associated with a pipeline state.
  * @param pipelineState The pipeline state to free.
  */
+// TODO: Add the options with a fence???
 ElemAPI void ElemFreePipelineState(ElemPipelineState pipelineState);
 
 /**
@@ -826,6 +992,17 @@ ElemAPI void ElemBindPipelineState(ElemCommandList commandList, ElemPipelineStat
  * @param data The data to be pushed as constants.
  */
 ElemAPI void ElemPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data);
+
+ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
+
+/**
+ * Dispatches a compute operation on a command list, specifying the number of thread groups in each dimension.
+ * @param commandList The command list on which the mesh operation is to be dispatched.
+ * @param threadGroupCountX The number of thread groups in the X dimension.
+ * @param threadGroupCountY The number of thread groups in the Y dimension.
+ * @param threadGroupCountZ The number of thread groups in the Z dimension.
+ */
+ElemAPI void ElemDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ);
 
 /**
  * Begins a render pass, setting up the rendering targets and viewports for drawing operations.

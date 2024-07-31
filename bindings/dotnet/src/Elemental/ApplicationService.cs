@@ -22,20 +22,9 @@ public class ApplicationService : IApplicationService
 
         var result = new SystemInfo();
         result.Platform = resultUnsafe.Platform;
-        
-var ApplicationPathCounter = 0;
-var ApplicationPathPointer = (byte*)resultUnsafe.ApplicationPath;
 
-while (ApplicationPathPointer[ApplicationPathCounter] != 0)
-{
-ApplicationPathCounter++;
-}
-
-ApplicationPathCounter++;
-        var ApplicationPathSpan = new ReadOnlySpan<byte>(ApplicationPathPointer, ApplicationPathCounter);
-        var ApplicationPathArray = new byte[ApplicationPathCounter];
-        ApplicationPathSpan.CopyTo(ApplicationPathArray);
-        result.ApplicationPath = ApplicationPathArray;
+        // TODO: New code to generate
+        result.ApplicationPath = MemoryMarshal.CreateReadOnlySpanFromNullTerminated(resultUnsafe.ApplicationPath);
         result.SupportMultiWindows = resultUnsafe.SupportMultiWindows;
 
         return result;
@@ -46,20 +35,25 @@ ApplicationPathCounter++;
     /// </summary>
     /// <param name="parameters">Configuration and handlers for the application lifecycle.</param>
     /// <returns>Status code indicating success or error.</returns>
-    public unsafe int RunApplication<T>(in RunApplicationParameters<T> parameters)
+    public unsafe int RunApplication<T>(in RunApplicationParameters<T> parameters) where T : unmanaged
     {
+        // TODO: New code to generate
         fixed (byte* ApplicationNamePinned = parameters.ApplicationName)
-        {
-        fixed (void* payloadPinnedPinned = &parameters.Payload)
         {
             var parametersUnsafe = new RunApplicationParametersUnsafe();
             parametersUnsafe.ApplicationName = ApplicationNamePinned;
-            parametersUnsafe.InitHandler = (void*)Marshal.GetFunctionPointerForDelegate(parameters.InitHandler);
-            parametersUnsafe.FreeHandler = (void*)Marshal.GetFunctionPointerForDelegate(parameters.FreeHandler);
-            parametersUnsafe.Payload = payloadPinnedPinned;
+
+            InitApplicationHandler<T>._interceptorEntry = parameters.InitHandler;
+            parametersUnsafe.InitHandler = (nint)(delegate* <ref T, void>)&InitApplicationHandler<T>.Interceptor;
+
+            FreeApplicationHandler<T>._interceptorEntry = parameters.FreeHandler;
+            parametersUnsafe.FreeHandler = (nint)(delegate* <ref T, void>)&FreeApplicationHandler<T>.Interceptor;
+
+            var test = stackalloc T[1];
+            *test = parameters.Payload;
+            parametersUnsafe.Payload = (nint)test;
 
             return ApplicationServiceInterop.RunApplication(parametersUnsafe);
-        }
         }
     }
 

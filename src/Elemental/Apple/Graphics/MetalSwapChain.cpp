@@ -1,7 +1,7 @@
 #include "MetalSwapChain.h"
 #include "MetalCommandList.h"
 #include "MetalGraphicsDevice.h"
-#include "MetalTexture.h"
+#include "MetalResource.h"
 #include "Inputs/Inputs.h"
 #include "../Inputs.h"
 #include "SystemDataPool.h"
@@ -71,10 +71,10 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
 {
     InitMetalSwapChainMemory();
 
-    auto commandQueueDataFull = GetMetalCommandQueueDataFull(commandQueue);
-    SystemAssert(commandQueueDataFull);
+    auto commandQueueData = GetMetalCommandQueueData(commandQueue);
+    SystemAssert(commandQueueData);
 
-    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandQueueDataFull->GraphicsDevice);
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
     
     auto windowRenderSize = ElemGetWindowRenderSize(window);
@@ -83,6 +83,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     auto height = windowRenderSize.Height;
     auto format = MTL::PixelFormatBGRA8Unorm_sRGB; // TODO: Enumerate compatible formats first
     auto frameLatency = 1u;
+    void* updatePayload = nullptr;
  
     if (options)
     {
@@ -96,13 +97,17 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         {
             frameLatency = options->FrameLatency;
         }
+
+        if (options->UpdatePayload)
+        {
+            updatePayload = options->UpdatePayload;
+        }
     }
 
     // TODO: Remove new
 
     // BUG: On MacOS sometimes we have are capped at 60 fps only on builin display (after disable/enable pro motion, everything work)
-    // BUG: Metal Dev Hub doesn't seem to work with the new MetalDisplayLink. see: https://forums.developer.apple.com/forums/thread/743684
-    auto metalDisplayLinkHandler = new MetalDisplayLinkHandler(commandQueueDataFull->GraphicsDevice, updateHandler, options->UpdatePayload);
+    auto metalDisplayLinkHandler = new MetalDisplayLinkHandler(commandQueueData->GraphicsDevice, updateHandler, updatePayload);
 
     auto swiftResult = ElementalSwiftLib::createMetalView(frameLatency, window, (void*)TouchHandler); 
     auto metalViewResult = (Test*)&swiftResult; 
@@ -140,13 +145,13 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         .DeviceObject = metalLayer,
         .Window = window,
         .CommandQueue = commandQueue,
-        .GraphicsDevice = commandQueueDataFull->GraphicsDevice,
+        .GraphicsDevice = commandQueueData->GraphicsDevice,
         .CreationTimestamp = CA::CurrentMediaTime(),
         .PreviousTargetPresentationTimestamp = CA::CurrentMediaTime(),
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
-        .Format = ElemTextureFormat_B8G8R8A8_SRGB // TODO: Temporary
+        .Format = ElemGraphicsFormat_B8G8R8A8_SRGB // TODO: Temporary
     }); 
 
     SystemAddDataPoolItemFull(metalSwapChainPool, handle, {
@@ -190,7 +195,7 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 void MetalSetSwapChainTiming(ElemSwapChain swapChain, uint32_t frameLatency, uint32_t targetFPS)
 {
     // TODO: Not implemented yet
-    SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "This feature is not yet implelmented.");
+    SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "This feature is not yet implemented.");
 }
 
 void MetalPresentSwapChain(ElemSwapChain swapChain)
@@ -257,10 +262,12 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         auto nextPresentTimestampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
 
         auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
+        auto sizeChanged = false;
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
             ResizeMetalSwapChain(_swapChain, windowSize.Width, windowSize.Height);
+            sizeChanged = true;
         }
 
         swapChainData->PresentCalled = false;
@@ -272,14 +279,16 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             return;
         }
 
-        auto backBufferTexture = CreateMetalTextureFromResource(swapChainData->GraphicsDevice, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
+        // TODO: Can we do something better than juste creating/destroying each time? 
+        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ElemGraphicsResourceUsage_RenderTarget, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
         ElemSwapChainUpdateParameters updateParameters = 
         {
             .SwapChainInfo = MetalGetSwapChainInfo(_swapChain),
-            .BackBufferTexture = backBufferTexture,
+            .BackBufferRenderTarget = backBufferTexture,
             .DeltaTimeInSeconds = deltaTime,
-            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds
+            .NextPresentTimestampInSeconds = nextPresentTimestampInSeconds,
+            .SizeChanged = sizeChanged
         };
 
         _updateHandler(&updateParameters, _updatePayload);
@@ -291,6 +300,8 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             MetalPresentSwapChain(_swapChain);
         }
         
-        MetalFreeTexture(backBufferTexture);
+        MetalFreeGraphicsResource(backBufferTexture, nullptr);
+
+        MetalProcessGraphicsResourceDeleteQueue();
     }
 }

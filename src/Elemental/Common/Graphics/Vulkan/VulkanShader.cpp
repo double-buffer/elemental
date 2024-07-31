@@ -1,6 +1,8 @@
 #include "VulkanShader.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
+#include "VulkanResource.h"
+#include "VulkanResourceBarrier.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -40,6 +42,82 @@ VulkanPipelineStateDataFull* GetVulkanPipelineStateDataFull(ElemPipelineState pi
     return SystemGetDataPoolItemFull(vulkanPipelineStatePool, pipelineState);
 }
 
+bool CheckVulkanPipelineStateType(const VulkanCommandListData* commandListData, VulkanPipelineStateType type)
+{
+    if (commandListData->PipelineStateType != type)
+    {
+        if (type == VulkanPipelineStateType_Compute)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "A compute pipelinestate must be bound to the commandlist before calling a compute command.");
+        }
+        else
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "A graphics pipelinestate must be bound to the commandlist before calling a rendering command.");
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+VkShaderStageFlagBits ConvertShaderTypeToVulkan(ShaderType shaderType)
+{
+    switch (shaderType) 
+    {
+        case ShaderType_Amplification:
+            return VK_SHADER_STAGE_TASK_BIT_EXT;
+
+        case ShaderType_Mesh:
+            return VK_SHADER_STAGE_MESH_BIT_EXT;
+
+        case ShaderType_Pixel:
+            return VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        case ShaderType_Compute:
+            return VK_SHADER_STAGE_COMPUTE_BIT;
+
+        case ShaderType_Library:
+        case ShaderType_Unknown:
+            return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    }
+}
+
+VkPipelineShaderStageCreateInfo GetVulkanShaderFunctionStageCreateInfo(MemoryArena memoryArena, VulkanShaderLibraryData* shaderLibraryData, ShaderType shaderType, const char* function)
+{
+    SystemAssert(function);
+    VkPipelineShaderStageCreateInfo result = {};
+    result.stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+
+    for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
+    {
+        auto shader = shaderLibraryData->GraphicsShaders[i];
+
+        if (shader.ShaderType == shaderType && SystemFindSubString(shader.Name, function) != -1)
+        {
+            auto moduleCreateInfo = SystemPushStruct<VkShaderModuleCreateInfo>(memoryArena);
+            moduleCreateInfo->sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            moduleCreateInfo->pCode = (uint32_t*)shader.ShaderCode.Pointer;
+            moduleCreateInfo->codeSize = shader.ShaderCode.Length;
+
+            VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+            stageCreateInfo.stage = ConvertShaderTypeToVulkan(shaderType);
+            stageCreateInfo.pName = function;
+            stageCreateInfo.pNext = moduleCreateInfo;
+
+            result = stageCreateInfo;
+            break;
+        }
+    }
+        
+    if (result.stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot find shader function '%s'", function);
+    }
+
+    return result;
+}
+
 ElemShaderLibrary VulkanCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitVulkanShaderMemory();
@@ -52,31 +130,7 @@ ElemShaderLibrary VulkanCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, E
     SystemAssert(graphicsDeviceData);
 
     auto dataSpan = Span<uint8_t>(shaderLibraryData.Items, shaderLibraryData.Length); 
-    auto shaderCount = *(uint32_t*)dataSpan.Pointer;
-    dataSpan = dataSpan.Slice(sizeof(uint32_t));
-
-    // HACK: This is bad to allocate this here but this should be temporary
-    auto graphicsShaderData = SystemPushArray<VkShaderModule>(VulkanGraphicsMemoryArena, shaderCount);
-
-    for (uint32_t i = 0; i < shaderCount; i++)
-    {
-        auto size = *(uint32_t*)dataSpan.Pointer;
-        dataSpan = dataSpan.Slice(sizeof(uint32_t));
-
-        // TODO: Debug
-        auto dest = SystemPushArray<uint8_t>(VulkanGraphicsMemoryArena, size);
-        SystemCopyBuffer(dest, ReadOnlySpan<uint8_t>(dataSpan.Pointer, size));
-
-        VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-        createInfo.codeSize = (size_t)size;
-        createInfo.pCode = reinterpret_cast<const uint32_t*>(dataSpan.Pointer); // TODO: Get rid of the reinterpret_cast
-
-        VkShaderModule shaderModule = nullptr;
-        AssertIfFailed(vkCreateShaderModule(graphicsDeviceData->Device, &createInfo, 0, &shaderModule));
-
-        graphicsShaderData[i] = shaderModule;
-        dataSpan = dataSpan.Slice(size);
-    }
+    auto graphicsShaderData = ReadShaders(VulkanGraphicsMemoryArena, dataSpan);
 
     auto handle = SystemAddDataPoolItem(vulkanShaderLibraryPool, {
         .GraphicsShaders = graphicsShaderData
@@ -91,29 +145,15 @@ ElemShaderLibrary VulkanCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, E
 
 void VulkanFreeShaderLibrary(ElemShaderLibrary shaderLibrary)
 {
-    SystemAssert(shaderLibrary != ELEM_HANDLE_NULL);
-
-    auto shaderLibraryData = GetVulkanShaderLibraryData(shaderLibrary);
-    SystemAssert(shaderLibraryData);
-
-    auto shaderLibraryDataFull = GetVulkanShaderLibraryDataFull(shaderLibrary);
-    SystemAssert(shaderLibraryDataFull);
-
-    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(shaderLibraryDataFull->GraphicsDevice);
-    SystemAssert(graphicsDeviceData);
-
-    for (uint32_t i = 0; i < shaderLibraryData->GraphicsShaders.Length; i++)
-    {
-        vkDestroyShaderModule(graphicsDeviceData->Device, shaderLibraryData->GraphicsShaders[i], nullptr);
-    }
+    // TODO: Free data
 }
 
 ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters)
 {
-    // TODO: To Refactor
     // TODO: Support libraries
 
     InitVulkanShaderMemory();
+    auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
 
@@ -127,22 +167,37 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
     SystemAssert(shaderLibraryData);
 
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-    uint32_t stagesCount = 2;
 
     VkPipelineShaderStageCreateInfo stages[3] = {};
-    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[0].stage = VK_SHADER_STAGE_MESH_BIT_EXT;
-    stages[0].module = shaderLibraryData->GraphicsShaders[0];
-    stages[0].pName = parameters->MeshShaderFunction;
+    uint32_t stageCount = 0;
 
-    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stages[1].module = shaderLibraryData->GraphicsShaders[1];
-    stages[1].pName = parameters->PixelShaderFunction;
-    
     // TODO: Amplification shader 
+
+    if (parameters->MeshShaderFunction)
+    {
+        auto shaderStage = GetVulkanShaderFunctionStageCreateInfo(stackMemoryArena, shaderLibraryData, ShaderType_Mesh, parameters->MeshShaderFunction);
+
+        if (shaderStage.stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM)
+        {
+            return ELEM_HANDLE_NULL;
+        }
+
+        stages[stageCount++] = shaderStage;
+    }
     
-    createInfo.stageCount = stagesCount;
+    if (parameters->PixelShaderFunction)
+    {
+        auto shaderStage = GetVulkanShaderFunctionStageCreateInfo(stackMemoryArena, shaderLibraryData, ShaderType_Pixel, parameters->PixelShaderFunction);
+
+        if (shaderStage.stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM)
+        {
+            return ELEM_HANDLE_NULL;
+        }
+
+        stages[stageCount++] = shaderStage;
+    }
+    
+    createInfo.stageCount = stageCount;
     createInfo.pStages = stages;
 
     VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -183,7 +238,7 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
     dynamicState.pDynamicStates = dynamicStates;
     createInfo.pDynamicState = &dynamicState;
 
-    VkFormat formats[] = {VK_FORMAT_B8G8R8A8_SRGB};
+    VkFormat formats[] = { ConvertToVulkanTextureFormat(parameters->TextureFormats.Items[0]) }; // TODO: Fill Correct Back Buffer Format 
 
     VkPipelineRenderingCreateInfo renderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
     renderingCreateInfo.colorAttachmentCount = 1; // TODO: Change that
@@ -196,6 +251,7 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
 
     auto handle = SystemAddDataPoolItem(vulkanPipelineStatePool, {
         .PipelineState = pipelineState,
+        .PipelineStateType = VulkanPipelineStateType_Graphics,
         .GraphicsDevice = graphicsDevice
     }); 
 
@@ -203,6 +259,53 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
     });
 
     return handle;
+}
+
+ElemPipelineState VulkanCompileComputePipelineState(ElemGraphicsDevice graphicsDevice, const ElemComputePipelineStateParameters* parameters)
+{
+    InitVulkanShaderMemory();
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    SystemAssert(parameters);
+    SystemAssert(parameters->ShaderLibrary != ELEM_HANDLE_NULL);
+
+    auto shaderLibraryData= GetVulkanShaderLibraryData(parameters->ShaderLibrary);
+    SystemAssert(shaderLibraryData);
+
+    VkComputePipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+
+    if (parameters->ComputeShaderFunction)
+    {
+        auto shaderStage = GetVulkanShaderFunctionStageCreateInfo(stackMemoryArena, shaderLibraryData, ShaderType_Compute, parameters->ComputeShaderFunction);
+
+        if (shaderStage.stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM)
+        {
+            return ELEM_HANDLE_NULL;
+        }
+
+        createInfo.stage = shaderStage;
+    }
+
+    createInfo.layout = graphicsDeviceData->PipelineLayout;
+
+	VkPipeline pipelineState;
+	AssertIfFailed(vkCreateComputePipelines(graphicsDeviceData->Device, nullptr, 1, &createInfo, 0, &pipelineState));
+
+    auto handle = SystemAddDataPoolItem(vulkanPipelineStatePool, {
+        .PipelineState = pipelineState,
+        .PipelineStateType = VulkanPipelineStateType_Compute,
+        .GraphicsDevice = graphicsDevice
+    }); 
+
+    SystemAddDataPoolItemFull(vulkanPipelineStatePool, handle, {
+    });
+
+	return handle;
 }
 
 void VulkanFreePipelineState(ElemPipelineState pipelineState)
@@ -227,10 +330,19 @@ void VulkanBindPipelineState(ElemCommandList commandList, ElemPipelineState pipe
     auto commandListData = GetVulkanCommandListData(commandList);
     SystemAssert(commandListData);
 
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
     auto pipelineStateData = GetVulkanPipelineStateData(pipelineState);
     SystemAssert(pipelineStateData);
 
-    vkCmdBindPipeline(commandListData->DeviceObject, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineStateData->PipelineState);
+    commandListData->PipelineStateType = pipelineStateData->PipelineStateType;
+
+    auto bindPoint = (pipelineStateData->PipelineStateType == VulkanPipelineStateType_Graphics) ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
+
+    VkDescriptorSet descriptorSets = { graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorSet };
+    vkCmdBindDescriptorSets(commandListData->DeviceObject, bindPoint, graphicsDeviceData->PipelineLayout, 0, 1, &descriptorSets, 0, nullptr);
+    vkCmdBindPipeline(commandListData->DeviceObject, bindPoint, pipelineStateData->PipelineState);
 }
 
 void VulkanPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data)
@@ -244,4 +356,20 @@ void VulkanPushPipelineStateConstants(ElemCommandList commandList, uint32_t offs
     SystemAssert(graphicsDeviceData);
 
     vkCmdPushConstants(commandListData->DeviceObject, graphicsDeviceData->PipelineLayout, VK_SHADER_STAGE_ALL, 0, data.Length, data.Items);
+}
+
+void VulkanDispatchCompute(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+{
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    if (!CheckVulkanPipelineStateType(commandListData, VulkanPipelineStateType_Compute))
+    {
+        return;
+    }
+
+    InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_Compute);
+    vkCmdDispatch(commandListData->DeviceObject, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

@@ -7,28 +7,24 @@
     <BuildNative>true</BuildNative>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="../Elemental.Common/Elemental.Common.csproj" />
-  </ItemGroup>
-  
   <Target Name="BuildPlatformNative" BeforeTargets="CoreCompile" Condition="'$(BuildNative)' == 'true'">
     <Exec Command="cmake --build $(MSBuildProjectDirectory)/../../../../build --target Elemental --config $(Configuration) -v" />
   </Target>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(BuildNative)' == 'True'">
-    <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/$(Configuration)/Elemental.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/Elemental/Elemental.dll">
       <TargetPath>Elemental.Native.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../../../build/bin/$(Configuration)/Elemental.pdb">
+    <Content Condition="'$(Configuration)' == 'Debug'" Include="$(MSBuildProjectDirectory)/../../../../build/bin/Elemental/Elemental.pdb">
       <TargetPath>Elemental.Native.pdb</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/$(Configuration)/D3D12Core.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/Elemental/D3D12Core.dll">
       <TargetPath>D3D12Core.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/$(Configuration)/D3D12SDKLayers.dll">
+    <Content Include="$(MSBuildProjectDirectory)/../../../../build/bin/Elemental/D3D12SDKLayers.dll">
       <TargetPath>D3D12SDKLayers.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -47,7 +43,7 @@
     </Content>
         </ItemGroup>  --> 
 
-<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(BuildNative)' == 'True'">
      <Exec Command="cp -R $(MSBuildProjectDirectory)/../../../../build/bin/Elemental.Framework $(OutputPath)/" />
  </Target>
 

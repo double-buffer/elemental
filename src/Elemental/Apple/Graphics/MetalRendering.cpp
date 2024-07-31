@@ -1,6 +1,8 @@
 #include "MetalRendering.h"
 #include "MetalCommandList.h"
-#include "MetalTexture.h"
+#include "MetalShader.h"
+#include "MetalResource.h"
+#include "MetalResourceBarrier.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
@@ -13,6 +15,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     SystemAssert(commandList != ELEM_HANDLE_NULL);
     SystemAssert(parameters);
 
+    ResetMetalCommandEncoder(commandList);
+
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
 
@@ -24,9 +28,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
-        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetMetalTextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         auto renderTargetDescriptor = renderPassDescriptor->colorAttachments()->object(i);
@@ -65,7 +68,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
         {
             return;
         }
-        renderTargetDescriptor->setTexture(textureData->DeviceObject.get());
+
+        renderTargetDescriptor->setTexture((MTL::Texture*)textureData->DeviceObject.get());
         renderTargetDescriptor->setLoadAction(loadAction);
         renderTargetDescriptor->setStoreAction(storeAction); 
 
@@ -86,6 +90,10 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     
     commandListData->CommandEncoder = renderCommandEncoder;
     commandListData->CommandEncoderType = MetalCommandEncoderType_Render;
+    commandListData->PipelineState = ELEM_HANDLE_NULL;
+    
+    // TODO: Wrong sync type
+    //InsertMetalResourceBarriersIfNeeded(commandList, SyncType_Compute);
 
     if (parameters->Viewports.Length > 0)
     {
@@ -94,9 +102,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
     else if (parameters->RenderTargets.Length > 0)
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[0];
-        SystemAssert(renderTargetParameters.RenderTarget != ELEM_HANDLE_NULL);
 
-        auto textureData = GetMetalTextureData(renderTargetParameters.RenderTarget); 
+        auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
         ElemViewport viewport = 
@@ -176,8 +183,12 @@ void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, 
     SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Render);
     SystemAssert(commandListData->CommandEncoder);
 
-    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+    auto pipelineStateData = GetMetalPipelineStateData(commandListData->PipelineState);
+    SystemAssert(pipelineStateData);
 
-    // TODO: Get the correct threads config
-    renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), MTL::Size(32, 1, 1), MTL::Size(32, 1, 1));
+    // TODO: Get the correct threads config for amplification shader
+    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+    renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), 
+                                               MTL::Size(32, 1, 1), 
+                                               MTL::Size(pipelineStateData->MeshShaderMetaData.ThreadSizeX, pipelineStateData->MeshShaderMetaData.ThreadSizeY, pipelineStateData->MeshShaderMetaData.ThreadSizeZ));
 }

@@ -11,6 +11,7 @@ SystemDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull> directX
 SystemDataPool<DirectX12CommandListData, DirectX12CommandListDataFull> directX12CommandListPool;
 
 thread_local CommandAllocatorDevicePool<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*> threadDirectX12DeviceCommandPools[DIRECTX12_MAX_DEVICES];
+thread_local bool threadDirectX12CommandBufferCommitted = true;
 
 HANDLE directX12GlobalFenceEvent;
 
@@ -144,6 +145,9 @@ void DirectX12FreeCommandQueue(ElemCommandQueue commandQueue)
         commandQueueDataFull->CommandLists[i].Reset();
     }
 
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
+    threadDirectX12DeviceCommandPools[graphicsIdUnpacked.Index] = {};
+
     SystemRemoveDataPoolItem(directX12CommandQueuePool, commandQueue);
 }
 
@@ -153,10 +157,17 @@ void DirectX12ResetCommandAllocation(ElemGraphicsDevice graphicsDevice)
     SystemAssert(graphicsDeviceData);
 
     graphicsDeviceData->CommandAllocationGeneration++;
+    threadDirectX12CommandBufferCommitted = true;
 }
 
 ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const ElemCommandListOptions* options)
 {
+    if (!threadDirectX12CommandBufferCommitted)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Cannot get a command list if commit was not called on the same thread.");
+        return ELEM_HANDLE_NULL;
+    }
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandQueue != ELEM_HANDLE_NULL);
@@ -167,7 +178,8 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandQueueData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadDirectX12DeviceCommandPools[commandQueueData->GraphicsDevice], 
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
+    auto commandAllocatorPoolItem = GetCommandAllocatorPoolItem(&threadDirectX12DeviceCommandPools[graphicsIdUnpacked.Index], 
                                                                 graphicsDeviceData->CommandAllocationGeneration, 
                                                                 commandQueueData->CommandAllocatorQueueType);
 
@@ -214,21 +226,32 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
     {
         commandListPoolItem->CommandList->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
     }
-            
+
     AssertIfFailedReturnNullHandle(commandListPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
+            
+    auto descriptorHeaps = SystemPushArray<ID3D12DescriptorHeap*>(stackMemoryArena, 1);
+    descriptorHeaps[0] = graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorHeap.Get();
+
+    commandListPoolItem->CommandList->SetDescriptorHeaps(1, descriptorHeaps.Pointer);
 
     // TODO: Can we set the root signature for all types all the time?
     commandListPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
-    //commandList->SetComputeRootSignature(graphicsDeviceData->RootSignature.Get());
+    commandListPoolItem->CommandList->SetComputeRootSignature(graphicsDeviceData->RootSignature.Get());
+
+    auto resourceBarrierPool = CreateResourceBarrierPool(DirectX12MemoryArena);
 
     auto handle = SystemAddDataPoolItem(directX12CommandListPool, {
         .DeviceObject = commandListPoolItem->CommandList,
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
-        .CommandListPoolItem = commandListPoolItem
+        .CommandListPoolItem = commandListPoolItem,
+        .GraphicsDevice = commandQueueData->GraphicsDevice,
+        .ResourceBarrierPool = resourceBarrierPool
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
     });
+    
+    threadDirectX12CommandBufferCommitted = false;
 
     return handle;
 }
@@ -237,35 +260,75 @@ void DirectX12CommitCommandList(ElemCommandList commandList)
 {    
     auto commandListData = GetDirectX12CommandListData(commandList);
     AssertIfFailed(commandListData->DeviceObject->Close());
+    
+    commandListData->IsCommitted = true;
+    threadDirectX12CommandBufferCommitted = true;
 }
 
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options)
 {
-    // TODO: Wait for fences if any
-
     auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
+    SystemAssert(commandQueueData);
+
+    if (options && options->FencesToWait.Length > 0)
+    {
+        for (uint32_t i = 0; i < options->FencesToWait.Length; i++)
+        {
+            auto fenceToWait = options->FencesToWait.Items[i];
+
+            auto commandQueueToWaitData = GetDirectX12CommandQueueData(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitData);
+
+            auto commandQueueToWaitDataFull = GetDirectX12CommandQueueDataFull(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitDataFull);
+
+	        AssertIfFailed(commandQueueData->DeviceObject->Wait(commandQueueToWaitDataFull->Fence.Get(), fenceToWait.FenceValue));
+    
+            if (DirectX12DebugBarrierInfoEnabled)
+            {
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%d, Value=%d)", fenceToWait.CommandQueue, fenceToWait.FenceValue);
+            }
+        }
+    }
+
+    bool hasError = false;
     auto commandListsToExecute = SystemPushArray<ID3D12CommandList*>(stackMemoryArena, commandLists.Length);
 
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetDirectX12CommandListData(commandLists.Items[i]);
-        commandListsToExecute[i] = commandListData->DeviceObject.Get();
+
+        if (!commandListData->IsCommitted)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Commandlist needs to be committed before executing it.");
+            hasError = true;
+            break;
+        }
+
+        commandListsToExecute[i] = commandListData->DeviceObject;
     }
 
-    auto commandQueueData = GetDirectX12CommandQueueData(commandQueue);
-    SystemAssert(commandQueueData);
-
-    commandQueueData->DeviceObject->ExecuteCommandLists(commandLists.Length, commandListsToExecute.Pointer);
+    if (!hasError)
+    {
+        commandQueueData->DeviceObject->ExecuteCommandLists(commandLists.Length, commandListsToExecute.Pointer);
+    }
 
     auto fence = CreateDirectX12CommandQueueFence(commandQueue);
     
     for (uint32_t i = 0; i < commandLists.Length; i++)
     {
         auto commandListData = GetDirectX12CommandListData(commandLists.Items[i]);
+
+        if (!commandListData->IsCommitted)
+        {
+            DirectX12CommitCommandList(commandLists.Items[i]);
+        }
+
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
+        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
-        commandListData->DeviceObject.Reset();
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);
     }
 
@@ -277,7 +340,11 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
     SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueToWaitDataFull = GetDirectX12CommandQueueDataFull(fence.CommandQueue);
-    SystemAssert(commandQueueToWaitDataFull);
+
+    if (!commandQueueToWaitDataFull)
+    {
+        return;
+    }
 
     if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue) 
     {
@@ -292,4 +359,23 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
         // TODO: It is a little bit extreme to block at infinity. We should set a timeout and break the program.
         WaitForSingleObject(directX12GlobalFenceEvent, INFINITE);
     }
+}
+
+bool DirectX12IsFenceCompleted(ElemFence fence)
+{
+    SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
+
+    auto commandQueueToWaitDataFull = GetDirectX12CommandQueueDataFull(fence.CommandQueue);
+
+    if (!commandQueueToWaitDataFull)
+    {
+        return true;
+    }
+
+    if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue) 
+    {
+        commandQueueToWaitDataFull->LastCompletedFenceValue = SystemMax(commandQueueToWaitDataFull->LastCompletedFenceValue, commandQueueToWaitDataFull->Fence->GetCompletedValue());
+    }
+
+    return fence.FenceValue <= commandQueueToWaitDataFull->LastCompletedFenceValue;
 }

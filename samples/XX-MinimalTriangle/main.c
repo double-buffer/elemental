@@ -72,7 +72,7 @@ void InitSample(void* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
-        .TextureFormats = { .Items = (ElemTextureFormat[]) { swapChainInfo.Format }, .Length = 1 }
+        .TextureFormats = { .Items = (ElemGraphicsFormat[]) { swapChainInfo.Format }, .Length = 1 }
     });
     
     ElemFreeShaderLibrary(shaderLibrary);
@@ -98,7 +98,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         .RenderTargets = 
         {
             .Items = (ElemRenderPassRenderTarget[]) {{ 
-                .RenderTarget = updateParameters->BackBufferTexture, 
+                .RenderTarget = updateParameters->BackBufferRenderTarget, 
                 .LoadAction = ElemRenderPassLoadAction_Clear 
             }},
             .Length = 1

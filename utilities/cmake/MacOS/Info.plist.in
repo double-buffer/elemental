@@ -5,19 +5,19 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
+    <string>@TARGET_NAME@</string>
 	<key>CFBundleGetInfoString</key>
 	<string></string>
 	<key>CFBundleIconFile</key>
 	<string></string>
     <key>CFBundleIdentifier</key>
-	<string>Elemental.$(PRODUCT_NAME:rfc1034identifier)</string>
+    <string>Elemental.@TARGET_NAME@</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleLongVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+    <string>@TARGET_NAME@</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -30,7 +30,7 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
     <string></string>
-    <key>CADisableMinimumFrameDurationOnPhone</key>
-    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.games</string>
 </dict>
 </plist>

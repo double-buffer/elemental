@@ -404,6 +404,8 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
     }
     else if (gamepadDirection == AppleGamepadDirection::MouseWheel)
     {
+        const float multiplier = 3.0f;
+
         if (xValue >= 0.0f)
         {
             AddInputEvent({
@@ -411,7 +413,7 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_MouseHorizontalWheelPositive,
                 .InputType = ElemInputType_Delta,
-                .Value = xValue,
+                .Value = xValue * multiplier,
                 .ElapsedSeconds = elapsedSeconds
             });
         }
@@ -423,7 +425,7 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_MouseHorizontalWheelNegative,
                 .InputType = ElemInputType_Delta,
-                .Value = -xValue,
+                .Value = -xValue * multiplier,
                 .ElapsedSeconds = elapsedSeconds
             });
         }
@@ -435,7 +437,7 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_MouseWheelPositive,
                 .InputType = ElemInputType_Delta,
-                .Value = yValue,
+                .Value = yValue * multiplier,
                 .ElapsedSeconds = elapsedSeconds
             });
         }
@@ -447,7 +449,7 @@ void DirectionHandler(ElemWindow window, AppleGamepadDirection gamepadDirection,
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_MouseWheelNegative,
                 .InputType = ElemInputType_Delta,
-                .Value = -yValue,
+                .Value = -yValue * multiplier,
                 .ElapsedSeconds = elapsedSeconds
             });
         }

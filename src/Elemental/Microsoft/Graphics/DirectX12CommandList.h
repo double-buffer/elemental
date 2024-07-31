@@ -3,6 +3,13 @@
 #include "Elemental.h"
 #include "SystemSpan.h"
 #include "Graphics/CommandAllocatorPool.h"
+#include "Graphics/ResourceBarrier.h"
+
+enum DirectX12PipelineStateType
+{
+    DirectX12PipelineStateType_Graphics,
+    DirectX12PipelineStateType_Compute
+};
 
 struct DirectX12CommandQueueData
 {
@@ -25,9 +32,13 @@ struct DirectX12CommandQueueDataFull
 
 struct DirectX12CommandListData
 {
-    ComPtr<ID3D12GraphicsCommandList10> DeviceObject;
+    ID3D12GraphicsCommandList10* DeviceObject;
     CommandAllocatorPoolItem<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*>* CommandAllocatorPoolItem;
     CommandListPoolItem<ID3D12GraphicsCommandList10*>* CommandListPoolItem;
+    DirectX12PipelineStateType PipelineStateType;
+    ElemGraphicsDevice GraphicsDevice;
+    bool IsCommitted;
+    ResourceBarrierPool ResourceBarrierPool;
 };
 
 struct DirectX12CommandListDataFull
@@ -49,3 +60,4 @@ void DirectX12CommitCommandList(ElemCommandList commandList);
 
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void DirectX12WaitForFenceOnCpu(ElemFence fence);
+bool DirectX12IsFenceCompleted(ElemFence fence);

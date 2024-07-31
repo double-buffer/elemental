@@ -2,49 +2,40 @@
 #include "ApplicationTests.h"
 #include "utest.h"
 
-// TODO: Gtk layer needs more work
-
-#ifndef __linux__
 UTEST(Window, CreateWindow) 
 {
-    RunApplicationTest([utest_result]() 
-    {
-        // Arrange
-        auto width = 640u;
-        auto height = 480u;
+    // Arrange
+    auto width = 640u;
+    auto height = 480u;
 
-        // Act
-        ElemWindowOptions options = { .Width = width, .Height = height };
-        auto window = ElemCreateWindow(&options); 
+    // Act
+    ElemWindowOptions options = { .Width = width, .Height = height };
+    auto window = ElemCreateWindow(&options); 
 
-        // Assert
-        auto size = ElemGetWindowRenderSize(window);
+    // Assert
+    auto size = ElemGetWindowRenderSize(window);
 
-        ElemFreeWindow(window);
+    ElemFreeWindow(window);
 
-        ASSERT_NE(0.0f, size.UIScale);
-        ASSERT_EQ(width * size.UIScale, size.Width);
-        ASSERT_EQ(height * size.UIScale, size.Height);
-        ASSERT_EQ(ElemWindowState_Normal, size.WindowState);
-    });
+    ASSERT_NE(0.0f, size.UIScale);
+    ASSERT_EQ(width * size.UIScale, size.Width);
+    ASSERT_EQ(height * size.UIScale, size.Height);
+    ASSERT_EQ(ElemWindowState_Normal, size.WindowState);
 }
 
 // TODO: Only run those tests for Windows/MacOS/Linux
 UTEST(Window, CreateWindowWithState) 
 {
-    RunApplicationTest([utest_result]() 
-    {
-        // Act
-        ElemWindowOptions options = { .WindowState = ElemWindowState_Maximized };
-        auto window = ElemCreateWindow(&options); 
+    // Act
+    ElemWindowOptions options = { .WindowState = ElemWindowState_Maximized };
+    auto window = ElemCreateWindow(&options); 
 
-        // Assert
-        auto size = ElemGetWindowRenderSize(window);
+    // Assert
+    auto size = ElemGetWindowRenderSize(window);
 
-        ElemFreeWindow(window);
+    ElemFreeWindow(window);
 
-        ASSERT_EQ(ElemWindowState_Maximized, size.WindowState);
-    });
+    ASSERT_EQ(ElemWindowState_Maximized, size.WindowState);
 }
 
 struct Window_SetWindowState
@@ -59,36 +50,33 @@ UTEST_F_SETUP(Window_SetWindowState)
 
 UTEST_F_TEARDOWN(Window_SetWindowState) 
 {
-    RunApplicationTest([utest_fixture, utest_result]() 
+    // Arrange
+    auto width = 640u;
+    auto height = 480u;
+
+    ElemWindowOptions options = { .Width = width, .Height = height, .WindowState = utest_fixture->SourceState };
+    auto window = ElemCreateWindow( &options); 
+
+    // Act
+    ElemSetWindowState(window, utest_fixture->DestinationState);
+
+    // Assert
+    auto size = ElemGetWindowRenderSize(window);    
+
+    ElemFreeWindow(window);
+
+    ASSERT_EQ(utest_fixture->DestinationState, size.WindowState);
+
+    if (utest_fixture->DestinationState == ElemWindowState_Normal)
     {
-        // Arrange
-        auto width = 640u;
-        auto height = 480u;
-
-        ElemWindowOptions options = { .Width = width, .Height = height, .WindowState = utest_fixture->SourceState };
-        auto window = ElemCreateWindow( &options); 
-
-        // Act
-        ElemSetWindowState(window, utest_fixture->DestinationState);
-
-        // Assert
-        auto size = ElemGetWindowRenderSize(window);    
-
-        ElemFreeWindow(window);
-
-        ASSERT_EQ(utest_fixture->DestinationState, size.WindowState);
-
-        if (utest_fixture->DestinationState == ElemWindowState_Normal)
-        {
-            ASSERT_EQ(width * size.UIScale, size.Width);
-            ASSERT_EQ(height * size.UIScale, size.Height);
-        }
-        else if (utest_fixture->DestinationState == ElemWindowState_Minimized)
-        {
-            ASSERT_EQ(0u, size.Width);
-            ASSERT_EQ(0u, size.Height);
-        }
-    });
+        ASSERT_EQ(width * size.UIScale, size.Width);
+        ASSERT_EQ(height * size.UIScale, size.Height);
+    }
+    else if (utest_fixture->DestinationState == ElemWindowState_Minimized)
+    {
+        ASSERT_EQ(0u, size.Width);
+        ASSERT_EQ(0u, size.Height);
+    }
 }
 
 UTEST_F(Window_SetWindowState, Normal_FullScreen) 
@@ -151,4 +139,3 @@ UTEST_F(Window_SetWindowState, Maximized_Normal)
     utest_fixture->SourceState = ElemWindowState_Maximized;
     utest_fixture->DestinationState = ElemWindowState_Normal;
 }
-#endif

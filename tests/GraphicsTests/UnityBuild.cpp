@@ -1,27 +1,58 @@
+#include "GraphicsTests.cpp"
 #include "GraphicsDeviceTests.cpp"
 #include "CommandListTests.cpp"
+#include "ShaderTests.cpp"
 #include "SwapChainTests.cpp"
-#include "TextureTests.cpp"
+#include "ResourceTests.cpp"
+#include "ResourceBarrierTests.cpp"
 #include "RenderingTests.cpp"
 #include "utest.h"
 
-bool testForceVulkanApi = false;
-bool testHasLogErrors = false;
-ElemGraphicsDevice sharedGraphicsDevice = ELEM_HANDLE_NULL;
+struct ApplicationTestPayload
+{
+    int argc;
+    const char** argv;
+};
+
+void ApplicationTestInitFunction(void* payload)
+{
+    auto applicationTestPayload = (ApplicationTestPayload*)payload;
+    ElemGraphicsOptions options = {};
+
+    if (applicationTestPayload->argc > 1 && strcmp(applicationTestPayload->argv[1], "--vulkan") == 0)
+    {
+        testForceVulkanApi = true;
+        options.PreferVulkan = true;
+    }
+
+    options.EnableDebugLayer = true;
+    options.EnableGpuValidation = false;
+    options.EnableDebugBarrierInfo = true;
+
+    ElemConfigureLogHandler(TestLogHandler);
+    ElemSetGraphicsOptions(&options);
+
+    auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
+
+    ElemExitApplication(result);
+}
 
 UTEST_STATE();
 
-int main(int argc, const char *const argv[]) 
+int main(int argc, const char* argv[]) 
 {
-    if (argc > 1 && strcmp(argv[1], "--vulkan") == 0)
+    ApplicationTestPayload payload =
     {
-        testForceVulkanApi = true;
-    }
+        .argc = argc,
+        .argv = argv
+    };
 
-    InitLog();
-    sharedGraphicsDevice = ElemCreateGraphicsDevice(nullptr);
-    auto returnCode = utest_main(argc, argv);
-    ElemFreeGraphicsDevice(sharedGraphicsDevice);
+    ElemRunApplicationParameters runParameters = 
+    {
+        .InitHandler = ApplicationTestInitFunction,
+        .Payload = &payload
+    };
 
-    return returnCode;
+    ElemRunApplication(&runParameters);
+    return 0;
 }

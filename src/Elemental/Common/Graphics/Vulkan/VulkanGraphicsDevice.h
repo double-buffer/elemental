@@ -11,12 +11,22 @@
 #include "volk.h"
 
 #define VULKAN_MAX_DEVICES 10u
+#define VULKAN_MAX_RESOURCES 400000
+
+struct VulkanDescriptorHeapStorage;
+
+struct VulkanDescriptorHeap
+{
+    VulkanDescriptorHeapStorage* Storage;
+};
 
 struct VulkanGraphicsDeviceData
 {
     VkDevice Device;
+    MemoryArena MemoryArena;
     VkPipelineLayout PipelineLayout;
     uint64_t CommandAllocationGeneration;
+    VulkanDescriptorHeap ResourceDescriptorHeap;
 };
 
 struct VulkanGraphicsDeviceDataFull
@@ -30,16 +40,25 @@ struct VulkanGraphicsDeviceDataFull
     uint32_t CurrentComputeCommandQueueIndex;
     uint32_t CopyCommandQueueIndex;
     uint32_t CurrentCopyCommandQueueIndex;
+    uint32_t GpuMemoryTypeIndex;
+    uint32_t GpuUploadMemoryTypeIndex;
+    uint32_t ReadBackMemoryTypeIndex;
+    VkDescriptorSetLayout ResourceDescriptorSetLayout;
 };
 
 extern MemoryArena VulkanGraphicsMemoryArena;
 extern VkInstance VulkanInstance;
 extern bool VulkanDebugLayerEnabled;
+extern bool VulkanDebugBarrierInfoEnabled;
 
 VulkanGraphicsDeviceData* GetVulkanGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 VulkanGraphicsDeviceDataFull* GetVulkanGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
-void VulkanEnableGraphicsDebugLayer();
+void VulkanSetGraphicsOptions(const ElemGraphicsOptions* options);
+
+uint32_t CreateVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap);
+void FreeVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap, uint32_t handle);
+
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices();
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);
 void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice);

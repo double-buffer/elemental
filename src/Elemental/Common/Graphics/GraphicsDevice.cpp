@@ -9,11 +9,7 @@ ElemAPI void ElemSetGraphicsOptions(const ElemGraphicsOptions* options)
     SystemAssert(options);
 
     useVulkan = options->PreferVulkan;
-
-    if (options->EnableDebugLayer)
-    {
-        DispatchGraphicsFunction(EnableGraphicsDebugLayer);
-    }
+    DispatchGraphicsFunction(SetGraphicsOptions, options);
 }
 
 ElemAPI ElemGraphicsDeviceInfoSpan ElemGetAvailableGraphicsDevices()

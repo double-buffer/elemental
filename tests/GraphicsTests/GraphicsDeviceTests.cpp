@@ -4,9 +4,6 @@
 
 UTEST(GraphicsDevice, GetAvailableGraphicsDevices) 
 {
-    // Arrange
-    InitLog();
-
     // Act
     auto graphicsDevices = ElemGetAvailableGraphicsDevices();
 
@@ -22,14 +19,13 @@ UTEST(GraphicsDevice, GetAvailableGraphicsDevices)
         }
     }
 
-    ASSERT_FALSE(testHasLogErrors);
-    ASSERT_LE(1u, deviceCount);
+    ASSERT_LOG_NOERROR();
+    ASSERT_GE(deviceCount, 1u);
 }
 
 UTEST(GraphicsDevice, CreateGraphicsDevice) 
 {
     // Arrange
-    InitLog();
     auto graphicsDevices = ElemGetAvailableGraphicsDevices();
     ElemGraphicsDeviceInfo graphicsDeviceInfo = {};
 
@@ -45,24 +41,24 @@ UTEST(GraphicsDevice, CreateGraphicsDevice)
 
     ASSERT_NE(0u, graphicsDeviceInfo.DeviceId);
 
-    char deviceName[255];
-    strcpy(deviceName, graphicsDeviceInfo.DeviceName);
+    char deviceName[MAX_PATH];
+    CopyString(deviceName, MAX_PATH, graphicsDeviceInfo.DeviceName, strlen(graphicsDeviceInfo.DeviceName));
         
     // Act
     ElemGraphicsDeviceOptions options = { .DeviceId = graphicsDeviceInfo.DeviceId };
     auto graphicsDevice = ElemCreateGraphicsDevice(&options); 
-    ASSERT_NE(ELEM_HANDLE_NULL, graphicsDevice);
+    ASSERT_NE_MSG(graphicsDevice, ELEM_HANDLE_NULL, "Handle should not be null.");
 
     // Assert
     auto resultDeviceInfo = ElemGetGraphicsDeviceInfo(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_EQ(resultDeviceInfo.DeviceId, graphicsDeviceInfo.DeviceId); 
+    ASSERT_STREQ(resultDeviceInfo.DeviceName, deviceName); 
+    ASSERT_EQ(resultDeviceInfo.GraphicsApi, graphicsDeviceInfo.GraphicsApi); 
+    ASSERT_EQ(resultDeviceInfo.AvailableMemory, graphicsDeviceInfo.AvailableMemory); 
     
     ElemFreeGraphicsDevice(graphicsDevice);
-
-    ASSERT_FALSE(testHasLogErrors);
-    ASSERT_EQ(graphicsDeviceInfo.DeviceId, resultDeviceInfo.DeviceId); 
-    ASSERT_STREQ(deviceName, resultDeviceInfo.DeviceName); 
-    ASSERT_EQ(graphicsDeviceInfo.GraphicsApi, resultDeviceInfo.GraphicsApi); 
-    ASSERT_EQ(graphicsDeviceInfo.AvailableMemory, resultDeviceInfo.AvailableMemory); 
 }
 
 // TODO: Test Shader Resource Descriptors 

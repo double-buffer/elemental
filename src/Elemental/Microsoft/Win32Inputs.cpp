@@ -410,7 +410,7 @@ void ProcessWin32RawInputMouse(ElemWindow window, ElemInputDevice inputDevice, R
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_MouseWheelNegative,
                 .InputType = ElemInputType_Delta,
-                .Value = -wheelDelta / WHEEL_DELTA,
+                .Value = -(wheelDelta / WHEEL_DELTA) * 10.0f,
                 .ElapsedSeconds = elapsedSeconds
             });
         }
@@ -422,7 +422,7 @@ void ProcessWin32RawInputMouse(ElemWindow window, ElemInputDevice inputDevice, R
                 .InputDevice = inputDevice,
                 .InputId = ElemInputId_MouseWheelPositive,
                 .InputType = ElemInputType_Delta,
-                .Value = wheelDelta / WHEEL_DELTA,
+                .Value = (wheelDelta / WHEEL_DELTA) * 10.0f,
                 .ElapsedSeconds = elapsedSeconds
             });
         }

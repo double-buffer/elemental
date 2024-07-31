@@ -548,6 +548,14 @@ Span<T> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<T> source)
     return result;
 }
 
+template<>
+Span<char> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<char> source)
+{
+    auto result = SystemPushArrayZero<char>(memoryArena, source.Length + 1);
+    SystemCopyBuffer(result, source);
+    return result;
+}
+
 template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2)
 {
