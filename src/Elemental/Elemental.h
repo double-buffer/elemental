@@ -644,6 +644,7 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemFreeGraphicsResourceOptions;
 
+// TODO: Here, we could add options to support StructuredBuffer (we need a different stride for that)
 typedef struct
 {
     uint32_t TextureMipIndex;

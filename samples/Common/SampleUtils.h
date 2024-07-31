@@ -21,9 +21,14 @@ uint64_t SampleMegaBytesToBytes(uint64_t value)
     return value * 1024 * 1024;
 }
 
-uint64_t SampleGygaBytesToBytes(uint64_t value)
+uint64_t SampleGigaBytesToBytes(uint64_t value)
 {
     return SampleMegaBytesToBytes(value) * 1024;
+}
+
+uint32_t SampleAlignValue(uint32_t value, uint32_t alignment)
+{
+    return (value + alignment - 1) & ~(alignment - 1);
 }
 
 // -----------------------------------------------------------------------------

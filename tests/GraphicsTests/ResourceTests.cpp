@@ -4,6 +4,8 @@
 
 // TODO: Add a test for texture2D uav + rendertarget
 // TODO: Add a test for gpupload heap can only be used for buffers
+// TODO: Add a test for GetResourcePointer only for GpuUpload
+// TODO: Test for structured buffer descriptors
 // TODO: Test all formats
 // TODO: Test Texture format required
 // TODO: Test Format SRGB not allowed to Texture UAV
