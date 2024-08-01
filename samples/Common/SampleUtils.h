@@ -1,8 +1,14 @@
 #pragma once
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "Elemental.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifdef ElemToolsAPI
+typedef ElemToolsDataSpan ElemDataSpan;
+#endif 
 
 #ifndef _WIN32
 #define MAX_PATH 255
@@ -47,7 +53,9 @@ void SampleGetFullPath(char* destination, const char* path)
 {
     memset(destination, 0, MAX_PATH);
 
-    char* pointer = NULL;
+    char* pointer = destination;
+
+    #ifdef ElemAPI
     ElemSystemInfo systemInfo = ElemGetSystemInfo();
 
     CopyString(destination, MAX_PATH, systemInfo.ApplicationPath, strlen(systemInfo.ApplicationPath));
@@ -66,8 +74,9 @@ void SampleGetFullPath(char* destination, const char* path)
 
     CopyString(pointer, pointer - destination, folderPrefix, strlen(folderPrefix));
     pointer = pointer + strlen(folderPrefix);
+    #endif
 
-    CopyString(pointer, pointer - destination, path, strlen(path));
+    CopyString(pointer, MAX_PATH - (int32_t)(pointer - destination), path, strlen(path));
 }
 
 ElemDataSpan SampleReadFile(const char* filename) 
@@ -120,6 +129,7 @@ ElemDataSpan SampleReadFile(const char* filename)
     rewind(file);
 
     uint8_t* buffer = (uint8_t*)malloc(fileSize + 1);
+    memset(buffer, 0, fileSize + 1);
 
     if (buffer == NULL)
     {
@@ -155,10 +165,122 @@ ElemDataSpan SampleReadFile(const char* filename)
     };
 }
 
+int SampleWriteDataToFile(const char* filename, ElemDataSpan data) 
+{
+    printf("Length:%s %d\n", filename, data.Length);
+    if (filename == NULL || data.Length == 0) 
+    {
+        printf("ERROR 1\n");
+        return -1;
+    }
+
+    #ifdef _WIN32
+    FILE* file;
+    fopen_s(&file, filename, "wb");
+    #else
+    FILE* file = fopen(filename, "wb");
+    #endif
+
+    if (file == NULL) 
+    {
+        printf("ERROR 2\n");
+        return -1;
+    }
+
+    size_t bytesWritten = fwrite(data.Items, 1, data.Length, file);
+    fclose(file);
+
+    if (bytesWritten < data.Length) 
+    {
+        printf("ERROR 3\n");
+        return -1; // Return -1 if not all bytes were written
+    }
+
+    return 0; // Success
+}
+
+ElemDataSpan SampleReadLine(ElemDataSpan* data)
+{
+    for (uint32_t i = 0; i < data->Length; i++)
+    {
+        if (data->Items[i] == '\n')
+        {
+            ElemDataSpan result =
+            {
+                .Items = data->Items,
+                .Length = i
+            };
+            
+            data->Items += i + 1;
+            data->Length -= i + 1;
+            return result;
+        }
+    }
+
+    return (ElemDataSpan){};
+}
+
+void SamplePrintDataSpan(ElemDataSpan data)
+{    
+    for (uint32_t i = 0; i < data.Length; i++)
+    {
+        printf("%c", data.Items[i]);
+    }
+
+    printf("\n");
+}
+
+void SampleSplitString(ElemDataSpan* destination, uint32_t* destinationCount, ElemDataSpan source)
+{
+    uint8_t* pointer = source.Items;
+
+    for (uint32_t i = 0; i < source.Length; i++)
+    {
+        if (source.Items[i] == ' ')
+        {
+            destination[(*destinationCount)++] = (ElemDataSpan)
+            {
+                .Items = pointer,
+                .Length = (source.Items + i) - pointer
+            };
+
+            if (i + 1 < source.Length)
+            {
+                pointer = source.Items + i + 1;
+            }
+        }
+    }
+
+    destination[(*destinationCount)++] = (ElemDataSpan)
+    {
+        .Items = pointer,
+        .Length = (source.Items + source.Length) - pointer
+    };
+}
+
+bool SampleCompareString(ElemDataSpan data, const char* value)
+{
+    if (strlen(value) != data.Length)
+    {
+        return false;
+    }
+
+    for (uint32_t i = 0; i < data.Length; i++)
+    {
+        if (data.Items[i] != value[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 // -----------------------------------------------------------------------------
 // UI Functions
 // -----------------------------------------------------------------------------
 
+#ifdef ElemAPI
 const char* SampleGetPlatformLabel(ElemPlatform platform)
 {
     switch (platform)
@@ -236,6 +358,7 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
                         memoryFormatted);
     ElemSetWindowTitle(window, titleFormatted);
 }
+#endif
 
 // -----------------------------------------------------------------------------
 // Timing Functions

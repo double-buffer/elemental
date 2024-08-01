@@ -59,11 +59,12 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
 void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicationPayload)
 {
-    uint32_t bufferSize = 10 * sizeof(SampleVector3);
-    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(applicationPayload->GraphicsDevice, bufferSize, ElemGraphicsResourceUsage_Read, NULL);
+    // TODO: Alignment should be used with the offset before adding the size of the resource!
+    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(applicationPayload->GraphicsDevice, 10 * sizeof(SampleVector3), ElemGraphicsResourceUsage_Read, NULL);
+
+    applicationPayload->CurrentHeapOffset = SampleAlignValue(applicationPayload->CurrentHeapOffset, bufferDescription.Alignment);
     meshData->VertexBuffer = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, applicationPayload->CurrentHeapOffset, &bufferDescription);
-    applicationPayload->CurrentHeapOffset += SampleAlignValue(bufferDescription.SizeInBytes, bufferDescription.Alignment);
-    meshData->VertexBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->TestMeshData.VertexBuffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    applicationPayload->CurrentHeapOffset += bufferDescription.SizeInBytes;
 
     float vertices[] =
     {
@@ -74,6 +75,8 @@ void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicat
 
     ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(applicationPayload->TestMeshData.VertexBuffer);
     memcpy(vertexBufferPointer.Items, vertices, sizeof(vertices));
+
+    meshData->VertexBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->TestMeshData.VertexBuffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 }
 
 void InitSample(void* payload)
@@ -88,7 +91,7 @@ void InitSample(void* payload)
     applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .FrameLatency = 1, .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
-    // TODO: For now we need to put the as GpuUpload but it should be Gpu when we use IOQueues
+    // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
 
     LoadMesh(&applicationPayload->TestMeshData, "Pouet.mesh", applicationPayload);

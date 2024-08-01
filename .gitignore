@@ -7,6 +7,7 @@
 *.userosscache
 *.sln.docstates
 *.resolved
+*.obj
 
 xcuserdata/
 packages/
