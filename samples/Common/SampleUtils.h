@@ -230,13 +230,13 @@ void SamplePrintDataSpan(ElemDataSpan data)
     printf("\n");
 }
 
-void SampleSplitString(ElemDataSpan* destination, uint32_t* destinationCount, ElemDataSpan source)
+void SampleSplitString(ElemDataSpan* destination, uint32_t* destinationCount, ElemDataSpan source, char separator)
 {
     uint8_t* pointer = source.Items;
 
     for (uint32_t i = 0; i < source.Length; i++)
     {
-        if (source.Items[i] == ' ')
+        if (source.Items[i] == separator)
         {
             destination[(*destinationCount)++] = (ElemDataSpan)
             {

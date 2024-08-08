@@ -37,7 +37,7 @@
 #endif
 
 //------------------------------------------------------------------------
-// ##Module_Application##
+// ##Module_Tools##
 //------------------------------------------------------------------------
 
 /**
@@ -185,9 +185,22 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
  * @param options Compilation options such as debug mode.
  * @return The result of the compilation, including any binaries and messages.
  */
+// TODO: Put graphics api and platform into options (default to current one)
 ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
 
 // TODO: Can we compile multiple source files into one library?
+
+typedef struct
+{
+    ElemToolsDataSpan Data;
+    uint32_t VertexSize;
+} ElemVertexBuffer;
+
+typedef struct
+{
+} ElemBuildMeshletsOptions;
+
+ElemToolsAPI void ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
 
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader

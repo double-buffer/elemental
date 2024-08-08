@@ -8,6 +8,9 @@
  * on readability and not performance. Don't use it in your production code!
  */
 
+// TODO: Review the angle functions, we are using left handed coordinate system. So positive rotation should
+// be in clockwise order
+
 float SamplePow2f(float value)
 {
     return value * value;

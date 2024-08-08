@@ -71,6 +71,13 @@ int main(int argc, const char* argv[])
     printf("Compiling shader: %s (DebugMode=%d)\n", inputPath, debugMode);
 
     ElemToolsDataSpan shaderSource = SampleReadFile(inputPath); 
+
+    if (shaderSource.Length == 0)
+    {
+        printf("File doesn't exist.\n");
+        return 1;
+    }
+
     ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = shaderSource };
     ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(targetApi, targetPlatform, &shaderSourceData, &(ElemCompileShaderOptions) { .DebugMode = debugMode });
 

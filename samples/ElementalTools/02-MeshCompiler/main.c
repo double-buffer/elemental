@@ -1,46 +1,215 @@
 #include "ElementalTools.h"
 #include "SampleUtils.h"
+#include "SampleMath.h"
 
-void SampleReadObjMesh(ElemToolsDataSpan data)
+/**
+ * WARNING: This obj parsing code is just for demonstration purpose only. The parsing is not feature complete
+ * and the implementation focus on readability and not performance. Don't use it in your production code!
+ */
+
+typedef struct
+{
+    uint32_t SubObjectCount;
+    uint32_t VertexCount;
+    uint32_t NormalCount;
+    uint32_t TextCoordCount;
+    uint32_t FaceCount;
+} ObjMeshElementCount;
+
+// TODO: Fix warning
+typedef struct
+{
+    union
+    {
+        struct 
+        {
+            uint32_t VertexIndex;
+            uint32_t NormalIndex;
+            uint32_t TextCoordIndex;
+        };
+
+        uint32_t Indices[3];
+    } Elements[3];
+} ObjMeshFace;
+
+ObjMeshElementCount CountObjMeshElements(ElemToolsDataSpan data)
 {
     ElemToolsDataSpan line = SampleReadLine(&data);
 
+    ObjMeshElementCount result = { .VertexCount = 1, .NormalCount = 1, .TextCoordCount = 1 };
+
     while (line.Length > 0)
     {
-        ElemToolsDataSpan lineParts[64]; 
-        uint32_t linePartCount = 0;
-        SampleSplitString(lineParts, &linePartCount, line);
-
-        if (linePartCount > 1)
+        if (line.Length > 2)
         {
-            if (SampleCompareString(lineParts[0], "g"))
+            if (line.Items[0] == 'g')
             {
-                printf("Group!\n");
+                result.SubObjectCount++;
             }
-            else if (SampleCompareString(lineParts[0], "v"))
+            else if (line.Items[0] == 'v' && line.Items[1] == 'n')
             {
-                printf("Vertex!\n");
+                result.NormalCount++;
             }
-            else if (SampleCompareString(lineParts[0], "vn"))
+            else if (line.Items[0] == 'v' && line.Items[1] == 't')
             {
-                printf("Normal!\n");
+                result.TextCoordCount++;
             }
-            else if (SampleCompareString(lineParts[0], "f"))
+            else if (line.Items[0] == 'v')
             {
-                printf("Face!\n");
+                result.VertexCount++;
             }
-            else
+            else if (line.Items[0] == 'f')
             {
-                printf("Unknown!\n");
+                result.FaceCount++;
             }
         }
 
         line = SampleReadLine(&data);
     }
+
+    printf("SubObject: %d\n", result.SubObjectCount);
+    printf("Vextex: %d\n", result.VertexCount);
+    printf("Normal: %d\n", result.NormalCount);
+    printf("TestCoord: %d\n", result.TextCoordCount);
+    printf("Face: %d\n", result.FaceCount);
+
+    return result;
+}
+
+SampleVector2 ReadObjVector2(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
+{
+    if (linePartCount < 3)
+    {
+        printf("Error: Invalid number of elements in the line for Vector2.\n");
+        return (SampleVector2) { 0 };
+    }
+
+    float x = atof((const char*)lineParts[1].Items);
+    float y = atof((const char*)lineParts[2].Items);
+
+    return (SampleVector2)
+    {
+        .X = x,
+        .Y = y
+    };
+}
+
+SampleVector3 ReadObjVector3(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
+{
+    if (linePartCount < 4)
+    {
+        printf("Error: Invalid number of elements in the line for Vector3.\n");
+        return (SampleVector3) { 0 };
+    }
+
+    float x = atof((const char*)lineParts[1].Items);
+    float y = atof((const char*)lineParts[2].Items);
+    float z = atof((const char*)lineParts[3].Items);
+
+    return (SampleVector3)
+    {
+        .X = x,
+        .Y = y,
+        .Z = z
+    };
+}
+
+ObjMeshFace ReadObjFace(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
+{
+    if (linePartCount < 4)
+    {
+        printf("Error: Invalid number of elements in the line for Face.\n");
+        return (ObjMeshFace) { 0 };
+    }
+
+    ObjMeshFace result = { 0 };
+
+    for (uint32_t i = 0; i < 3; i++)
+    {
+        ElemToolsDataSpan faceParts[3];
+        uint32_t facePartCount = 0;
+
+        SampleSplitString(faceParts, &facePartCount, lineParts[i + 1], '/');
+
+        for (uint32_t j = 0; j < 3; j++)
+        {
+            if (faceParts[j].Length > 0)
+            {
+                result.Elements[i].Indices[j] = atoi((const char*)faceParts[j].Items);
+            }
+        }
+    }
+
+    return result;
+}
+
+void ReadObjMesh(ElemToolsDataSpan data)
+{
+    ObjMeshElementCount meshElementCount = CountObjMeshElements(data);
+    ElemToolsDataSpan line = SampleReadLine(&data);
+
+    SampleVector3* vertexList = malloc(meshElementCount.VertexCount * sizeof(SampleVector3));
+    uint32_t vertexCount = 1;
+
+    SampleVector3* normalList = malloc(meshElementCount.NormalCount * sizeof(SampleVector3));
+    uint32_t normalCount = 1;
+
+    SampleVector2* textCoordList = malloc(meshElementCount.TextCoordCount * sizeof(SampleVector2));
+    uint32_t textCoordCount = 1;
+
+    ObjMeshFace* faceList = malloc(meshElementCount.FaceCount * sizeof(ObjMeshFace));
+    uint32_t faceCount = 0;
+
+    while (line.Length > 0)
+    {
+        ElemToolsDataSpan lineParts[64]; 
+        uint32_t linePartCount = 0;
+        SampleSplitString(lineParts, &linePartCount, line, ' ');
+
+        if (linePartCount > 1)
+        {
+            if (SampleCompareString(lineParts[0], "g"))
+            {
+                printf("ERROR: Group not implemented yet!\n");
+            }
+            else if (SampleCompareString(lineParts[0], "v"))
+            {
+                vertexList[vertexCount++] = ReadObjVector3(lineParts, linePartCount);
+            }
+            else if (SampleCompareString(lineParts[0], "vn"))
+            {
+                normalList[normalCount++] = ReadObjVector3(lineParts, linePartCount);
+            }
+            else if (SampleCompareString(lineParts[0], "vt"))
+            {
+                textCoordList[textCoordCount++] = ReadObjVector2(lineParts, linePartCount);
+            }
+            else if (SampleCompareString(lineParts[0], "f"))
+            {
+                faceList[faceCount++] = ReadObjFace(lineParts, linePartCount);
+            }
+        }
+
+        line = SampleReadLine(&data);
+    }
+
+    for (uint32_t i = 0; i < 10; i++)
+    {
+        printf("Vertex %d: %f, %f, %f\n", i, vertexList[i].X, vertexList[i].Y, vertexList[i].Z);
+    }
+
+    for (uint32_t i = 0; i < 10; i++)
+    {
+        for (uint32_t j = 0; j < 3; j++)
+        {
+            printf("Face %d-%d: %d, %d, %d\n", i, j, faceList[i].Elements[j].VertexIndex, faceList[i].Elements[j].NormalIndex, faceList[i].Elements[j].TextCoordIndex);
+        }
+    }
 }
 
 int main(int argc, const char* argv[]) 
 {
+    // TODO: Add an option to handle handness change
     if (argc < 3)
     {
         printf("USAGE: MeshCompiler [options] inputfile outputfile\n");
@@ -91,5 +260,12 @@ int main(int argc, const char* argv[])
     printf("Compiling mesh: %s\n", inputPath);
 
     ElemToolsDataSpan inputData = SampleReadFile(inputPath); 
-    SampleReadObjMesh(inputData); 
+    
+    if (inputData.Length == 0)
+    {
+        printf("File doesn't exist.\n");
+        return 1;
+    }
+
+    ReadObjMesh(inputData); 
 }
