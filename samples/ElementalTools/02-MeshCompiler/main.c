@@ -16,7 +16,6 @@ typedef struct
     uint32_t FaceCount;
 } ObjMeshElementCount;
 
-// TODO: Fix warning
 typedef struct
 {
     union
@@ -31,6 +30,19 @@ typedef struct
         uint32_t Indices[3];
     } Elements[3];
 } ObjMeshFace;
+
+typedef struct
+{
+    SampleVector3 Position;
+    SampleVector3 Normal;
+    SampleVector2 TextureCoordinates;
+} InputMeshVertex;
+
+typedef struct
+{
+    InputMeshVertex* VertexList;
+    uint32_t VertexCount;
+} InputMeshData;
 
 ObjMeshElementCount CountObjMeshElements(ElemToolsDataSpan data)
 {
@@ -135,6 +147,7 @@ ObjMeshFace ReadObjFace(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
         {
             if (faceParts[j].Length > 0)
             {
+                // Note: We are not handling negative indices
                 result.Elements[i].Indices[j] = atoi((const char*)faceParts[j].Items);
             }
         }
@@ -143,7 +156,7 @@ ObjMeshFace ReadObjFace(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
     return result;
 }
 
-void ReadObjMesh(ElemToolsDataSpan data)
+InputMeshData ReadObjMesh(ElemToolsDataSpan data)
 {
     ObjMeshElementCount meshElementCount = CountObjMeshElements(data);
     ElemToolsDataSpan line = SampleReadLine(&data);
@@ -157,8 +170,8 @@ void ReadObjMesh(ElemToolsDataSpan data)
     SampleVector2* textCoordList = malloc(meshElementCount.TextCoordCount * sizeof(SampleVector2));
     uint32_t textCoordCount = 1;
 
-    ObjMeshFace* faceList = malloc(meshElementCount.FaceCount * sizeof(ObjMeshFace));
-    uint32_t faceCount = 0;
+    InputMeshVertex* inputMeshVertexList = malloc(meshElementCount.FaceCount * 3 * sizeof(InputMeshVertex));
+    uint32_t inputMeshVertexCount = 0;
 
     while (line.Length > 0)
     {
@@ -186,25 +199,30 @@ void ReadObjMesh(ElemToolsDataSpan data)
             }
             else if (SampleCompareString(lineParts[0], "f"))
             {
-                faceList[faceCount++] = ReadObjFace(lineParts, linePartCount);
+                ObjMeshFace face = ReadObjFace(lineParts, linePartCount);
+                
+                for (uint32_t i = 0; i < 3; i++)
+                {
+                    InputMeshVertex vertex = 
+                    {
+                        .Position = vertexList[face.Elements[i].VertexIndex],
+                        .Normal = normalList[face.Elements[i].NormalIndex],
+                        .TextureCoordinates = textCoordList[face.Elements[i].TextCoordIndex]
+                    };
+
+                    inputMeshVertexList[inputMeshVertexCount++] = vertex;
+                }
             }
         }
 
         line = SampleReadLine(&data);
     }
 
-    for (uint32_t i = 0; i < 10; i++)
+    return (InputMeshData)
     {
-        printf("Vertex %d: %f, %f, %f\n", i, vertexList[i].X, vertexList[i].Y, vertexList[i].Z);
-    }
-
-    for (uint32_t i = 0; i < 10; i++)
-    {
-        for (uint32_t j = 0; j < 3; j++)
-        {
-            printf("Face %d-%d: %d, %d, %d\n", i, j, faceList[i].Elements[j].VertexIndex, faceList[i].Elements[j].NormalIndex, faceList[i].Elements[j].TextCoordIndex);
-        }
-    }
+        .VertexList = inputMeshVertexList,
+        .VertexCount = inputMeshVertexCount
+    };
 }
 
 int main(int argc, const char* argv[]) 
@@ -267,5 +285,39 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    ReadObjMesh(inputData); 
+    InputMeshData inputMeshData = ReadObjMesh(inputData); 
+    printf("Input mesh vertex Count: %d\n", inputMeshData.VertexCount);
+
+    ElemVertexBuffer vertexBuffer =
+    {
+        .Data = { .Items = (uint8_t*)inputMeshData.VertexList, .Length = inputMeshData.VertexCount * sizeof(InputMeshVertex) },
+        .VertexSize = sizeof(InputMeshVertex)
+    };
+
+    ElemBuildMeshletResult result = ElemBuildMeshlets(vertexBuffer, NULL);
+    
+    // TODO: Refactor this into an util function to display messages with proper colors
+    for (uint32_t i = 0; i < result.Messages.Length; i++)
+    {
+        printf("Compil msg (%d): %s\n", result.Messages.Items[i].Type, result.Messages.Items[i].Message);
+    }
+
+    if (result.HasErrors)
+    {
+        printf("Error while compiling shader!\n");
+        return 1;
+    }
+
+    // TODO: This is a good unit test
+    // TODO: Test cone and bounding box and spheres
+    for (uint32_t i = 0; i < 10; i++)
+    {
+        InputMeshVertex vertex = ((InputMeshVertex*)result.VertexBuffer.Data.Items)[i];
+
+        printf("Vertex X=%f, Y=%f, Z=%f\n", vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
+    }
+    
+    printf("Writing mesh data to: %s\n", outputPath);
+    
+    SampleWriteDataToFile(outputPath, result.VertexBuffer.Data, false);
 }

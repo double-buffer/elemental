@@ -196,11 +196,45 @@ typedef struct
     uint32_t VertexSize;
 } ElemVertexBuffer;
 
+// TODO: Allow to specify the offset of the vertex position? (For now we assume vertex position is at offset 0)
 typedef struct
 {
+    uint32_t Reserved;
 } ElemBuildMeshletsOptions;
 
-ElemToolsAPI void ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
+typedef struct
+{
+    uint32_t VertexIndexOffset;
+    uint32_t VertexIndexCount;
+    uint32_t TriangleIndexOffset;
+    uint32_t TriangleIndexCount;
+} ElemMeshlet;
+
+typedef struct
+{
+    ElemMeshlet* Items;
+    uint32_t Length;
+} ElemMeshletSpan;
+
+typedef struct
+{
+    uint32_t* Items;
+    uint32_t Length;
+} ElemUInt32Span;
+
+typedef struct
+{
+    uint32_t MeshletMaxVertexCount;
+    uint32_t MeshletMaxTriangleCount;
+    ElemVertexBuffer VertexBuffer;
+    ElemMeshletSpan Meshlets;
+    ElemUInt32Span MeshletVertexIndexBuffer;
+    ElemToolsDataSpan MeshletTriangleIndexBuffer;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemBuildMeshletResult;
+
+ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
 
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader

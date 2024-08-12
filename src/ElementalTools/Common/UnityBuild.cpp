@@ -6,6 +6,8 @@
 #include "MetalShaderConverter.cpp"
 #endif
 
+#include "MeshletBuilder.cpp"
+
 #include "SystemFunctions.cpp"
 #include "SystemDictionary.cpp"
 #include "SystemMemory.cpp"

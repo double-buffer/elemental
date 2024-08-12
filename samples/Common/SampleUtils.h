@@ -165,7 +165,7 @@ ElemDataSpan SampleReadFile(const char* filename)
     };
 }
 
-int SampleWriteDataToFile(const char* filename, ElemDataSpan data) 
+int SampleWriteDataToFile(const char* filename, ElemDataSpan data, bool append) 
 {
     printf("Length:%s %d\n", filename, data.Length);
     if (filename == NULL || data.Length == 0) 
@@ -217,7 +217,11 @@ ElemDataSpan SampleReadLine(ElemDataSpan* data)
         }
     }
 
-    return (ElemDataSpan){};
+    return (ElemDataSpan) 
+    {
+        .Items = NULL,
+        .Length = 0
+    };
 }
 
 void SamplePrintDataSpan(ElemDataSpan data)

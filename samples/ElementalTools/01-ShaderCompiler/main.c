@@ -93,5 +93,5 @@ int main(int argc, const char* argv[])
     }
 
     printf("Writing shader data to: %s\n", outputPath);
-    return SampleWriteDataToFile(outputPath, compilationResult.Data);
+    return SampleWriteDataToFile(outputPath, compilationResult.Data, false);
 }

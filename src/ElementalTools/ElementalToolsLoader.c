@@ -24,7 +24,8 @@ static int functionPointersLoadedElementalTools = 0;
 typedef struct ElementalToolsFunctions 
 {
     bool (*ElemCanCompileShader)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform);
-    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, const ElemShaderSourceData*, const ElemCompileShaderOptions*);
+    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, ElemShaderSourceData const *, ElemCompileShaderOptions const *);
+    ElemBuildMeshletResult (*ElemBuildMeshlets)(ElemVertexBuffer, ElemBuildMeshletsOptions const *);
     
 } ElementalToolsFunctions;
 
@@ -78,7 +79,8 @@ static bool LoadElementalToolsFunctionPointers(void)
     }
 
     listElementalToolsFunctions.ElemCanCompileShader = (bool (*)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform))GetElementalToolsFunctionPointer("ElemCanCompileShader");
-    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, const ElemShaderSourceData*, const ElemCompileShaderOptions*))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
+    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, ElemShaderSourceData const *, ElemCompileShaderOptions const *))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
+    listElementalToolsFunctions.ElemBuildMeshlets = (ElemBuildMeshletResult (*)(ElemVertexBuffer, ElemBuildMeshletsOptions const *))GetElementalToolsFunctionPointer("ElemBuildMeshlets");
     
 
     functionPointersLoadedElementalTools = 1;
@@ -116,7 +118,7 @@ static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemT
     return listElementalToolsFunctions.ElemCanCompileShader(shaderLanguage, graphicsApi, platform);
 }
 
-static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
+static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, ElemShaderSourceData const * sourceData, ElemCompileShaderOptions const * options)
 {
     if (!LoadElementalToolsFunctionPointers()) 
     {
@@ -145,4 +147,35 @@ static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGrap
     }
 
     return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, platform, sourceData, options);
+}
+
+static inline ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemBuildMeshletsOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemBuildMeshletResult result = {};
+        #else
+        ElemBuildMeshletResult result = (ElemBuildMeshletResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemBuildMeshlets) 
+    {
+        assert(listElementalToolsFunctions.ElemBuildMeshlets);
+
+        #ifdef __cplusplus
+        ElemBuildMeshletResult result = {};
+        #else
+        ElemBuildMeshletResult result = (ElemBuildMeshletResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemBuildMeshlets(vertexBuffer, options);
 }

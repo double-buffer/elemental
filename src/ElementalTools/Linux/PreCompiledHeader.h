@@ -35,6 +35,7 @@
 
 #include "dxcapi.h"
 #include "d3d12shader.h"
+#include "meshoptimizer.h"
 
 #ifdef _WASDEBUG
 #define _DEBUG

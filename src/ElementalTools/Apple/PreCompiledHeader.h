@@ -33,6 +33,7 @@
 
 #include "dxcapi.h"
 #include "d3d12shader.h"
+#include "meshoptimizer.h"
 
 #include "metal_irconverter/metal_irconverter.h"
 

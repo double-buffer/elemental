@@ -193,7 +193,6 @@ if(WIN32)
     endfunction()
 endif()
 
-
 #=======================================================================
 # Shader Compilers
 #=======================================================================
@@ -205,10 +204,15 @@ if(WIN32 OR APPLE)
 endif()
 
 #=======================================================================
+# Mesh Optimizer
+#=======================================================================
+add_subdirectory(./meshoptimizer)
+
+#=======================================================================
 # Tools External Dependencies
 #=======================================================================
 add_library(tools_external_dependencies INTERFACE)
-target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers)
+target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer)
 
 #=======================================================================
 # xxHash

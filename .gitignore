@@ -8,6 +8,7 @@
 *.sln.docstates
 *.resolved
 *.obj
+*.mesh
 
 xcuserdata/
 packages/
