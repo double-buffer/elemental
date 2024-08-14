@@ -174,11 +174,13 @@ int SampleWriteDataToFile(const char* filename, ElemDataSpan data, bool append)
         return -1;
     }
 
+    const char* fileMode = append ? "ab" : "wb"; 
+
     #ifdef _WIN32
     FILE* file;
-    fopen_s(&file, filename, "wb");
+    fopen_s(&file, filename, fileMode);
     #else
-    FILE* file = fopen(filename, "wb");
+    FILE* file = fopen(filename, fileMode);
     #endif
 
     if (file == NULL) 
@@ -192,7 +194,7 @@ int SampleWriteDataToFile(const char* filename, ElemDataSpan data, bool append)
 
     if (bytesWritten < data.Length) 
     {
-        printf("ERROR 3\n");
+        printf("ERROR 3: %zu\n", bytesWritten);
         return -1; // Return -1 if not all bytes were written
     }
 

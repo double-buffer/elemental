@@ -3,28 +3,34 @@
 #include "SampleUtils.h"
 #include "SampleMath.h"
 #include "SampleInputs.h"
+#include "SampleMesh.h"
 
-#define ROTATION_TOUCH_SPEED 0.5f
+#define ROTATION_TOUCH_DECREASE_SPEED 0.001f
+#define ROTATION_TOUCH_SPEED 4.0f
 #define ROTATION_TOUCH_MAX_DELTA 0.3f
-#define ROTATION_MULTITOUCH_SPEED 100.0f
-#define ROTATION_ACCELERATION 50.0f
-#define ROTATION_FRICTION 40.0f
-#define ZOOM_MULTITOUCH_SPEED 100.0f
-#define ZOOM_SPEED 0.5f
-#define ZOOM_FACTOR 10.0f
+#define ROTATION_MULTITOUCH_SPEED 200.0f
+#define ROTATION_ACCELERATION 500.0f
+#define ROTATION_FRICTION 60.0f
+#define ZOOM_MULTITOUCH_SPEED 1000.0f
+#define ZOOM_SPEED 5.0f
 
 typedef struct
 {
     uint32_t VertexBuffer;
-    SampleMatrix3x3 Transform;
+    uint32_t MeshletBuffer;
+    uint32_t MeshletVertexIndexBuffer;
+    uint32_t MeshletTriangleIndexBuffer;
+    SampleVector4 RotationQuaternion;
+    float Zoom;
+    float AspectRatio;
+    uint32_t TriangeColor;
 } ShaderParameters;
 
 typedef struct
 {
-    SampleVector2 TranslationDelta;
-    float RotationDelta;
+    SampleVector3 RotationDelta;
     SampleVector2 RotationTouch;
-    SampleVector2 CurrentTranslationSpeed;
+    SampleVector3 CurrentRotationSpeed;
     float PreviousTouchDistance;
     float PreviousTouchAngle;
     float Zoom;
@@ -32,8 +38,15 @@ typedef struct
 
 typedef struct
 {
+    uint32_t MeshletCount;
     ElemGraphicsResource VertexBuffer;
     ElemGraphicsResourceDescriptor VertexBufferReadDescriptor;
+    ElemGraphicsResource MeshletBuffer;
+    ElemGraphicsResourceDescriptor MeshletBufferReadDescriptor;
+    ElemGraphicsResource MeshletVertexIndexBuffer;
+    ElemGraphicsResourceDescriptor MeshletVertexIndexBufferReadDescriptor;
+    ElemGraphicsResource MeshletTriangleIndexBuffer;
+    ElemGraphicsResourceDescriptor MeshletTriangleIndexBufferReadDescriptor;
 } MeshData;
 
 // TODO: Group common variables into separate structs
@@ -49,7 +62,7 @@ typedef struct
     ElemSwapChain SwapChain;
     ElemPipelineState GraphicsPipeline;
     ShaderParameters ShaderParameters;
-    SampleStandardInputActions InputActions;
+    SampleModelViewerInputActions InputActions;
     SampleInputActionBindingSpan InputActionBindings;
     GameState GameState;
     MeshData TestMeshData;
@@ -57,26 +70,42 @@ typedef struct
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
 
-void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicationPayload)
+// TODO: To remove when IOQueues
+void CreateAndUploadDataTemp(ElemGraphicsResource* buffer, ElemGraphicsResourceDescriptor* readDescriptor, ApplicationPayload* applicationPayload, void* dataPointer, uint32_t sizeInBytes)
 {
     // TODO: Alignment should be used with the offset before adding the size of the resource!
-    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(applicationPayload->GraphicsDevice, 10 * sizeof(SampleVector3), ElemGraphicsResourceUsage_Read, NULL);
+    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(applicationPayload->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Read, NULL);
 
     applicationPayload->CurrentHeapOffset = SampleAlignValue(applicationPayload->CurrentHeapOffset, bufferDescription.Alignment);
-    meshData->VertexBuffer = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, applicationPayload->CurrentHeapOffset, &bufferDescription);
+    *buffer = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, applicationPayload->CurrentHeapOffset, &bufferDescription);
     applicationPayload->CurrentHeapOffset += bufferDescription.SizeInBytes;
 
-    float vertices[] =
+    ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(*buffer);
+    memcpy(vertexBufferPointer.Items, dataPointer, sizeInBytes);
+
+    *readDescriptor = ElemCreateGraphicsResourceDescriptor(*buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+}
+
+void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicationPayload)
+{
+    // TODO: When IOQueues are implemented, we only need to read the header, not the whole file!
+    // Add a parameter to specify the length we want to read and the offset
+    ElemDataSpan meshFileData = SampleReadFile(path);
+
+    uint8_t* fileDataPointer = meshFileData.Items;
+    SampleMeshHeader* meshHeader = (SampleMeshHeader*)fileDataPointer;
+
+    if (meshHeader->FileId[0] == 'M' && meshHeader->FileId[1] == 'E' && meshHeader->FileId[2] == 'S' && meshHeader->FileId[3] == 'H')
     {
-        -1.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        -1.0f, 0.0f, 0.0f
-    };
+        printf("OK Meshlet Count: %d\n", meshHeader->MeshletCount);
+    }
 
-    ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(applicationPayload->TestMeshData.VertexBuffer);
-    memcpy(vertexBufferPointer.Items, vertices, sizeof(vertices));
+    meshData->MeshletCount = meshHeader->MeshletCount;
 
-    meshData->VertexBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->TestMeshData.VertexBuffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    CreateAndUploadDataTemp(&meshData->VertexBuffer, &meshData->VertexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->VertexBufferOffset, meshHeader->VertexBufferSizeInBytes);
+    CreateAndUploadDataTemp(&meshData->MeshletBuffer, &meshData->MeshletBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletBufferOffset, meshHeader->MeshletBufferSizeInBytes);
+    CreateAndUploadDataTemp(&meshData->MeshletVertexIndexBuffer, &meshData->MeshletVertexIndexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletVertexIndexBufferOffset, meshHeader->MeshletVertexIndexBufferSizeInBytes);
+    CreateAndUploadDataTemp(&meshData->MeshletTriangleIndexBuffer, &meshData->MeshletTriangleIndexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletTriangleIndexBufferOffset, meshHeader->MeshletTriangleIndexBufferSizeInBytes);
 }
 
 void InitSample(void* payload)
@@ -94,8 +123,11 @@ void InitSample(void* payload)
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
 
-    LoadMesh(&applicationPayload->TestMeshData, "Pouet.mesh", applicationPayload);
+    LoadMesh(&applicationPayload->TestMeshData, "kitten.mesh", applicationPayload);
     applicationPayload->ShaderParameters.VertexBuffer = applicationPayload->TestMeshData.VertexBufferReadDescriptor;
+    applicationPayload->ShaderParameters.MeshletBuffer = applicationPayload->TestMeshData.MeshletBufferReadDescriptor;
+    applicationPayload->ShaderParameters.MeshletVertexIndexBuffer = applicationPayload->TestMeshData.MeshletVertexIndexBufferReadDescriptor;
+    applicationPayload->ShaderParameters.MeshletTriangleIndexBuffer = applicationPayload->TestMeshData.MeshletTriangleIndexBufferReadDescriptor;
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -110,12 +142,10 @@ void InitSample(void* payload)
 
     ElemFreeShaderLibrary(shaderLibrary);
 
-    applicationPayload->ShaderParameters.Transform = SampleCreateIdentityMatrix();
+    applicationPayload->ShaderParameters.RotationQuaternion = (SampleVector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
     applicationPayload->InputActions.ShowCursor = true;
-    applicationPayload->GameState.Zoom = 1.0f;
-    applicationPayload->GameState.RotationDelta = 0.0f;
 
-    SampleRegisterStandardInputBindings(&applicationPayload->InputActionBindings, &applicationPayload->InputActions);
+    SampleRegisterModelViewerInputBindings(&applicationPayload->InputActionBindings, &applicationPayload->InputActions);
     
     SampleStartFrameMeasurement();
 }
@@ -133,6 +163,12 @@ void FreeSample(void* payload)
     // Free Mesh
     ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.VertexBufferReadDescriptor, NULL);
     ElemFreeGraphicsResource(applicationPayload->TestMeshData.VertexBuffer, NULL);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.MeshletBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletBuffer, NULL);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.MeshletVertexIndexBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletVertexIndexBuffer, NULL);
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.MeshletTriangleIndexBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletTriangleIndexBuffer, NULL);
 
     ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
@@ -145,12 +181,9 @@ void ResetTouchParameters(GameState* gameState)
     gameState->PreviousTouchAngle = 0.0f;   
 }
 
-void UpdateGameState(GameState* gameState, SampleStandardInputActions* inputActions, float deltaTimeInSeconds)
+void UpdateGameState(GameState* gameState, SampleModelViewerInputActions* inputActions, float deltaTimeInSeconds)
 {
-    gameState->TranslationDelta = V2Zero; 
-
-    float zoomDelta = 0.0f;
-    float rotationDeltaZ = 0.0f;
+    gameState->RotationDelta = V3Zero; 
 
     if (inputActions->Touch)
     {
@@ -165,12 +198,12 @@ void UpdateGameState(GameState* gameState, SampleStandardInputActions* inputActi
 
             if (gameState->PreviousTouchDistance != 0.0f)
             {
-                zoomDelta = -(distance - gameState->PreviousTouchDistance) * ZOOM_MULTITOUCH_SPEED * deltaTimeInSeconds;
+                gameState->Zoom += (distance - gameState->PreviousTouchDistance) * ZOOM_MULTITOUCH_SPEED * deltaTimeInSeconds;
             }
 
             if (gameState->PreviousTouchAngle != 0.0f)
             {
-                rotationDeltaZ = -SampleNormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
+                gameState->RotationDelta.Z = -SampleNormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
             }
 
             gameState->PreviousTouchDistance = distance;
@@ -180,65 +213,67 @@ void UpdateGameState(GameState* gameState, SampleStandardInputActions* inputActi
         {
             ResetTouchParameters(gameState);
 
-            gameState->TranslationDelta.X = (inputActions->TouchTranslateLeft - inputActions->TouchTranslateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-            gameState->TranslationDelta.Y = (inputActions->TouchTranslateUp - inputActions->TouchTranslateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+            gameState->RotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+            gameState->RotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
         }
     }
     else if (inputActions->TouchRotateSide)
     {
         ResetTouchParameters(gameState);
-        rotationDeltaZ = (inputActions->TouchTranslateLeft - inputActions->TouchTranslateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+        gameState->RotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else if (inputActions->TouchReleased && !inputActions->Touch2)
     {
         ResetTouchParameters(gameState);
 
-        gameState->RotationTouch.X = (inputActions->TouchTranslateUp - inputActions->TouchTranslateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-        gameState->RotationTouch.Y = (inputActions->TouchTranslateLeft - inputActions->TouchTranslateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+        gameState->RotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+        gameState->RotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else
     {
-        SampleVector2 direction = SampleNormalizeV2((SampleVector2) 
+        SampleVector3 direction = SampleNormalizeV3((SampleVector3) 
         { 
-            .X = (inputActions->TranslateRight - inputActions->TranslateLeft),
-            .Y = (inputActions->TranslateDown - inputActions->TranslateUp),
+            .X = (inputActions->RotateUp - inputActions->RotateDown),
+            .Y = (inputActions->RotateLeft - inputActions->RotateRight),
+            .Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight)
         });
 
-        if (SampleMagnitudeSquaredV2(direction))
+        if (SampleMagnitudeSquaredV3(direction))
         {
-            SampleVector2 acceleration = SampleAddV2(SampleMulScalarV2(direction, ROTATION_ACCELERATION), SampleMulScalarV2(SampleInverseV2(gameState->CurrentTranslationSpeed), ROTATION_FRICTION));
+            SampleVector3 acceleration = SampleAddV3(SampleMulScalarV3(direction, ROTATION_ACCELERATION), SampleMulScalarV3(SampleInverseV3(gameState->CurrentRotationSpeed), ROTATION_FRICTION));
 
             ResetTouchParameters(gameState);
-
-            gameState->TranslationDelta = SampleAddV2(SampleMulScalarV2(acceleration, 0.5f * SamplePow2f(deltaTimeInSeconds)), SampleMulScalarV2(gameState->CurrentTranslationSpeed, deltaTimeInSeconds));
-            gameState->CurrentTranslationSpeed = SampleAddV2(SampleMulScalarV2(acceleration, deltaTimeInSeconds), gameState->CurrentTranslationSpeed);
+            gameState->RotationDelta = SampleAddV3(SampleMulScalarV3(acceleration, 0.5f * SamplePow2f(deltaTimeInSeconds)), SampleMulScalarV3(gameState->CurrentRotationSpeed, deltaTimeInSeconds));
+            gameState->CurrentRotationSpeed = SampleAddV3(SampleMulScalarV3(acceleration, deltaTimeInSeconds), gameState->CurrentRotationSpeed);
         }
-
-        rotationDeltaZ = (inputActions->RotateSideLeft - inputActions->RotateSideRight) * 1 * deltaTimeInSeconds;
-        zoomDelta = -(inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
     }
 
-    if (zoomDelta != 0)
+    if (SampleMagnitudeSquaredV2(gameState->RotationTouch) > 0)
     {
-        if (zoomDelta > 0) 
+        if (SampleMagnitudeV2(gameState->RotationTouch) > ROTATION_TOUCH_MAX_DELTA)
         {
-            gameState->Zoom *= powf(ZOOM_FACTOR, zoomDelta);
+            gameState->RotationTouch = SampleMulScalarV2(SampleNormalizeV2(gameState->RotationTouch), ROTATION_TOUCH_MAX_DELTA);
         }
-        else
+
+        gameState->RotationDelta = SampleAddV3(gameState->RotationDelta, (SampleVector3){ gameState->RotationTouch.X, gameState->RotationTouch.Y, 0.0f });
+
+        SampleVector2 inverse = SampleMulScalarV2(SampleNormalizeV2(SampleInverseV2(gameState->RotationTouch)), ROTATION_TOUCH_DECREASE_SPEED);
+        gameState->RotationTouch = SampleAddV2(gameState->RotationTouch, inverse);
+
+        if (SampleMagnitudeV2(gameState->RotationTouch) < 0.001f)
         {
-            gameState->Zoom /= powf(ZOOM_FACTOR, -zoomDelta);
+            ResetTouchParameters(gameState);
         }
     }
 
-    gameState->TranslationDelta = SampleMulScalarV2(gameState->TranslationDelta, gameState->Zoom);
-    gameState->RotationDelta = rotationDeltaZ;
+    gameState->Zoom += (inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    SampleStandardInputActions* inputActions = &applicationPayload->InputActions;
+    SampleModelViewerInputActions* inputActions = &applicationPayload->InputActions;
     SampleUpdateInputActions(&applicationPayload->InputActionBindings);
 
     if (inputActions->ExitApp)
@@ -258,9 +293,19 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     GameState* gameState = &applicationPayload->GameState;
     UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
 
-    SampleMatrix3x3 transformMatrix = SampleMulMatrix3x3(SampleCreateTranslationMatrix(gameState->TranslationDelta.X, gameState->TranslationDelta.Y), SampleCreateRotationMatrix(gameState->RotationDelta));
+    if (SampleMagnitudeSquaredV3(gameState->RotationDelta))
+    {
+        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 1, 0, 0 }, gameState->RotationDelta.X), 
+                                                         SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 0, 0, 1 }, gameState->RotationDelta.Z),
+                                                                       SampleCreateQuaternion((SampleVector3){ 0, 1, 0 }, gameState->RotationDelta.Y)));
 
-    applicationPayload->ShaderParameters.Transform = SampleMulMatrix3x3(applicationPayload->ShaderParameters.Transform, transformMatrix);
+        applicationPayload->ShaderParameters.RotationQuaternion = SampleMulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
+    }
+
+    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
+    float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
+    applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, gameState->Zoom);
+    applicationPayload->ShaderParameters.TriangeColor = inputActions->TriangleColor;
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -279,7 +324,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-    ElemDispatchMesh(commandList, 1, 1, 1);
+    ElemDispatchMesh(commandList, applicationPayload->TestMeshData.MeshletCount, 1, 1);
 
     ElemEndRenderPass(commandList);
 

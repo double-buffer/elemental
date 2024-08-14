@@ -9,13 +9,13 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     printf("Meshlet Builder\n");
 
     auto indexCount = vertexBuffer.Data.Length / vertexBuffer.VertexSize;
-    auto vertexRemap = SystemPushArray<uint32_t>(stackMemoryArena, indexCount);
+    auto vertexRemap = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
     
     auto vertexCount = meshopt_generateVertexRemap(vertexRemap.Pointer, nullptr, indexCount, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize);
-    printf("VertexCount after remap: %lu\n", vertexCount);
+    printf("VertexCount after remap: %zu\n", vertexCount);
 
-    auto vertexList = SystemPushArray<uint8_t>(stackMemoryArena, vertexCount * vertexBuffer.VertexSize);
-    auto indexList = SystemPushArray<uint32_t>(stackMemoryArena, indexCount);
+    auto vertexList = SystemPushArrayZero<uint8_t>(stackMemoryArena, vertexCount * vertexBuffer.VertexSize);
+    auto indexList = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
 
     meshopt_remapVertexBuffer(vertexList.Pointer, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize, vertexRemap.Pointer);
     meshopt_remapIndexBuffer(indexList.Pointer, nullptr, indexCount, vertexRemap.Pointer);
@@ -27,20 +27,21 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
     // TODO: Review the default values
     // TODO: Allow customisation
-    auto meshletMaxVertexCount = 64;
-    auto meshletMaxTriangleCount = 64;
+    uint8_t meshletMaxVertexCount = 64u;
+    uint8_t meshletMaxTriangleCount = 64u;
     auto coneWeight = 0.5f;
 
-    auto meshletCount = meshopt_buildMeshletsBound(indexCount, meshletMaxVertexCount, meshletMaxTriangleCount);
+    auto meshletCount = (uint32_t)meshopt_buildMeshletsBound(indexCount, meshletMaxVertexCount, meshletMaxTriangleCount);
     printf("MeshletCount: %d\n", meshletCount);
 
     auto meshOptMeshletList = SystemPushArray<meshopt_Meshlet>(stackMemoryArena, meshletCount);
     auto meshletVertexIndexList = SystemPushArray<uint32_t>(stackMemoryArena, meshletCount * meshletMaxVertexCount);
-    auto meshletTriangleIndexList = SystemPushArray<uint8_t>(stackMemoryArena, meshletCount * meshletMaxTriangleCount);
+    auto meshletTriangleIndexListRaw = SystemPushArray<uint8_t>(stackMemoryArena, meshletCount * meshletMaxTriangleCount * 3);
+    auto meshletTriangleIndexList = SystemPushArrayZero<uint32_t>(stackMemoryArena, meshletCount * meshletMaxTriangleCount);
 
     meshletCount = meshopt_buildMeshlets(meshOptMeshletList.Pointer, 
                                          meshletVertexIndexList.Pointer, 
-                                         meshletTriangleIndexList.Pointer, 
+                                         meshletTriangleIndexListRaw.Pointer, 
                                          indexList.Pointer, 
                                          indexCount, 
                                          (const float*)vertexList.Pointer, 
@@ -49,6 +50,10 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
                                          meshletMaxVertexCount, 
                                          meshletMaxTriangleCount, 
                                          coneWeight);
+
+
+    auto meshletVertexIndexCount = 0u;
+    auto meshletTriangleIndexCount = 0u;
 
     printf("MeshletCount: %d\n", meshletCount);
 
@@ -59,12 +64,12 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
         auto meshlet = meshOptMeshletList[i];
 
         meshopt_optimizeMeshlet(&meshletVertexIndexList[meshlet.vertex_offset], 
-                                &meshletTriangleIndexList[meshlet.triangle_offset], 
+                                &meshletTriangleIndexListRaw[meshlet.triangle_offset], 
                                 meshlet.triangle_count, 
                                 meshlet.vertex_count);
 
         auto meshletBounds = meshopt_computeMeshletBounds(&meshletVertexIndexList[meshlet.vertex_offset], 
-                                                          &meshletTriangleIndexList[meshlet.triangle_offset], 
+                                                          &meshletTriangleIndexListRaw[meshlet.triangle_offset], 
                                                           meshlet.triangle_count, 
                                                           (const float*)vertexList.Pointer, 
                                                           vertexCount, 
@@ -76,20 +81,35 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
         {
             .VertexIndexOffset = meshlet.vertex_offset,
             .VertexIndexCount = meshlet.vertex_count,
-            .TriangleIndexOffset = meshlet.triangle_offset,
-            .TriangleIndexCount = meshlet.vertex_count
+            .TriangleOffset = meshlet.triangle_offset / 3,
+            .TriangleCount = meshlet.triangle_count
         };
+
+        for (uint32_t j = 0; j < meshlet.triangle_count; j++)
+        {
+            printf("Processing Triangle: %d (meshlet %d)\n", j, i);
+            auto pointer = &meshletTriangleIndexListRaw[meshlet.triangle_offset + j * 3]; 
+            
+            auto p0 = pointer[0];
+            auto p1 = pointer[1];
+            auto p2 = pointer[2];
+
+            meshletTriangleIndexList[meshletList[i].TriangleOffset + j] = ((uint32_t)p2) << 16 | ((uint32_t)p1) << 8 | (uint32_t)p0;
+        }
+
+        meshletVertexIndexCount += meshlet.vertex_count;
+        meshletTriangleIndexCount += meshlet.triangle_count;
     }
 
     printf("Done\n");
-
+    
     return 
     {
         .MeshletMaxVertexCount = meshletMaxVertexCount,
         .MeshletMaxTriangleCount = meshletMaxTriangleCount,
-        .VertexBuffer = { .Data =  { .Items = vertexList.Pointer, .Length = vertexList.Length }, .VertexSize = vertexBuffer.VertexSize },
-        .Meshlets = { .Items = meshletList.Pointer, .Length = meshletList.Length },
-        .MeshletVertexIndexBuffer = { .Items = meshletVertexIndexList.Pointer, .Length = meshletVertexIndexList.Length },
-        .MeshletTriangleIndexBuffer = { .Items = meshletTriangleIndexList.Pointer, .Length = meshletTriangleIndexList.Length }
+        .VertexBuffer = { .Data = { .Items = vertexList.Pointer, .Length = (uint32_t)vertexList.Length }, .VertexSize = vertexBuffer.VertexSize },
+        .Meshlets = { .Items = meshletList.Pointer, .Length = (uint32_t)meshletList.Length },
+        .MeshletVertexIndexBuffer = { .Items = meshletVertexIndexList.Pointer, .Length = meshletVertexIndexCount },
+        .MeshletTriangleIndexBuffer = { .Items = meshletTriangleIndexList.Pointer, .Length = meshletTriangleIndexCount }
     };
 }

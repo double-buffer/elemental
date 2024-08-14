@@ -1,6 +1,7 @@
 #include "ElementalTools.h"
 #include "SampleUtils.h"
 #include "SampleMath.h"
+#include "SampleMesh.h"
 
 /**
  * WARNING: This obj parsing code is just for demonstration purpose only. The parsing is not feature complete
@@ -23,8 +24,8 @@ typedef struct
         struct 
         {
             uint32_t VertexIndex;
-            uint32_t NormalIndex;
             uint32_t TextCoordIndex;
+            uint32_t NormalIndex;
         };
 
         uint32_t Indices[3];
@@ -131,10 +132,10 @@ ObjMeshFace ReadObjFace(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
     if (linePartCount < 4)
     {
         printf("Error: Invalid number of elements in the line for Face.\n");
-        return (ObjMeshFace) { 0 };
+        return (ObjMeshFace) {};
     }
 
-    ObjMeshFace result = { 0 };
+    ObjMeshFace result = {};
 
     for (uint32_t i = 0; i < 3; i++)
     {
@@ -162,12 +163,15 @@ InputMeshData ReadObjMesh(ElemToolsDataSpan data)
     ElemToolsDataSpan line = SampleReadLine(&data);
 
     SampleVector3* vertexList = malloc(meshElementCount.VertexCount * sizeof(SampleVector3));
+    memset(vertexList, 0, meshElementCount.VertexCount * sizeof(SampleVector3));
     uint32_t vertexCount = 1;
 
     SampleVector3* normalList = malloc(meshElementCount.NormalCount * sizeof(SampleVector3));
+    memset(normalList, 0, meshElementCount.NormalCount * sizeof(SampleVector3));
     uint32_t normalCount = 1;
 
     SampleVector2* textCoordList = malloc(meshElementCount.TextCoordCount * sizeof(SampleVector2));
+    memset(textCoordList, 0, meshElementCount.TextCoordCount * sizeof(SampleVector2));
     uint32_t textCoordCount = 1;
 
     InputMeshVertex* inputMeshVertexList = malloc(meshElementCount.FaceCount * 3 * sizeof(InputMeshVertex));
@@ -318,6 +322,29 @@ int main(int argc, const char* argv[])
     }
     
     printf("Writing mesh data to: %s\n", outputPath);
+
+    uint32_t meshletBufferSize = result.Meshlets.Length * sizeof(ElemMeshlet);
+    uint32_t meshletVertexIndexBufferSize = result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t);
+
+    SampleMeshHeader meshHeader = 
+    {
+        .FileId = { 'M', 'E', 'S', 'H' },
+        .MeshletCount = result.Meshlets.Length,
+        .MeshletMaxVertexCount = result.MeshletMaxVertexCount,
+        .MeshletMaxTriangleCount = result.MeshletMaxTriangleCount,
+        .VertexBufferOffset = sizeof(SampleMeshHeader),
+        .VertexBufferSizeInBytes = result.VertexBuffer.Data.Length,
+        .MeshletBufferOffset = sizeof(SampleMeshHeader) + result.VertexBuffer.Data.Length,
+        .MeshletBufferSizeInBytes = meshletBufferSize,
+        .MeshletVertexIndexBufferOffset = sizeof(SampleMeshHeader) + result.VertexBuffer.Data.Length + meshletBufferSize,
+        .MeshletVertexIndexBufferSizeInBytes = meshletVertexIndexBufferSize,
+        .MeshletTriangleIndexBufferOffset = sizeof(SampleMeshHeader) + result.VertexBuffer.Data.Length + meshletBufferSize + meshletVertexIndexBufferSize,
+        .MeshletTriangleIndexBufferSizeInBytes = result.MeshletTriangleIndexBuffer.Length * sizeof(uint32_t)
+    };
     
-    SampleWriteDataToFile(outputPath, result.VertexBuffer.Data, false);
+    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)&meshHeader, .Length = sizeof(SampleMeshHeader) }, false);
+    SampleWriteDataToFile(outputPath, result.VertexBuffer.Data, true);
+    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)result.Meshlets.Items, .Length = meshletBufferSize}, true);
+    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)result.MeshletVertexIndexBuffer.Items, .Length = result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t) }, true);
+    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)result.MeshletTriangleIndexBuffer.Items, .Length = result.MeshletTriangleIndexBuffer.Length * sizeof(uint32_t) }, true);
 }

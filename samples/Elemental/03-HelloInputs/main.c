@@ -362,7 +362,6 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
 
     InputActions* inputActions = &applicationPayload->InputActions;
     UpdateInputActions(&applicationPayload->InputActionBindings);
@@ -393,6 +392,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         applicationPayload->ShaderParameters.RotationQuaternion = SampleMulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
 
+    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
     float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
     applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, gameState->Zoom);
     applicationPayload->ShaderParameters.TriangeColor = inputActions->TriangleColor;

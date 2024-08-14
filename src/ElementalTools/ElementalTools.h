@@ -206,8 +206,8 @@ typedef struct
 {
     uint32_t VertexIndexOffset;
     uint32_t VertexIndexCount;
-    uint32_t TriangleIndexOffset;
-    uint32_t TriangleIndexCount;
+    uint32_t TriangleOffset;
+    uint32_t TriangleCount;
 } ElemMeshlet;
 
 typedef struct
@@ -224,12 +224,12 @@ typedef struct
 
 typedef struct
 {
-    uint32_t MeshletMaxVertexCount;
-    uint32_t MeshletMaxTriangleCount;
+    uint8_t MeshletMaxVertexCount;
+    uint8_t MeshletMaxTriangleCount;
     ElemVertexBuffer VertexBuffer;
     ElemMeshletSpan Meshlets;
     ElemUInt32Span MeshletVertexIndexBuffer;
-    ElemToolsDataSpan MeshletTriangleIndexBuffer;
+    ElemUInt32Span MeshletTriangleIndexBuffer;
     ElemToolsMessageSpan Messages;
     bool HasErrors;
 } ElemBuildMeshletResult;
