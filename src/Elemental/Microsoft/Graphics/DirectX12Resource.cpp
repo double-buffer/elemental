@@ -73,6 +73,16 @@ DXGI_FORMAT ConvertDirectX12FormatWithoutSrgbIfNeeded(DXGI_FORMAT format)
     }
 }
 
+bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format)
+{
+    if (format == ElemGraphicsFormat_D32_FLOAT)
+    {
+        return true;
+    }
+
+    return false;
+}
+
 ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture)
 {
     InitDirectX12ResourceMemory();
@@ -82,6 +92,7 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
 
     auto resourceDesc = resource->GetDesc();
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = {};
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = {};
 
     if (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
@@ -95,10 +106,23 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
  
         graphicsDeviceData->Device->CreateRenderTargetView(resource.Get(), &renderTargetViewDesc, rtvHandle);
     }
+    else if (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+    {
+        dsvHandle = CreateDirectX12DescriptorHandle(graphicsDeviceData->DSVDescriptorHeap);
+        
+        D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = 
+        {
+            .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceDesc.Format),
+            .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
+        };
+ 
+        graphicsDeviceData->Device->CreateDepthStencilView(resource.Get(), &depthStencilViewDesc, dsvHandle);
+    }
   
     auto handle = SystemAddDataPoolItem(directX12GraphicsResourcePool, {
         .DeviceObject = resource,
         .RtvHandle = rtvHandle,
+        .DsvHandle = dsvHandle,
         .Type = type,
         .DirectX12Format = resourceDesc.Format,
         .DirectX12Flags = resourceDesc.Flags,
@@ -131,6 +155,9 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
 
+        case ElemGraphicsFormat_D32_FLOAT:
+            return DXGI_FORMAT_D32_FLOAT;
+
         case ElemGraphicsFormat_Raw:
             return DXGI_FORMAT_UNKNOWN;
     }
@@ -152,6 +179,9 @@ ElemGraphicsFormat ConvertFromDirectX12TextureFormat(DXGI_FORMAT format)
         case DXGI_FORMAT_R32G32B32A32_FLOAT:
             return ElemGraphicsFormat_R32G32B32A32_FLOAT;
 
+        case DXGI_FORMAT_D32_FLOAT:
+            return ElemGraphicsFormat_D32_FLOAT;
+
         default:
             return ElemGraphicsFormat_Raw;
     }
@@ -171,6 +201,11 @@ D3D12_RESOURCE_FLAGS ConvertToDirectX12ResourceFlags(ElemGraphicsResourceUsage u
         result |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
     
+    if (usage & ElemGraphicsResourceUsage_DepthStencil)
+    {
+        result |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    }
+    
     return result;
 }
 
@@ -186,6 +221,11 @@ ElemGraphicsResourceUsage ConvertFromDirectX12ResourceFlags(D3D12_RESOURCE_FLAGS
     if (flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
         result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_RenderTarget);
+    }
+    
+    if (flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+    {
+        result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_DepthStencil);
     }
 
     return result;
@@ -400,6 +440,18 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
             return ELEM_HANDLE_NULL;
         }
 
+        if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget) && (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage RenderTarget and DepthStencil should not be used together.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil && !CheckDirectX12DepthStencilFormat(resourceInfo->Format))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage DepthStencil should use a compatible format.");
+            return ELEM_HANDLE_NULL;
+        }
+
         resourceDescription = CreateDirectX12TextureDescription(resourceInfo);
     }
     else
@@ -410,9 +462,15 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
             return ELEM_HANDLE_NULL;
         }
         
-        if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget))
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to RenderTarget.");
+            return ELEM_HANDLE_NULL;
+        }
+        
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to DepthStencil.");
             return ELEM_HANDLE_NULL;
         }
 
@@ -559,7 +617,8 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
     {
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = 
         {
-            .Format = resourceData->DirectX12Format,
+            // TODO: Make a function to handle depth stencil formats checks
+            .Format = resourceData->DirectX12Format == DXGI_FORMAT_D32_FLOAT ? DXGI_FORMAT_R32_FLOAT : resourceData->DirectX12Format,
             .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
         };
 

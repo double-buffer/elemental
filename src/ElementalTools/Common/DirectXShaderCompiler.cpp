@@ -132,6 +132,7 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
     {
         parameters[parameterIndex++] = L"-spirv";
         parameters[parameterIndex++] = L"-fspv-target-env=vulkan1.3";
+        parameters[parameterIndex++] = L"-fvk-use-dx-layout";
     }
 
     parameters[parameterIndex++] = L"-HV";

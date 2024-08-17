@@ -133,7 +133,7 @@ ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const ch
 TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_Gpu);
 void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer);
 
-TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format);
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage);
 void TestFreeGpuTexture(TestGpuTexture texture);
 
 template<typename T>
@@ -141,8 +141,6 @@ void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipeline
 
 template<typename T>
 void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);
-
-void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor);
 
 void TestBarrierCheckSyncTypeToString(char* destination, ElemGraphicsResourceBarrierSyncType syncType);
 void TestBarrierCheckAccessTypeToString(char* destination, ElemGraphicsResourceBarrierAccessType accessType);

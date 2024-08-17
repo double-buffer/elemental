@@ -17,17 +17,18 @@ typedef struct
     uint32_t FaceCount;
 } ObjMeshElementCount;
 
+typedef struct 
+{
+    uint32_t VertexIndex;
+    uint32_t TextCoordIndex;
+    uint32_t NormalIndex;
+} ObjMeshVertex;
+
 typedef struct
 {
     union
     {
-        struct 
-        {
-            uint32_t VertexIndex;
-            uint32_t TextCoordIndex;
-            uint32_t NormalIndex;
-        };
-
+        ObjMeshVertex Vertex;        
         uint32_t Indices[3];
     } Elements[3];
 } ObjMeshFace;
@@ -107,7 +108,7 @@ SampleVector2 ReadObjVector2(ElemToolsDataSpan* lineParts, uint32_t linePartCoun
     };
 }
 
-SampleVector3 ReadObjVector3(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
+SampleVector3 ReadObjVector3(ElemToolsDataSpan* lineParts, uint32_t linePartCount, bool reverseHandedness)
 {
     if (linePartCount < 4)
     {
@@ -119,6 +120,11 @@ SampleVector3 ReadObjVector3(ElemToolsDataSpan* lineParts, uint32_t linePartCoun
     float y = atof((const char*)lineParts[2].Items);
     float z = atof((const char*)lineParts[3].Items);
 
+    if (reverseHandedness)
+    {
+        z = -z;
+    }
+
     return (SampleVector3)
     {
         .X = x,
@@ -127,7 +133,7 @@ SampleVector3 ReadObjVector3(ElemToolsDataSpan* lineParts, uint32_t linePartCoun
     };
 }
 
-ObjMeshFace ReadObjFace(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
+ObjMeshFace ReadObjFace(ElemToolsDataSpan* lineParts, uint32_t linePartCount, bool reverseHandedness)
 {
     if (linePartCount < 4)
     {
@@ -154,10 +160,17 @@ ObjMeshFace ReadObjFace(ElemToolsDataSpan* lineParts, uint32_t linePartCount)
         }
     }
 
+    if (reverseHandedness)
+    {
+        ObjMeshVertex temp = result.Elements[1].Vertex;
+        result.Elements[1] = result.Elements[2];
+        result.Elements[2].Vertex = temp;
+    }
+
     return result;
 }
 
-InputMeshData ReadObjMesh(ElemToolsDataSpan data)
+InputMeshData ReadObjMesh(ElemToolsDataSpan data, bool reverseHandedness)
 {
     ObjMeshElementCount meshElementCount = CountObjMeshElements(data);
     ElemToolsDataSpan line = SampleReadLine(&data);
@@ -191,11 +204,11 @@ InputMeshData ReadObjMesh(ElemToolsDataSpan data)
             }
             else if (SampleCompareString(lineParts[0], "v"))
             {
-                vertexList[vertexCount++] = ReadObjVector3(lineParts, linePartCount);
+                vertexList[vertexCount++] = ReadObjVector3(lineParts, linePartCount, reverseHandedness);
             }
             else if (SampleCompareString(lineParts[0], "vn"))
             {
-                normalList[normalCount++] = ReadObjVector3(lineParts, linePartCount);
+                normalList[normalCount++] = ReadObjVector3(lineParts, linePartCount, reverseHandedness);
             }
             else if (SampleCompareString(lineParts[0], "vt"))
             {
@@ -203,17 +216,17 @@ InputMeshData ReadObjMesh(ElemToolsDataSpan data)
             }
             else if (SampleCompareString(lineParts[0], "f"))
             {
-                ObjMeshFace face = ReadObjFace(lineParts, linePartCount);
+                ObjMeshFace face = ReadObjFace(lineParts, linePartCount, reverseHandedness);
                 
                 for (uint32_t i = 0; i < 3; i++)
                 {
                     InputMeshVertex vertex = 
                     {
-                        .Position = vertexList[face.Elements[i].VertexIndex],
-                        .Normal = normalList[face.Elements[i].NormalIndex],
-                        .TextureCoordinates = textCoordList[face.Elements[i].TextCoordIndex]
+                        .Position = vertexList[face.Elements[i].Vertex.VertexIndex],
+                        .Normal = normalList[face.Elements[i].Vertex.NormalIndex],
+                        .TextureCoordinates = textCoordList[face.Elements[i].Vertex.TextCoordIndex]
                     };
-
+                
                     inputMeshVertexList[inputMeshVertexCount++] = vertex;
                 }
             }
@@ -289,7 +302,7 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    InputMeshData inputMeshData = ReadObjMesh(inputData); 
+    InputMeshData inputMeshData = ReadObjMesh(inputData, true); 
     printf("Input mesh vertex Count: %d\n", inputMeshData.VertexCount);
 
     ElemVertexBuffer vertexBuffer =
@@ -312,15 +325,39 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    // TODO: This is a good unit test
-    // TODO: Test cone and bounding box and spheres
-    for (uint32_t i = 0; i < 10; i++)
+    // TODO: Good Unit test too!
+    for (uint32_t i = 0; i < result.Meshlets.Length; i++)
     {
-        InputMeshVertex vertex = ((InputMeshVertex*)result.VertexBuffer.Data.Items)[i];
+        ElemMeshlet meshlet = result.Meshlets.Items[i];
 
-        printf("Vertex X=%f, Y=%f, Z=%f\n", vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
+        if (i < result.Meshlets.Length - 1) 
+        {
+            ElemMeshlet nextMeshlet = result.Meshlets.Items[i + 1];
+
+            if (meshlet.TriangleOffset + meshlet.TriangleCount - 1 == nextMeshlet.TriangleOffset)
+            {
+                printf("Error not last\n");
+            }
+        }
+        else if (meshlet.TriangleOffset + meshlet.TriangleCount - 1 == result.MeshletTriangleIndexBuffer.Length)
+        {
+            printf("ERROR\n");
+        }
+    }
+
+    for (uint32_t i = result.MeshletTriangleIndexBuffer.Length - 10; i < result.MeshletTriangleIndexBuffer.Length + 3; i++)
+    {
+        printf("Trig index: %u\n", result.MeshletTriangleIndexBuffer.Items[i]);
     }
     
+    for (uint32_t i = 0; i < result.MeshletTriangleIndexBuffer.Length; i++)
+    {
+        if (result.MeshletTriangleIndexBuffer.Items[i] == 0)
+        {
+            printf("Zero Triangle index at: %d\n", i);
+        }
+    }
+
     printf("Writing mesh data to: %s\n", outputPath);
 
     uint32_t meshletBufferSize = result.Meshlets.Length * sizeof(ElemMeshlet);

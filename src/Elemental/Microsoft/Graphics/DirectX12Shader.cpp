@@ -147,15 +147,14 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     D3D12_RT_FORMAT_ARRAY renderTargets = {};
 
     renderTargets.NumRenderTargets = 1;
-    renderTargets.RTFormats[0] = ConvertToDirectX12TextureFormat(parameters->TextureFormats.Items[0]); // TODO: Fill Correct Back Buffer Format
+    renderTargets.RTFormats[0] = ConvertToDirectX12TextureFormat(parameters->RenderTargetFormats.Items[0]); // TODO: Fill Correct Back Buffer Format
    
     DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
 
-    /*if (renderPassDescriptor.DepthTexturePointer.HasValue)
+    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
     {
-        // TODO: Change that
-        depthFormat = DXGI_FORMAT_D32_FLOAT;
-    }*/
+        depthFormat = ConvertToDirectX12TextureFormat(parameters->DepthStencilFormat);
+    }
 
     DXGI_SAMPLE_DESC sampleDesc = {};
     sampleDesc.Count = 1;
@@ -176,10 +175,18 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     rasterizerState.ForcedSampleCount = 0;
     rasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
-   /* 
+    // TODO: With Unit tests
     D3D12_DEPTH_STENCIL_DESC depthStencilState = {};
+
+    // HACK: Temporary
+    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
+    {
+        depthStencilState.DepthEnable = true;
+        depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+    }
     
-    if (renderPassDescriptor.DepthBufferOperation != GraphicsDepthBufferOperation::DepthNone)
+    /*if (renderPassDescriptor.DepthBufferOperation != GraphicsDepthBufferOperation::DepthNone)
     {
         depthStencilState.DepthEnable = true;
         depthStencilState.StencilEnable = false;
@@ -199,8 +206,8 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
         {
             depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
         }
-    }
-*/
+    }*/
+
     D3D12_BLEND_DESC blendState = {};
     blendState.AlphaToCoverageEnable = false;
     blendState.IndependentBlendEnable = false;
@@ -260,7 +267,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     psoDesc.SampleDesc = sampleDesc;
     psoDesc.RasterizerState = rasterizerState;
     psoDesc.DepthStencilFormat = depthFormat;
-    //psoDesc.DepthStencilState = depthStencilState;
+    psoDesc.DepthStencilState = depthStencilState;
     psoDesc.BlendState = blendState;
 
     psoStream.SizeInBytes = sizeof(GraphicsPso);

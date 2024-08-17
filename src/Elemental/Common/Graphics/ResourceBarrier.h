@@ -10,6 +10,7 @@ typedef ElemHandle ResourceBarrierPool;
 struct ResourceBarrierItem
 {
     ElemGraphicsResourceType Type;
+    bool IsDepthStencil;
     ElemGraphicsResource Resource;
     ElemGraphicsResourceBarrierSyncType BeforeSync; 
     ElemGraphicsResourceBarrierSyncType AfterSync; 

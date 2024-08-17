@@ -26,6 +26,7 @@ typedef struct
     uint32_t TriangeColor;
 } ShaderParameters;
 
+// TODO: Extract from the gamestate the inputState
 typedef struct
 {
     SampleVector3 RotationDelta;
@@ -60,6 +61,8 @@ typedef struct
     uint32_t CurrentHeapOffset;
     ElemFence LastExecutionFence;
     ElemSwapChain SwapChain;
+    ElemGraphicsHeap DepthBufferHeap;
+    ElemGraphicsResource DepthBuffer;
     ElemPipelineState GraphicsPipeline;
     ShaderParameters ShaderParameters;
     SampleModelViewerInputActions InputActions;
@@ -69,6 +72,23 @@ typedef struct
 } ApplicationPayload;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
+
+void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
+{
+    if (applicationPayload->DepthBuffer != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
+    }
+
+    printf("Creating DepthBuffer...\n");
+
+    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_D32_FLOAT, ElemGraphicsResourceUsage_DepthStencil,
+                                                                            &(ElemGraphicsResourceInfoOptions) { 
+                                                                                .DebugName = "DepthBuffer" 
+                                                                            });
+
+    applicationPayload->DepthBuffer = ElemCreateGraphicsResource(applicationPayload->DepthBufferHeap, 0, &resourceInfo);
+}
 
 // TODO: To remove when IOQueues
 void CreateAndUploadDataTemp(ElemGraphicsResource* buffer, ElemGraphicsResourceDescriptor* readDescriptor, ApplicationPayload* applicationPayload, void* dataPointer, uint32_t sizeInBytes)
@@ -106,6 +126,11 @@ void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicat
     CreateAndUploadDataTemp(&meshData->MeshletBuffer, &meshData->MeshletBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletBufferOffset, meshHeader->MeshletBufferSizeInBytes);
     CreateAndUploadDataTemp(&meshData->MeshletVertexIndexBuffer, &meshData->MeshletVertexIndexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletVertexIndexBufferOffset, meshHeader->MeshletVertexIndexBufferSizeInBytes);
     CreateAndUploadDataTemp(&meshData->MeshletTriangleIndexBuffer, &meshData->MeshletTriangleIndexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletTriangleIndexBufferOffset, meshHeader->MeshletTriangleIndexBufferSizeInBytes);
+
+    applicationPayload->ShaderParameters.VertexBuffer = meshData->VertexBufferReadDescriptor;
+    applicationPayload->ShaderParameters.MeshletBuffer = meshData->MeshletBufferReadDescriptor;
+    applicationPayload->ShaderParameters.MeshletVertexIndexBuffer = meshData->MeshletVertexIndexBufferReadDescriptor;
+    applicationPayload->ShaderParameters.MeshletTriangleIndexBuffer = meshData->MeshletTriangleIndexBufferReadDescriptor;
 }
 
 void InitSample(void* payload)
@@ -120,14 +145,14 @@ void InitSample(void* payload)
     applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .FrameLatency = 1, .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
+    // TODO: For now we create a separate heap to avoid memory management
+    applicationPayload->DepthBufferHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
+
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
 
+    CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     LoadMesh(&applicationPayload->TestMeshData, "kitten.mesh", applicationPayload);
-    applicationPayload->ShaderParameters.VertexBuffer = applicationPayload->TestMeshData.VertexBufferReadDescriptor;
-    applicationPayload->ShaderParameters.MeshletBuffer = applicationPayload->TestMeshData.MeshletBufferReadDescriptor;
-    applicationPayload->ShaderParameters.MeshletVertexIndexBuffer = applicationPayload->TestMeshData.MeshletVertexIndexBufferReadDescriptor;
-    applicationPayload->ShaderParameters.MeshletTriangleIndexBuffer = applicationPayload->TestMeshData.MeshletTriangleIndexBufferReadDescriptor;
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -137,7 +162,8 @@ void InitSample(void* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
-        .TextureFormats = { .Items = (ElemGraphicsFormat[]) { swapChainInfo.Format }, .Length = 1 }
+        .RenderTargetFormats = { .Items = (ElemGraphicsFormat[]) { swapChainInfo.Format }, .Length = 1 },
+        .DepthStencilFormat = ElemGraphicsFormat_D32_FLOAT
     });
 
     ElemFreeShaderLibrary(shaderLibrary);
@@ -169,6 +195,9 @@ void FreeSample(void* payload)
     ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletVertexIndexBuffer, NULL);
     ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.MeshletTriangleIndexBufferReadDescriptor, NULL);
     ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletTriangleIndexBuffer, NULL);
+
+    ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
+    ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
 
     ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
@@ -272,6 +301,11 @@ void UpdateGameState(GameState* gameState, SampleModelViewerInputActions* inputA
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+    
+    if (updateParameters->SizeChanged)
+    {
+        CreateDepthBuffer(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
+    }
 
     SampleModelViewerInputActions* inputActions = &applicationPayload->InputActions;
     SampleUpdateInputActions(&applicationPayload->InputActionBindings);
@@ -319,6 +353,12 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
                 .LoadAction = ElemRenderPassLoadAction_Clear
             }},
             .Length = 1
+        },
+        .DepthStencil =
+        {
+            .DepthStencil = applicationPayload->DepthBuffer,
+            .DepthClearValue = 0.0f,
+            .DepthLoadAction = ElemRenderPassLoadAction_Clear
         }
     });
 

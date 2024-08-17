@@ -380,6 +380,7 @@ typedef enum
     ElemGraphicsFormat_B8G8R8A8_UNORM,
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
+    ElemGraphicsFormat_D32_FLOAT 
 } ElemGraphicsFormat;
 
 typedef enum
@@ -392,7 +393,8 @@ typedef enum
 {
     ElemGraphicsResourceUsage_Read = 0x00,
     ElemGraphicsResourceUsage_Write = 0x01,
-    ElemGraphicsResourceUsage_RenderTarget = 0x02
+    ElemGraphicsResourceUsage_RenderTarget = 0x02,
+    ElemGraphicsResourceUsage_DepthStencil = 0x04
 } ElemGraphicsResourceUsage;
 
 typedef enum
@@ -413,7 +415,8 @@ typedef enum
     ElemGraphicsResourceBarrierAccessType_NoAccess,
     ElemGraphicsResourceBarrierAccessType_Read,
     ElemGraphicsResourceBarrierAccessType_Write,
-    ElemGraphicsResourceBarrierAccessType_RenderTarget
+    ElemGraphicsResourceBarrierAccessType_RenderTarget,
+    ElemGraphicsResourceBarrierAccessType_DepthStencilWrite
 } ElemGraphicsResourceBarrierAccessType;
 
 typedef enum 
@@ -422,6 +425,7 @@ typedef enum
     ElemGraphicsResourceBarrierLayoutType_Read,
     ElemGraphicsResourceBarrierLayoutType_Write,
     ElemGraphicsResourceBarrierLayoutType_RenderTarget,
+    ElemGraphicsResourceBarrierLayoutType_DepthStencilWrite,
     ElemGraphicsResourceBarrierLayoutType_Present
 } ElemGraphicsResourceBarrierLayoutType;
 
@@ -686,7 +690,8 @@ typedef struct
     // Function name of the pixel shader in the shader library.
     const char* PixelShaderFunction;
     // Supported texture formats for the pipeline state.
-    ElemGraphicsFormatSpan TextureFormats;
+    ElemGraphicsFormatSpan RenderTargetFormats;
+    ElemGraphicsFormat DepthStencilFormat;
     // Optional debug name for the pipeline state.
     const char* DebugName;
 } ElemGraphicsPipelineStateParameters;
@@ -774,6 +779,16 @@ typedef struct
     ElemRenderPassStoreAction StoreAction;
 } ElemRenderPassRenderTarget;
 
+typedef struct
+{
+    ElemGraphicsResource DepthStencil;
+
+    // TODO: Specify read or write mode ? (write by default)
+    float DepthClearValue;
+    ElemRenderPassLoadAction DepthLoadAction;
+    ElemRenderPassStoreAction DepthStoreAction;
+} ElemRenderPassDepthBufferStencil;
+
 /**
  * Represents a collection of render pass targets.
  */
@@ -792,6 +807,7 @@ typedef struct
 {
     // Render targets to be used in the render pass.
     ElemRenderPassRenderTargetSpan RenderTargets;
+    ElemRenderPassDepthBufferStencil DepthStencil;
     // Viewports to be used in the render pass.
     ElemViewportSpan Viewports;
 } ElemBeginRenderPassParameters;

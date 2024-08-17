@@ -115,6 +115,30 @@ UTEST(Resource, CreateBufferGraphicsResource_UsageRenderTargetAndWrite)
     ASSERT_EQ_MSG(resource, ELEM_HANDLE_NULL, "Handle should be null.");
 }
 
+UTEST(Resource, CreateBufferGraphicsResource_UsageDepthStencil) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Buffer,
+        .Width = 64,
+        .Usage = ElemGraphicsResourceUsage_DepthStencil
+    };
+
+    // Act
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Assert
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("GraphicsBuffer usage should not be equals to DepthStencil.");
+    ASSERT_EQ_MSG(resource, ELEM_HANDLE_NULL, "Handle should be null.");
+}
+
 UTEST(Resource, CreateGraphicsBufferResourceInfo) 
 {
     // Arrange
@@ -179,6 +203,150 @@ UTEST(Resource, CreateTexture2DGraphicsResource)
     ASSERT_EQ_MSG(resourceInfo.MipLevels, mipLevels, "MipLevels should be equals to creation.");
     ASSERT_EQ_MSG(resourceInfo.Format, format, "Format should be equals to creation.");
     ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_Read, "Usage should match the creation usage.");
+}
+
+UTEST(Resource, CreateTexture2DGraphicsResource_UsageRenderTarget) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto width = 128u;
+    auto height = 256u;
+    auto format = ElemGraphicsFormat_B8G8R8A8_SRGB;
+    auto mipLevels = 3u;
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Texture2D,
+        .Width = width,
+        .Height = height,
+        .MipLevels = mipLevels,
+        .Format = format,
+        .Usage = ElemGraphicsResourceUsage_RenderTarget
+    };
+
+    // Act
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Assert
+    resourceInfo = ElemGetGraphicsResourceInfo(resource);
+
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_NE_MSG(resource, ELEM_HANDLE_NULL, "Handle should not be null.");
+
+    ASSERT_EQ_MSG(resourceInfo.Type, ElemGraphicsResourceType_Texture2D, "Resource Type should be a Texture2D.");
+    ASSERT_EQ_MSG(resourceInfo.Width, width, "Width should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Height, height, "Height should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.MipLevels, mipLevels, "MipLevels should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Format, format, "Format should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_RenderTarget, "Usage should match the creation usage.");
+}
+
+UTEST(Resource, CreateTexture2DGraphicsResource_UsageDepthStencil) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto width = 128u;
+    auto height = 256u;
+    auto format = ElemGraphicsFormat_D32_FLOAT;
+    auto mipLevels = 3u;
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Texture2D,
+        .Width = width,
+        .Height = height,
+        .MipLevels = mipLevels,
+        .Format = format,
+        .Usage = ElemGraphicsResourceUsage_DepthStencil
+    };
+
+    // Act
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Assert
+    resourceInfo = ElemGetGraphicsResourceInfo(resource);
+
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_NE_MSG(resource, ELEM_HANDLE_NULL, "Handle should not be null.");
+
+    ASSERT_EQ_MSG(resourceInfo.Type, ElemGraphicsResourceType_Texture2D, "Resource Type should be a Texture2D.");
+    ASSERT_EQ_MSG(resourceInfo.Width, width, "Width should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Height, height, "Height should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.MipLevels, mipLevels, "MipLevels should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Format, format, "Format should be equals to creation.");
+    ASSERT_EQ_MSG(resourceInfo.Usage, ElemGraphicsResourceUsage_DepthStencil, "Usage should match the creation usage.");
+}
+
+UTEST(Resource, CreateTexture2DGraphicsResource_UsageDepthStencil_WrongFormat) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto width = 128u;
+    auto height = 256u;
+    auto format = ElemGraphicsFormat_B8G8R8A8_SRGB;
+    auto mipLevels = 3u;
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Texture2D,
+        .Width = width,
+        .Height = height,
+        .MipLevels = mipLevels,
+        .Format = format,
+        .Usage = ElemGraphicsResourceUsage_DepthStencil
+    };
+
+    // Act
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Assert
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("Texture2D with usage DepthStencil should use a compatible format.");
+    ASSERT_EQ_MSG(resource, ELEM_HANDLE_NULL, "Handle should be null.");
+}
+
+UTEST(Resource, CreateTexture2DGraphicsResource_UsageRenderTargetDepthStencil) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto width = 128u;
+    auto height = 256u;
+    auto format = ElemGraphicsFormat_B8G8R8A8_SRGB;
+    auto mipLevels = 3u;
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+
+    ElemGraphicsResourceInfo resourceInfo =  
+    {
+        .Type = ElemGraphicsResourceType_Texture2D,
+        .Width = width,
+        .Height = height,
+        .MipLevels = mipLevels,
+        .Format = format,
+        .Usage = (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_DepthStencil)
+    };
+
+    // Act
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Assert
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("Texture2D with usage RenderTarget and DepthStencil should not be used together.");
+    ASSERT_EQ_MSG(resource, ELEM_HANDLE_NULL, "Handle should be null.");
 }
 
 UTEST(Resource, CreateTexture2DGraphicsResource_WidthZero) 

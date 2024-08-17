@@ -18,6 +18,16 @@ void CopyTexture(uint2 threadId: SV_DispatchThreadID)
     destinationBuffer[threadId.y * 16 + threadId.x] = sourceTexture.Load(uint3(threadId, 0));
 }
 
+[shader("compute")]
+[numthreads(16, 16, 1)]
+void CopyTextureFloat(uint2 threadId: SV_DispatchThreadID)
+{
+    Texture2D<float> sourceTexture = ResourceDescriptorHeap[parameters.SourceBufferIndex];
+    RWStructuredBuffer<float> destinationBuffer = ResourceDescriptorHeap[parameters.DestinationBufferIndex];
+    
+    destinationBuffer[threadId.y * 16 + threadId.x] = sourceTexture.Load(uint3(threadId, 0));
+}
+
 struct VertexOutput
 {
     float4 Position: SV_Position;

@@ -19,6 +19,7 @@ struct DirectX12GraphicsResourceData
 {
     ComPtr<ID3D12Resource> DeviceObject;
     D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle;
+    D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle;
     ElemGraphicsResourceType Type;
     DXGI_FORMAT DirectX12Format;
     D3D12_RESOURCE_FLAGS DirectX12Flags;
@@ -42,6 +43,7 @@ DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGrap
 
 ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
 DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format);
+bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format);
 
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);

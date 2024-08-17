@@ -6,7 +6,6 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     // TODO: Error messages
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    printf("Meshlet Builder\n");
 
     auto indexCount = vertexBuffer.Data.Length / vertexBuffer.VertexSize;
     auto vertexRemap = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
@@ -87,7 +86,6 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
         for (uint32_t j = 0; j < meshlet.triangle_count; j++)
         {
-            printf("Processing Triangle: %d (meshlet %d)\n", j, i);
             auto pointer = &meshletTriangleIndexListRaw[meshlet.triangle_offset + j * 3]; 
             
             auto p0 = pointer[0];
@@ -98,11 +96,9 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
         }
 
         meshletVertexIndexCount += meshlet.vertex_count;
-        meshletTriangleIndexCount += meshlet.triangle_count;
+        meshletTriangleIndexCount = max(meshletTriangleIndexCount, meshlet.triangle_offset / 3 + meshlet.triangle_count);
     }
 
-    printf("Done\n");
-    
     return 
     {
         .MeshletMaxVertexCount = meshletMaxVertexCount,

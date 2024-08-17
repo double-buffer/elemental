@@ -5,6 +5,45 @@
 #include "DirectX12Resource.h"
 #include "SystemFunctions.h"
 
+D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ConvertToDirectX12RenderPassBeginningAccessType(ElemRenderPassLoadAction loadAction)
+{
+    D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE beginAccessType;
+
+    switch (loadAction)
+    {
+        case ElemRenderPassLoadAction_Load:
+            beginAccessType = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+            break;
+
+        case ElemRenderPassLoadAction_Clear:
+            beginAccessType = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+            break;
+
+        default:
+            beginAccessType = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+            break;
+    }
+
+    return beginAccessType;
+}
+D3D12_RENDER_PASS_ENDING_ACCESS_TYPE ConvertToDirectX12RenderPassEndingAccessType(ElemRenderPassStoreAction storeAction)
+{
+    D3D12_RENDER_PASS_ENDING_ACCESS_TYPE endAccessType;
+
+    switch (storeAction)
+    {
+        case ElemRenderPassStoreAction_Store:
+            endAccessType = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+            break;
+
+        default:
+            endAccessType = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+            break;
+    }
+
+    return endAccessType;
+}
+
 void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
     // TODO: Check command list type != COMPUTE
@@ -35,23 +74,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         SystemAssert(textureData);
 
         // TODO: Validate usage
-
-        D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE beginAccessType;
-
-        switch (renderTargetParameters.LoadAction)
-        {
-            case ElemRenderPassLoadAction_Load:
-                beginAccessType = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-                break;
-
-            case ElemRenderPassLoadAction_Clear:
-                beginAccessType = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-                break;
-
-            default:
-                beginAccessType = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-                break;
-        }
+        auto beginAccessType = ConvertToDirectX12RenderPassBeginningAccessType(renderTargetParameters.LoadAction);
         
         D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS beginAccessClearValue
         {
@@ -68,18 +91,7 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
             }
         };
 
-        D3D12_RENDER_PASS_ENDING_ACCESS_TYPE endAccessType;
-
-        switch (renderTargetParameters.StoreAction)
-        {
-            case ElemRenderPassStoreAction_Store:
-                endAccessType = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-                break;
-
-            default:
-                endAccessType = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
-                break;
-        }
+        auto endAccessType = ConvertToDirectX12RenderPassEndingAccessType(renderTargetParameters.StoreAction);
 
         renderTargetDescList[i] =
         {
@@ -114,13 +126,54 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         }
     } 
 
+    D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthStencilDesc = {};
+
+    if (parameters->DepthStencil.DepthStencil != ELEM_HANDLE_NULL)
+    {
+        auto depthStencilParameters = parameters->DepthStencil;
+
+        auto textureData = GetDirectX12GraphicsResourceData(depthStencilParameters.DepthStencil);
+        SystemAssert(textureData);
+
+        // TODO: Validate usage
+        auto depthBeginAccessType = ConvertToDirectX12RenderPassBeginningAccessType(depthStencilParameters.DepthLoadAction);
+        auto depthEndAccessType = ConvertToDirectX12RenderPassEndingAccessType(depthStencilParameters.DepthStoreAction);
+
+        D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS beginAccessClearValue
+        {
+            .ClearValue = 
+            { 
+                .Format = textureData->DirectX12Format, 
+                .DepthStencil = { .Depth = depthStencilParameters.DepthClearValue } 
+            }
+        };
+
+        depthStencilDesc = 
+        {
+            .cpuDescriptor = textureData->DsvHandle,
+            .DepthBeginningAccess = { .Type = depthBeginAccessType, .Clear = beginAccessClearValue },
+            .DepthEndingAccess = { .Type = depthEndAccessType }
+        };
+
+        ResourceBarrierItem resourceBarrier =
+        {
+            .Type = ElemGraphicsResourceType_Texture2D,
+            .IsDepthStencil = true,
+            .Resource = depthStencilParameters.DepthStencil,
+            .AfterAccess = ElemGraphicsResourceBarrierAccessType_DepthStencilWrite,
+            .AfterLayout = ElemGraphicsResourceBarrierLayoutType_DepthStencilWrite
+        };
+
+        EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
+    }
+
     if (parameters->Viewports.Length > 0)
     {
         ElemSetViewports(commandList, parameters->Viewports);
     }
 
     InsertDirectX12ResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_RenderTarget);
-    commandListData->DeviceObject->BeginRenderPass(renderTargetDescList.Length, renderTargetDescList.Pointer, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
+    commandListData->DeviceObject->BeginRenderPass(renderTargetDescList.Length, renderTargetDescList.Pointer, parameters->DepthStencil.DepthStencil != ELEM_HANDLE_NULL ? &depthStencilDesc : nullptr, D3D12_RENDER_PASS_FLAG_NONE);
 }
 
 void DirectX12EndRenderPass(ElemCommandList commandList)

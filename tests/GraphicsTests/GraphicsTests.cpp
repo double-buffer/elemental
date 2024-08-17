@@ -308,7 +308,7 @@ ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const ch
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = meshShaderFunction,
         .PixelShaderFunction = pixelShaderFunction,
-        .TextureFormats = { .Items = &renderTargetFormat, .Length = 1 }
+        .RenderTargetFormats = { .Items = &renderTargetFormat, .Length = 1 }
     };
 
     auto pipelineState = ElemCompileGraphicsPipelineState(graphicsDevice, &pipelineStateParameters);
@@ -353,13 +353,19 @@ void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer)
     ElemFreeGraphicsHeap(gpuBuffer.GraphicsHeap);
 }
 
-TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format)
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage)
 {
-    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, 1, format, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_Write | ElemGraphicsResourceUsage_RenderTarget), nullptr);
+    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, 1, format, usage, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, textureInfo.SizeInBytes, nullptr);
     auto texture = ElemCreateGraphicsResource(graphicsHeap, 0, &textureInfo);
     auto textureReadDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
-    auto textureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
+
+    auto textureWriteDescriptor = -1;
+
+    if (usage & ElemGraphicsResourceUsage_Write)
+    {
+        textureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
+    }
 
     return
     {
@@ -374,7 +380,12 @@ TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t 
 void TestFreeGpuTexture(TestGpuTexture texture)
 {
     ElemFreeGraphicsResourceDescriptor(texture.ReadDescriptor, nullptr);
-    ElemFreeGraphicsResourceDescriptor(texture.WriteDescriptor, nullptr);
+
+    if (texture.WriteDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(texture.WriteDescriptor, nullptr);
+    }
+
     ElemFreeGraphicsResource(texture.Texture, nullptr);
     ElemFreeGraphicsHeap(texture.GraphicsHeap);
 }
@@ -405,28 +416,6 @@ void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, Ele
     ElemWaitForFenceOnCpu(fence);
 
     ElemFreePipelineState(pipelineState);
-}
-
-void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor)
-{
-    ElemRenderPassRenderTarget renderPassRenderTarget = 
-    {
-        .RenderTarget = renderTarget,
-        .ClearColor = clearColor,
-        .LoadAction = ElemRenderPassLoadAction_Clear
-    };
-
-    ElemBeginRenderPassParameters parameters =
-    {
-        .RenderTargets =
-        { 
-            .Items = &renderPassRenderTarget,
-            .Length = 1
-        }
-    };
-
-    // Act
-    ElemBeginRenderPass(commandList, &parameters);
 }
 
 void TestBarrierCheckSyncTypeToString(char* destination, ElemGraphicsResourceBarrierSyncType syncType)

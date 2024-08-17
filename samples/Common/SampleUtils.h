@@ -167,7 +167,6 @@ ElemDataSpan SampleReadFile(const char* filename)
 
 int SampleWriteDataToFile(const char* filename, ElemDataSpan data, bool append) 
 {
-    printf("Length:%s %d\n", filename, data.Length);
     if (filename == NULL || data.Length == 0) 
     {
         printf("ERROR 1\n");
