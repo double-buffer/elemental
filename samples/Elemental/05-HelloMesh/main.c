@@ -163,7 +163,9 @@ void InitSample(void* payload)
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         .RenderTargetFormats = { .Items = (ElemGraphicsFormat[]) { swapChainInfo.Format }, .Length = 1 },
-        .DepthStencilFormat = ElemGraphicsFormat_D32_FLOAT
+        .DepthStencilFormat = ElemGraphicsFormat_D32_FLOAT,
+        .DepthWrite = true,
+        .DepthCompareFunction = ElemGraphicsCompareFunction_Greater
     });
 
     ElemFreeShaderLibrary(shaderLibrary);
@@ -356,9 +358,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         },
         .DepthStencil =
         {
-            .DepthStencil = applicationPayload->DepthBuffer,
-            .DepthClearValue = 0.0f,
-            .DepthLoadAction = ElemRenderPassLoadAction_Clear
+            .DepthStencil = applicationPayload->DepthBuffer
         }
     });
 

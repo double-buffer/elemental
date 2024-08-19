@@ -131,6 +131,36 @@ void DirectX12FreeShaderLibrary(ElemShaderLibrary shaderLibrary)
     // TODO: Free data
 }
 
+D3D12_COMPARISON_FUNC ConvertToDirectX12CompareFunction(ElemGraphicsCompareFunction compareFunction)
+{
+    switch (compareFunction)
+    {
+        case ElemGraphicsCompareFunction_Never:
+            return D3D12_COMPARISON_FUNC_NEVER;
+
+        case ElemGraphicsCompareFunction_Less:
+            return D3D12_COMPARISON_FUNC_LESS;
+
+        case ElemGraphicsCompareFunction_Equal:
+            return D3D12_COMPARISON_FUNC_EQUAL;
+
+        case ElemGraphicsCompareFunction_LessEqual:
+            return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+        case ElemGraphicsCompareFunction_Greater:
+            return D3D12_COMPARISON_FUNC_GREATER;
+
+        case ElemGraphicsCompareFunction_NotEqual:
+            return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+
+        case ElemGraphicsCompareFunction_GreaterEqual:
+            return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+
+        case ElemGraphicsCompareFunction_Always:
+            return D3D12_COMPARISON_FUNC_ALWAYS;
+    }
+}
+
 ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters)
 {
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
@@ -141,7 +171,6 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
 
     auto shaderLibraryData= GetDirectX12ShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
-
 
     D3D12_RT_FORMAT_ARRAY renderTargets = {};
 
@@ -174,38 +203,19 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     rasterizerState.ForcedSampleCount = 0;
     rasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
-    // TODO: With Unit tests
     D3D12_DEPTH_STENCIL_DESC depthStencilState = {};
 
-    // HACK: Temporary
-    /*if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
+    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
     {
         depthStencilState.DepthEnable = true;
-        depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-        depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
-    }*/
-    
-    /*if (renderPassDescriptor.DepthBufferOperation != GraphicsDepthBufferOperation::DepthNone)
-    {
-        depthStencilState.DepthEnable = true;
-        depthStencilState.StencilEnable = false;
 
-        if (renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::ClearWrite ||
-            renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::Write)
+        if (parameters->DepthWrite)
         {
             depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
         }
 
-        if (renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::CompareEqual)
-        {
-            depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
-        }
-
-        else
-        {
-            depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
-        }
-    }*/
+        depthStencilState.DepthFunc = ConvertToDirectX12CompareFunction(parameters->DepthCompareFunction);
+    }
 
     D3D12_BLEND_DESC blendState = {};
     blendState.AlphaToCoverageEnable = false;

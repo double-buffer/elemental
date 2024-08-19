@@ -405,6 +405,18 @@ typedef enum
 
 typedef enum
 {
+    ElemGraphicsCompareFunction_Never = 0,
+    ElemGraphicsCompareFunction_Less = 1,
+    ElemGraphicsCompareFunction_Equal = 2,
+    ElemGraphicsCompareFunction_LessEqual = 3,
+    ElemGraphicsCompareFunction_Greater = 4,
+    ElemGraphicsCompareFunction_NotEqual = 5,
+    ElemGraphicsCompareFunction_GreaterEqual = 6,
+    ElemGraphicsCompareFunction_Always = 7
+} ElemGraphicsCompareFunction;
+
+typedef enum
+{
     ElemGraphicsResourceBarrierSyncType_None,
     ElemGraphicsResourceBarrierSyncType_Compute,
     ElemGraphicsResourceBarrierSyncType_RenderTarget
@@ -434,12 +446,12 @@ typedef enum
  */
 typedef enum
 {
-    // Discards the previous contents.
-    ElemRenderPassLoadAction_Discard = 0,
-    // Loads the existing contents.
-    ElemRenderPassLoadAction_Load = 1,
     // Clears to a predefined value.
-    ElemRenderPassLoadAction_Clear = 2
+    ElemRenderPassLoadAction_Clear = 0,
+    // Discards the previous contents.
+    ElemRenderPassLoadAction_Discard = 1,
+    // Loads the existing contents.
+    ElemRenderPassLoadAction_Load = 2,
 } ElemRenderPassLoadAction;
 
 /**
@@ -692,6 +704,9 @@ typedef struct
     // Supported texture formats for the pipeline state.
     ElemGraphicsFormatSpan RenderTargetFormats;
     ElemGraphicsFormat DepthStencilFormat;
+
+    bool DepthWrite;
+    ElemGraphicsCompareFunction DepthCompareFunction;
     // Optional debug name for the pipeline state.
     const char* DebugName;
 } ElemGraphicsPipelineStateParameters;

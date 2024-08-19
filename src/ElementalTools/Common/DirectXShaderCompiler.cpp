@@ -136,7 +136,7 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
     }
 
     parameters[parameterIndex++] = L"-HV";
-    parameters[parameterIndex++] = L"2021";
+    parameters[parameterIndex++] = L"202x";
 
     parameters[parameterIndex++] = DXC_ARG_ALL_RESOURCES_BOUND;
 

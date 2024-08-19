@@ -45,7 +45,7 @@ UTEST(Rendering, RenderPassClearRenderTarget)
 
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "RenderingTests.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -96,7 +96,7 @@ UTEST(Rendering, RenderPassClearDepthBuffer)
 
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)depthBuffer.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "RenderingTests.shader", "CopyTextureFloat", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTextureFloat", 1, 1, 1, &resourceIdList);
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -159,7 +159,7 @@ UTEST(Rendering, DispatchMesh)
 
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "RenderingTests.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
     auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
 
     TestFreeGpuBuffer(readbackBuffer);
