@@ -105,6 +105,35 @@ UTEST(MeshBuilder, CheckVertexBuffer_NoDuplicates)
     ASSERT_EQ_MSG(result.VertexBuffer.Data.Length / result.VertexBuffer.VertexSize, vertexCount - 3, "Vertex Count is not correct.");
 }
 
+UTEST(MeshBuilder, CheckMeshletVertexIndexBuffer) 
+{
+    // Arrange
+    const uint32_t vertexCount = 210;
+    TestMeshVertex vertexList[vertexCount];
+    auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount - 3);
+
+    // Act
+    auto result = ElemBuildMeshlets(vertexBuffer, NULL);
+
+    // Assert
+    ASSERT_FALSE(result.HasErrors);
+
+    for (uint32_t i = 0; i < result.Meshlets.Length; i++)
+    {
+        ElemMeshlet meshlet = result.Meshlets.Items[i];
+
+        if (i < result.Meshlets.Length - 1) 
+        {
+            ElemMeshlet nextMeshlet = result.Meshlets.Items[i + 1];
+            ASSERT_NE_MSG(meshlet.VertexIndexOffset + meshlet.VertexIndexCount - 1, nextMeshlet.VertexIndexOffset, "Error Not Last");
+        }
+        else 
+        {
+            ASSERT_NE_MSG(meshlet.VertexIndexOffset + meshlet.VertexIndexCount - 1, result.MeshletVertexIndexBuffer.Length, "Error");
+        }
+    }
+}
+
 UTEST(MeshBuilder, CheckMeshletTriangleIndexBuffer) 
 {
     // Arrange

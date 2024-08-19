@@ -142,7 +142,6 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     auto shaderLibraryData= GetDirectX12ShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
 
-    ComPtr<ID3D12PipelineState> pipelineState;
 
     D3D12_RT_FORMAT_ARRAY renderTargets = {};
 
@@ -179,12 +178,12 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     D3D12_DEPTH_STENCIL_DESC depthStencilState = {};
 
     // HACK: Temporary
-    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
+    /*if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
     {
         depthStencilState.DepthEnable = true;
         depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
         depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
-    }
+    }*/
     
     /*if (renderPassDescriptor.DepthBufferOperation != GraphicsDepthBufferOperation::DepthNone)
     {
@@ -264,15 +263,16 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     }
 
     psoDesc.RenderTargets = renderTargets;
-    psoDesc.SampleDesc = sampleDesc;
-    psoDesc.RasterizerState = rasterizerState;
     psoDesc.DepthStencilFormat = depthFormat;
     psoDesc.DepthStencilState = depthStencilState;
+    psoDesc.RasterizerState = rasterizerState;
     psoDesc.BlendState = blendState;
+    psoDesc.SampleDesc = sampleDesc;
 
     psoStream.SizeInBytes = sizeof(GraphicsPso);
     psoStream.pPipelineStateSubobjectStream = &psoDesc;
 
+    ComPtr<ID3D12PipelineState> pipelineState;
     AssertIfFailed(graphicsDeviceData->Device->CreatePipelineState(&psoStream, IID_PPV_ARGS(pipelineState.GetAddressOf())));
 
     return pipelineState;

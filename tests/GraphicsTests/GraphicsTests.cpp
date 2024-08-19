@@ -299,17 +299,15 @@ ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const
     return pipelineState;
 }
 
-ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, ElemGraphicsFormat renderTargetFormat)
+ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters)
 {
     auto shaderLibrary = TestOpenShader(graphicsDevice, shader);
 
-    ElemGraphicsPipelineStateParameters pipelineStateParameters =
-    {
-        .ShaderLibrary = shaderLibrary,
-        .MeshShaderFunction = meshShaderFunction,
-        .PixelShaderFunction = pixelShaderFunction,
-        .RenderTargetFormats = { .Items = &renderTargetFormat, .Length = 1 }
-    };
+    ElemGraphicsPipelineStateParameters pipelineStateParameters = *baseParameters;
+
+    pipelineStateParameters.ShaderLibrary = shaderLibrary;
+    pipelineStateParameters.MeshShaderFunction = meshShaderFunction;
+    pipelineStateParameters.PixelShaderFunction = pixelShaderFunction;
 
     auto pipelineState = ElemCompileGraphicsPipelineState(graphicsDevice, &pipelineStateParameters);
 

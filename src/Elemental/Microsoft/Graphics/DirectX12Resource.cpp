@@ -416,6 +416,8 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
     SystemAssert(graphicsDeviceData);
     
     D3D12_BARRIER_LAYOUT initialState = D3D12_BARRIER_LAYOUT_COMMON;
+
+    // TODO: Handle clear value
     D3D12_CLEAR_VALUE* clearValue = nullptr;
 
     D3D12_RESOURCE_DESC1 resourceDescription = {}; 

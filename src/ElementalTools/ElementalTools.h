@@ -236,6 +236,8 @@ typedef struct
 
 ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
 
+// TODO: Do an optimize mesh function that can be used to optimize a normal mesh (for Raytracing for example)
+
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader
 #include "ElementalToolsLoader.c"
