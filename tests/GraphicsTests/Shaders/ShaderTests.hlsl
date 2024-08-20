@@ -1,7 +1,9 @@
 struct TestParameters
 {
     uint TestDescriptor;
-    float4 ColorAndDepth;
+    float Depth;
+    uint2 Reserved;
+    float4 Color;
 };
 
 [[vk::push_constant]]
@@ -46,7 +48,7 @@ void MeshShader(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOut
 
     if (groupThreadId < meshVertexCount)
     {
-        vertices[groupThreadId].Position = float4(rectangleVertices[groupThreadId].xy, parameters.ColorAndDepth.w, 1);
+        vertices[groupThreadId].Position = float4(rectangleVertices[groupThreadId].xy, parameters.Depth, 1);
     }
 
     if (groupThreadId < meshPrimitiveCount)
@@ -58,5 +60,5 @@ void MeshShader(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOut
 [shader("pixel")]
 float4 PixelShader(const VertexOutput input) : SV_Target0
 {
-    return float4(parameters.ColorAndDepth.rgb, 1.0); 
+    return float4(parameters.Color.rgba); 
 }

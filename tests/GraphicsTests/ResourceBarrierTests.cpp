@@ -315,9 +315,10 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureRenderTargetAfterWrite)
     auto writeTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteTextureData");
     auto readTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadTextureData");
     
+    ElemGraphicsPipelineStateRenderTarget psoRenderTarget { .Format = gpuTexture.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
     {
-        .RenderTargetFormats = { .Items = &gpuTexture.Format, .Length = 1 }
+        .RenderTargets = { .Items = &psoRenderTarget, .Length = 1 }
     };
 
     auto meshShaderPipelineState = TestOpenMeshShader(graphicsDevice, "ResourceBarrierTests.shader", "TestMeshShader", "TestPixelShader", &psoParameters);

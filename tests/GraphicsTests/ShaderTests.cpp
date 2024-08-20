@@ -4,9 +4,12 @@
 
 // TODO: Validate dispatch thread group count
 // TODO: Cannot push constant before binding pso
-// TODO: PSO Multi render targets
+// TODO: PSO Multi render targets (Test Blend States too)
 // TODO: PSO Blend state
+// TODO: PSO FillMode
 // TODO: PSO Cull order
+// TODO: PSO Depth Bias?
+// TODO: Check depth stencil format if comparaison function set
 
 
 UTEST(Shader, CompileComputePipelineState) 
@@ -125,12 +128,15 @@ UTEST_F_TEARDOWN(Shader_CompileGraphicsPipelineStateDepthCompare)
     auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
     auto depthBuffer = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_D32_FLOAT, ElemGraphicsResourceUsage_DepthStencil);
     
+    ElemGraphicsPipelineStateRenderTarget psoRenderTarget { .Format = renderTarget.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
     {
-        .RenderTargetFormats = { .Items = &renderTarget.Format, .Length = 1 },
-        .DepthStencilFormat = depthBuffer.Format,
-        .DepthWrite = true,
-        .DepthCompareFunction = utest_fixture->CompareFunction
+        .RenderTargets = { .Items = &psoRenderTarget, .Length = 1 },
+        .DepthStencil = 
+        {
+            .Format = depthBuffer.Format,
+            .DepthCompareFunction = utest_fixture->CompareFunction
+        }
     };
 
     auto meshShaderPipeline = TestOpenMeshShader(graphicsDevice, "ShaderTests.shader", "MeshShader", "PixelShader", &psoParameters);
@@ -160,15 +166,15 @@ UTEST_F_TEARDOWN(Shader_CompileGraphicsPipelineStateDepthCompare)
     ElemBeginRenderPass(commandList, &parameters);
     ElemBindPipelineState(commandList, meshShaderPipeline);
 
-    float shaderParameters[] = { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.25f };
+    float shaderParameters[] = { 0.0f, 0.25f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f };
     ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)shaderParameters, .Length = sizeof(float) * 8 });
     ElemDispatchMesh(commandList, 1, 1, 1);
 
-    float shaderParameters2[] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f };
+    float shaderParameters2[] = { 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f };
     ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)shaderParameters2, .Length = sizeof(float) * 8 });
     ElemDispatchMesh(commandList, 1, 1, 1);
 
-    float shaderParameters3[] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.75f };
+    float shaderParameters3[] = { 0.0f, 0.75f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f };
     ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)shaderParameters3, .Length = sizeof(float) * 8 });
     ElemDispatchMesh(commandList, 1, 1, 1);
 
@@ -266,4 +272,526 @@ UTEST_F(Shader_CompileGraphicsPipelineStateDepthCompare, Always)
     utest_fixture->Color[1] = 0.0f;
     utest_fixture->Color[2] = 1.0f;
 }
-// TODO: Check depth stencil format if comparaison function set
+
+struct Shader_CompileGraphicsPipelineStateBlendState
+{
+    ElemGraphicsBlendOperation BlendOperation;
+    ElemGraphicsBlendFactor SourceBlendFactor;
+    ElemGraphicsBlendFactor DestinationBlendFactor;
+    ElemGraphicsBlendOperation BlendOperationAlpha;
+    ElemGraphicsBlendFactor SourceBlendFactorAlpha;
+    ElemGraphicsBlendFactor DestinationBlendFactorAlpha;
+    float DestinationColor[4];
+    float SourceColor[4];
+    float ResultColor[4];
+};
+
+UTEST_F_SETUP(Shader_CompileGraphicsPipelineStateBlendState) 
+{
+}
+
+UTEST_F_TEARDOWN(Shader_CompileGraphicsPipelineStateBlendState) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
+    
+    ElemGraphicsPipelineStateRenderTarget psoRenderTarget = 
+    { 
+        .Format = renderTarget.Format,
+        .BlendOperation = utest_fixture->BlendOperation,
+        .SourceBlendFactor = utest_fixture->SourceBlendFactor,
+        .DestinationBlendFactor = utest_fixture->DestinationBlendFactor,
+        .BlendOperationAlpha = utest_fixture->BlendOperationAlpha,
+        .SourceBlendFactorAlpha = utest_fixture->SourceBlendFactorAlpha,
+        .DestinationBlendFactorAlpha = utest_fixture->DestinationBlendFactorAlpha
+    };
+
+    ElemGraphicsPipelineStateParameters psoParameters =
+    {
+        .RenderTargets = { .Items = &psoRenderTarget, .Length = 1 },
+    };
+
+    auto meshShaderPipeline = TestOpenMeshShader(graphicsDevice, "ShaderTests.shader", "MeshShader", "PixelShader", &psoParameters);
+
+    // Act
+    ElemRenderPassRenderTarget renderPassRenderTarget = 
+    {
+        .RenderTarget = renderTarget.Texture,
+        .ClearColor = 
+        { 
+            .Red = utest_fixture->DestinationColor[0], 
+            .Green = utest_fixture->DestinationColor[1], 
+            .Blue = utest_fixture->DestinationColor[2], 
+            .Alpha = utest_fixture->DestinationColor[3]
+        },
+        .LoadAction = ElemRenderPassLoadAction_Clear
+    };
+
+    ElemBeginRenderPassParameters parameters =
+    {
+        .RenderTargets =
+        { 
+            .Items = &renderPassRenderTarget,
+            .Length = 1
+        }
+    };
+
+    ElemBeginRenderPass(commandList, &parameters);
+    ElemBindPipelineState(commandList, meshShaderPipeline);
+
+    float shaderParameters[] = { 0.0f, 0.0f, 0.0f, 0.0f, utest_fixture->SourceColor[0], utest_fixture->SourceColor[1], utest_fixture->SourceColor[2], utest_fixture->SourceColor[3] };
+    ElemPushPipelineStateConstants(commandList, 0, { .Items = (uint8_t*)shaderParameters, .Length = sizeof(float) * 8 });
+    ElemDispatchMesh(commandList, 1, 1, 1);
+
+    ElemEndRenderPass(commandList);
+    
+    // Assert
+    ElemCommitCommandList(commandList);
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+    ElemWaitForFenceOnCpu(fence);
+
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
+    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+
+    TestFreeGpuBuffer(readbackBuffer);
+    TestFreeGpuTexture(renderTarget);
+    ElemFreePipelineState(meshShaderPipeline);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    auto floatData = (float*)bufferData.Items;
+
+    for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4)
+    {
+        ASSERT_EQ_MSG(floatData[i], utest_fixture->ResultColor[0], "Red channel data is invalid.");
+        ASSERT_EQ_MSG(floatData[i + 1], utest_fixture->ResultColor[1], "Green channel data is invalid.");
+        ASSERT_EQ_MSG(floatData[i + 2], utest_fixture->ResultColor[2], "Blue channel data is invalid.");
+        ASSERT_EQ_MSG(floatData[i + 3], utest_fixture->ResultColor[3], "Alpha channel data is invalid.");
+    }
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Defaults) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 1.0f;
+    utest_fixture->ResultColor[1] = 0.5f;
+    utest_fixture->ResultColor[2] = 1.0f;
+    utest_fixture->ResultColor[3] = 1.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_Zero_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 0.0f;
+    utest_fixture->ResultColor[1] = 1.0f;
+    utest_fixture->ResultColor[2] = 0.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_One_Zero) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_One;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 1.0f;
+    utest_fixture->ResultColor[1] = 0.5f;
+    utest_fixture->ResultColor[2] = 1.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_One_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_One;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 1.0f;
+    utest_fixture->ResultColor[1] = 1.5f;
+    utest_fixture->ResultColor[2] = 1.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AddAlpha_Zero_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 0.5f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 0.0f;
+    utest_fixture->ResultColor[1] = 0.0f;
+    utest_fixture->ResultColor[2] = 0.0f;
+    utest_fixture->ResultColor[3] = 0.5f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AddAlpha_One_Zero) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 0.5f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 0.0f;
+    utest_fixture->ResultColor[1] = 0.0f;
+    utest_fixture->ResultColor[2] = 0.0f;
+    utest_fixture->ResultColor[3] = 1.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AddAlpha_One_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 0.5f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 0.0f;
+    utest_fixture->ResultColor[1] = 0.0f;
+    utest_fixture->ResultColor[2] = 0.0f;
+    utest_fixture->ResultColor[3] = 1.5f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_SourceColor_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_SourceColor;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 1.0f;
+    utest_fixture->ResultColor[1] = 1.25f;
+    utest_fixture->ResultColor[2] = 1.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_InverseSourceColor_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_InverseSourceColor;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.25f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 0.0f;
+    utest_fixture->ResultColor[1] = 1.1875f;
+    utest_fixture->ResultColor[2] = 0.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_SourceAlpha_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_SourceAlpha;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.25f;
+    utest_fixture->SourceColor[2] = 0.8;
+    utest_fixture->SourceColor[3] = 0.5f;
+
+    utest_fixture->ResultColor[0] = 0.5f;
+    utest_fixture->ResultColor[1] = 1.125f;
+    utest_fixture->ResultColor[2] = 0.4f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_InverseSourceAlpha_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_InverseSourceAlpha;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 0.8;
+    utest_fixture->SourceColor[3] = 0.75f;
+
+    utest_fixture->ResultColor[0] = 0.25f;
+    utest_fixture->ResultColor[1] = 1.125f;
+    utest_fixture->ResultColor[2] = 0.2f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_DestinationColor_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_DestinationColor;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.5f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 1.0f;
+    utest_fixture->ResultColor[1] = 1.5f;
+    utest_fixture->ResultColor[2] = 0.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_InverseDestinationColor_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_InverseDestinationColor;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.5f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.25f;
+    utest_fixture->SourceColor[2] = 1.0f;
+    utest_fixture->SourceColor[3] = 1.0f;
+
+    utest_fixture->ResultColor[0] = 1.0f;
+    utest_fixture->ResultColor[1] = 1.0f;
+    utest_fixture->ResultColor[2] = 1.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_DestinationAlpha_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_DestinationAlpha;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.5f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.25f;
+    utest_fixture->SourceColor[2] = 0.8;
+    utest_fixture->SourceColor[3] = 0.5f;
+
+    utest_fixture->ResultColor[0] = 1.5f;
+    utest_fixture->ResultColor[1] = 1.25;
+    utest_fixture->ResultColor[2] = 0.8f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_InverseDestinationAlpha_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_InverseDestinationAlpha;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.5f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 1.0f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.5f;
+    utest_fixture->SourceColor[2] = 0.8;
+    utest_fixture->SourceColor[3] = 0.75f;
+
+    utest_fixture->ResultColor[0] = 0.5f;
+    utest_fixture->ResultColor[1] = 1.0f;
+    utest_fixture->ResultColor[2] = 0.0f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_SourceAlphaSaturated_One) 
+{
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_SourceAlphaSaturated;
+    utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
+
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Add;
+    utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+    utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_Zero;
+
+    utest_fixture->DestinationColor[0] = 0.0f;
+    utest_fixture->DestinationColor[1] = 1.0f;
+    utest_fixture->DestinationColor[2] = 0.0f;
+    utest_fixture->DestinationColor[3] = 0.75f;
+
+    utest_fixture->SourceColor[0] = 1.0f;
+    utest_fixture->SourceColor[1] = 0.25f;
+    utest_fixture->SourceColor[2] = 0.8;
+    utest_fixture->SourceColor[3] = 0.5f;
+
+    utest_fixture->ResultColor[0] = 0.25f;
+    utest_fixture->ResultColor[1] = 1.0625f;
+    utest_fixture->ResultColor[2] = 0.2f;
+    utest_fixture->ResultColor[3] = 0.0f;
+}
+
+// TODO: Other blend operators

@@ -238,7 +238,7 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
     dynamicState.pDynamicStates = dynamicStates;
     createInfo.pDynamicState = &dynamicState;
 
-    VkFormat formats[] = { ConvertToVulkanTextureFormat(parameters->RenderTargetFormats.Items[0]) }; // TODO: Fill Correct Back Buffer Format 
+    VkFormat formats[] = { ConvertToVulkanTextureFormat(parameters->RenderTargets.Items[0].Format) }; // TODO: Fill Correct Back Buffer Format 
 
     VkPipelineRenderingCreateInfo renderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
     renderingCreateInfo.colorAttachmentCount = 1; // TODO: Change that

@@ -135,13 +135,13 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
 {
     if (parameters.TriangleColor == 0)
     {
-        return float4(normalize(input.WorldNormal) * 0.5 + 0.5, 1);
+        return float4(normalize(input.WorldNormal) * 0.5 + 0.5, 1.0);
     }
     else
     {
         uint hashResult = hash(input.MeshletIndex);
         float3 meshletColor = float3(float(hashResult & 255), float((hashResult >> 8) & 255), float((hashResult >> 16) & 255)) / 255.0;
 
-        return float4(meshletColor, 1);
+        return float4(meshletColor, 1.0);
     }
 }

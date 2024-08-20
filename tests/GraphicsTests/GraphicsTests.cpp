@@ -52,7 +52,6 @@ void GetFullPath(char* destination, const char* path)
 
     CopyString(pointer, pointer - destination, folderPrefix, strlen(folderPrefix));
     pointer = pointer + strlen(folderPrefix);
-
     CopyString(pointer, pointer - destination, path, strlen(path));
 }
 
@@ -163,7 +162,7 @@ const char* ReplaceShaderFilenameForVulkan(const char* original)
     }
 
     // Copy the base part
-    strncpy(newString, original, baseLength);
+    CopyString(newString, newLength, original, baseLength);
     newString[baseLength] = '\0'; // Null-terminate the base part
 
     // Append the "_vulkan" string

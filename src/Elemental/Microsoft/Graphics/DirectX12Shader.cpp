@@ -94,6 +94,106 @@ D3D12_SHADER_BYTECODE GetDirectX12ShaderFunctionByteCode(DirectX12ShaderLibraryD
     return result;
 }
 
+bool IsDirectX12BlendEnabled(ElemGraphicsPipelineStateRenderTarget renderTargetParameters)
+{
+    return !(renderTargetParameters.BlendOperation == ElemGraphicsBlendOperation_Add &&
+             renderTargetParameters.SourceBlendFactor == ElemGraphicsBlendFactor_Zero &&
+             renderTargetParameters.DestinationBlendFactor == ElemGraphicsBlendFactor_Zero &&
+             renderTargetParameters.BlendOperationAlpha == ElemGraphicsBlendOperation_Add &&
+             renderTargetParameters.SourceBlendFactorAlpha == ElemGraphicsBlendFactor_Zero &&
+             renderTargetParameters.DestinationBlendFactorAlpha == ElemGraphicsBlendFactor_Zero);
+}
+
+D3D12_BLEND_OP ConvertToDirectX12BlendOperation(ElemGraphicsBlendOperation blendOperation)
+{
+    switch (blendOperation)
+    {
+        case ElemGraphicsBlendOperation_Add:
+            return D3D12_BLEND_OP_ADD;
+
+        case ElemGraphicsBlendOperation_Substract:
+            return D3D12_BLEND_OP_ADD;
+
+        case ElemGraphicsBlendOperation_ReverseSubstract:
+            return D3D12_BLEND_OP_ADD;
+
+        case ElemGraphicsBlendOperation_Min:
+            return D3D12_BLEND_OP_ADD;
+
+        case ElemGraphicsBlendOperation_Max:
+            return D3D12_BLEND_OP_ADD;
+    }
+}
+
+D3D12_BLEND ConvertToDirectX12Blend(ElemGraphicsBlendFactor blendFactor)
+{
+    switch (blendFactor)
+    {
+        case ElemGraphicsBlendFactor_Zero:
+            return D3D12_BLEND_ZERO;
+
+        case ElemGraphicsBlendFactor_One:
+            return D3D12_BLEND_ONE;
+
+        case ElemGraphicsBlendFactor_SourceColor:
+            return D3D12_BLEND_SRC_COLOR;
+
+        case ElemGraphicsBlendFactor_InverseSourceColor:
+            return D3D12_BLEND_INV_SRC_COLOR;
+
+        case ElemGraphicsBlendFactor_SourceAlpha:
+            return D3D12_BLEND_SRC_ALPHA;
+
+        case ElemGraphicsBlendFactor_InverseSourceAlpha:
+            return D3D12_BLEND_INV_SRC_ALPHA;
+
+        case ElemGraphicsBlendFactor_DestinationColor:
+            return D3D12_BLEND_DEST_COLOR;
+
+        case ElemGraphicsBlendFactor_InverseDestinationColor:
+            return D3D12_BLEND_INV_DEST_COLOR;
+
+        case ElemGraphicsBlendFactor_DestinationAlpha:
+            return D3D12_BLEND_DEST_ALPHA;
+
+        case ElemGraphicsBlendFactor_InverseDestinationAlpha:
+            return D3D12_BLEND_INV_DEST_ALPHA;
+
+        case ElemGraphicsBlendFactor_SourceAlphaSaturated:
+            return D3D12_BLEND_SRC_ALPHA_SAT;
+    }
+}
+
+D3D12_COMPARISON_FUNC ConvertToDirectX12CompareFunction(ElemGraphicsCompareFunction compareFunction)
+{
+    switch (compareFunction)
+    {
+        case ElemGraphicsCompareFunction_Never:
+            return D3D12_COMPARISON_FUNC_NEVER;
+
+        case ElemGraphicsCompareFunction_Less:
+            return D3D12_COMPARISON_FUNC_LESS;
+
+        case ElemGraphicsCompareFunction_Equal:
+            return D3D12_COMPARISON_FUNC_EQUAL;
+
+        case ElemGraphicsCompareFunction_LessEqual:
+            return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+        case ElemGraphicsCompareFunction_Greater:
+            return D3D12_COMPARISON_FUNC_GREATER;
+
+        case ElemGraphicsCompareFunction_NotEqual:
+            return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+
+        case ElemGraphicsCompareFunction_GreaterEqual:
+            return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+
+        case ElemGraphicsCompareFunction_Always:
+            return D3D12_COMPARISON_FUNC_ALWAYS;
+    }
+}
+
 ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitDirectX12ShaderMemory();
@@ -131,36 +231,6 @@ void DirectX12FreeShaderLibrary(ElemShaderLibrary shaderLibrary)
     // TODO: Free data
 }
 
-D3D12_COMPARISON_FUNC ConvertToDirectX12CompareFunction(ElemGraphicsCompareFunction compareFunction)
-{
-    switch (compareFunction)
-    {
-        case ElemGraphicsCompareFunction_Never:
-            return D3D12_COMPARISON_FUNC_NEVER;
-
-        case ElemGraphicsCompareFunction_Less:
-            return D3D12_COMPARISON_FUNC_LESS;
-
-        case ElemGraphicsCompareFunction_Equal:
-            return D3D12_COMPARISON_FUNC_EQUAL;
-
-        case ElemGraphicsCompareFunction_LessEqual:
-            return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-
-        case ElemGraphicsCompareFunction_Greater:
-            return D3D12_COMPARISON_FUNC_GREATER;
-
-        case ElemGraphicsCompareFunction_NotEqual:
-            return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-
-        case ElemGraphicsCompareFunction_GreaterEqual:
-            return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-
-        case ElemGraphicsCompareFunction_Always:
-            return D3D12_COMPARISON_FUNC_ALWAYS;
-    }
-}
-
 ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDevice, const ElemGraphicsPipelineStateParameters* parameters)
 {
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
@@ -172,23 +242,60 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     auto shaderLibraryData= GetDirectX12ShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
 
-    D3D12_RT_FORMAT_ARRAY renderTargets = {};
+    // TODO: Extract methods (this will be easier to switch to new PipelineState later)
 
-    renderTargets.NumRenderTargets = 1;
-    renderTargets.RTFormats[0] = ConvertToDirectX12TextureFormat(parameters->RenderTargetFormats.Items[0]); // TODO: Fill Correct Back Buffer Format
-   
-    DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
-
-    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
+    // TODO: Render targets
+    D3D12_RT_FORMAT_ARRAY renderTargets = 
     {
-        depthFormat = ConvertToDirectX12TextureFormat(parameters->DepthStencilFormat);
+        .NumRenderTargets = parameters->RenderTargets.Length
+    };
+
+    D3D12_BLEND_DESC blendState = 
+    {
+        .IndependentBlendEnable = false, // TODO: I think that one is needed
+    };
+
+    for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
+    {
+        auto renderTargetParameters = parameters->RenderTargets.Items[i];
+    
+        renderTargets.RTFormats[i] = ConvertToDirectX12TextureFormat(renderTargetParameters.Format);
+
+        blendState.RenderTarget[i] =
+        {
+            .BlendEnable = IsDirectX12BlendEnabled(renderTargetParameters),
+            .SrcBlend = ConvertToDirectX12Blend(renderTargetParameters.SourceBlendFactor),
+            .DestBlend = ConvertToDirectX12Blend(renderTargetParameters.DestinationBlendFactor),
+            .BlendOp = ConvertToDirectX12BlendOperation(renderTargetParameters.BlendOperation),
+            .SrcBlendAlpha = ConvertToDirectX12Blend(renderTargetParameters.SourceBlendFactorAlpha),
+            .DestBlendAlpha = ConvertToDirectX12Blend(renderTargetParameters.DestinationBlendFactorAlpha),
+            .BlendOpAlpha = ConvertToDirectX12BlendOperation(renderTargetParameters.BlendOperationAlpha),
+            .RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL
+        };
+    }
+
+    DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
+    D3D12_DEPTH_STENCIL_DESC2 depthStencilState = {};
+
+    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencil.Format))
+    {
+        depthFormat = ConvertToDirectX12TextureFormat(parameters->DepthStencil.Format);
+        depthStencilState.DepthEnable = true;
+
+        if (!parameters->DepthStencil.DepthDisableWrite)
+        {
+            depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        }
+
+        depthStencilState.DepthFunc = ConvertToDirectX12CompareFunction(parameters->DepthStencil.DepthCompareFunction);
     }
 
     DXGI_SAMPLE_DESC sampleDesc = {};
     sampleDesc.Count = 1;
     sampleDesc.Quality = 0;
 
-    D3D12_RASTERIZER_DESC rasterizerState = {};
+    D3D12_RASTERIZER_DESC2 rasterizerState = {};
+    //rasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
     rasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
     rasterizerState.CullMode = D3D12_CULL_MODE_NONE; // D3D12_CULL_MODE_BACK;
     rasterizerState.FrontCounterClockwise = false;
@@ -196,52 +303,11 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     rasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
     rasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
     rasterizerState.DepthClipEnable = true;
-    rasterizerState.MultisampleEnable = false;
-    rasterizerState.AntialiasedLineEnable = false;
+    rasterizerState.LineRasterizationMode = D3D12_LINE_RASTERIZATION_MODE_ALIASED;
 
     // TODO: Check those 2
     rasterizerState.ForcedSampleCount = 0;
     rasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-
-    D3D12_DEPTH_STENCIL_DESC depthStencilState = {};
-
-    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencilFormat))
-    {
-        depthStencilState.DepthEnable = true;
-
-        if (parameters->DepthWrite)
-        {
-            depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-        }
-
-        depthStencilState.DepthFunc = ConvertToDirectX12CompareFunction(parameters->DepthCompareFunction);
-    }
-
-    D3D12_BLEND_DESC blendState = {};
-    blendState.AlphaToCoverageEnable = false;
-    blendState.IndependentBlendEnable = false;
-/*
-    if (renderPassDescriptor.RenderTarget1BlendOperation.HasValue)
-    {
-        auto blendOperation = renderPassDescriptor.RenderTarget1BlendOperation.Value;
-        blendState.RenderTarget[0] = InitBlendState(blendOperation);
-    }
-
-    else
-    {*/
-    blendState.RenderTarget[0] = {
-        false,
-        false,
-        D3D12_BLEND_ONE,
-        D3D12_BLEND_ZERO,
-        D3D12_BLEND_OP_ADD,
-        D3D12_BLEND_ONE,
-        D3D12_BLEND_ZERO,
-        D3D12_BLEND_OP_ADD,
-        D3D12_LOGIC_OP_NOOP,
-        D3D12_COLOR_WRITE_ENABLE_ALL,
-    }; // InitBlendState(GraphicsBlendOperation::None);
-    //}
 
     D3D12_PIPELINE_STATE_STREAM_DESC psoStream = {};
     GraphicsPso psoDesc = {};

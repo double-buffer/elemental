@@ -122,10 +122,11 @@ UTEST(Rendering, DispatchMesh)
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
     auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
-    
+
+    ElemGraphicsPipelineStateRenderTarget psoRenderTarget = { .Format = renderTarget.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
     {
-        .RenderTargetFormats = { .Items = &renderTarget.Format, .Length = 1 }
+        .RenderTargets = { .Items = &psoRenderTarget, .Length = 1 }
     };
 
     auto meshShaderPipeline = TestOpenMeshShader(graphicsDevice, "RenderingTests.shader", "MeshShader", "PixelShader", &psoParameters);

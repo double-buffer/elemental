@@ -162,10 +162,12 @@ void InitSample(void* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
-        .RenderTargetFormats = { .Items = (ElemGraphicsFormat[]) { swapChainInfo.Format }, .Length = 1 },
-        .DepthStencilFormat = ElemGraphicsFormat_D32_FLOAT,
-        .DepthWrite = true,
-        .DepthCompareFunction = ElemGraphicsCompareFunction_Greater
+        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = swapChainInfo.Format }}, .Length = 1 },
+        .DepthStencil =
+        {
+            .Format = ElemGraphicsFormat_D32_FLOAT,
+            .DepthCompareFunction = ElemGraphicsCompareFunction_Greater
+        }
     });
 
     ElemFreeShaderLibrary(shaderLibrary);
@@ -212,6 +214,7 @@ void ResetTouchParameters(GameState* gameState)
     gameState->PreviousTouchAngle = 0.0f;   
 }
 
+// TODO: Extract model view gamestate update
 void UpdateGameState(GameState* gameState, SampleModelViewerInputActions* inputActions, float deltaTimeInSeconds)
 {
     gameState->RotationDelta = V3Zero; 

@@ -405,6 +405,30 @@ typedef enum
 
 typedef enum
 {
+    ElemGraphicsBlendOperation_Add = 0,
+    ElemGraphicsBlendOperation_Substract = 1,
+    ElemGraphicsBlendOperation_ReverseSubstract = 2,
+    ElemGraphicsBlendOperation_Min = 3,
+    ElemGraphicsBlendOperation_Max = 4,
+} ElemGraphicsBlendOperation;
+
+typedef enum
+{
+    ElemGraphicsBlendFactor_Zero = 0,
+    ElemGraphicsBlendFactor_One = 1,
+    ElemGraphicsBlendFactor_SourceColor = 2,
+    ElemGraphicsBlendFactor_InverseSourceColor = 3,
+    ElemGraphicsBlendFactor_SourceAlpha = 4,
+    ElemGraphicsBlendFactor_InverseSourceAlpha = 5,
+    ElemGraphicsBlendFactor_DestinationColor = 6,
+    ElemGraphicsBlendFactor_InverseDestinationColor = 7,
+    ElemGraphicsBlendFactor_DestinationAlpha = 8,
+    ElemGraphicsBlendFactor_InverseDestinationAlpha = 9,
+    ElemGraphicsBlendFactor_SourceAlphaSaturated = 10,
+} ElemGraphicsBlendFactor;
+
+typedef enum
+{
     ElemGraphicsCompareFunction_Never = 0,
     ElemGraphicsCompareFunction_Less = 1,
     ElemGraphicsCompareFunction_Equal = 2,
@@ -679,16 +703,34 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemFreeGraphicsResourceDescriptorOptions;
 
+typedef struct
+{
+    ElemGraphicsFormat Format;
+    ElemGraphicsBlendOperation BlendOperation;
+    ElemGraphicsBlendFactor SourceBlendFactor;
+    ElemGraphicsBlendFactor DestinationBlendFactor;
+    ElemGraphicsBlendOperation BlendOperationAlpha;
+    ElemGraphicsBlendFactor SourceBlendFactorAlpha;
+    ElemGraphicsBlendFactor DestinationBlendFactorAlpha;
+} ElemGraphicsPipelineStateRenderTarget;
+
+typedef struct
+{
+    ElemGraphicsFormat Format;
+    bool DepthDisableWrite;
+    ElemGraphicsCompareFunction DepthCompareFunction;
+} ElemGraphicsPipelineStateDepthStencil;
+
 /**
  * Represents a collection of texture formats.
  */
 typedef struct
 {
-    // Pointer to an array of ElemGraphicsFormat.
-    ElemGraphicsFormat* Items;
+    // Pointer to an array of ElemGraphicsPipelineStateRenderTarget.
+    ElemGraphicsPipelineStateRenderTarget* Items;
     // Number of items in the array.
     uint32_t Length;
-} ElemGraphicsFormatSpan;
+} ElemGraphicsPipelineStateRenderTargetSpan;
 
 /**
  * Parameters for creating a graphics pipeline state.
@@ -701,12 +743,8 @@ typedef struct
     const char* MeshShaderFunction;
     // Function name of the pixel shader in the shader library.
     const char* PixelShaderFunction;
-    // Supported texture formats for the pipeline state.
-    ElemGraphicsFormatSpan RenderTargetFormats;
-    ElemGraphicsFormat DepthStencilFormat;
-
-    bool DepthWrite;
-    ElemGraphicsCompareFunction DepthCompareFunction;
+    ElemGraphicsPipelineStateRenderTargetSpan RenderTargets;
+    ElemGraphicsPipelineStateDepthStencil DepthStencil;
     // Optional debug name for the pipeline state.
     const char* DebugName;
 } ElemGraphicsPipelineStateParameters;
@@ -785,7 +823,6 @@ typedef struct
 typedef struct
 {
     ElemGraphicsResource RenderTarget;
-
     // Color to clear the render target with if the load action is clear.
     ElemColor ClearColor;
     // Action to take when loading data into the render target at the beginning of a render pass.
@@ -797,7 +834,6 @@ typedef struct
 typedef struct
 {
     ElemGraphicsResource DepthStencil;
-
     // TODO: Specify read or write mode ? (write by default)
     float DepthClearValue;
     ElemRenderPassLoadAction DepthLoadAction;
