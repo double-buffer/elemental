@@ -104,6 +104,33 @@ bool IsDirectX12BlendEnabled(ElemGraphicsPipelineStateRenderTarget renderTargetP
              renderTargetParameters.DestinationBlendFactorAlpha == ElemGraphicsBlendFactor_Zero);
 }
 
+D3D12_FILL_MODE ConvertToDirectX12FillMode(ElemGraphicsFillMode fillMode)
+{
+    switch (fillMode) 
+    {
+        case ElemGraphicsFillMode_Solid:
+            return D3D12_FILL_MODE_SOLID;
+
+        case ElemGraphicsFillMode_Wireframe:
+            return D3D12_FILL_MODE_WIREFRAME;
+    }
+}
+
+D3D12_CULL_MODE ConvertToDirectX12CullMode(ElemGraphicsCullMode cullMode)
+{
+    switch (cullMode) 
+    {
+        case ElemGraphicsCullMode_BackFace:
+            return D3D12_CULL_MODE_BACK;
+
+        case ElemGraphicsCullMode_FrontFace:
+            return D3D12_CULL_MODE_FRONT;
+
+        case ElemGraphicsCullMode_None:
+            return D3D12_CULL_MODE_NONE;
+    }
+}
+
 D3D12_BLEND_OP ConvertToDirectX12BlendOperation(ElemGraphicsBlendOperation blendOperation)
 {
     switch (blendOperation)
@@ -112,16 +139,16 @@ D3D12_BLEND_OP ConvertToDirectX12BlendOperation(ElemGraphicsBlendOperation blend
             return D3D12_BLEND_OP_ADD;
 
         case ElemGraphicsBlendOperation_Substract:
-            return D3D12_BLEND_OP_ADD;
+            return D3D12_BLEND_OP_SUBTRACT;
 
         case ElemGraphicsBlendOperation_ReverseSubstract:
-            return D3D12_BLEND_OP_ADD;
+            return D3D12_BLEND_OP_REV_SUBTRACT;
 
         case ElemGraphicsBlendOperation_Min:
-            return D3D12_BLEND_OP_ADD;
+            return D3D12_BLEND_OP_MIN;
 
         case ElemGraphicsBlendOperation_Max:
-            return D3D12_BLEND_OP_ADD;
+            return D3D12_BLEND_OP_MAX;
     }
 }
 
@@ -295,9 +322,8 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     sampleDesc.Quality = 0;
 
     D3D12_RASTERIZER_DESC2 rasterizerState = {};
-    //rasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-    rasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-    rasterizerState.CullMode = D3D12_CULL_MODE_NONE; // D3D12_CULL_MODE_BACK;
+    rasterizerState.FillMode = ConvertToDirectX12FillMode(parameters->FillMode);
+    rasterizerState.CullMode = ConvertToDirectX12CullMode(parameters->CullMode);
     rasterizerState.FrontCounterClockwise = false;
     rasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
     rasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;

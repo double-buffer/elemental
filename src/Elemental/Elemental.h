@@ -405,6 +405,19 @@ typedef enum
 
 typedef enum
 {
+    ElemGraphicsFillMode_Solid = 0,
+    ElemGraphicsFillMode_Wireframe = 1
+} ElemGraphicsFillMode;
+
+typedef enum
+{
+    ElemGraphicsCullMode_BackFace = 0,
+    ElemGraphicsCullMode_FrontFace = 1,
+    ElemGraphicsCullMode_None = 2
+} ElemGraphicsCullMode;
+
+typedef enum
+{
     ElemGraphicsBlendOperation_Add = 0,
     ElemGraphicsBlendOperation_Substract = 1,
     ElemGraphicsBlendOperation_ReverseSubstract = 2,
@@ -745,6 +758,8 @@ typedef struct
     const char* PixelShaderFunction;
     ElemGraphicsPipelineStateRenderTargetSpan RenderTargets;
     ElemGraphicsPipelineStateDepthStencil DepthStencil;
+    ElemGraphicsFillMode FillMode;
+    ElemGraphicsCullMode CullMode;
     // Optional debug name for the pipeline state.
     const char* DebugName;
 } ElemGraphicsPipelineStateParameters;
