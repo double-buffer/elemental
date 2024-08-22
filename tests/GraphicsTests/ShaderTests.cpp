@@ -351,16 +351,7 @@ UTEST_F_TEARDOWN(Shader_CompileGraphicsPipelineStateDepthCompare)
     ElemFreeGraphicsDevice(graphicsDevice);
 
     ASSERT_LOG_NOERROR();
-
-    auto floatData = (float*)bufferData.Items;
-
-    for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4)
-    {
-        ASSERT_EQ_MSG(floatData[i], utest_fixture->Color[0], "Red channel data is invalid.");
-        ASSERT_EQ_MSG(floatData[i + 1], utest_fixture->Color[1], "Green channel data is invalid.");
-        ASSERT_EQ_MSG(floatData[i + 2], utest_fixture->Color[2], "Blue channel data is invalid.");
-        ASSERT_EQ_MSG(floatData[i + 3], 1.0f, "Alpha channel data is invalid.");
-    }
+    ASSERT_COLOR_BUFFER(bufferData, utest_fixture->Color[0], utest_fixture->Color[1], utest_fixture->Color[2], 1.0f);
 }
 
 UTEST_F(Shader_CompileGraphicsPipelineStateDepthCompare, Never) 

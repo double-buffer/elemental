@@ -14,6 +14,19 @@
 #define ASSERT_LOG_MESSAGE(message) { TestInitLog(); ASSERT_TRUE_MSG(strstr(testErrorLogs, message) != NULL, message); }
 #define ASSERT_LOG_MESSAGE_DEBUG(message) { TestInitLog(); ASSERT_TRUE_MSG(strstr(testDebugLogs, message) != NULL, message); }
 
+#define ASSERT_COLOR_BUFFER(buffer, red, green, blue, alpha) \
+    { \ 
+        auto floatData = (float*)buffer.Items; \
+    \
+        for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \
+        { \
+            ASSERT_EQ_MSG(floatData[i], red, "Red channel data is invalid."); \
+            ASSERT_EQ_MSG(floatData[i + 1], green, "Green channel data is invalid."); \
+            ASSERT_EQ_MSG(floatData[i + 2], blue, "Blue channel data is invalid."); \
+            ASSERT_EQ_MSG(floatData[i + 3], alpha, "Alpha channel data is invalid."); \
+        } \
+    }
+
 #define BUFFER_BARRIER(resource, syncBefore, syncAfter, accessBefore, accessAfter) \
     { \
         .Resource = resource, \
@@ -128,6 +141,7 @@ void TestInitLog();
 
 ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader);
 ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* function);
+ElemPipelineState TestOpenMeshShaderAmplification(ElemGraphicsDevice graphicsDevice, const char* shader, const char* amplificationShaderFunction, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters);
 ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters);
 
 TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_Gpu);

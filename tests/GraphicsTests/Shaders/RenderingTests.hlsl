@@ -1,3 +1,11 @@
+struct TestParameters
+{
+    uint ShouldDraw;
+};
+
+[[vk::push_constant]]
+TestParameters parameters : register(b0);
+
 struct VertexOutput
 {
     float4 Position: SV_Position;
@@ -17,10 +25,24 @@ static uint3 rectanglePrimitives[] =
     uint3(2, 1, 3)
 };
 
+struct AmplificationPayload
+{
+    float Test;
+};
+
+groupshared AmplificationPayload sharedPayload;
+
+[shader("amplification")]
+[numthreads(1, 1, 1)] 
+void AmplificationShader(in uint3 groupID : SV_GroupID)    
+{ 
+    DispatchMesh(parameters.ShouldDraw, 1, 1, sharedPayload);
+}
+
 [shader("mesh")]
 [OutputTopology("triangle")]
 [NumThreads(4, 1, 1)]
-void MeshShader(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[4], out indices uint3 indices[2])
+void MeshShader(in uint groupThreadId : SV_GroupThreadID, in payload AmplificationPayload payload, out vertices VertexOutput vertices[4], out indices uint3 indices[2])
 {
     const uint meshVertexCount = 4;
     const uint meshPrimitiveCount = 2;
