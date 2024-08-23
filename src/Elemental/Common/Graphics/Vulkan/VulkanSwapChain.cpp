@@ -149,7 +149,7 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     swapChainCreateInfo->imageExtent.width = width;
     swapChainCreateInfo->imageExtent.height = height;
     
-    // BUG: The resizing works well but not fullscreen!
+    // BUG: The resizing works well but not fullscreen! (Windows / Linux?)
     swapChainData->DeviceObject = CreateVulkanSwapChainObject(swapChainData->CommandQueue, swapChainData->WindowSurface, swapChainCreateInfo, oldSwapChain);
 
     for (uint32_t i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)

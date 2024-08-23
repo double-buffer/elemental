@@ -26,6 +26,7 @@ D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ConvertToDirectX12RenderPassBeginningAcc
 
     return beginAccessType;
 }
+
 D3D12_RENDER_PASS_ENDING_ACCESS_TYPE ConvertToDirectX12RenderPassEndingAccessType(ElemRenderPassStoreAction storeAction)
 {
     D3D12_RENDER_PASS_ENDING_ACCESS_TYPE endAccessType;

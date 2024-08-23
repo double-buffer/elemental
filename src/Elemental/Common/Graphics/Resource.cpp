@@ -1,5 +1,15 @@
-#include "Elemental.h"
+#include "Resource.h"
 #include "GraphicsCommon.h"
+
+bool CheckDepthStencilFormat(ElemGraphicsFormat format)
+{
+    if (format == ElemGraphicsFormat_D32_FLOAT)
+    {
+        return true;
+    }
+
+    return false;
+}
 
 ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options)
 {

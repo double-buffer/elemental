@@ -2,7 +2,9 @@
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12Resource.h"
 #include "DirectX12CommandList.h"
+#include "Graphics/Resource.h"
 #include "Graphics/ShaderReader.h"
+#include "Graphics/Shader.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -92,16 +94,6 @@ D3D12_SHADER_BYTECODE GetDirectX12ShaderFunctionByteCode(DirectX12ShaderLibraryD
     }
 
     return result;
-}
-
-bool IsDirectX12BlendEnabled(ElemGraphicsPipelineStateRenderTarget renderTargetParameters)
-{
-    return !(renderTargetParameters.BlendOperation == ElemGraphicsBlendOperation_Add &&
-             renderTargetParameters.SourceBlendFactor == ElemGraphicsBlendFactor_Zero &&
-             renderTargetParameters.DestinationBlendFactor == ElemGraphicsBlendFactor_Zero &&
-             renderTargetParameters.BlendOperationAlpha == ElemGraphicsBlendOperation_Add &&
-             renderTargetParameters.SourceBlendFactorAlpha == ElemGraphicsBlendFactor_Zero &&
-             renderTargetParameters.DestinationBlendFactorAlpha == ElemGraphicsBlendFactor_Zero);
 }
 
 D3D12_FILL_MODE ConvertToDirectX12FillMode(ElemGraphicsFillMode fillMode)
@@ -290,7 +282,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
 
         blendState.RenderTarget[i] =
         {
-            .BlendEnable = IsDirectX12BlendEnabled(renderTargetParameters),
+            .BlendEnable = IsBlendEnabled(renderTargetParameters),
             .SrcBlend = ConvertToDirectX12Blend(renderTargetParameters.SourceBlendFactor),
             .DestBlend = ConvertToDirectX12Blend(renderTargetParameters.DestinationBlendFactor),
             .BlendOp = ConvertToDirectX12BlendOperation(renderTargetParameters.BlendOperation),
@@ -304,7 +296,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
     D3D12_DEPTH_STENCIL_DESC2 depthStencilState = {};
 
-    if (CheckDirectX12DepthStencilFormat(parameters->DepthStencil.Format))
+    if (CheckDepthStencilFormat(parameters->DepthStencil.Format))
     {
         depthFormat = ConvertToDirectX12TextureFormat(parameters->DepthStencil.Format);
         depthStencilState.DepthEnable = true;
@@ -335,9 +327,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     rasterizerState.ForcedSampleCount = 0;
     rasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
-    D3D12_PIPELINE_STATE_STREAM_DESC psoStream = {};
     GraphicsPso psoDesc = {};
-    
     psoDesc.RootSignature = graphicsDeviceData->RootSignature.Get();
 
     if (parameters->AmplificationShaderFunction)
@@ -383,6 +373,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     psoDesc.BlendState = blendState;
     psoDesc.SampleDesc = sampleDesc;
 
+    D3D12_PIPELINE_STATE_STREAM_DESC psoStream = {};
     psoStream.SizeInBytes = sizeof(GraphicsPso);
     psoStream.pPipelineStateSubobjectStream = &psoDesc;
 

@@ -4,7 +4,7 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-VkPipelineStageFlags2 ConvertToVulkanBarrierSync(ElemGraphicsResourceBarrierSyncType syncType)
+VkPipelineStageFlags2 ConvertToVulkanBarrierSync(ElemGraphicsResourceBarrierSyncType syncType, bool isDepthStencil)
 {
     switch (syncType) 
     {
@@ -15,7 +15,20 @@ VkPipelineStageFlags2 ConvertToVulkanBarrierSync(ElemGraphicsResourceBarrierSync
             return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 
         case ElemGraphicsResourceBarrierSyncType_RenderTarget:
-            return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT | VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        {
+            if (!isDepthStencil)
+            {
+                return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT | 
+                       VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT | 
+                       VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT | 
+                       VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            }
+            else
+            {
+                return VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+                       VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+            }
+        }
      }
 }
 
@@ -34,6 +47,9 @@ VkAccessFlags2 ConvertToVulkanBarrierAccess(ElemGraphicsResourceBarrierAccessTyp
 
         case ElemGraphicsResourceBarrierAccessType_RenderTarget:
             return VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+
+        case ElemGraphicsResourceBarrierAccessType_DepthStencilWrite:
+            return VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         case ElemGraphicsResourceBarrierAccessType_Write:
             return VK_ACCESS_2_SHADER_WRITE_BIT;
@@ -59,6 +75,9 @@ VkImageLayout ConvertToVulkanBarrierLayout(ElemGraphicsResourceBarrierLayoutType
 
         case ElemGraphicsResourceBarrierLayoutType_RenderTarget:
             return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        case ElemGraphicsResourceBarrierLayoutType_DepthStencilWrite:
+            return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         case ElemGraphicsResourceBarrierLayoutType_Present:
             return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -101,8 +120,8 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
             vulkanBufferBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
             vulkanBufferBarrier->buffer = graphicsResourceData->BufferDeviceObject;
             vulkanBufferBarrier->size = graphicsResourceData->Width;
-            vulkanBufferBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync);
-            vulkanBufferBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync);
+            vulkanBufferBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync, false);
+            vulkanBufferBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync, false);
             vulkanBufferBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess);
             vulkanBufferBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess);
         }
@@ -124,13 +143,13 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
 
             vulkanTextureBarrier->sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
             vulkanTextureBarrier->image = graphicsResourceData->TextureDeviceObject;
-            vulkanTextureBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync);
-            vulkanTextureBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync);
+            vulkanTextureBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync, barrier.IsDepthStencil);
+            vulkanTextureBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync, barrier.IsDepthStencil);
             vulkanTextureBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess);
             vulkanTextureBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess);
             vulkanTextureBarrier->oldLayout = ConvertToVulkanBarrierLayout(barrier.BeforeLayout);
             vulkanTextureBarrier->newLayout = ConvertToVulkanBarrierLayout(barrier.AfterLayout);
-            vulkanTextureBarrier->subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            vulkanTextureBarrier->subresourceRange.aspectMask = graphicsResourceData->Usage & ElemGraphicsResourceUsage_DepthStencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
             vulkanTextureBarrier->subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
             vulkanTextureBarrier->subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
         }

@@ -17,6 +17,7 @@ struct VulkanGraphicsResourceData
     VkImage TextureDeviceObject;
     ElemGraphicsResourceType Type;
     VkImageView RenderTargetImageView;
+    VkImageView DepthStencilImageView;
     VkFormat Format;
     ElemGraphicsFormat InternalFormat;
     bool IsPresentTexture;

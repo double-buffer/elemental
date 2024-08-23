@@ -36,6 +36,8 @@ ComPtr<IDXGIDebug1> dxgiDebugInterface;
 ComPtr<ID3D12Debug6> directX12DebugInterface;
 ComPtr<ID3D12DeviceFactory> directX12DeviceFactory;
 
+// TODO: For time queries, use https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12commandqueue-getclockcalibration
+
 void InitDirectX12()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();

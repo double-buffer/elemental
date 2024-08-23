@@ -1,5 +1,6 @@
 #include "DirectX12Resource.h"
 #include "DirectX12GraphicsDevice.h"
+#include "Graphics/Resource.h"
 #include "Graphics/ResourceDeleteQueue.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
@@ -71,16 +72,6 @@ DXGI_FORMAT ConvertDirectX12FormatWithoutSrgbIfNeeded(DXGI_FORMAT format)
         default:
             return format;
     }
-}
-
-bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format)
-{
-    if (format == ElemGraphicsFormat_D32_FLOAT)
-    {
-        return true;
-    }
-
-    return false;
 }
 
 ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture)
@@ -448,7 +439,7 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
             return ELEM_HANDLE_NULL;
         }
 
-        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil && !CheckDirectX12DepthStencilFormat(resourceInfo->Format))
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil && !CheckDepthStencilFormat(resourceInfo->Format))
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage DepthStencil should use a compatible format.");
             return ELEM_HANDLE_NULL;

@@ -1,5 +1,6 @@
 #include "VulkanResource.h"
 #include "VulkanGraphicsDevice.h"
+#include "Graphics/Resource.h"
 #include "Graphics/ResourceDeleteQueue.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
@@ -56,6 +57,9 @@ VkFormat ConvertToVulkanTextureFormat(ElemGraphicsFormat format)
 
         case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return VK_FORMAT_R32G32B32A32_SFLOAT;
+        
+        case ElemGraphicsFormat_D32_FLOAT:
+            return VK_FORMAT_D32_SFLOAT;
 
         case ElemGraphicsFormat_Raw:
             return VK_FORMAT_UNDEFINED;
@@ -75,6 +79,11 @@ VkImageUsageFlags ConvertToVulkanImageUsageFlags(ElemGraphicsResourceUsage usage
     {
         result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
+
+    if (usage & ElemGraphicsResourceUsage_DepthStencil)
+    {
+        result |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
     
     return result;
 }
@@ -92,6 +101,7 @@ ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphics
     auto vulkanTextureFormat = ConvertToVulkanTextureFormat(resourceInfo->Format);
     
     VkImageView renderTargetImageView = {};
+    VkImageView depthStencilImageView = {};
 
     if (resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget)
     {
@@ -106,11 +116,25 @@ ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphics
 
         AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &renderTargetImageView));
     }
+    else if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil)
+    {
+        VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        createInfo.image = resource;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = vulkanTextureFormat;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; // TODO: Maybe we need to combine that with flag Stencil depending on the format
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        createInfo.subresourceRange.layerCount = 1;
+
+        AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &depthStencilImageView));
+    }
 
     auto handle = SystemAddDataPoolItem(vulkanGraphicsResourcePool, {
         .TextureDeviceObject = resource,
         .Type = ElemGraphicsResourceType_Texture2D,
         .RenderTargetImageView = renderTargetImageView,
+        .DepthStencilImageView = depthStencilImageView,
         .Format = vulkanTextureFormat,
         .InternalFormat = resourceInfo->Format,
         .IsPresentTexture = isPresentTexture,
@@ -355,6 +379,18 @@ ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap,
             return ELEM_HANDLE_NULL;
         }
 
+        if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget) && (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage RenderTarget and DepthStencil should not be used together.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil && !CheckDepthStencilFormat(resourceInfo->Format))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage DepthStencil should use a compatible format.");
+            return ELEM_HANDLE_NULL;
+        }
+
         auto texture = CreateVulkanTexture(graphicsHeapData->GraphicsDevice, resourceInfo);
         AssertIfFailed(vkBindImageMemory(graphicsDeviceData->Device, texture, graphicsHeapData->DeviceObject, graphicsHeapOffset));
 
@@ -371,6 +407,12 @@ ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap,
         if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget))
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to RenderTarget.");
+            return ELEM_HANDLE_NULL;
+        }
+        
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to DepthStencil.");
             return ELEM_HANDLE_NULL;
         }
 
@@ -423,6 +465,11 @@ void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGra
         if (resourceData->Usage & ElemGraphicsResourceUsage_RenderTarget)
         {
             vkDestroyImageView(graphicsDeviceData->Device, resourceData->RenderTargetImageView, nullptr);
+        }
+
+        if (resourceData->Usage & ElemGraphicsResourceUsage_DepthStencil)
+        {
+            vkDestroyImageView(graphicsDeviceData->Device, resourceData->DepthStencilImageView, nullptr);
         }
 
         if (resourceData->TextureDeviceObject && !resourceData->IsPresentTexture)
@@ -551,11 +598,11 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
         createInfo.image = resourceData->TextureDeviceObject;
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         createInfo.format = resourceData->Format;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.aspectMask = (resourceData->Usage & ElemGraphicsResourceUsage_DepthStencil) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT; // TODO: Stencil?
         createInfo.subresourceRange.baseMipLevel = textureMipIndex;
         createInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
         createInfo.subresourceRange.layerCount = 1;
-
+    
         VkImageView imageView;
         AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &imageView));
 
