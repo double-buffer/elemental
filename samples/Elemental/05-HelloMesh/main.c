@@ -24,6 +24,7 @@ typedef struct
     float Zoom;
     float AspectRatio;
     uint32_t TriangeColor;
+    uint32_t MeshletCount;
 } ShaderParameters;
 
 // TODO: Extract from the gamestate the inputState
@@ -131,6 +132,7 @@ void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicat
     applicationPayload->ShaderParameters.MeshletBuffer = meshData->MeshletBufferReadDescriptor;
     applicationPayload->ShaderParameters.MeshletVertexIndexBuffer = meshData->MeshletVertexIndexBufferReadDescriptor;
     applicationPayload->ShaderParameters.MeshletTriangleIndexBuffer = meshData->MeshletTriangleIndexBufferReadDescriptor;
+    applicationPayload->ShaderParameters.MeshletCount = meshData->MeshletCount;
 }
 
 void InitSample(void* payload)
@@ -160,6 +162,7 @@ void InitSample(void* payload)
     applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "RenderMesh PSO",
         .ShaderLibrary = shaderLibrary,
+        .AmplificationShaderFunction = "AmplificationMain",
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = swapChainInfo.Format }}, .Length = 1 },
@@ -366,7 +369,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-    ElemDispatchMesh(commandList, applicationPayload->TestMeshData.MeshletCount, 1, 1);
+    // TODO: Create a function for the thread group calculation
+    ElemDispatchMesh(commandList, (applicationPayload->TestMeshData.MeshletCount + (32 - 1)) / 32, 1, 1);
 
     ElemEndRenderPass(commandList);
 

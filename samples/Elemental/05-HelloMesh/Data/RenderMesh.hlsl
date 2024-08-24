@@ -1,3 +1,5 @@
+#define WAVE_SIZE 32
+
 struct ShaderParameters
 {
     uint32_t VertexBufferIndex;
@@ -8,6 +10,7 @@ struct ShaderParameters
     float Zoom;
     float AspectRatio;
     uint32_t TriangleColor;
+    uint32_t MeshletCount;
 };
 
 [[vk::push_constant]]
@@ -19,6 +22,13 @@ struct ElemMeshlet
     uint32_t VertexIndexCount;
     uint32_t TriangleOffset;
     uint32_t TriangleCount;
+};
+
+struct MeshShaderPayload
+{
+    uint MeshletIndexes[WAVE_SIZE];
+    float4x4 WorldViewProjectionMatrix;
+    float4x4 InverseTransposeWorldMatrix;
 };
 
 struct Vertex
@@ -76,17 +86,27 @@ float4x4 PerspectiveProjectionMatrix(float fovY, float aspectRatio, float zNear)
     return float4x4(row1, row2, row3, row4);
 }
 
-[shader("mesh")]
-[OutputTopology("triangle")]
-[NumThreads(126, 1, 1)]
-void MeshMain(in uint groupId: SV_GroupID, in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[64], out indices uint3 indices[126])
+groupshared MeshShaderPayload meshShaderPayload;
+
+[shader("amplification")]
+[NumThreads(WAVE_SIZE, 1, 1)]
+void AmplificationMain(in uint groupId: SV_GroupID, in uint groupThreadId: SV_GroupThreadID)
 {
-    ByteAddressBuffer meshletBuffer = ResourceDescriptorHeap[parameters.MeshletBufferIndex];
-    ElemMeshlet meshlet = meshletBuffer.Load<ElemMeshlet>(groupId * sizeof(ElemMeshlet));
+    uint meshletIndex = groupId * WAVE_SIZE + groupThreadId;
+    bool isMeshletVisible = false;
 
-    SetMeshOutputCounts(meshlet.VertexIndexCount, meshlet.TriangleCount);
+    if (meshletIndex < parameters.MeshletCount)
+    {
+        isMeshletVisible = true;//meshletIndex % 2;
+    }
 
-    if (groupThreadId < meshlet.VertexIndexCount)
+    if (isMeshletVisible)
+    {
+        uint laneIndex = WavePrefixCountBits(isMeshletVisible);
+        meshShaderPayload.MeshletIndexes[laneIndex] = meshletIndex;
+    }
+
+    if (groupThreadId == 0)
     {
         // TODO: Compute matrix in task shader
         float cameraZDistance = (parameters.AspectRatio >= 0.75 ? -2.0 : -4.0) + parameters.Zoom;
@@ -95,16 +115,40 @@ void MeshMain(in uint groupId: SV_GroupID, in uint groupThreadId : SV_GroupThrea
         float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, cameraZDistance), float3(0, 0, 0), float3(0, 1, 0));
         float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
 
-        float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
+        meshShaderPayload.WorldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
+        meshShaderPayload.InverseTransposeWorldMatrix = worldMatrix;
+    }
 
+    uint meshletCount = WaveActiveCountBits(isMeshletVisible);
+    DispatchMesh(meshletCount, 1, 1, meshShaderPayload);
+}
+
+[shader("mesh")]
+[OutputTopology("triangle")]
+[NumThreads(126, 1, 1)]
+void MeshMain(in uint groupId: SV_GroupID, 
+              in uint groupThreadId : SV_GroupThreadID, 
+              in payload MeshShaderPayload payload, 
+              out vertices VertexOutput vertices[64], 
+              out indices uint3 indices[126])
+{
+    uint meshletIndex = payload.MeshletIndexes[groupId];
+
+    ByteAddressBuffer meshletBuffer = ResourceDescriptorHeap[parameters.MeshletBufferIndex];
+    ElemMeshlet meshlet = meshletBuffer.Load<ElemMeshlet>(meshletIndex * sizeof(ElemMeshlet));
+
+    SetMeshOutputCounts(meshlet.VertexIndexCount, meshlet.TriangleCount);
+
+    if (groupThreadId < meshlet.VertexIndexCount)
+    {
         ByteAddressBuffer meshletVertexIndexBuffer = ResourceDescriptorHeap[parameters.MeshletVertexIndexBufferIndex];
         ByteAddressBuffer vertexBuffer = ResourceDescriptorHeap[parameters.VertexBufferIndex];
 
         uint vertexIndex = meshletVertexIndexBuffer.Load<uint>((meshlet.VertexIndexOffset + groupThreadId) * sizeof(uint));
         Vertex vertex = vertexBuffer.Load<Vertex>(vertexIndex * sizeof(Vertex));
 
-        vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), worldViewProjectionMatrix);
-        vertices[groupThreadId].WorldNormal = mul(vertex.Normal, worldMatrix); // TODO: Compute inverse transpose
+        vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), payload.WorldViewProjectionMatrix);
+        vertices[groupThreadId].WorldNormal = mul(vertex.Normal, payload.InverseTransposeWorldMatrix); // TODO: Compute inverse transpose
         vertices[groupThreadId].MeshletIndex = groupId;
     }
 
@@ -113,8 +157,7 @@ void MeshMain(in uint groupId: SV_GroupID, in uint groupThreadId : SV_GroupThrea
         ByteAddressBuffer meshletTriangleIndexBuffer = ResourceDescriptorHeap[parameters.MeshletTriangleIndexBufferIndex];
         uint triangleIndex = meshletTriangleIndexBuffer.Load<uint>((meshlet.TriangleOffset + groupThreadId) * sizeof(uint));
 
-        uint32_t4 unpacked = unpack_u8u32(triangleIndex);
-        indices[groupThreadId] = unpacked.xyz;
+        indices[groupThreadId] = unpack_u8u32(triangleIndex).xyz;
     }
 }
 
