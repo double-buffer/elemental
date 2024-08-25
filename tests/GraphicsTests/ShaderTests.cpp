@@ -938,9 +938,9 @@ UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Add_SourceAlphaSaturated_
     utest_fixture->ResultColor[3] = 0.0f;
 }
 
-UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Substract_One_One) 
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Subtract_One_One) 
 {
-    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Substract;
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Subtract;
     utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_One;
     utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
 
@@ -964,9 +964,9 @@ UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Substract_One_One)
     utest_fixture->ResultColor[3] = 0.0f;
 }
 
-UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, ReverseSubstract_One_One) 
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, ReverseSubtract_One_One) 
 {
-    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_ReverseSubstract;
+    utest_fixture->BlendOperation = ElemGraphicsBlendOperation_ReverseSubtract;
     utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_One;
     utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_One;
 
@@ -1042,13 +1042,13 @@ UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, Max_One_One)
     utest_fixture->ResultColor[3] = 0.0f;
 }
 
-UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AlphaSubstract_One_One) 
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AlphaSubtract_One_One) 
 {
     utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
     utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_Zero;
     utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_Zero;
 
-    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Substract;
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_Subtract;
     utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One;
     utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One;
 
@@ -1068,13 +1068,13 @@ UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AlphaSubstract_One_One)
     utest_fixture->ResultColor[3] = 0.5f;
 }
 
-UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AlphaReverseSubstract_One_One) 
+UTEST_F(Shader_CompileGraphicsPipelineStateBlendState, AlphaReverseSubtract_One_One) 
 {
     utest_fixture->BlendOperation = ElemGraphicsBlendOperation_Add;
     utest_fixture->SourceBlendFactor = ElemGraphicsBlendFactor_Zero;
     utest_fixture->DestinationBlendFactor = ElemGraphicsBlendFactor_Zero;
 
-    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_ReverseSubstract;
+    utest_fixture->BlendOperationAlpha = ElemGraphicsBlendOperation_ReverseSubtract;
     utest_fixture->SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One;
     utest_fixture->DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One;
 

@@ -50,9 +50,16 @@ void* MetalDebugReportCallback(void* arg)
         {
             auto message = ((ReadOnlySpan<char>)splittedStrings[1]).Slice(1);
 
+            // TODO: Refactor
             if (SystemFindSubString(message, "Metal API Validation Enabled") == -1)
             {
-                SystemLogErrorMessage(ElemLogMessageCategory_Graphics, message);
+                if (SystemFindSubString(message, "unused binding in encoder") == -1)
+                {
+                    if (SystemFindSubString(message, "redundant setting") == -1)
+                    { 
+                        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, message);
+                    }
+                }
             }
         }
     }

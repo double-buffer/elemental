@@ -96,7 +96,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
         }
 
         meshletVertexIndexCount += meshlet.vertex_count;
-        meshletTriangleIndexCount = max(meshletTriangleIndexCount, meshlet.triangle_offset / 3 + meshlet.triangle_count);
+        meshletTriangleIndexCount = fmax(meshletTriangleIndexCount, meshlet.triangle_offset / 3 + meshlet.triangle_count);
     }
 
     return 

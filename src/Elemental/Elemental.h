@@ -419,8 +419,8 @@ typedef enum
 typedef enum
 {
     ElemGraphicsBlendOperation_Add = 0,
-    ElemGraphicsBlendOperation_Substract = 1,
-    ElemGraphicsBlendOperation_ReverseSubstract = 2,
+    ElemGraphicsBlendOperation_Subtract = 1,
+    ElemGraphicsBlendOperation_ReverseSubtract = 2,
     ElemGraphicsBlendOperation_Min = 3,
     ElemGraphicsBlendOperation_Max = 4,
 } ElemGraphicsBlendOperation;

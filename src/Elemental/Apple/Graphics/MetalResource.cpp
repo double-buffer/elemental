@@ -2,6 +2,7 @@
 #include "MetalGraphicsDevice.h"
 #include "MetalCommandList.h"
 #include "Graphics/ResourceDeleteQueue.h"
+#include "Graphics/Resource.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -60,6 +61,9 @@ MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return MTL::PixelFormatRGBA32Float;
 
+        case ElemGraphicsFormat_D32_FLOAT:
+            return MTL::PixelFormatDepth32Float;
+
         default:
             return MTL::PixelFormatR8Unorm;
     }
@@ -81,6 +85,9 @@ ElemGraphicsFormat ConvertFromMetalResourceFormat(MTL::PixelFormat format)
         case MTL::PixelFormatRGBA32Float:
             return ElemGraphicsFormat_R32G32B32A32_FLOAT;
 
+        case MTL::PixelFormatDepth32Float:
+            return ElemGraphicsFormat_D32_FLOAT;
+
         default:
             return ElemGraphicsFormat_Raw;
     }
@@ -95,7 +102,8 @@ MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
         result |= MTL::TextureUsageShaderWrite;
     }
 
-    if (usage & ElemGraphicsResourceUsage_RenderTarget)
+    if (usage & ElemGraphicsResourceUsage_RenderTarget ||
+        usage & ElemGraphicsResourceUsage_DepthStencil)
     {
         result |= MTL::TextureUsageRenderTarget;
     }
@@ -318,6 +326,18 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
             return ELEM_HANDLE_NULL;
         }
 
+        if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget) && (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage RenderTarget and DepthStencil should not be used together.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil && !CheckDepthStencilFormat(resourceInfo->Format))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage DepthStencil should use a compatible format.");
+            return ELEM_HANDLE_NULL;
+        }
+
         auto textureDescriptor = CreateMetalTextureDescriptor(resourceInfo);
         resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newTexture(textureDescriptor.get(), graphicsHeapOffset));
     }
@@ -332,6 +352,12 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
         if (resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to RenderTarget.");
+            return ELEM_HANDLE_NULL;
+        }
+        
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to DepthStencil.");
             return ELEM_HANDLE_NULL;
         }
 

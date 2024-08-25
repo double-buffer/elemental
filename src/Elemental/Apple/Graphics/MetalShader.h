@@ -22,7 +22,10 @@ struct MetalPipelineStateData
 {
     NS::SharedPtr<MTL::RenderPipelineState> RenderPipelineState;
     NS::SharedPtr<MTL::ComputePipelineState> ComputePipelineState;
-    MetalShaderMetaData AmplificaitonShaderMetaData;
+    NS::SharedPtr<MTL::DepthStencilState> RenderDepthStencilState;
+    MTL::CullMode RenderCullMode;
+    MTL::TriangleFillMode RenderFillMode;
+    MetalShaderMetaData AmplificationShaderMetaData;
     MetalShaderMetaData MeshShaderMetaData;
     MetalShaderMetaData ComputeShaderMetaData;
 };

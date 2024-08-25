@@ -206,7 +206,9 @@ endif()
 #=======================================================================
 # Mesh Optimizer
 #=======================================================================
-add_subdirectory(./meshoptimizer)
+if(NOT BUILD_FOR_IOS)
+    add_subdirectory(./meshoptimizer)
+endif()
 
 #=======================================================================
 # Tools External Dependencies

@@ -3,6 +3,8 @@
 #include "MetalCommandList.h"
 #include "MetalResource.h"
 #include "MetalResourceBarrier.h"
+#include "Graphics/Resource.h"
+#include "Graphics/Shader.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -100,6 +102,8 @@ MetalShaderFunctionData GetMetalShaderFunction(MetalShaderLibraryData* shaderLib
                     result.MetaData.ThreadSizeZ = metaData.Value[2];
                 }
             }
+
+            break;
         }
     }
         
@@ -109,6 +113,111 @@ MetalShaderFunctionData GetMetalShaderFunction(MetalShaderLibraryData* shaderLib
     }
 
     return result;
+}
+
+MTL::CullMode ConvertToMetalCullMode(ElemGraphicsCullMode cullMode)
+{
+    switch (cullMode) 
+    {
+        case ElemGraphicsCullMode_BackFace:
+            return MTL::CullModeBack;
+
+        case ElemGraphicsCullMode_FrontFace:
+            return MTL::CullModeFront;
+
+        case ElemGraphicsCullMode_None:
+            return MTL::CullModeNone;
+    }
+}
+
+MTL::BlendOperation ConvertToMetalBlendOperation(ElemGraphicsBlendOperation blendOperation)
+{
+    switch (blendOperation)
+    {
+        case ElemGraphicsBlendOperation_Add:
+            return MTL::BlendOperationAdd;
+
+        case ElemGraphicsBlendOperation_Subtract:
+            return MTL::BlendOperationSubtract;
+
+        case ElemGraphicsBlendOperation_ReverseSubtract:
+            return MTL::BlendOperationReverseSubtract;
+
+        case ElemGraphicsBlendOperation_Min:
+            return MTL::BlendOperationMin;
+
+        case ElemGraphicsBlendOperation_Max:
+            return MTL::BlendOperationMax;
+    }
+}
+
+MTL::BlendFactor ConvertToMetalBlendFactor(ElemGraphicsBlendFactor blendFactor)
+{
+    switch (blendFactor)
+    {
+        case ElemGraphicsBlendFactor_Zero:
+            return MTL::BlendFactorZero;
+
+        case ElemGraphicsBlendFactor_One:
+            return MTL::BlendFactorOne;
+
+        case ElemGraphicsBlendFactor_SourceColor:
+            return MTL::BlendFactorSourceColor;
+
+        case ElemGraphicsBlendFactor_InverseSourceColor:
+            return MTL::BlendFactorOneMinusSourceColor;
+
+        case ElemGraphicsBlendFactor_SourceAlpha:
+            return MTL::BlendFactorSourceAlpha;
+
+        case ElemGraphicsBlendFactor_InverseSourceAlpha:
+            return MTL::BlendFactorOneMinusSourceAlpha;
+
+        case ElemGraphicsBlendFactor_DestinationColor:
+            return MTL::BlendFactorDestinationColor;
+
+        case ElemGraphicsBlendFactor_InverseDestinationColor:
+            return MTL::BlendFactorOneMinusDestinationColor;
+
+        case ElemGraphicsBlendFactor_DestinationAlpha:
+            return MTL::BlendFactorDestinationAlpha;
+
+        case ElemGraphicsBlendFactor_InverseDestinationAlpha:
+            return MTL::BlendFactorOneMinusDestinationAlpha;
+
+        case ElemGraphicsBlendFactor_SourceAlphaSaturated:
+            return MTL::BlendFactorSourceAlphaSaturated;
+    }
+}
+
+MTL::CompareFunction ConvertToMetalCompareFunction(ElemGraphicsCompareFunction compareFunction)
+{
+    switch (compareFunction)
+    {
+        case ElemGraphicsCompareFunction_Never:
+            return MTL::CompareFunctionNever;
+
+        case ElemGraphicsCompareFunction_Less:
+            return MTL::CompareFunctionLess;
+
+        case ElemGraphicsCompareFunction_Equal:
+            return MTL::CompareFunctionEqual;
+
+        case ElemGraphicsCompareFunction_LessEqual:
+            return MTL::CompareFunctionLessEqual;
+
+        case ElemGraphicsCompareFunction_Greater:
+            return MTL::CompareFunctionGreater;
+
+        case ElemGraphicsCompareFunction_NotEqual:
+            return MTL::CompareFunctionNotEqual;
+
+        case ElemGraphicsCompareFunction_GreaterEqual:
+            return MTL::CompareFunctionGreaterEqual;
+
+        case ElemGraphicsCompareFunction_Always:
+            return MTL::CompareFunctionAlways;
+    }
 }
 
 ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
@@ -203,8 +312,61 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     SystemAssert(shaderLibraryData);
 
     auto pipelineStateDescriptor = NS::TransferPtr(MTL::MeshRenderPipelineDescriptor::alloc()->init());
+        
+    for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
+    {
+        auto renderTargetParameters = parameters->RenderTargets.Items[i];
+        auto metalColorAttachment = pipelineStateDescriptor->colorAttachments()->object(i);
 
+        metalColorAttachment->setPixelFormat(ConvertToMetalResourceFormat(renderTargetParameters.Format));
+        
+        metalColorAttachment->setBlendingEnabled(IsBlendEnabled(renderTargetParameters));
+        metalColorAttachment->setSourceRGBBlendFactor(ConvertToMetalBlendFactor(renderTargetParameters.SourceBlendFactor));
+        metalColorAttachment->setDestinationRGBBlendFactor(ConvertToMetalBlendFactor(renderTargetParameters.DestinationBlendFactor));
+        metalColorAttachment->setRgbBlendOperation(ConvertToMetalBlendOperation(renderTargetParameters.BlendOperation));
+        metalColorAttachment->setSourceAlphaBlendFactor(ConvertToMetalBlendFactor(renderTargetParameters.SourceBlendFactorAlpha));
+        metalColorAttachment->setDestinationAlphaBlendFactor(ConvertToMetalBlendFactor(renderTargetParameters.DestinationBlendFactorAlpha));
+        metalColorAttachment->setAlphaBlendOperation(ConvertToMetalBlendOperation(renderTargetParameters.BlendOperationAlpha));
+        metalColorAttachment->setWriteMask(MTL::ColorWriteMaskAll);
+    }
+
+    NS::SharedPtr<MTL::DepthStencilState> depthStencilState = {}; 
+
+    if (CheckDepthStencilFormat(parameters->DepthStencil.Format))
+    {
+        pipelineStateDescriptor->setDepthAttachmentPixelFormat(ConvertToMetalResourceFormat(parameters->DepthStencil.Format));
+
+        auto depthStencilDescriptor = NS::TransferPtr(MTL::DepthStencilDescriptor::alloc()->init());
+   
+        if (!parameters->DepthStencil.DepthDisableWrite)
+        {
+            depthStencilDescriptor->setDepthWriteEnabled(true);
+        }
+
+        depthStencilDescriptor->setDepthCompareFunction(ConvertToMetalCompareFunction(parameters->DepthStencil.DepthCompareFunction));
+        depthStencilState = NS::TransferPtr(graphicsDeviceData->Device->newDepthStencilState(depthStencilDescriptor.get()));
+    }
+
+    auto cullMode = ConvertToMetalCullMode(parameters->CullMode);
+    auto fillMode = parameters->FillMode == ElemGraphicsFillMode_Solid ? MTL::TriangleFillModeFill : MTL::TriangleFillModeLines;
+    
+    MetalShaderMetaData amplificationShaderMetaData = {};
     MetalShaderMetaData meshShaderMetaData = {};
+
+    if (parameters->AmplificationShaderFunction)
+    {
+        auto functionData = GetMetalShaderFunction(shaderLibraryData, ShaderType_Amplification, parameters->AmplificationShaderFunction);
+
+        if (!functionData.Function)
+        {
+            return ELEM_HANDLE_NULL;
+        }
+
+        pipelineStateDescriptor->setObjectFunction(functionData.Function.get());
+        amplificationShaderMetaData.ThreadSizeX = functionData.MetaData.ThreadSizeX;
+        amplificationShaderMetaData.ThreadSizeY = functionData.MetaData.ThreadSizeY;
+        amplificationShaderMetaData.ThreadSizeZ = functionData.MetaData.ThreadSizeZ;
+    }
 
     if (parameters->MeshShaderFunction)
     {
@@ -232,53 +394,6 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
 
         pipelineStateDescriptor->setFragmentFunction(functionData.Function.get());
     }
-        
-    for (uint32_t i = 0; i < parameters->TextureFormats.Length; i++)
-    {
-        pipelineStateDescriptor->colorAttachments()->object(0)->setPixelFormat(ConvertToMetalResourceFormat(parameters->TextureFormats.Items[i]));
-    }
-    
-    // TODO: Why is the triangle not back face culled by default?
-    //pipelineStateDescriptor.supportIndirectCommandBuffers = true
-
-    // TODO: Use the correct render target format
-    /*if (renderPassDescriptor->RenderTarget0.HasValue) 
-    {
-        pipelineStateDescriptor->colorAttachments()->object(0)->setPixelFormat(MTL::PixelFormatBGRA8Unorm_sRGB);
-    }*/
-    
-    /*
-    if (metalRenderPassDescriptor.RenderTarget2TextureFormat.HasValue == 1) {
-        pipelineStateDescriptor.colorAttachments[1].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget2TextureFormat.Value)
-    }
-
-    if (metalRenderPassDescriptor.RenderTarget3TextureFormat.HasValue == 1) {
-        pipelineStateDescriptor.colorAttachments[2].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget3TextureFormat.Value)
-    }
-
-    if (metalRenderPassDescriptor.RenderTarget4TextureFormat.HasValue == 1) {
-        pipelineStateDescriptor.colorAttachments[3].pixelFormat = convertTextureFormat(metalRenderPassDescriptor.RenderTarget4TextureFormat.Value)
-    }
-
-    if (metalRenderPassDescriptor.DepthTexturePointer.HasValue == 1) {
-        pipelineStateDescriptor.depthAttachmentPixelFormat = .depth32Float
-    } 
-)
-    if (metalRenderPassDescriptor.RenderTarget1BlendOperation.HasValue == 1) {
-        initBlendState(pipelineStateDescriptor.colorAttachments[0]!, metalRenderPassDescriptor.RenderTarget1BlendOperation.Value)
-    }
-
-    if (metalRenderPassDescriptor.RenderTarget2BlendOperation.HasValue == 1) {
-        initBlendState(pipelineStateDescriptor.colorAttachments[1]!, metalRenderPassDescriptor.RenderTarget2BlendOperation.Value)
-    }
-
-    if (metalRenderPassDescriptor.RenderTarget3BlendOperation.HasValue == 1) {
-        initBlendState(pipelineStateDescriptor.colorAttachments[2]!, metalRenderPassDescriptor.RenderTarget3BlendOperation.Value)
-    }
-
-    if (metalRenderPassDescriptor.RenderTarget4BlendOperation.HasValue == 1) {
-        initBlendState(pipelineStateDescriptor.colorAttachments[3]!, metalRenderPassDescriptor.RenderTarget4BlendOperation.Value)
-    }*/
     
     // TODO: Review this!
     auto dispatchGroup = dispatch_group_create();
@@ -305,6 +420,10 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     
     auto handle = SystemAddDataPoolItem(metalPipelineStatePool, {
         .RenderPipelineState = pipelineState,
+        .RenderDepthStencilState = depthStencilState,
+        .RenderCullMode = cullMode,
+        .RenderFillMode = fillMode,
+        .AmplificationShaderMetaData = amplificationShaderMetaData,
         .MeshShaderMetaData = meshShaderMetaData
     }); 
 
@@ -405,6 +524,14 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
         {
             auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
             renderCommandEncoder->setRenderPipelineState(pipelineStateData->RenderPipelineState.get());
+
+            if (pipelineStateData->RenderDepthStencilState)
+            {
+                renderCommandEncoder->setDepthStencilState(pipelineStateData->RenderDepthStencilState.get());
+            }
+
+            renderCommandEncoder->setCullMode(pipelineStateData->RenderCullMode);
+            renderCommandEncoder->setTriangleFillMode(pipelineStateData->RenderFillMode);
         }
     }
     else
@@ -448,6 +575,9 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
         // TODO: compute offset
         // HACK: For the oment we set the slot 2 because it is the global one for bindless
         
+        renderCommandEncoder->setObjectBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+        renderCommandEncoder->setObjectBytes(data.Items, data.Length, 2);
+
         renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         renderCommandEncoder->setMeshBytes(data.Items, data.Length, 2);
 

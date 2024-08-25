@@ -102,7 +102,7 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
     }
     else
     {
-        IRCompilerSetMinimumDeploymentTarget(pCompiler, IROperatingSystem_macOS, "14.0.0");
+        IRCompilerSetMinimumDeploymentTarget(pCompiler, IROperatingSystem_macOS, "15.0.0");
     }    
 
     auto compilationMessages = SystemPushArray<ElemToolsMessage>(memoryArena, 1024);
@@ -188,6 +188,7 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
             if (!result)
             {
                 // TODO: Error
+                printf("ERRORRRRRR!\n");
             }
 
             size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
