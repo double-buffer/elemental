@@ -67,9 +67,6 @@ VkShaderStageFlagBits ConvertShaderTypeToVulkan(ShaderType shaderType)
 {
     switch (shaderType) 
     {
-        case ShaderType_Amplification:
-            return VK_SHADER_STAGE_TASK_BIT_EXT;
-
         case ShaderType_Mesh:
             return VK_SHADER_STAGE_MESH_BIT_EXT;
 
@@ -354,18 +351,6 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
 
     VkPipelineShaderStageCreateInfo stages[3] = {};
     uint32_t stageCount = 0;
-
-    if (parameters->AmplificationShaderFunction)
-    {
-        auto shaderStage = GetVulkanShaderFunctionStageCreateInfo(stackMemoryArena, shaderLibraryData, ShaderType_Amplification, parameters->AmplificationShaderFunction);
-
-        if (shaderStage.stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM)
-        {
-            return ELEM_HANDLE_NULL;
-        }
-
-        stages[stageCount++] = shaderStage;
-    }
 
     if (parameters->MeshShaderFunction)
     {

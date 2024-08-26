@@ -330,18 +330,6 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     GraphicsPso psoDesc = {};
     psoDesc.RootSignature = graphicsDeviceData->RootSignature.Get();
 
-    if (parameters->AmplificationShaderFunction)
-    {
-        auto shaderByteCode = GetDirectX12ShaderFunctionByteCode(shaderLibraryData, ShaderType_Amplification, parameters->AmplificationShaderFunction);
-
-        if (!shaderByteCode.pShaderBytecode)
-        {
-            return ELEM_HANDLE_NULL;
-        }
-
-        psoDesc.AS = shaderByteCode;
-    }
-
     if (parameters->MeshShaderFunction)
     {
         auto shaderByteCode = GetDirectX12ShaderFunctionByteCode(shaderLibraryData, ShaderType_Mesh, parameters->MeshShaderFunction);
