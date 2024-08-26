@@ -5,7 +5,6 @@
 enum ShaderType
 {
     ShaderType_Unknown = 0,
-    ShaderType_Amplification = 1,
     ShaderType_Mesh = 2,
     ShaderType_Pixel = 3,
     ShaderType_Compute = 4,

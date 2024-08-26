@@ -217,17 +217,8 @@ void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, 
     auto pipelineStateData = GetMetalPipelineStateData(commandListData->PipelineState);
     SystemAssert(pipelineStateData);
 
-    auto amplificationShaderThreadSize = MTL::Size(1, 1, 1);
-
-    if (pipelineStateData->AmplificationShaderMetaData.ThreadSizeX > 0)
-    {
-        amplificationShaderThreadSize = MTL::Size(pipelineStateData->AmplificationShaderMetaData.ThreadSizeX, 
-                                                  pipelineStateData->AmplificationShaderMetaData.ThreadSizeY, 
-                                                  pipelineStateData->AmplificationShaderMetaData.ThreadSizeZ);
-    }
-
     auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
     renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), 
-                                               amplificationShaderThreadSize, 
+                                               MTL::Size(1, 1, 1), 
                                                MTL::Size(pipelineStateData->MeshShaderMetaData.ThreadSizeX, pipelineStateData->MeshShaderMetaData.ThreadSizeY, pipelineStateData->MeshShaderMetaData.ThreadSizeZ));
 }

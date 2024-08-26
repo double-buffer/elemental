@@ -53,9 +53,6 @@ IRShaderStage ConvertShaderTypeToMetalShaderStage(ShaderType shaderType)
 {
     switch (shaderType)
     {
-        case ShaderType_Amplification:
-            return IRShaderStage::IRShaderStageAmplification;
-
         case ShaderType_Mesh:
             return IRShaderStage::IRShaderStageMesh;
 

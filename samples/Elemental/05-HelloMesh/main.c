@@ -162,7 +162,6 @@ void InitSample(void* payload)
     applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "RenderMesh PSO",
         .ShaderLibrary = shaderLibrary,
-        .AmplificationShaderFunction = "AmplificationMain",
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = swapChainInfo.Format }}, .Length = 1 },
@@ -369,8 +368,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-    // TODO: Create a function for the thread group calculation
-    ElemDispatchMesh(commandList, (applicationPayload->TestMeshData.MeshletCount + (32 - 1)) / 32, 1, 1);
+    ElemDispatchMesh(commandList, applicationPayload->TestMeshData.MeshletCount, 1, 1);
 
     ElemEndRenderPass(commandList);
 

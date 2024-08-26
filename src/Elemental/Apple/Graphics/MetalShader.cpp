@@ -353,21 +353,6 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     MetalShaderMetaData amplificationShaderMetaData = {};
     MetalShaderMetaData meshShaderMetaData = {};
 
-    if (parameters->AmplificationShaderFunction)
-    {
-        auto functionData = GetMetalShaderFunction(shaderLibraryData, ShaderType_Amplification, parameters->AmplificationShaderFunction);
-
-        if (!functionData.Function)
-        {
-            return ELEM_HANDLE_NULL;
-        }
-
-        pipelineStateDescriptor->setObjectFunction(functionData.Function.get());
-        amplificationShaderMetaData.ThreadSizeX = functionData.MetaData.ThreadSizeX;
-        amplificationShaderMetaData.ThreadSizeY = functionData.MetaData.ThreadSizeY;
-        amplificationShaderMetaData.ThreadSizeZ = functionData.MetaData.ThreadSizeZ;
-    }
-
     if (parameters->MeshShaderFunction)
     {
         auto functionData = GetMetalShaderFunction(shaderLibraryData, ShaderType_Mesh, parameters->MeshShaderFunction);
@@ -423,7 +408,6 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
         .RenderDepthStencilState = depthStencilState,
         .RenderCullMode = cullMode,
         .RenderFillMode = fillMode,
-        .AmplificationShaderMetaData = amplificationShaderMetaData,
         .MeshShaderMetaData = meshShaderMetaData
     }); 
 
@@ -570,14 +554,10 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
     {
         auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
 
-        // TODO: Amplification shader
         // TODO: Do we need to check if the shader stage is bound?
         // TODO: compute offset
         // HACK: For the oment we set the slot 2 because it is the global one for bindless
         
-        renderCommandEncoder->setObjectBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
-        renderCommandEncoder->setObjectBytes(data.Items, data.Length, 2);
-
         renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
         renderCommandEncoder->setMeshBytes(data.Items, data.Length, 2);
 

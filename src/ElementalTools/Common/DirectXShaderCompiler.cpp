@@ -72,9 +72,6 @@ ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind)
         case DxilShaderKind::Compute:
             return "cs_6_8";
 
-        case DxilShaderKind::Amplification:
-            return "as_6_8";
-
         case DxilShaderKind::Mesh:
             return "ms_6_8";
 
@@ -92,9 +89,6 @@ ShaderType GetShaderTypeEnum(DxilShaderKind shaderKind)
     {
         case DxilShaderKind::Compute:
             return ShaderType_Compute;
-
-        case DxilShaderKind::Amplification:
-            return ShaderType_Amplification;
 
         case DxilShaderKind::Mesh:
             return ShaderType_Mesh;

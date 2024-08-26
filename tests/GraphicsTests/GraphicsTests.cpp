@@ -298,14 +298,13 @@ ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const
     return pipelineState;
 }
 
-ElemPipelineState TestOpenMeshShaderAmplification(ElemGraphicsDevice graphicsDevice, const char* shader, const char* amplificationShaderFunction, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters)
+ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters)
 {
     auto shaderLibrary = TestOpenShader(graphicsDevice, shader);
 
     ElemGraphicsPipelineStateParameters pipelineStateParameters = *baseParameters;
 
     pipelineStateParameters.ShaderLibrary = shaderLibrary;
-    pipelineStateParameters.AmplificationShaderFunction = amplificationShaderFunction;
     pipelineStateParameters.MeshShaderFunction = meshShaderFunction;
     pipelineStateParameters.PixelShaderFunction = pixelShaderFunction;
 
@@ -318,11 +317,6 @@ ElemPipelineState TestOpenMeshShaderAmplification(ElemGraphicsDevice graphicsDev
 
     ElemFreeShaderLibrary(shaderLibrary);
     return pipelineState;
-}
-
-ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters)
-{
-    return TestOpenMeshShaderAmplification(graphicsDevice, shader, nullptr, meshShaderFunction, pixelShaderFunction, baseParameters);
 }
 
 TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType)

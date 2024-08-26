@@ -752,7 +752,6 @@ typedef struct
 {
     // Shader library containing the shaders.
     ElemShaderLibrary ShaderLibrary;
-    const char* AmplificationShaderFunction;
     // Function name of the mesh shader in the shader library.
     const char* MeshShaderFunction;
     // Function name of the pixel shader in the shader library.

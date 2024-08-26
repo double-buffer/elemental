@@ -1,5 +1,3 @@
-#define WAVE_SIZE 32
-
 struct ShaderParameters
 {
     uint32_t VertexBufferIndex;
@@ -22,13 +20,6 @@ struct ElemMeshlet
     uint32_t VertexIndexCount;
     uint32_t TriangleOffset;
     uint32_t TriangleCount;
-};
-
-struct MeshShaderPayload
-{
-    uint MeshletIndexes[WAVE_SIZE];
-    float4x4 WorldViewProjectionMatrix;
-    float4x4 InverseTransposeWorldMatrix;
 };
 
 struct Vertex
@@ -86,53 +77,15 @@ float4x4 PerspectiveProjectionMatrix(float fovY, float aspectRatio, float zNear)
     return float4x4(row1, row2, row3, row4);
 }
 
-groupshared MeshShaderPayload meshShaderPayload;
-
-[shader("amplification")]
-[NumThreads(WAVE_SIZE, 1, 1)]
-void AmplificationMain(in uint groupId: SV_GroupID, in uint groupThreadId: SV_GroupThreadID)
-{
-    uint meshletIndex = groupId * WAVE_SIZE + groupThreadId;
-    bool isMeshletVisible = false;
-
-    if (meshletIndex < parameters.MeshletCount)
-    {
-        isMeshletVisible = true;//meshletIndex % 2;
-    }
-
-    if (isMeshletVisible)
-    {
-        uint laneIndex = WavePrefixCountBits(isMeshletVisible);
-        meshShaderPayload.MeshletIndexes[laneIndex] = meshletIndex;
-    }
-
-    if (groupThreadId == 0)
-    {
-        // TODO: Compute matrix in task shader
-        float cameraZDistance = (parameters.AspectRatio >= 0.75 ? -2.0 : -4.0) + parameters.Zoom;
-
-        float4x4 worldMatrix = TransformMatrix(parameters.RotationQuaternion, float3(0.0, 0.0, 0.0));
-        float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, cameraZDistance), float3(0, 0, 0), float3(0, 1, 0));
-        float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
-
-        meshShaderPayload.WorldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
-        meshShaderPayload.InverseTransposeWorldMatrix = worldMatrix;
-    }
-
-    uint meshletCount = WaveActiveCountBits(isMeshletVisible);
-    DispatchMesh(meshletCount, 1, 1, meshShaderPayload);
-}
-
 [shader("mesh")]
 [OutputTopology("triangle")]
 [NumThreads(126, 1, 1)]
 void MeshMain(in uint groupId: SV_GroupID, 
               in uint groupThreadId : SV_GroupThreadID, 
-              in payload MeshShaderPayload payload, 
               out vertices VertexOutput vertices[64], 
               out indices uint3 indices[126])
 {
-    uint meshletIndex = payload.MeshletIndexes[groupId];
+    uint meshletIndex = groupId;
 
     ByteAddressBuffer meshletBuffer = ResourceDescriptorHeap[parameters.MeshletBufferIndex];
     ElemMeshlet meshlet = meshletBuffer.Load<ElemMeshlet>(meshletIndex * sizeof(ElemMeshlet));
@@ -141,14 +94,24 @@ void MeshMain(in uint groupId: SV_GroupID,
 
     if (groupThreadId < meshlet.VertexIndexCount)
     {
+        // TODO: Compute matrix in task shader
+        float cameraZDistance = (parameters.AspectRatio >= 0.75 ? -2.0 : -4.0) + parameters.Zoom;
+
+        float4x4 worldMatrix = TransformMatrix(parameters.RotationQuaternion, float3(0.0, 0.0, 0.0));
+        float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, cameraZDistance), float3(0, 0, 0), float3(0, 1, 0));
+        float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
+
+        float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
+        float4x4 inverseTransposeWorldMatrix = worldMatrix;
+
         ByteAddressBuffer meshletVertexIndexBuffer = ResourceDescriptorHeap[parameters.MeshletVertexIndexBufferIndex];
         ByteAddressBuffer vertexBuffer = ResourceDescriptorHeap[parameters.VertexBufferIndex];
 
         uint vertexIndex = meshletVertexIndexBuffer.Load<uint>((meshlet.VertexIndexOffset + groupThreadId) * sizeof(uint));
         Vertex vertex = vertexBuffer.Load<Vertex>(vertexIndex * sizeof(Vertex));
 
-        vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), payload.WorldViewProjectionMatrix);
-        vertices[groupThreadId].WorldNormal = mul(vertex.Normal, payload.InverseTransposeWorldMatrix); // TODO: Compute inverse transpose
+        vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), worldViewProjectionMatrix);
+        vertices[groupThreadId].WorldNormal = mul(vertex.Normal, inverseTransposeWorldMatrix); // TODO: Compute inverse transpose
         vertices[groupThreadId].MeshletIndex = groupId;
     }
 
