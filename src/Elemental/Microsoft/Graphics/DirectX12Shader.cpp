@@ -130,10 +130,10 @@ D3D12_BLEND_OP ConvertToDirectX12BlendOperation(ElemGraphicsBlendOperation blend
         case ElemGraphicsBlendOperation_Add:
             return D3D12_BLEND_OP_ADD;
 
-        case ElemGraphicsBlendOperation_Substract:
+        case ElemGraphicsBlendOperation_Subtract:
             return D3D12_BLEND_OP_SUBTRACT;
 
-        case ElemGraphicsBlendOperation_ReverseSubstract:
+        case ElemGraphicsBlendOperation_ReverseSubtract:
             return D3D12_BLEND_OP_REV_SUBTRACT;
 
         case ElemGraphicsBlendOperation_Min:

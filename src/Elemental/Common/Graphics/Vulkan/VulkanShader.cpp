@@ -119,10 +119,10 @@ VkBlendOp ConvertToVulkanBlendOperation(ElemGraphicsBlendOperation blendOperatio
         case ElemGraphicsBlendOperation_Add:
             return VK_BLEND_OP_ADD;
 
-        case ElemGraphicsBlendOperation_Substract:
+        case ElemGraphicsBlendOperation_Subtract:
             return VK_BLEND_OP_SUBTRACT;
 
-        case ElemGraphicsBlendOperation_ReverseSubstract:
+        case ElemGraphicsBlendOperation_ReverseSubtract:
             return VK_BLEND_OP_REVERSE_SUBTRACT;
 
         case ElemGraphicsBlendOperation_Min:
