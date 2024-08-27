@@ -131,6 +131,7 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
 
     parameters[parameterIndex++] = L"-HV";
     parameters[parameterIndex++] = L"202x";
+    parameters[parameterIndex++] = L"-enable-16bit-types";
 
     parameters[parameterIndex++] = DXC_ARG_ALL_RESOURCES_BOUND;
 
