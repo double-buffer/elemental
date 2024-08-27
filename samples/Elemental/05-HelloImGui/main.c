@@ -6,6 +6,7 @@
 typedef struct
 {
     bool PreferVulkan;
+    bool ShowImGuiDemoWindow;
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
@@ -17,8 +18,37 @@ typedef struct
     ElemGraphicsResource DepthBuffer;
     ElemPipelineState GraphicsPipeline;
  } ApplicationPayload;
+
+typedef struct
+{
+    ElemGraphicsDevice GraphicsDevice;
+} ImGuiElementalUserData;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
+
+void ImGuiInitBackend(ElemGraphicsDevice graphicsDevice)
+{
+    ImGuiIO* imGuiIO = igGetIO();
+    
+    ImGuiElementalUserData* backendData = malloc(sizeof(ImGuiElementalUserData));
+    memset(backendData, 0, sizeof(ImGuiElementalUserData));
+    imGuiIO->BackendRendererUserData = backendData;
+    imGuiIO->BackendRendererName = "Elemental";
+
+    // TODO: 
+    imGuiIO->Fonts->TexID = (void*)1;
+}
+
+void ImGuidElementalNewFrame(const ElemSwapChainUpdateParameters* updateParameters)
+{
+    ImGuiIO* imGuiIO = igGetIO();
+
+    imGuiIO->DisplaySize = (ImVec2){ updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height };
+}
+
+void ImGuiRenderDrawData(ImDrawData* draw_data, ElemCommandList commandList)
+{
+}
 
 void InitSample(void* payload)
 {
@@ -56,6 +86,9 @@ void InitSample(void* payload)
 
     ElemFreeShaderLibrary(shaderLibrary);
     SampleStartFrameMeasurement();
+
+    igCreateContext(NULL);
+    ImGuiInitBackend(applicationPayload->GraphicsDevice);
 }
 
 void FreeSample(void* payload)
@@ -97,8 +130,12 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    bool open = true;
-//    igShowDemoWindow(&open);
+    ImGuidElementalNewFrame(updateParameters);
+    igNewFrame();
+    igShowDemoWindow(&applicationPayload->ShowImGuiDemoWindow);
+    igRender();
+
+    ImGuiRenderDrawData(igGetDrawData(), commandList);
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
     //ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });

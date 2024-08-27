@@ -226,7 +226,7 @@ target_include_directories(xxHash INTERFACE ./xxHash/)
 # ImGui
 #=======================================================================
 add_subdirectory(./cimgui)
-set(IMGUI_STATIC "yes")
+#set(IMGUI_STATIC "yes")
 
 #=======================================================================
 # Volk
