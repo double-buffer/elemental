@@ -60,6 +60,8 @@ void ImGuiInitBackend(ApplicationPayload* payload)
     ImGuiIO* imGuiIO = igGetIO();
     imGuiIO->BackendRendererUserData = &payload->ImGuiBackendData;
     imGuiIO->BackendRendererName = "Elemental";
+    imGuiIO->BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+    //imGuiIO->ConfigFlags |= ImGuiConfigFlags_IsSRGB;
 
     CreateBuffer(&imGuiData->VertexBuffer, &imGuiData->VertexBufferReadDescriptor, payload, 5000 * sizeof(ImDrawVert));
     CreateBuffer(&imGuiData->IndexBuffer, &imGuiData->IndexBufferReadDescriptor, payload, 5000 * sizeof(ImDrawIdx));
@@ -84,7 +86,20 @@ void ImGuiInitBackend(ApplicationPayload* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
-        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = swapChainInfo.Format }}, .Length = 1 },
+        .RenderTargets = 
+        { 
+            .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
+            { 
+                .Format = swapChainInfo.Format,
+                //.BlendOperation = ElemGraphicsBlendOperation_Add,
+                //.SourceBlendFactor = ElemGraphicsBlendFactor_One,
+                //.DestinationBlendFactor = ElemGraphicsBlendFactor_InverseSourceAlpha,
+                //.BlendOperationAlpha = ElemGraphicsBlendOperation_Add,
+                //.SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One,
+                //.DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_InverseSourceAlpha
+            }}, 
+            .Length = 1 
+        },
     });
 
     ElemFreeShaderLibrary(shaderLibrary);
@@ -94,7 +109,12 @@ void ImGuidElementalNewFrame(const ElemSwapChainUpdateParameters* updateParamete
 {
     ImGuiIO* imGuiIO = igGetIO();
 
-    imGuiIO->DisplaySize = (ImVec2){ updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height };
+    // TODO: Set Correct UI Scale
+    imGuiIO->DisplaySize = (ImVec2){ (float)updateParameters->SwapChainInfo.Width / 2.0f, (float)updateParameters->SwapChainInfo.Height / 2.0f };
+    imGuiIO->DisplayFramebufferScale = (ImVec2) { 2.0f, 2.0f };
+
+    //imGuiIO->DisplaySize = (ImVec2){ updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height };
+    //imGuiIO->ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts | ImGuiConfigFlags_DpiEnableScaleViewports;
 }
 
 void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, ApplicationPayload* payload, const ElemSwapChainUpdateParameters* updateParameters)
@@ -121,8 +141,8 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
             .VertexCount = imCommandList->VtxBuffer.Size,
             .IndexOffset = currentIndexOffset,
             .IndexCount = imCommandList->IdxBuffer.Size,
-            .RenderWidth = updateParameters->SwapChainInfo.Width,
-            .RenderHeight = updateParameters->SwapChainInfo.Height
+            .RenderWidth = drawData->DisplaySize.x,
+            .RenderHeight = drawData->DisplaySize.y
         };
 
         memcpy(vertexBufferPointer.Items + currentVertexOffset, imCommandList->VtxBuffer.Data, imCommandList->VtxBuffer.Size * sizeof(ImDrawVert));
@@ -136,7 +156,7 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
     
         uint32_t threadSize = 128;
         //ElemDispatchMesh(commandList, (imCommandList->IdxBuffer.Size / 3 + (threadSize - 1)) / threadSize, 1, 1);
-        ElemDispatchMesh(commandList, 1, 1, 1);
+        ElemDispatchMesh(commandList, 10, 1, 1);
     }
 }
 

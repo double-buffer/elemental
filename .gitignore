@@ -9,6 +9,7 @@
 *.resolved
 *.obj
 *.mesh
+*.ini
 
 xcuserdata/
 packages/
