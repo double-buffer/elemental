@@ -634,12 +634,14 @@ typedef struct
  */
 typedef struct
 {
+    ElemWindow Window;
     // Width of the swap chain in pixels.
     uint32_t Width;
     // Height of the swap chain in pixels.
     uint32_t Height;
     // Aspect ratio of the swap chain.
     float AspectRatio;
+    float UIScale;
     // Format of the textures used in the swap chain.
     ElemGraphicsFormat Format;
 } ElemSwapChainInfo;

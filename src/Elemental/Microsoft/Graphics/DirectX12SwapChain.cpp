@@ -56,7 +56,7 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
     }
 }
 
-void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height, float uiScale)
 {
     if (width == 0 || height == 0)
     {
@@ -72,6 +72,7 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
     swapChainData->Width = width;
     swapChainData->Height = height;
     swapChainData->AspectRatio = (float)width / height;
+    swapChainData->UIScale = uiScale;
  
     auto fence = CreateDirectX12CommandQueueFence(swapChainData->CommandQueue);
     ElemWaitForFenceOnCpu(fence);
@@ -207,7 +208,7 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
-            ResizeDirectX12SwapChain(handle, windowSize.Width, windowSize.Height);
+            ResizeDirectX12SwapChain(handle, windowSize.Width, windowSize.Height, windowSize.UIScale);
             sizeChanged = true;
         }
         
@@ -360,6 +361,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
+        .UIScale = windowRenderSize.UIScale,
         .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
@@ -410,9 +412,11 @@ ElemSwapChainInfo DirectX12GetSwapChainInfo(ElemSwapChain swapChain)
 
     return 
     {
+        .Window = swapChainData->Window,
         .Width = swapChainData->Width,
         .Height = swapChainData->Height,
         .AspectRatio = swapChainData->AspectRatio,
+        .UIScale = swapChainData->UIScale,
         .Format = swapChainData->Format
     };
 }

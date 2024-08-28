@@ -49,7 +49,7 @@ MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain swapChain)
     return SystemGetDataPoolItemFull(metalSwapChainPool, swapChain);
 }
 
-void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height, float uiScale)
 {    
     if (width == 0 || height == 0)
     {
@@ -64,6 +64,7 @@ void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t heig
     swapChainData->Width = width;
     swapChainData->Height = height;
     swapChainData->AspectRatio = (float)width / height;
+    swapChainData->UIScale = uiScale;
     swapChainData->DeviceObject->setDrawableSize(CGSizeMake(width, height));
 }
 
@@ -151,6 +152,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
+        .UIScale = windowRenderSize.UIScale,
         .Format = ElemGraphicsFormat_B8G8R8A8_SRGB // TODO: Temporary
     }); 
 
@@ -185,9 +187,11 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 
     return 
     {
+        .Window = swapChainData->Window,
         .Width = swapChainData->Width,
         .Height = swapChainData->Height,
         .AspectRatio = swapChainData->AspectRatio,
+        .UIScale = swapChainData->UIScale,
         .Format = swapChainData->Format
     };
 }
@@ -266,7 +270,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
-            ResizeMetalSwapChain(_swapChain, windowSize.Width, windowSize.Height);
+            ResizeMetalSwapChain(_swapChain, windowSize.Width, windowSize.Height, windowSize.UIScale);
             sizeChanged = true;
         }
 

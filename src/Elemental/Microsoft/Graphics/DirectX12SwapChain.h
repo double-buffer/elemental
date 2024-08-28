@@ -19,6 +19,7 @@ struct DirectX12SwapChainData
     uint32_t Width;
     uint32_t Height;
     float AspectRatio;
+    float UIScale;
     ElemGraphicsFormat Format;
     bool PresentCalled;
     uint32_t FrameLatency;

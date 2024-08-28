@@ -113,7 +113,7 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
     return swapChain;
 }
 
-void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height, float uiScale)
 {
     if (width == 0 || height == 0)
     {
@@ -138,6 +138,7 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     swapChainData->Width = width;
     swapChainData->Height = height;
     swapChainData->AspectRatio = (float)width / height;
+    swapChainData->UIScale = uiScale;
 
     auto fence = CreateVulkanCommandQueueFence(swapChainData->CommandQueue);
     VulkanWaitForFenceOnCpu(fence);
@@ -208,7 +209,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
 
     if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
     {
-        ResizeVulkanSwapChain(handle, windowSize.Width, windowSize.Height);
+        ResizeVulkanSwapChain(handle, windowSize.Width, windowSize.Height, windowSize.UIScale);
         sizeChanged = true;
     }
 
@@ -409,6 +410,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
+        .UIScale = windowRenderSize.UIScale,
         .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
@@ -475,9 +477,11 @@ ElemSwapChainInfo VulkanGetSwapChainInfo(ElemSwapChain swapChain)
 
     return 
     {
+        .Window = swapChainData->Window,
         .Width = swapChainData->Width,
         .Height = swapChainData->Height,
         .AspectRatio = swapChainData->AspectRatio,
+        .UIScale = swapChainData->UIScale,
         .Format = swapChainData->Format
     };
 }

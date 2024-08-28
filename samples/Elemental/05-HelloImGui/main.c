@@ -18,7 +18,6 @@ typedef struct
     uint32_t VertexBufferIndex;
     uint32_t IndexBufferIndex;
     uint32_t VertexOffset;
-    uint32_t VertexCount;
     uint32_t IndexOffset;
     uint32_t IndexCount;
     uint32_t RenderWidth;
@@ -63,8 +62,8 @@ void ImGuiInitBackend(ApplicationPayload* payload)
     imGuiIO->BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
     //imGuiIO->ConfigFlags |= ImGuiConfigFlags_IsSRGB;
 
-    CreateBuffer(&imGuiData->VertexBuffer, &imGuiData->VertexBufferReadDescriptor, payload, 5000 * sizeof(ImDrawVert));
-    CreateBuffer(&imGuiData->IndexBuffer, &imGuiData->IndexBufferReadDescriptor, payload, 5000 * sizeof(ImDrawIdx));
+    CreateBuffer(&imGuiData->VertexBuffer, &imGuiData->VertexBufferReadDescriptor, payload, 10000 * sizeof(ImDrawVert));
+    CreateBuffer(&imGuiData->IndexBuffer, &imGuiData->IndexBufferReadDescriptor, payload, 10000 * sizeof(ImDrawIdx));
 
     // TODO: Font 
     uint8_t* fontPixels;
@@ -86,17 +85,18 @@ void ImGuiInitBackend(ApplicationPayload* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
+        .CullMode = ElemGraphicsCullMode_None,
         .RenderTargets = 
         { 
             .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
             { 
                 .Format = swapChainInfo.Format,
-                //.BlendOperation = ElemGraphicsBlendOperation_Add,
-                //.SourceBlendFactor = ElemGraphicsBlendFactor_One,
-                //.DestinationBlendFactor = ElemGraphicsBlendFactor_InverseSourceAlpha,
-                //.BlendOperationAlpha = ElemGraphicsBlendOperation_Add,
-                //.SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One,
-                //.DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_InverseSourceAlpha
+                .BlendOperation = ElemGraphicsBlendOperation_Add,
+                .SourceBlendFactor = ElemGraphicsBlendFactor_SourceAlpha,
+                .DestinationBlendFactor = ElemGraphicsBlendFactor_InverseSourceAlpha,
+                .BlendOperationAlpha = ElemGraphicsBlendOperation_Add,
+                .SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One,
+                .DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_InverseSourceAlpha
             }}, 
             .Length = 1 
         },
@@ -105,23 +105,44 @@ void ImGuiInitBackend(ApplicationPayload* payload)
     ElemFreeShaderLibrary(shaderLibrary);
 }
 
-void ImGuidElementalNewFrame(const ElemSwapChainUpdateParameters* updateParameters)
+void ImGuidElementalNewFrame(const ElemSwapChainUpdateParameters* updateParameters, const ElemInputStream inputStream)
 {
     ImGuiIO* imGuiIO = igGetIO();
 
-    // TODO: Set Correct UI Scale
-    imGuiIO->DisplaySize = (ImVec2){ (float)updateParameters->SwapChainInfo.Width / 2.0f, (float)updateParameters->SwapChainInfo.Height / 2.0f };
-    imGuiIO->DisplayFramebufferScale = (ImVec2) { 2.0f, 2.0f };
+    imGuiIO->DisplaySize = (ImVec2)
+    { 
+        (float)updateParameters->SwapChainInfo.Width / updateParameters->SwapChainInfo.UIScale, 
+        (float)updateParameters->SwapChainInfo.Height / updateParameters->SwapChainInfo.UIScale 
+    };
 
-    //imGuiIO->DisplaySize = (ImVec2){ updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height };
+    imGuiIO->DisplayFramebufferScale = (ImVec2) { updateParameters->SwapChainInfo.UIScale, updateParameters->SwapChainInfo.UIScale };
+    imGuiIO->DeltaTime = updateParameters->DeltaTimeInSeconds;
+
+    for (uint32_t i = 0; i < inputStream.Events.Length; i++)
+    {
+        ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
+
+        if (inputEvent->InputId == ElemInputId_MouseAxisXNegative ||
+            inputEvent->InputId == ElemInputId_MouseAxisXPositive ||
+            inputEvent->InputId == ElemInputId_MouseAxisYNegative ||
+            inputEvent->InputId == ElemInputId_MouseAxisYPositive)
+        {
+            ElemWindowCursorPosition cursorPosition = ElemGetWindowCursorPosition(updateParameters->SwapChainInfo.Window);
+            ImGuiIO_AddMousePosEvent(imGuiIO, cursorPosition.X / updateParameters->SwapChainInfo.UIScale, cursorPosition.Y / updateParameters->SwapChainInfo.UIScale); 
+        }
+
+        if (inputEvent->InputId == ElemInputId_MouseLeftButton)
+        {
+            ImGuiIO_AddMouseButtonEvent(imGuiIO, ImGuiMouseButton_Left, inputEvent->Value);
+        }
+    }
+
     //imGuiIO->ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts | ImGuiConfigFlags_DpiEnableScaleViewports;
 }
 
 void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, ApplicationPayload* payload, const ElemSwapChainUpdateParameters* updateParameters)
 {
     ElemImGuiBackendData* imGuiData = &payload->ImGuiBackendData;
-
-    printf("DrawData VertexCount=%d, IndexCount=%d, CommandList=%d\n", drawData->TotalVtxCount, drawData->TotalIdxCount , drawData->CmdListsCount);
 
     uint32_t currentVertexOffset = 0;
     ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(imGuiData->VertexBuffer);
@@ -131,32 +152,40 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
 
     for (int32_t i = 0; i < drawData->CmdListsCount; i++)
     {
+        printf("DrawData: Vertexcount = %d, IndexCount=%d\n", drawData->TotalVtxCount, drawData->TotalIdxCount);
         ImDrawList* imCommandList = drawData->CmdLists.Data[i];
 
-        ImGuiShaderParameters shaderParameters =
+        for (int32_t j = 0; j < imCommandList->CmdBuffer.Size; j++)
         {
-            .VertexBufferIndex = imGuiData->VertexBufferReadDescriptor,
-            .IndexBufferIndex = imGuiData->IndexBufferReadDescriptor,
-            .VertexOffset = currentVertexOffset,
-            .VertexCount = imCommandList->VtxBuffer.Size,
-            .IndexOffset = currentIndexOffset,
-            .IndexCount = imCommandList->IdxBuffer.Size,
-            .RenderWidth = drawData->DisplaySize.x,
-            .RenderHeight = drawData->DisplaySize.y
-        };
+            ImDrawCmd* drawCommand = &imCommandList->CmdBuffer.Data[j];
+
+            ImGuiShaderParameters shaderParameters =
+            {
+                .VertexBufferIndex = imGuiData->VertexBufferReadDescriptor,
+                .IndexBufferIndex = imGuiData->IndexBufferReadDescriptor,
+                .VertexOffset = currentVertexOffset + drawCommand->VtxOffset,
+                .IndexOffset = currentIndexOffset + drawCommand->IdxOffset,
+                .IndexCount = drawCommand->ElemCount,
+                .RenderWidth = drawData->DisplaySize.x,
+                .RenderHeight = drawData->DisplaySize.y
+            };
+
+            // TODO: SetScisorTests
+            // TODO: Bug when clicking on the menu
+
+            ElemBindPipelineState(commandList, imGuiData->RenderPipeline); 
+            ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&shaderParameters, .Length = sizeof(ImGuiShaderParameters) });
+
+            uint32_t threadSize = 126;
+            uint32_t dispatchCount = (drawCommand->ElemCount + (threadSize - 1)) / threadSize;
+            ElemDispatchMesh(commandList, dispatchCount, 1, 1);
+        }
 
         memcpy(vertexBufferPointer.Items + currentVertexOffset, imCommandList->VtxBuffer.Data, imCommandList->VtxBuffer.Size * sizeof(ImDrawVert));
         currentVertexOffset += imCommandList->VtxBuffer.Size;
 
         memcpy(indexBufferPointer.Items + currentIndexOffset, imCommandList->IdxBuffer.Data, imCommandList->IdxBuffer.Size * sizeof(ImDrawIdx));
         currentIndexOffset += imCommandList->IdxBuffer.Size;
-
-        ElemBindPipelineState(commandList, imGuiData->RenderPipeline); 
-        ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&shaderParameters, .Length = sizeof(ImGuiShaderParameters) });
-    
-        uint32_t threadSize = 128;
-        //ElemDispatchMesh(commandList, (imCommandList->IdxBuffer.Size / 3 + (threadSize - 1)) / threadSize, 1, 1);
-        ElemDispatchMesh(commandList, 10, 1, 1);
     }
 }
 
@@ -201,6 +230,8 @@ void FreeSample(void* payload)
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
+    
+    ElemInputStream inputStream = ElemGetInputStream();
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -216,7 +247,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    ImGuidElementalNewFrame(updateParameters);
+    ImGuidElementalNewFrame(updateParameters, inputStream);
     igNewFrame();
     igShowDemoWindow(&applicationPayload->ShowImGuiDemoWindow);
     igRender();
