@@ -10,6 +10,18 @@
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
 #endif
 
+#define PRINT_COLOR_BUFFER(buffer, totalWidth) \
+    { \ 
+        auto floatData = (float*)buffer.Items; \
+    \
+        for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \
+        { \
+            auto pixelX = (i / 4) % totalWidth;\
+            auto pixelY = (i / 4) / totalWidth;\
+            printf("Pixel %d [%d, %d]: %f %f %f %f\n", i / 4, pixelX, pixelY, floatData[i], floatData[i + 1], floatData[i + 2], floatData[i + 3]); \
+        } \
+    }
+
 #define ASSERT_LOG_NOERROR() { TestInitLog(); ASSERT_FALSE_MSG(testHasLogErrors, testErrorLogs); }
 #define ASSERT_LOG_MESSAGE(message) { TestInitLog(); ASSERT_TRUE_MSG(strstr(testErrorLogs, message) != NULL, message); }
 #define ASSERT_LOG_MESSAGE_DEBUG(message) { TestInitLog(); ASSERT_TRUE_MSG(strstr(testDebugLogs, message) != NULL, message); }
@@ -24,6 +36,32 @@
             ASSERT_EQ_MSG(floatData[i + 1], green, "Green channel data is invalid."); \
             ASSERT_EQ_MSG(floatData[i + 2], blue, "Blue channel data is invalid."); \
             ASSERT_EQ_MSG(floatData[i + 3], alpha, "Alpha channel data is invalid."); \
+        } \
+    }
+
+#define ASSERT_COLOR_BUFFER_RECTANGLE(buffer, totalWidth, x, y, width, height, red, green, blue, alpha, backgroundRed, backgroundGreen, backgroundBlue, backgroundAlpha) \
+    { \
+        auto floatData = (float*)buffer.Items;\
+    \
+        for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \
+        { \
+            auto pixelX = (i / 4) % totalWidth;\
+            auto pixelY = (i / 4) / totalWidth;\
+    \
+            if (pixelX >= x && pixelX < (x + width) && pixelY >= y && pixelY < (y + height)) \
+            { \
+                ASSERT_EQ_MSG(floatData[i], red, "Red channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 1], green, "Green channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 2], blue, "Blue channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 3], alpha, "Alpha channel data is invalid."); \
+            } \
+            else \
+            { \
+                ASSERT_EQ_MSG(floatData[i], backgroundRed, "Background Red channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 1], backgroundGreen, "Background Green channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 2], backgroundBlue, "Background Blue channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 3], backgroundAlpha, "Background Alpha channel data is invalid."); \
+            } \
         } \
     }
 

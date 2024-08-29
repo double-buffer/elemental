@@ -27,6 +27,22 @@ ElemAPI void ElemSetViewports(ElemCommandList commandList, ElemViewportSpan view
     DispatchGraphicsFunction(SetViewports, commandList, viewports);
 }
 
+ElemAPI void ElemSetScissorRectangle(ElemCommandList commandList, const ElemRectangle* rectangle)
+{
+    ElemRectangleSpan rectangleSpan = 
+    {
+        .Items = (ElemRectangle*)rectangle,
+        .Length = 1
+    };
+
+    DispatchGraphicsFunction(SetScissorRectangles, commandList, rectangleSpan);
+}
+
+ElemAPI void ElemSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles)
+{
+    DispatchGraphicsFunction(SetScissorRectangles, commandList, rectangles);
+}
+
 ElemAPI void ElemDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
 {
     DispatchGraphicsFunction(DispatchMesh, commandList, threadGroupCountX, threadGroupCountY, threadGroupCountZ);

@@ -315,8 +315,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     }
 
     SampleModelViewerInputActions* inputActions = &applicationPayload->InputActions;
+    ElemInputStream inputStream = ElemGetInputStream();
     // TODO: PAss the input stream as a parameter
-    SampleUpdateInputActions(&applicationPayload->InputActionBindings);
+    SampleUpdateInputActions(&applicationPayload->InputActionBindings, inputStream);
 
     if (inputActions->ExitApp)
     {

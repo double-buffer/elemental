@@ -125,6 +125,19 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
 
             ElemSetViewport(commandList, &viewport); 
         }
+        
+        if (i == 0 && parameters->ScissorRectangles.Length == 0)
+        {
+            ElemRectangle rectangle =
+            {
+                .X = 0, 
+                .Y = 0, 
+                .Width = (float)textureData->Width, 
+                .Height = (float)textureData->Height 
+            };
+
+            ElemSetScissorRectangle(commandList, &rectangle); 
+        }
     } 
 
     D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthStencilDesc = {};
@@ -171,6 +184,11 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
     if (parameters->Viewports.Length > 0)
     {
         ElemSetViewports(commandList, parameters->Viewports);
+    }
+
+    if (parameters->ScissorRectangles.Length > 0)
+    {
+        ElemSetScissorRectangles(commandList, parameters->ScissorRectangles);
     }
 
     InsertDirectX12ResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_RenderTarget);
@@ -225,7 +243,6 @@ void DirectX12SetViewports(ElemCommandList commandList, ElemViewportSpan viewpor
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto directX12Viewports = SystemPushArray<D3D12_VIEWPORT>(stackMemoryArena, viewports.Length);
-    auto directX12ScissorRects = SystemPushArray<D3D12_RECT>(stackMemoryArena, viewports.Length);
 
     for (uint32_t i = 0; i < viewports.Length; i++)
     {
@@ -238,20 +255,37 @@ void DirectX12SetViewports(ElemCommandList commandList, ElemViewportSpan viewpor
             .MinDepth = viewports.Items[i].MinDepth,
             .MaxDepth = viewports.Items[i].MaxDepth
         };
-
-        directX12ScissorRects[i] = 
-        {
-            .left = (int32_t)viewports.Items[i].X,
-            .top = (int32_t)viewports.Items[i].Y,
-            .right = (int32_t)viewports.Items[i].X + (int32_t)viewports.Items[i].Width,
-            .bottom = (int32_t)viewports.Items[i].Y + (int32_t)viewports.Items[i].Height
-        };
     }
 
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
 
     commandListData->DeviceObject->RSSetViewports(directX12Viewports.Length, directX12Viewports.Pointer);
+}
+
+void DirectX12SetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles)
+{
+    // TODO: Check command list type != COMPUTE
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto directX12ScissorRects = SystemPushArray<D3D12_RECT>(stackMemoryArena, rectangles.Length);
+
+    for (uint32_t i = 0; i < rectangles.Length; i++)
+    {
+        directX12ScissorRects[i] = 
+        {
+            .left = (int32_t)rectangles.Items[i].X,
+            .top = (int32_t)rectangles.Items[i].Y,
+            .right = (int32_t)rectangles.Items[i].X + (int32_t)rectangles.Items[i].Width,
+            .bottom = (int32_t)rectangles.Items[i].Y + (int32_t)rectangles.Items[i].Height
+        };
+    }
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
     commandListData->DeviceObject->RSSetScissorRects(directX12ScissorRects.Length, directX12ScissorRects.Pointer);
 }
 

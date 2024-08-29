@@ -62,14 +62,15 @@ void ImGuiInitBackend(ApplicationPayload* payload)
     imGuiIO->BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
     //imGuiIO->ConfigFlags |= ImGuiConfigFlags_IsSRGB;
 
-    CreateBuffer(&imGuiData->VertexBuffer, &imGuiData->VertexBufferReadDescriptor, payload, 10000 * sizeof(ImDrawVert));
-    CreateBuffer(&imGuiData->IndexBuffer, &imGuiData->IndexBufferReadDescriptor, payload, 10000 * sizeof(ImDrawIdx));
+    // TODO: Dynamically manage heaps and buffers
+    CreateBuffer(&imGuiData->VertexBuffer, &imGuiData->VertexBufferReadDescriptor, payload, 20000 * sizeof(ImDrawVert));
+    CreateBuffer(&imGuiData->IndexBuffer, &imGuiData->IndexBufferReadDescriptor, payload, 20000 * sizeof(ImDrawIdx));
 
     // TODO: Font 
     uint8_t* fontPixels;
-    uint32_t fontWidth;
-    uint32_t fontHeight;
-    uint32_t fontBytesPerPixel;
+    int32_t fontWidth;
+    int32_t fontHeight;
+    int32_t fontBytesPerPixel;
     ImFontAtlas_GetTexDataAsRGBA32(imGuiIO->Fonts, &fontPixels, &fontWidth, &fontHeight, &fontBytesPerPixel);
 
     payload->ImGuiBackendData.FontTextureId = 1;
@@ -152,7 +153,7 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
 
     for (int32_t i = 0; i < drawData->CmdListsCount; i++)
     {
-        printf("DrawData: Vertexcount = %d, IndexCount=%d\n", drawData->TotalVtxCount, drawData->TotalIdxCount);
+        printf("DrawData: Vertexcount = %d, IndexCount=%d, CommandLists=%d\n", drawData->TotalVtxCount, drawData->TotalIdxCount, drawData->CmdLists.Size);
         ImDrawList* imCommandList = drawData->CmdLists.Data[i];
 
         for (int32_t j = 0; j < imCommandList->CmdBuffer.Size; j++)
@@ -170,21 +171,24 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
                 .RenderHeight = drawData->DisplaySize.y
             };
 
-            // TODO: SetScisorTests
-            // TODO: Bug when clicking on the menu
-
             ElemBindPipelineState(commandList, imGuiData->RenderPipeline); 
             ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&shaderParameters, .Length = sizeof(ImGuiShaderParameters) });
+            ElemSetScissorRectangle(commandList, &(ElemRectangle) { 
+                .X = drawCommand->ClipRect.x * updateParameters->SwapChainInfo.UIScale,
+                .Y = drawCommand->ClipRect.y * updateParameters->SwapChainInfo.UIScale,
+                .Width = (drawCommand->ClipRect.z - drawCommand->ClipRect.x) * updateParameters->SwapChainInfo.UIScale,
+                .Height = (drawCommand->ClipRect.w - drawCommand->ClipRect.y) * updateParameters->SwapChainInfo.UIScale
+            });
 
             uint32_t threadSize = 126;
             uint32_t dispatchCount = (drawCommand->ElemCount + (threadSize - 1)) / threadSize;
             ElemDispatchMesh(commandList, dispatchCount, 1, 1);
         }
 
-        memcpy(vertexBufferPointer.Items + currentVertexOffset, imCommandList->VtxBuffer.Data, imCommandList->VtxBuffer.Size * sizeof(ImDrawVert));
+        memcpy(vertexBufferPointer.Items + currentVertexOffset * sizeof(ImDrawVert), imCommandList->VtxBuffer.Data, imCommandList->VtxBuffer.Size * sizeof(ImDrawVert));
         currentVertexOffset += imCommandList->VtxBuffer.Size;
 
-        memcpy(indexBufferPointer.Items + currentIndexOffset, imCommandList->IdxBuffer.Data, imCommandList->IdxBuffer.Size * sizeof(ImDrawIdx));
+        memcpy(indexBufferPointer.Items + currentIndexOffset * sizeof(ImDrawIdx), imCommandList->IdxBuffer.Data, imCommandList->IdxBuffer.Size * sizeof(ImDrawIdx));
         currentIndexOffset += imCommandList->IdxBuffer.Size;
     }
 }

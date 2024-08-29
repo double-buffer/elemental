@@ -274,7 +274,6 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto vulkanViewports = SystemPushArray<VkViewport>(stackMemoryArena, viewports.Length);
-    auto vulkanScissorRects = SystemPushArray<VkRect2D>(stackMemoryArena, viewports.Length);
 
     for (uint32_t i = 0; i < viewports.Length; i++)
     {
@@ -287,18 +286,36 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
             .minDepth = viewports.Items[i].MinDepth,
             .maxDepth = viewports.Items[i].MaxDepth
         };
+    }
 
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    vkCmdSetViewport(commandListData->DeviceObject, 0, vulkanViewports.Length, vulkanViewports.Pointer);
+}
+
+void VulkanSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles)
+{
+    // TODO: Check command list type != COMPUTE
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto vulkanScissorRects = SystemPushArray<VkRect2D>(stackMemoryArena, rectangles.Length);
+
+    for (uint32_t i = 0; i < rectangles.Length; i++)
+    {
         vulkanScissorRects[i] = 
         {
             .offset = 
             {
-                .x = (int32_t)viewports.Items[i].X,
-                .y = (int32_t)viewports.Items[i].Y,
+                .x = (int32_t)rectangles.Items[i].X,
+                .y = (int32_t)rectangles.Items[i].Y,
             },
             .extent = 
             {
-                .width = (uint32_t)viewports.Items[i].Width,
-                .height = (uint32_t)viewports.Items[i].Height
+                .width = (uint32_t)rectangles.Items[i].Width,
+                .height = (uint32_t)rectangles.Items[i].Height
             }
         };
     }
@@ -306,7 +323,6 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
     auto commandListData = GetVulkanCommandListData(commandList);
     SystemAssert(commandListData);
 
-    vkCmdSetViewport(commandListData->DeviceObject, 0, vulkanViewports.Length, vulkanViewports.Pointer);
     vkCmdSetScissor(commandListData->DeviceObject, 0, vulkanScissorRects.Length, vulkanScissorRects.Pointer);
 }
 

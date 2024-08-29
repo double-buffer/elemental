@@ -804,6 +804,29 @@ typedef struct
     float Alpha; 
 } ElemColor;
 
+typedef struct
+{
+    // X coordinate of the rectangle's top left corner.
+    float X;
+    // Y coordinate of the rectangle's top left corner.
+    float Y;
+    // Width of the rectangle.
+    float Width;
+    // Height of the rectangle.
+    float Height;
+} ElemRectangle;
+
+/**
+ * Represents a collection of rectangles.
+ */
+typedef struct
+{
+    // Pointer to an array of ElemRectangle.
+    ElemRectangle* Items;
+    // Number of items in the array.
+    uint32_t Length;
+} ElemRectangleSpan;
+
 /**
  * Defines a viewport for rendering.
  */
@@ -878,6 +901,8 @@ typedef struct
     ElemRenderPassDepthBufferStencil DepthStencil;
     // Viewports to be used in the render pass.
     ElemViewportSpan Viewports;
+
+    ElemRectangleSpan ScissorRectangles;
 } ElemBeginRenderPassParameters;
 
 /**
@@ -1115,6 +1140,10 @@ ElemAPI void ElemSetViewport(ElemCommandList commandList, const ElemViewport* vi
  * @param viewports A span of viewports to be applied.
  */
 ElemAPI void ElemSetViewports(ElemCommandList commandList, ElemViewportSpan viewports);
+
+ElemAPI void ElemSetScissorRectangle(ElemCommandList commandList, const ElemRectangle* rectangle);
+
+ElemAPI void ElemSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles);
 
 /**
  * Dispatches a mesh shader operation on a command list, specifying the number of thread groups in each dimension.

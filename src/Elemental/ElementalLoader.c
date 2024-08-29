@@ -79,6 +79,8 @@ typedef struct ElementalFunctions
     void (*ElemEndRenderPass)(ElemCommandList);
     void (*ElemSetViewport)(ElemCommandList, ElemViewport const *);
     void (*ElemSetViewports)(ElemCommandList, ElemViewportSpan);
+    void (*ElemSetScissorRectangle)(ElemCommandList, ElemRectangle const *);
+    void (*ElemSetScissorRectangles)(ElemCommandList, ElemRectangleSpan);
     void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
     ElemInputDeviceInfo (*ElemGetInputDeviceInfo)(ElemInputDevice);
     ElemInputStream (*ElemGetInputStream)(void);
@@ -190,6 +192,8 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
     listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, ElemViewport const *))GetElementalFunctionPointer("ElemSetViewport");
     listElementalFunctions.ElemSetViewports = (void (*)(ElemCommandList, ElemViewportSpan))GetElementalFunctionPointer("ElemSetViewports");
+    listElementalFunctions.ElemSetScissorRectangle = (void (*)(ElemCommandList, ElemRectangle const *))GetElementalFunctionPointer("ElemSetScissorRectangle");
+    listElementalFunctions.ElemSetScissorRectangles = (void (*)(ElemCommandList, ElemRectangleSpan))GetElementalFunctionPointer("ElemSetScissorRectangles");
     listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
     listElementalFunctions.ElemGetInputDeviceInfo = (ElemInputDeviceInfo (*)(ElemInputDevice))GetElementalFunctionPointer("ElemGetInputDeviceInfo");
     listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(void))GetElementalFunctionPointer("ElemGetInputStream");
@@ -1600,6 +1604,40 @@ static inline void ElemSetViewports(ElemCommandList commandList, ElemViewportSpa
     }
 
     listElementalFunctions.ElemSetViewports(commandList, viewports);
+}
+
+static inline void ElemSetScissorRectangle(ElemCommandList commandList, ElemRectangle const * rectangle)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemSetScissorRectangle) 
+    {
+        assert(listElementalFunctions.ElemSetScissorRectangle);
+        return;
+    }
+
+    listElementalFunctions.ElemSetScissorRectangle(commandList, rectangle);
+}
+
+static inline void ElemSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemSetScissorRectangles) 
+    {
+        assert(listElementalFunctions.ElemSetScissorRectangles);
+        return;
+    }
+
+    listElementalFunctions.ElemSetScissorRectangles(commandList, rectangles);
 }
 
 static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int threadGroupCountX, unsigned int threadGroupCountY, unsigned int threadGroupCountZ)

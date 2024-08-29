@@ -97,10 +97,8 @@ void SampleRegisterInputActionBinding(SampleInputActionBindingSpan* bindings, El
     };
 }
 
-void SampleUpdateInputActions(SampleInputActionBindingSpan* inputActionBindings)
+void SampleUpdateInputActions(SampleInputActionBindingSpan* inputActionBindings, ElemInputStream inputStream)
 {
-    ElemInputStream inputStream = ElemGetInputStream();
-
     for (uint32_t i = 0; i < inputActionBindings->Length; i++)
     {
         SampleInputActionBinding binding = inputActionBindings->Items[i];

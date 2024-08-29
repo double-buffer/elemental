@@ -257,8 +257,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     applicationPayload->ShaderParameters.RenderTextureIndex = applicationPayload->RenderTextureWriteDescriptor;
 
+    ElemInputStream inputStream = ElemGetInputStream();
     SampleStandardInputActions* inputActions = &applicationPayload->InputActions;
-    SampleUpdateInputActions(&applicationPayload->InputActionBindings);
+    SampleUpdateInputActions(&applicationPayload->InputActionBindings, inputStream);
 
     if (inputActions->ExitApp)
     {

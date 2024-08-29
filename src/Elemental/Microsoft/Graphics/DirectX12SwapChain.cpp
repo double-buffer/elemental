@@ -194,6 +194,12 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
 
         // TODO: If delta time is above a thresold, take the delta time based on target FPS
         auto deltaTime = vSyncDelta * refreshInterval;//(nextVSyncQPCTime.QuadPart - swapChainData->PreviousTargetPresentationTimestamp.QuadPart) / ticksPerSecond;
+
+        if (deltaTime <= 0.0f)
+        {
+            deltaTime = 1.0f / 60.0f;
+        }
+
         swapChainData->PreviousTargetPresentationTimestamp = nextVSyncQPCTime;
 
         if (vSyncDelta > 1)
