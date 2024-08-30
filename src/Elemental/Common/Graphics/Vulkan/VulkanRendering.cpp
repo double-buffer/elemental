@@ -129,6 +129,8 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
 
                 ElemSetViewport(commandList, &viewport); 
             }
+
+            // TODO: Check this because normally the tests should fail
         }
     }
 
