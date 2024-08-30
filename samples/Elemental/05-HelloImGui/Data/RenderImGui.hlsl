@@ -46,7 +46,8 @@ void MeshMain(in uint groupId: SV_GroupID,
               out vertices VertexOutput vertices[MAX_VERTEX_COUNT], 
               out indices uint3 indices[MAX_VERTEX_COUNT / 3])
 {
-    // TODO: For the moment we process several time the same vertices
+    // TODO: For the moment we process several time the same vertices because we don't have
+    // unique indices for the meshlet
     uint vertexCount = min(MAX_VERTEX_COUNT, parameters.IndexCount - groupId * MAX_VERTEX_COUNT);
     uint triangleCount = vertexCount / 3;
     SetMeshOutputCounts(vertexCount, triangleCount);

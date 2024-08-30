@@ -136,6 +136,12 @@ void ImGuidElementalNewFrame(const ElemSwapChainUpdateParameters* updateParamete
         {
             ImGuiIO_AddMouseButtonEvent(imGuiIO, ImGuiMouseButton_Left, inputEvent->Value);
         }
+
+        if (inputEvent->InputId == ElemInputId_MouseWheelNegative || inputEvent->InputId == ElemInputId_MouseWheelPositive)
+        {
+            // TODO: Input wheel should maybe normalized to one?
+            ImGuiIO_AddMouseWheelEvent(imGuiIO, 0.0f, (inputEvent->InputId == ElemInputId_MouseWheelPositive ? inputEvent->Value : -inputEvent->Value) / 10.0f);
+        }
     }
 
     //imGuiIO->ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts | ImGuiConfigFlags_DpiEnableScaleViewports;
@@ -153,7 +159,6 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
 
     for (int32_t i = 0; i < drawData->CmdListsCount; i++)
     {
-        printf("DrawData: Vertexcount = %d, IndexCount=%d, CommandLists=%d\n", drawData->TotalVtxCount, drawData->TotalIdxCount, drawData->CmdLists.Size);
         ImDrawList* imCommandList = drawData->CmdLists.Data[i];
 
         for (int32_t j = 0; j < imCommandList->CmdBuffer.Size; j++)
