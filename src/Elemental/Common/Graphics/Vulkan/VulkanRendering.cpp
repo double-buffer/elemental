@@ -129,14 +129,20 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
 
                 ElemSetViewport(commandList, &viewport); 
             }
+        
+            if (i == 0 && parameters->ScissorRectangles.Length == 0)
+            {
+                ElemRectangle rectangle =
+                {
+                    .X = 0, 
+                    .Y = 0, 
+                    .Width = (float)textureData->Width, 
+                    .Height = (float)textureData->Height 
+                };
 
-            // TODO: Check this because normally the tests should fail
+                ElemSetScissorRectangle(commandList, &rectangle); 
+            }
         }
-    }
-
-    if (parameters->Viewports.Length > 0)
-    {
-        ElemSetViewports(commandList, parameters->Viewports);
     }
     
     if (parameters->DepthStencil.DepthStencil != ELEM_HANDLE_NULL)
@@ -184,6 +190,16 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         };
 
         EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
+    }
+
+    if (parameters->Viewports.Length > 0)
+    {
+        ElemSetViewports(commandList, parameters->Viewports);
+    }
+    
+    if (parameters->ScissorRectangles.Length > 0)
+    {
+        ElemSetScissorRectangles(commandList, parameters->ScissorRectangles);
     }
     
     SystemAssert(renderingWidth != 0 && renderingHeight != 0);
