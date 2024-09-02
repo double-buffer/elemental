@@ -298,6 +298,8 @@ typedef ElemHandle ElemCommandQueue;
  */
 typedef ElemHandle ElemCommandList;
 
+typedef ElemHandle ElemIOCommandQueue;
+
 /**
  * Handle that represents a swap chain.
  */
@@ -351,6 +353,12 @@ typedef enum
     // Command queue for compute operations.
     ElemCommandQueueType_Compute = 1
 } ElemCommandQueueType;
+
+typedef enum
+{
+    ElemIOCommandType_File = 0,
+    ElemIOCommandType_Memory = 1
+} ElemIOCommandType;
 
 /**
  * Enumerates swap chain formats.
@@ -572,6 +580,12 @@ typedef struct
     const char* DebugName;
 } ElemCommandListOptions;
 
+typedef struct
+{
+    // Optional debug name for the command queue.
+    const char* DebugName;
+} ElemIOCommandQueueOptions;
+
 /**
  * Represents a fence for command list synchronization.
  */
@@ -613,6 +627,11 @@ typedef struct
     // Fences that the execution should wait on before starting.
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
+
+typedef struct
+{
+    ElemIOCommandType IOCommandType; 
+} ElemIOCommandParameters;
 
 /**
  * Options for configuring a swap chain.
@@ -995,6 +1014,13 @@ ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemComm
  * @return A fence indicating the completion state of the command lists' execution.
  */
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
+
+ElemAPI ElemIOCommandQueue ElemCreateIOCommandQueue(const ElemIOCommandQueueOptions* options);
+ElemAPI void ElemFreeIOCommandQueue(ElemIOCommandQueue ioQueue);
+ElemAPI void ElemEnqueueIOCommand(ElemIOCommandQueue ioCommandQueue, const ElemIOCommandParameters* parameters);
+ElemAPI ElemFence ElemSubmitIOCommandQueue();
+
+ElemAPI ElemFence ElemExecuteIOCommands();
 
 /**
  * Waits for a fence to reach its signaled state on the CPU, effectively synchronizing CPU and GPU operations.
