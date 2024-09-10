@@ -2,7 +2,8 @@ struct ShaderParameters
 {
     uint32_t RenderTextureIndex;
     float Zoom;
-    float3x3 Transform;
+    float2 Reserved;
+    float4x4 Transform;
 };
 
 [[vk::push_constant]]

@@ -101,10 +101,10 @@ void CreateAndUploadDataTemp(ElemGraphicsResource* buffer, ElemGraphicsResourceD
     *buffer = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, applicationPayload->CurrentHeapOffset, &bufferDescription);
     applicationPayload->CurrentHeapOffset += bufferDescription.SizeInBytes;
 
+    *readDescriptor = ElemCreateGraphicsResourceDescriptor(*buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+
     ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(*buffer);
     memcpy(vertexBufferPointer.Items, dataPointer, sizeInBytes);
-
-    *readDescriptor = ElemCreateGraphicsResourceDescriptor(*buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 }
 
 void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicationPayload)
@@ -151,6 +151,7 @@ void InitSample(void* payload)
     applicationPayload->DepthBufferHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
 
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
+    // TODO: Having GPU Upload is still annoying 😞
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);

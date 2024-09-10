@@ -108,6 +108,9 @@ void ImGuiInitBackend(ApplicationPayload* payload)
 
 void ImGuidElementalNewFrame(const ElemSwapChainUpdateParameters* updateParameters, const ElemInputStream inputStream)
 {
+    // TODO: Investigate: https://github.com/ocornut/imgui/releases/tag/v1.91.1
+    //ImGuiPlatformIO* imGuiPlatformIO = igGetPlatformIO();
+
     ImGuiIO* imGuiIO = igGetIO();
 
     imGuiIO->DisplaySize = (ImVec2)

@@ -231,7 +231,8 @@ ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uin
 
     VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     allocateInfo.allocationSize = sizeInBytes;
-    allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuMemoryTypeIndex;
+    //allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuMemoryTypeIndex;
+    allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuUploadMemoryTypeIndex;
 
     if (options)
     {
