@@ -51,10 +51,16 @@ typedef struct
     ElemGraphicsResourceDescriptor MeshletTriangleIndexBufferReadDescriptor;
 } MeshData;
 
-// TODO: Group common variables into separate structs
 typedef struct
 {
     bool PreferVulkan;
+    bool PreferFullScreen;
+} SampleAppSettings;
+
+// TODO: Group common variables into separate structs
+typedef struct
+{
+    SampleAppSettings AppSettings;
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
@@ -138,9 +144,9 @@ void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicat
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-    applicationPayload->Window = ElemCreateWindow(NULL);
+    applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .WindowState = applicationPayload->AppSettings.PreferFullScreen ? ElemWindowState_FullScreen : ElemWindowState_Normal });
 
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .EnableGpuValidation = false, .EnableDebugBarrierInfo = false, .PreferVulkan = applicationPayload->PreferVulkan });
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .EnableGpuValidation = false, .EnableDebugBarrierInfo = false, .PreferVulkan = applicationPayload->AppSettings.PreferVulkan });
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
     applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
@@ -157,7 +163,7 @@ void InitSample(void* payload)
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     LoadMesh(&applicationPayload->TestMeshData, "kitten.mesh", applicationPayload);
 
-    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
+    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
 
     applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
@@ -391,19 +397,28 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
 int main(int argc, const char* argv[]) 
 {
-    bool preferVulkan = false;
+    // TODO: Extract arguments parsing code to sample
+    SampleAppSettings appSettings = {};
 
-    if (argc > 1 && strcmp(argv[1], "--vulkan") == 0)
+    for (int32_t i = 1; i < argc; i++)
     {
-        preferVulkan = true;
-    }
+        if (strcmp(argv[i], "--vulkan") == 0)
+        {
+            appSettings.PreferVulkan = true;
+        }
 
-    ElemConfigureLogHandler(ElemConsoleLogHandler);
+        if (strcmp(argv[i], "--fullscreen") == 0)
+        {
+            appSettings.PreferFullScreen = true;
+        }
+    }
 
     ApplicationPayload payload =
     {
-        .PreferVulkan = preferVulkan
+        .AppSettings = appSettings
     };
+
+    ElemConfigureLogHandler(ElemConsoleLogHandler);
 
     ElemRunApplication(&(ElemRunApplicationParameters)
     {

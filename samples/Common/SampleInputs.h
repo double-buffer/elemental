@@ -191,6 +191,7 @@ void SampleRegisterStandardInputBindings(SampleInputActionBindingSpan* inputActi
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadLeftShoulder, 0, SampleInputActionBindingType_Value, &inputActions->ZoomOut);
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadRightShoulder, 0, SampleInputActionBindingType_Value, &inputActions->ZoomIn);
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadButtonA, 0, SampleInputActionBindingType_Value, &inputActions->Action1);
+    SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadButtonB, 0, SampleInputActionBindingType_Released, &inputActions->ExitApp);
 
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputId_Touch, 0, SampleInputActionBindingType_Value, &inputActions->Touch);
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputId_TouchXNegative, 0, SampleInputActionBindingType_Value, &inputActions->TouchTranslateLeft);
@@ -242,6 +243,7 @@ void SampleRegisterModelViewerInputBindings(SampleInputActionBindingSpan* inputA
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadLeftShoulder, 0, SampleInputActionBindingType_Value, &inputActions->ZoomOut);
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadRightShoulder, 0, SampleInputActionBindingType_Value, &inputActions->ZoomIn);
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadButtonA, 0, SampleInputActionBindingType_Value, &inputActions->TriangleColor);
+    SampleRegisterInputActionBinding(inputActionBindings, ElemInputID_GamepadButtonB, 0, SampleInputActionBindingType_Released, &inputActions->ExitApp);
 
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputId_Touch, 0, SampleInputActionBindingType_Value, &inputActions->Touch);
     SampleRegisterInputActionBinding(inputActionBindings, ElemInputId_TouchXNegative, 0, SampleInputActionBindingType_Value, &inputActions->TouchRotateLeft);

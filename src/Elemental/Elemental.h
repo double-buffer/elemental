@@ -184,6 +184,8 @@ typedef struct
     float UIScale;
     // Current state of the window.
     ElemWindowState WindowState;
+    // TODO: Return refresh rate
+    // TODO: Return an ElemMonitor so that we can get the info about the monitor
 } ElemWindowSize;
 
 // TODO: Comments
@@ -272,6 +274,8 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
  * @param windowState New state for the window.
  */
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
+
+// TODO: Function to get monitor infos
 
 // TODO: Comments
 // TODO: Make sure the coordinates are consistent accross all platforms

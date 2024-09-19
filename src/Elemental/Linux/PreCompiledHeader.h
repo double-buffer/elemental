@@ -33,7 +33,6 @@
 typedef signed int HRESULT;
 #define SUCCEEDED(Status) ((HRESULT)(Status) >= 0)
 #define ElemAPI extern "C" __attribute__((visibility("default")))
-#define PackedStruct struct __attribute__((__packed__))
 #define AssertIfFailed(expression) SystemAssert(SUCCEEDED((expression)))
 #define AssertIfFailedReturnNullHandle(expression) SystemAssertReturnNullHandle(SUCCEEDED((expression)))
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))

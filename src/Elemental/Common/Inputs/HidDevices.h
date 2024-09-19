@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Elemental.h"
+#include "../Elemental.h"
 #include "SystemSpan.h"
 
 bool IsHidDeviceSupported(uint32_t vendorId, uint32_t productId);
