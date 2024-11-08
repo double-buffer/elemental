@@ -1,18 +1,9 @@
-#include <math.h>
 #include "Elemental.h"
 #include "SampleUtils.h"
 #include "SampleMath.h"
-#include "SampleInputs.h"
+#include "SampleApplicationInputs.h"
+#include "SampleModelViewerInputs.h"
 #include "SampleMesh.h"
-
-#define ROTATION_TOUCH_DECREASE_SPEED 0.001f
-#define ROTATION_TOUCH_SPEED 4.0f
-#define ROTATION_TOUCH_MAX_DELTA 0.3f
-#define ROTATION_MULTITOUCH_SPEED 200.0f
-#define ROTATION_ACCELERATION 500.0f
-#define ROTATION_FRICTION 60.0f
-#define ZOOM_MULTITOUCH_SPEED 1000.0f
-#define ZOOM_SPEED 5.0f
 
 typedef struct
 {
@@ -23,20 +14,9 @@ typedef struct
     SampleVector4 RotationQuaternion;
     float Zoom;
     float AspectRatio;
-    uint32_t TriangeColor;
+    uint32_t ShowMeshlets;
     uint32_t MeshletCount;
 } ShaderParameters;
-
-// TODO: Extract from the gamestate the inputState
-typedef struct
-{
-    SampleVector3 RotationDelta;
-    SampleVector2 RotationTouch;
-    SampleVector3 CurrentRotationSpeed;
-    float PreviousTouchDistance;
-    float PreviousTouchAngle;
-    float Zoom;
-} GameState;
 
 typedef struct
 {
@@ -50,12 +30,6 @@ typedef struct
     ElemGraphicsResource MeshletTriangleIndexBuffer;
     ElemGraphicsResourceDescriptor MeshletTriangleIndexBufferReadDescriptor;
 } MeshData;
-
-typedef struct
-{
-    bool PreferVulkan;
-    bool PreferFullScreen;
-} SampleAppSettings;
 
 // TODO: Group common variables into separate structs
 typedef struct
@@ -72,9 +46,8 @@ typedef struct
     ElemGraphicsResource DepthBuffer;
     ElemPipelineState GraphicsPipeline;
     ShaderParameters ShaderParameters;
-    SampleModelViewerInputActions InputActions;
-    SampleInputActionBindingSpan InputActionBindings;
-    GameState GameState;
+    SampleApplicationInputs ApplicationInputs;
+    SampleModelViewerInputs ModelViewerInputs;
     MeshData TestMeshData;
 } ApplicationPayload;
     
@@ -141,12 +114,33 @@ void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicat
     applicationPayload->ShaderParameters.MeshletCount = meshData->MeshletCount;
 }
 
+void FreeMesh(MeshData* meshData)
+{
+    ElemFreeGraphicsResourceDescriptor(meshData->VertexBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(meshData->VertexBuffer, NULL);
+    ElemFreeGraphicsResourceDescriptor(meshData->MeshletBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(meshData->MeshletBuffer, NULL);
+    ElemFreeGraphicsResourceDescriptor(meshData->MeshletVertexIndexBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(meshData->MeshletVertexIndexBuffer, NULL);
+    ElemFreeGraphicsResourceDescriptor(meshData->MeshletTriangleIndexBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(meshData->MeshletTriangleIndexBuffer, NULL);
+}
+
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .WindowState = applicationPayload->AppSettings.PreferFullScreen ? ElemWindowState_FullScreen : ElemWindowState_Normal });
 
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .EnableGpuValidation = false, .EnableDebugBarrierInfo = false, .PreferVulkan = applicationPayload->AppSettings.PreferVulkan });
+    
+    // TODO: Debug why the AMD integrated GPU is not create at all
+    ElemGraphicsDeviceInfoSpan devices = ElemGetAvailableGraphicsDevices();
+    
+    for (uint32_t i = 0; i < devices.Length; i++)
+    {
+        printf("Device: %s\n", devices.Items[i].DeviceName);
+    }
+
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
     applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
@@ -182,10 +176,16 @@ void InitSample(void* payload)
     ElemFreeShaderLibrary(shaderLibrary);
 
     applicationPayload->ShaderParameters.RotationQuaternion = (SampleVector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
-    applicationPayload->InputActions.ShowCursor = true;
 
-    SampleRegisterModelViewerInputBindings(&applicationPayload->InputActionBindings, &applicationPayload->InputActions);
+    SampleApplicationInputsInit(&applicationPayload->ApplicationInputs);
+    SampleModelViewerInputsInit(&applicationPayload->ModelViewerInputs);
     
+    if (applicationPayload->AppSettings.PreferFullScreen)
+    {
+        ElemHideWindowCursor(applicationPayload->Window);
+        applicationPayload->ApplicationInputs.State.IsCursorDisplayed = false;
+    }
+
     SampleStartFrameMeasurement();
 }
 
@@ -195,121 +195,17 @@ void FreeSample(void* payload)
 
     ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
 
+    FreeMesh(&applicationPayload->TestMeshData);
+
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
  
-    // Free Mesh
-    ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.VertexBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(applicationPayload->TestMeshData.VertexBuffer, NULL);
-    ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.MeshletBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletBuffer, NULL);
-    ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.MeshletVertexIndexBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletVertexIndexBuffer, NULL);
-    ElemFreeGraphicsResourceDescriptor(applicationPayload->TestMeshData.MeshletTriangleIndexBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(applicationPayload->TestMeshData.MeshletTriangleIndexBuffer, NULL);
-
     ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
     ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
 
     ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
-}
-
-void ResetTouchParameters(GameState* gameState) 
-{
-    gameState->RotationTouch = V2Zero;
-    gameState->PreviousTouchDistance = 0.0f;
-    gameState->PreviousTouchAngle = 0.0f;   
-}
-
-// TODO: Extract model view gamestate update
-void UpdateGameState(GameState* gameState, SampleModelViewerInputActions* inputActions, float deltaTimeInSeconds)
-{
-    gameState->RotationDelta = V3Zero; 
-
-    if (inputActions->Touch)
-    {
-        if (inputActions->Touch2)
-        {
-            SampleVector2 touchPosition = (SampleVector2) { inputActions->TouchPositionX, inputActions->TouchPositionY };
-            SampleVector2 touchPosition2 = (SampleVector2) { inputActions->Touch2PositionX, inputActions->Touch2PositionY };
-
-            SampleVector2 diffVector = SampleSubstractV2(touchPosition, touchPosition2);
-            float distance = SampleMagnitudeV2(diffVector);
-            float angle = atan2(diffVector.X, diffVector.Y);
-
-            if (gameState->PreviousTouchDistance != 0.0f)
-            {
-                gameState->Zoom += (distance - gameState->PreviousTouchDistance) * ZOOM_MULTITOUCH_SPEED * deltaTimeInSeconds;
-            }
-
-            if (gameState->PreviousTouchAngle != 0.0f)
-            {
-                gameState->RotationDelta.Z = -SampleNormalizeAngle(angle - gameState->PreviousTouchAngle) * ROTATION_MULTITOUCH_SPEED * deltaTimeInSeconds;
-            }
-
-            gameState->PreviousTouchDistance = distance;
-            gameState->PreviousTouchAngle = angle;
-        }
-        else 
-        {
-            ResetTouchParameters(gameState);
-
-            gameState->RotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-            gameState->RotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-        }
-    }
-    else if (inputActions->TouchRotateSide)
-    {
-        ResetTouchParameters(gameState);
-        gameState->RotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-    }
-    else if (inputActions->TouchReleased && !inputActions->Touch2)
-    {
-        ResetTouchParameters(gameState);
-
-        gameState->RotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-        gameState->RotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
-    }
-    else
-    {
-        SampleVector3 direction = SampleNormalizeV3((SampleVector3) 
-        { 
-            .X = (inputActions->RotateUp - inputActions->RotateDown),
-            .Y = (inputActions->RotateLeft - inputActions->RotateRight),
-            .Z = (inputActions->RotateSideLeft - inputActions->RotateSideRight)
-        });
-
-        if (SampleMagnitudeSquaredV3(direction))
-        {
-            SampleVector3 acceleration = SampleAddV3(SampleMulScalarV3(direction, ROTATION_ACCELERATION), SampleMulScalarV3(SampleInverseV3(gameState->CurrentRotationSpeed), ROTATION_FRICTION));
-
-            ResetTouchParameters(gameState);
-            gameState->RotationDelta = SampleAddV3(SampleMulScalarV3(acceleration, 0.5f * SamplePow2f(deltaTimeInSeconds)), SampleMulScalarV3(gameState->CurrentRotationSpeed, deltaTimeInSeconds));
-            gameState->CurrentRotationSpeed = SampleAddV3(SampleMulScalarV3(acceleration, deltaTimeInSeconds), gameState->CurrentRotationSpeed);
-        }
-    }
-
-    if (SampleMagnitudeSquaredV2(gameState->RotationTouch) > 0)
-    {
-        if (SampleMagnitudeV2(gameState->RotationTouch) > ROTATION_TOUCH_MAX_DELTA)
-        {
-            gameState->RotationTouch = SampleMulScalarV2(SampleNormalizeV2(gameState->RotationTouch), ROTATION_TOUCH_MAX_DELTA);
-        }
-
-        gameState->RotationDelta = SampleAddV3(gameState->RotationDelta, (SampleVector3){ gameState->RotationTouch.X, gameState->RotationTouch.Y, 0.0f });
-
-        SampleVector2 inverse = SampleMulScalarV2(SampleNormalizeV2(SampleInverseV2(gameState->RotationTouch)), ROTATION_TOUCH_DECREASE_SPEED);
-        gameState->RotationTouch = SampleAddV2(gameState->RotationTouch, inverse);
-
-        if (SampleMagnitudeV2(gameState->RotationTouch) < 0.001f)
-        {
-            ResetTouchParameters(gameState);
-        }
-    }
-
-    gameState->Zoom += (inputActions->ZoomIn - inputActions->ZoomOut) * ZOOM_SPEED * deltaTimeInSeconds; 
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
@@ -321,41 +217,42 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         CreateDepthBuffer(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
     }
 
-    SampleModelViewerInputActions* inputActions = &applicationPayload->InputActions;
     ElemInputStream inputStream = ElemGetInputStream();
-    // TODO: PAss the input stream as a parameter
-    SampleUpdateInputActions(&applicationPayload->InputActionBindings, inputStream);
 
-    if (inputActions->ExitApp)
+    SampleApplicationInputsUpdate(inputStream, &applicationPayload->ApplicationInputs, updateParameters->DeltaTimeInSeconds);
+    SampleModelViewerInputsUpdate(inputStream, &applicationPayload->ModelViewerInputs, updateParameters->DeltaTimeInSeconds);
+
+    if (applicationPayload->ApplicationInputs.State.ExitApplication)
     {
         ElemExitApplication(0);
     }
 
-    if (inputActions->ShowCursor)
+    if (applicationPayload->ApplicationInputs.State.ShowCursor)
     {
+        printf("Show cursor\n");
         ElemShowWindowCursor(applicationPayload->Window);
     }
-    else
+    else if (applicationPayload->ApplicationInputs.State.HideCursor)
     {
-        ElemHideWindowCursor(applicationPayload->Window);
-    }
+        printf("Hide cursor\n");
+        ElemHideWindowCursor(applicationPayload->Window); 
+    } 
 
-    GameState* gameState = &applicationPayload->GameState;
-    UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
+    SampleModelViewerInputState* modelViewerState = &applicationPayload->ModelViewerInputs.State;
 
-    if (SampleMagnitudeSquaredV3(gameState->RotationDelta))
+    if (SampleMagnitudeSquaredV3(modelViewerState->RotationDelta))
     {
-        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 1, 0, 0 }, gameState->RotationDelta.X), 
-                                                         SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 0, 0, 1 }, gameState->RotationDelta.Z),
-                                                                       SampleCreateQuaternion((SampleVector3){ 0, 1, 0 }, gameState->RotationDelta.Y)));
+        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 1, 0, 0 }, modelViewerState->RotationDelta.X), 
+                                                         SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 0, 0, 1 }, modelViewerState->RotationDelta.Z),
+                                                                       SampleCreateQuaternion((SampleVector3){ 0, 1, 0 }, modelViewerState->RotationDelta.Y)));
 
         applicationPayload->ShaderParameters.RotationQuaternion = SampleMulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
 
     applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
     float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
-    applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, gameState->Zoom);
-    applicationPayload->ShaderParameters.TriangeColor = inputActions->TriangleColor;
+    applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, modelViewerState->Zoom);
+    applicationPayload->ShaderParameters.ShowMeshlets = modelViewerState->Action;
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -397,25 +294,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
 int main(int argc, const char* argv[]) 
 {
-    // TODO: Extract arguments parsing code to sample
-    SampleAppSettings appSettings = {};
-
-    for (int32_t i = 1; i < argc; i++)
-    {
-        if (strcmp(argv[i], "--vulkan") == 0)
-        {
-            appSettings.PreferVulkan = true;
-        }
-
-        if (strcmp(argv[i], "--fullscreen") == 0)
-        {
-            appSettings.PreferFullScreen = true;
-        }
-    }
-
     ApplicationPayload payload =
     {
-        .AppSettings = appSettings
+        .AppSettings = SampleParseAppSettings(argc, argv)
     };
 
     ElemConfigureLogHandler(ElemConsoleLogHandler);

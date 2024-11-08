@@ -1,6 +1,7 @@
 #include "HidDevices.h"
 #include "HidUtils.h"
 #include "HidSwitchGamepad.h"
+#include "HidDualSenseGamepad.h"
 #include "Inputs.h"
 #include "SystemFunctions.h"
 
@@ -318,6 +319,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     });
 }
 
+/*
 void ProcessDualSenseGamepadReport(ElemWindow window, ElemInputDevice inputDevice, ReadOnlySpan<uint8_t> hidReport, double elapsedSeconds)
 {
     auto reportId = hidReport[0];
@@ -458,15 +460,15 @@ void ProcessDualSenseGamepadReport(ElemWindow window, ElemInputDevice inputDevic
         .InputType = ElemInputType_Digital,
         .Value = (inputReport->Buttons & 0x20) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
-    });*/
-}
+    });
+}*/
 
 HidGamepadHandler HidGamepadHandlers[] =
 {
     { .Vendor = HidGamepadVendor_Microsoft, .Product = HidGamepadProduct_XboxOneWirelessOldDriver, .ProcessDataHandler = ProcessXboxOneWirelessOldDriverGamepadReport },
     { .Vendor = HidGamepadVendor_Microsoft, .Product = HidGamepadProduct_XboxOneUsb, .ProcessDataHandler = ProcessXboxOneWirelessOldDriverGamepadReport },
     { .Vendor = HidGamepadVendor_Microsoft, .Product = HidGamepadProduct_XboxOneWireless, .ProcessDataHandler = ProcessXboxOneWirelessGamepadReport },
-    { .Vendor = HidGamepadVendor_Sony, .Product = HidGamepadProduct_DualSense, .ProcessDataHandler = ProcessDualSenseGamepadReport },
+    { .Vendor = HidGamepadVendor_Sony, .Product = HidGamepadProduct_DualSense, .ProcessDataHandler = ProcessHidDualSenseGamepadInputReport },
     { .Vendor = HidGamepadVendor_Nintendo, .Product = HidGamepadProduct_SwitchPro, .ProcessDataHandler = ProcessHidSwitchGamepadInputReport }
 };
 

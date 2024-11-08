@@ -7,7 +7,7 @@ struct ShaderParameters
     float4 RotationQuaternion;
     float Zoom;
     float AspectRatio;
-    uint32_t TriangleColor;
+    uint32_t ShowMeshlets;
     uint32_t MeshletCount;
 };
 
@@ -139,7 +139,7 @@ uint hash(uint a)
 [shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
-    if (parameters.TriangleColor == 0)
+    if (parameters.ShowMeshlets == 0)
     {
         return float4(normalize(input.WorldNormal) * 0.5 + 0.5, 1.0);
     }

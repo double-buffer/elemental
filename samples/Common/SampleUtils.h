@@ -446,3 +446,34 @@ SampleFrameMeasurement SampleEndFrameMeasurement(void)
         .HasNewData = newData
     };
 }
+
+
+// -----------------------------------------------------------------------------
+// Settings Functions
+// -----------------------------------------------------------------------------
+
+typedef struct
+{
+    bool PreferVulkan;
+    bool PreferFullScreen;
+} SampleAppSettings;
+
+SampleAppSettings SampleParseAppSettings(int argc, const char* argv[])
+{
+    SampleAppSettings appSettings = {};
+
+    for (int32_t i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--vulkan") == 0)
+        {
+            appSettings.PreferVulkan = true;
+        }
+
+        if (strcmp(argv[i], "--fullscreen") == 0)
+        {
+            appSettings.PreferFullScreen = true;
+        }
+    }
+    
+    return appSettings;
+}

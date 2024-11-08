@@ -343,6 +343,7 @@ ElemAPI void ElemFreeWindow(ElemWindow window)
     SystemRemoveDataPoolItem(windowDataPool, window);
 }
 
+// BUG: We have a bug when we switch to the TV with the refresh rate
 ElemAPI ElemWindowSize ElemGetWindowRenderSize(ElemWindow window)
 {
     SystemAssert(window != ELEM_HANDLE_NULL);

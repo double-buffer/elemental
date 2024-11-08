@@ -277,6 +277,9 @@ ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
 
 // TODO: Function to get monitor infos
 
+// TODO: We need to be able to detect if the window is in focus mode. When a game loose focus, 
+// it should be able to disable mouse tracking (for camera etc.)
+
 // TODO: Comments
 // TODO: Make sure the coordinates are consistent accross all platforms
 ElemAPI void ElemShowWindowCursor(ElemWindow window);
@@ -378,6 +381,7 @@ typedef enum
 typedef enum
 {
     ElemGraphicsHeapType_Gpu = 0,
+    // TODO: Get rid of this?
     ElemGraphicsHeapType_GpuUpload = 1,
     ElemGraphicsHeapType_Readback = 2
 } ElemGraphicsHeapType;
@@ -1019,6 +1023,7 @@ ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemComm
  */
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 
+// TODO: Still in draft!
 ElemAPI ElemIOCommandQueue ElemCreateIOCommandQueue(const ElemIOCommandQueueOptions* options);
 ElemAPI void ElemFreeIOCommandQueue(ElemIOCommandQueue ioQueue);
 ElemAPI void ElemEnqueueIOCommand(ElemIOCommandQueue ioCommandQueue, const ElemIOCommandParameters* parameters);
@@ -1334,7 +1339,7 @@ typedef enum
     ElemInputID_GamepadButtonB = 119,
     ElemInputID_GamepadButtonX = 120,
     ElemInputID_GamepadButtonY = 121,
-    ElemInputID_GamepadButtonMenu = 122,
+    ElemInputID_GamepadButtonShare = 122,
     ElemInputID_GamepadButtonOptions = 123,
     ElemInputID_GamepadButtonHome = 124,
     ElemInputID_GamepadLeftShoulder = 125,

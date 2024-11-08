@@ -30,6 +30,7 @@ typedef struct
     float PreviousTouchDistance;
     float PreviousTouchAngle;
     float Zoom;
+    bool IsCursorDisplayed;
 } GameState;
 
 // TODO: Group common variables into separate structs
@@ -124,7 +125,6 @@ void InitSample(void* payload)
     ElemFreeShaderLibrary(shaderLibrary);
 
     applicationPayload->ShaderParameters.Transform = SampleCreateIdentityMatrix();
-    applicationPayload->InputActions.ShowCursor = true;
     applicationPayload->GameState.Zoom = 1.0f;
     applicationPayload->GameState.RotationDelta = 0.0f;
 
@@ -266,16 +266,20 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemExitApplication(0);
     }
 
-    if (inputActions->ShowCursor)
+    GameState* gameState = &applicationPayload->GameState;
+
+    if (inputActions->SwitchShowCursor)
     {
-        ElemShowWindowCursor(applicationPayload->Window);
-    }
-    else
-    {
-        ElemHideWindowCursor(applicationPayload->Window);
+        if (!gameState->IsCursorDisplayed)
+        {
+            ElemShowWindowCursor(applicationPayload->Window);
+        }
+        else
+        {
+            ElemHideWindowCursor(applicationPayload->Window); 
+        } 
     }
 
-    GameState* gameState = &applicationPayload->GameState;
     UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
 
     SampleMatrix3x3 transformMatrix = SampleMulMatrix3x3(SampleCreateTranslationMatrix(gameState->TranslationDelta.X, gameState->TranslationDelta.Y), SampleCreateRotationMatrix(gameState->RotationDelta));

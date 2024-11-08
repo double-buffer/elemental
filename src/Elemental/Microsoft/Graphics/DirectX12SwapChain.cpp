@@ -62,6 +62,8 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
     {
         return;
     }
+
+    // BUG: When switching to a screen with a different refresh rate!
     
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d.", width, height);
     SystemAssert(swapChain != ELEM_HANDLE_NULL);
@@ -334,6 +336,8 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT        
         #endif
     };
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f. (%dHz)", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale, targetFPS);
 
     ComPtr<IDXGISwapChain4> swapChain;
     AssertIfFailedReturnNullHandle(DxgiFactory->CreateSwapChainForHwnd(commandQueueData->DeviceObject.Get(), windowData->WindowHandle, &swapChainDesc, nullptr, nullptr, (IDXGISwapChain1**)swapChain.GetAddressOf()));  
