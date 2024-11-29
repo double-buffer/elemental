@@ -341,8 +341,8 @@ void CreateVulkanPipelineLayout(ElemGraphicsDevice graphicsDevice)
 
     VkMutableDescriptorTypeListEXT descriptorSetTypeList = 
     { 
-        .pDescriptorTypes = resourceDescriptorTypes,
-        .descriptorTypeCount = ARRAYSIZE(resourceDescriptorTypes)
+        .descriptorTypeCount = ARRAYSIZE(resourceDescriptorTypes),
+        .pDescriptorTypes = resourceDescriptorTypes
     };
 
     VkMutableDescriptorTypeCreateInfoEXT mutableDescriptorTypeCreateInfo = { VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT };

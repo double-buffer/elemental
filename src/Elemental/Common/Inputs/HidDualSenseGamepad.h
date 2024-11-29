@@ -76,6 +76,10 @@ struct HidDualSenseGamepadData
 {
     float PreviousLeftStickX;
     float PreviousLeftStickY;
+    float PreviousRightStickX;
+    float PreviousRightStickY;
+    float PreviousLeftTrigger;
+    float PreviousRightTrigger;
     uint16_t PreviousButtons;
 };
 
@@ -147,7 +151,8 @@ inline bool SendHidDualSenseGamepadSubCommand(ElemInputDevice inputDevice, HidDu
     return PlatformHidSendOutputReport(inputDevice, ReadOnlySpan<uint8_t>((uint8_t*)&outputReport, sizeof(outputReport)));
 }*/
 
-inline void ProcessHidDualSenseGamepadStick(ElemWindow window, ElemInputDevice inputDevice, double elapsedSeconds, float stickData, float previousStickData, ElemInputId negativeInputId, ElemInputId positiveInputId)
+// TODO: Promote those functions to common header
+inline void ProcessHidGamepadStick(ElemWindow window, ElemInputDevice inputDevice, double elapsedSeconds, float stickData, float previousStickData, ElemInputId negativeInputId, ElemInputId positiveInputId)
 {
     if (stickData != previousStickData)
     {
@@ -177,7 +182,22 @@ inline void ProcessHidDualSenseGamepadStick(ElemWindow window, ElemInputDevice i
     }
 }
 
-inline void ProcessHidDualSenseGamepadButton(ElemWindow window, ElemInputDevice inputDevice, double elapsedSeconds, uint16_t currentButtons, uint16_t previousButtons, HidDualSenseGamepadButton buttonType, ElemInputId inputId)
+inline void ProcessHidGamepadTrigger(ElemWindow window, ElemInputDevice inputDevice, double elapsedSeconds, float data, float previousData, ElemInputId inputId)
+{
+    if (data != previousData)
+    {
+        AddInputEvent({
+            .Window = window,
+            .InputDevice = inputDevice,
+            .InputId = inputId,
+            .InputType = ElemInputType_Analog,
+            .Value = data,
+            .ElapsedSeconds = elapsedSeconds
+        });
+    }
+}
+
+inline void ProcessHidGamepadButton(ElemWindow window, ElemInputDevice inputDevice, double elapsedSeconds, uint16_t currentButtons, uint16_t previousButtons, uint16_t buttonType, ElemInputId inputId)
 {
     if ((currentButtons & buttonType) != (previousButtons & buttonType))
     {
@@ -205,21 +225,35 @@ inline void ProcessHidDualSenseGamepadInputReportBluetoothStandard(ElemWindow wi
         SystemAssert(hidData);
 
         auto leftStickX = NormalizeInputValueSigned(inputReport->LeftStickX, HID_DUALSENSE_STICK_RANGE, HID_DUALSENSE_STICK_DEAD_ZONE);
-        ProcessHidDualSenseGamepadStick(window, inputDevice, elapsedSeconds, leftStickX, hidData->PreviousLeftStickX, ElemInputId_GamepadLeftStickXNegative, ElemInputId_GamepadLeftStickXPositive);
+        ProcessHidGamepadStick(window, inputDevice, elapsedSeconds, leftStickX, hidData->PreviousLeftStickX, ElemInputId_GamepadLeftStickXNegative, ElemInputId_GamepadLeftStickXPositive);
 
         auto leftStickY = -NormalizeInputValueSigned(inputReport->LeftStickY, HID_DUALSENSE_STICK_RANGE, HID_DUALSENSE_STICK_DEAD_ZONE);
-        ProcessHidDualSenseGamepadStick(window, inputDevice, elapsedSeconds, leftStickY, hidData->PreviousLeftStickY, ElemInputId_GamepadLeftStickYNegative, ElemInputId_GamepadLeftStickYPositive);
+        ProcessHidGamepadStick(window, inputDevice, elapsedSeconds, leftStickY, hidData->PreviousLeftStickY, ElemInputId_GamepadLeftStickYNegative, ElemInputId_GamepadLeftStickYPositive);
 
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Cross, ElemInputID_GamepadButtonA);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Circle, ElemInputID_GamepadButtonB);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Square, ElemInputID_GamepadButtonX);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Triangle, ElemInputID_GamepadButtonY);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_L1, ElemInputID_GamepadLeftShoulder);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_R1, ElemInputID_GamepadRightShoulder);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Share, ElemInputID_GamepadButtonShare);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Options, ElemInputID_GamepadButtonOptions);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_L3, ElemInputId_GamepadLeftStickButton);
-        ProcessHidDualSenseGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_R3, ElemInputId_GamepadRightStickButton);
+        auto rightStickX = NormalizeInputValueSigned(inputReport->RightStickX, HID_DUALSENSE_STICK_RANGE, HID_DUALSENSE_STICK_DEAD_ZONE);
+        ProcessHidGamepadStick(window, inputDevice, elapsedSeconds, rightStickX, hidData->PreviousRightStickX, ElemInputId_GamepadRightStickXNegative, ElemInputId_GamepadRightStickXPositive);
+
+        auto rightStickY = -NormalizeInputValueSigned(inputReport->RightStickY, HID_DUALSENSE_STICK_RANGE, HID_DUALSENSE_STICK_DEAD_ZONE);
+        ProcessHidGamepadStick(window, inputDevice, elapsedSeconds, rightStickY, hidData->PreviousRightStickY, ElemInputId_GamepadRightStickYNegative, ElemInputId_GamepadRightStickYPositive);
+
+        auto leftTrigger = NormalizeInputValue(inputReport->LeftTrigger, HID_DUALSENSE_STICK_RANGE, HID_DUALSENSE_STICK_DEAD_ZONE);
+        ProcessHidGamepadTrigger(window, inputDevice, elapsedSeconds, leftTrigger, hidData->PreviousLeftTrigger, ElemInputId_GamepadLeftTrigger);
+
+        auto rightTrigger = NormalizeInputValue(inputReport->RightTrigger, HID_DUALSENSE_STICK_RANGE, HID_DUALSENSE_STICK_DEAD_ZONE);
+        ProcessHidGamepadTrigger(window, inputDevice, elapsedSeconds, rightTrigger, hidData->PreviousRightTrigger, ElemInputId_GamepadRightTrigger);
+
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Cross, ElemInputId_GamepadButtonA);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Circle, ElemInputId_GamepadButtonB);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Square, ElemInputId_GamepadButtonX);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Triangle, ElemInputId_GamepadButtonY);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_L1, ElemInputId_GamepadLeftShoulder);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_R1, ElemInputId_GamepadRightShoulder);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Share, ElemInputId_GamepadButtonShare);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_Options, ElemInputId_GamepadButtonOptions);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_L3, ElemInputId_GamepadLeftStickButton);
+        ProcessHidGamepadButton(window, inputDevice, elapsedSeconds, inputReport->Buttons, hidData->PreviousButtons, HidDualSenseGamepadButton_R3, ElemInputId_GamepadRightStickButton);
+
+        // TODO: System button
 
         // TODO: TESTING ONLY
         if (inputReport->Buttons & 0x01)
@@ -229,6 +263,10 @@ inline void ProcessHidDualSenseGamepadInputReportBluetoothStandard(ElemWindow wi
 
         hidData->PreviousLeftStickX = leftStickX;
         hidData->PreviousLeftStickY = leftStickY;
+        hidData->PreviousRightStickX = rightStickX;
+        hidData->PreviousRightStickY = rightStickY;
+        hidData->PreviousLeftTrigger = leftTrigger;
+        hidData->PreviousRightTrigger = rightTrigger;
         hidData->PreviousButtons = inputReport->Buttons;
     }
 }

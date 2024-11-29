@@ -392,7 +392,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     AssertIfFailed(vkCreateFence(graphicsDeviceData->Device, &fenceCreateInfo, 0, &acquireFence ));
 
-    uint64_t creationTimestamp;
+    uint64_t creationTimestamp = 0;
     // TODO: Put that in a system function
     //QueryPerformanceCounter(&creationTimestamp);
 

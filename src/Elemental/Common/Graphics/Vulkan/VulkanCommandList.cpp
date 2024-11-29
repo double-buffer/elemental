@@ -462,7 +462,6 @@ bool VulkanIsFenceCompleted(ElemFence fence)
     SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueToWaitData = GetVulkanCommandQueueData(fence.CommandQueue);
-    auto commandQueueToWaitDataFull = GetVulkanCommandQueueDataFull(fence.CommandQueue);
 
     if (!commandQueueToWaitData)
     {

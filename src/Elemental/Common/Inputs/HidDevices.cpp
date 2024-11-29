@@ -129,7 +129,7 @@ void ProcessXboxOneWirelessGamepadReport(ElemWindow window, ElemInputDevice inpu
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadLeftTrigger,
+        .InputId = ElemInputId_GamepadLeftTrigger,
         .InputType = ElemInputType_Analog,
         .Value = NormalizeInputValue(xboxReport->LeftTrigger, 1024, 0.1f),
         .ElapsedSeconds = elapsedSeconds
@@ -138,7 +138,7 @@ void ProcessXboxOneWirelessGamepadReport(ElemWindow window, ElemInputDevice inpu
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadRightTrigger,
+        .InputId = ElemInputId_GamepadRightTrigger,
         .InputType = ElemInputType_Analog,
         .Value = NormalizeInputValue(xboxReport->RightTrigger, 1024, 0.1f),
         .ElapsedSeconds = elapsedSeconds
@@ -150,7 +150,7 @@ void ProcessXboxOneWirelessGamepadReport(ElemWindow window, ElemInputDevice inpu
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadButtonA,
+        .InputId = ElemInputId_GamepadButtonA,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x01) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
@@ -159,7 +159,7 @@ void ProcessXboxOneWirelessGamepadReport(ElemWindow window, ElemInputDevice inpu
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadButtonB,
+        .InputId = ElemInputId_GamepadButtonB,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x02) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
@@ -168,7 +168,7 @@ void ProcessXboxOneWirelessGamepadReport(ElemWindow window, ElemInputDevice inpu
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadLeftShoulder,
+        .InputId = ElemInputId_GamepadLeftShoulder,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x40) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
@@ -177,7 +177,7 @@ void ProcessXboxOneWirelessGamepadReport(ElemWindow window, ElemInputDevice inpu
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadRightShoulder,
+        .InputId = ElemInputId_GamepadRightShoulder,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x80) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
@@ -262,7 +262,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadLeftTrigger,
+        .InputId = ElemInputId_GamepadLeftTrigger,
         .InputType = ElemInputType_Analog,
         .Value = NormalizeInputValue(left, 255, 0.1f),
         .ElapsedSeconds = elapsedSeconds
@@ -271,7 +271,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadRightTrigger,
+        .InputId = ElemInputId_GamepadRightTrigger,
         .InputType = ElemInputType_Analog,
         .Value = NormalizeInputValue(right, 255, 0.1f),
         .ElapsedSeconds = elapsedSeconds
@@ -285,7 +285,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadButtonA,
+        .InputId = ElemInputId_GamepadButtonA,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x01) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
@@ -294,7 +294,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadButtonB,
+        .InputId = ElemInputId_GamepadButtonB,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x02) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
@@ -303,7 +303,7 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadLeftShoulder,
+        .InputId = ElemInputId_GamepadLeftShoulder,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x10) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
@@ -312,156 +312,12 @@ void ProcessXboxOneWirelessOldDriverGamepadReport(ElemWindow window, ElemInputDe
     AddInputEvent({
         .Window = window,
         .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadRightShoulder,
+        .InputId = ElemInputId_GamepadRightShoulder,
         .InputType = ElemInputType_Digital,
         .Value = (xboxReport->Buttons & 0x20) ? 1.0f : 0.0f,
         .ElapsedSeconds = elapsedSeconds
     });
 }
-
-/*
-void ProcessDualSenseGamepadReport(ElemWindow window, ElemInputDevice inputDevice, ReadOnlySpan<uint8_t> hidReport, double elapsedSeconds)
-{
-    auto reportId = hidReport[0];
-
-    if (reportId == 1)
-    {
-        auto inputReport = (DualSenseSimpleGamepadReport*)(++hidReport.Pointer);
-
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Process DualSense %d %d", reportId, inputReport->LeftStickX);
-
-        // TODO: Also here we need to send the event only if the analog value has changed
-        // TODO: We can refactor this function by taking the sizeof of the field?
-        float leftStickX = NormalizeInputValueSigned(inputReport->LeftStickX, 256, 0.2f);
-
-        if (leftStickX <= 0)
-        {
-            AddInputEvent({
-                .Window = window,
-                .InputDevice = inputDevice,
-                .InputId = ElemInputId_GamepadLeftStickXNegative,
-                .InputType = ElemInputType_Analog,
-                .Value = -leftStickX,
-                .ElapsedSeconds = elapsedSeconds
-            });
-        }
-
-        if (leftStickX >= 0)
-        {
-            AddInputEvent({
-                .Window = window,
-                .InputDevice = inputDevice,
-                .InputId = ElemInputId_GamepadLeftStickXPositive,
-                .InputType = ElemInputType_Analog,
-                .Value = leftStickX,
-                .ElapsedSeconds = elapsedSeconds
-            });
-        }
-    }
-/*
-    float leftStickY = -NormalizeInputValueSigned(inputReport->LeftStickY, 65535, 0.2f);
-    
-    if (leftStickY <= 0)
-    {
-        AddInputEvent({
-            .Window = window,
-            .InputDevice = inputDevice,
-            .InputId = ElemInputId_GamepadLeftStickYNegative,
-            .InputType = ElemInputType_Analog,
-            .Value = -leftStickY,
-            .ElapsedSeconds = elapsedSeconds
-        });
-    }
-    // TODO: check if the value is inversed!!
-    if (leftStickY >= 0)
-    {
-        AddInputEvent({
-            .Window = window,
-            .InputDevice = inputDevice,
-            .InputId = ElemInputId_GamepadLeftStickYPositive,
-            .InputType = ElemInputType_Analog,
-            .Value = leftStickY,
-            .ElapsedSeconds = elapsedSeconds
-        });
-    }
-
-    const uint16_t midpoint = 32768;
-
-    uint8_t left, right;
-
-    // Calculate the right trigger value as a difference from midpoint
-    if (inputReport->Triggers <= midpoint) {
-        right = static_cast<uint8_t>((midpoint - inputReport->Triggers) >> 7);
-    } else {
-        right = 0;
-    }
-
-    // Calculate the left trigger value as a difference from midpoint
-    if (inputReport->Triggers >= midpoint) {
-        left = static_cast<uint8_t>((inputReport->Triggers - midpoint) >> 7);
-    } else {
-        left = 0;
-    }
-
-    AddInputEvent({
-        .Window = window,
-        .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadLeftTrigger,
-        .InputType = ElemInputType_Analog,
-        .Value = NormalizeInputValue(left, 255, 0.1f),
-        .ElapsedSeconds = elapsedSeconds
-    });
-
-    AddInputEvent({
-        .Window = window,
-        .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadRightTrigger,
-        .InputType = ElemInputType_Analog,
-        .Value = NormalizeInputValue(right, 255, 0.1f),
-        .ElapsedSeconds = elapsedSeconds
-    });
-
-    // TODO: For buttons we need to keep track of old report to see if there was a change
-    // Maybe we can do the same as with delta inputs!
-
-
-
-    AddInputEvent({
-        .Window = window,
-        .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadButtonA,
-        .InputType = ElemInputType_Digital,
-        .Value = (inputReport->Buttons & 0x01) ? 1.0f : 0.0f,
-        .ElapsedSeconds = elapsedSeconds
-    });
-
-    AddInputEvent({
-        .Window = window,
-        .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadButtonB,
-        .InputType = ElemInputType_Digital,
-        .Value = (inputReport->Buttons & 0x02) ? 1.0f : 0.0f,
-        .ElapsedSeconds = elapsedSeconds
-    });
-
-    AddInputEvent({
-        .Window = window,
-        .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadLeftShoulder,
-        .InputType = ElemInputType_Digital,
-        .Value = (inputReport->Buttons & 0x10) ? 1.0f : 0.0f,
-        .ElapsedSeconds = elapsedSeconds
-    });
-
-    AddInputEvent({
-        .Window = window,
-        .InputDevice = inputDevice,
-        .InputId = ElemInputID_GamepadRightShoulder,
-        .InputType = ElemInputType_Digital,
-        .Value = (inputReport->Buttons & 0x20) ? 1.0f : 0.0f,
-        .ElapsedSeconds = elapsedSeconds
-    });
-}*/
 
 HidGamepadHandler HidGamepadHandlers[] =
 {

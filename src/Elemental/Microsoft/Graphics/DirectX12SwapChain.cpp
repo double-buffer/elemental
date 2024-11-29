@@ -467,7 +467,7 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     // TODO: Compute vsync interval based on target fps (rework that, it only works for multiples for now!)
     // TODO: We need to take into account the current present time with the nextPresentTime computed from update function
     // For example, if we present and we missed a vsync, the calculation should take that into account
-    auto vsyncInteval = windowData->MonitorRefreshRate / swapChainData->TargetFPS;
+    //auto vsyncInteval = windowData->MonitorRefreshRate / swapChainData->TargetFPS;
 
     // TODO: Control the next vsync for frame pacing (eg: running at 30fps on a 120hz screen)
     //AssertIfFailed(swapChainData->DeviceObject->Present(vsyncInteval, 0));

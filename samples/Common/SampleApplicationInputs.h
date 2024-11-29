@@ -29,7 +29,7 @@ void SampleApplicationInputsInit(SampleApplicationInputs* inputs)
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyF1, 0, SampleInputActionBindingType_Released, &inputs->InputActions.SwitchShowCursor);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyEscape, 0, SampleInputActionBindingType_Released, &inputs->InputActions.ExitApp);
 
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputID_GamepadButtonB, 0, SampleInputActionBindingType_Released, &inputs->InputActions.ExitApp);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadButtonB, 0, SampleInputActionBindingType_Released, &inputs->InputActions.ExitApp);
 
     inputs->State.IsCursorDisplayed = true;
 }

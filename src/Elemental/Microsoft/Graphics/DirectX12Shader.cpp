@@ -388,8 +388,8 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
     // TODO: Test for now without stack
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    auto stateSubObjects = SystemPushArray<D3D12_STATE_SUBOBJECT>(stackMemoryArena, 32);
-    auto stateSubObjectsIndex = 0u;
+    //auto stateSubObjects = SystemPushArray<D3D12_STATE_SUBOBJECT>(stackMemoryArena, 32);
+    //auto stateSubObjectsIndex = 0u;
 
     auto dxilLibraries = SystemPushArray<D3D12_DXIL_LIBRARY_DESC>(stackMemoryArena, 8);
     auto dxilLibrariesIndex = 0u;
@@ -594,6 +594,7 @@ void DirectX12BindPipelineState(ElemCommandList commandList, ElemPipelineState p
     auto pipelineStateData = GetDirectX12PipelineStateData(pipelineState);
     SystemAssert(pipelineStateData);
 
+    /*
     D3D12_SET_PROGRAM_DESC programDesc =
     {
         .Type = D3D12_PROGRAM_TYPE_GENERIC_PIPELINE,
@@ -601,7 +602,7 @@ void DirectX12BindPipelineState(ElemCommandList commandList, ElemPipelineState p
         {
             .ProgramIdentifier = pipelineStateData->ProgramIdentifier
         }
-    };
+    };*/
 
     commandListData->PipelineStateType = pipelineStateData->PipelineStateType;
 
