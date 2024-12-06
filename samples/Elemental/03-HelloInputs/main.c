@@ -3,6 +3,8 @@
 #include "SampleUtils.h"
 #include "SampleMath.h"
 
+// TODO: Align sample with the Sample inputs header
+
 #define ROTATION_TOUCH_DECREASE_SPEED 0.001f
 #define ROTATION_TOUCH_SPEED 4.0f
 #define ROTATION_TOUCH_MAX_DELTA 0.3f

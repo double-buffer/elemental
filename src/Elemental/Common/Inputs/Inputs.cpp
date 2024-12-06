@@ -124,6 +124,7 @@ void ResetInputsFrame()
 
     for (uint32_t i = 0; i < previousDeltaInputsToResetWriteIndex; i++)
     {
+        // TODO: Investigate if we process multiple time the same event??
         if (previousDeltaToReset[i].InputId != ElemInputId_Unknown)
         {
             auto inputEvent = previousDeltaToReset[i];

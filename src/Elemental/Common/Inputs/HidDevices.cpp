@@ -1,7 +1,9 @@
+#include "HidSwitchGamepad.cpp"
+#include "HidDualSenseGamepad.cpp"
+
+// TODO: Get rid of the headers here. We should only include the cpp files
 #include "HidDevices.h"
 #include "HidUtils.h"
-#include "HidSwitchGamepad.h"
-#include "HidDualSenseGamepad.h"
 #include "Inputs.h"
 #include "SystemFunctions.h"
 
@@ -328,6 +330,7 @@ HidGamepadHandler HidGamepadHandlers[] =
     { .Vendor = HidGamepadVendor_Nintendo, .Product = HidGamepadProduct_SwitchPro, .ProcessDataHandler = ProcessHidSwitchGamepadInputReport }
 };
 
+// TODO: Allow each providers to handle registration
 bool IsHidDeviceSupported(uint32_t vendorId, uint32_t productId)
 {
     for (uint32_t i = 0; i < ARRAYSIZE(HidGamepadHandlers); i++)

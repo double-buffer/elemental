@@ -1360,26 +1360,29 @@ typedef enum
     ElemInputId_GamepadDpadRight = 140,
     ElemInputId_GamepadDpadDown = 141,
     ElemInputId_GamepadDpadLeft = 142,
-    ElemInputId_Touch = 143,
-    ElemInputId_TouchXNegative = 144,
-    ElemInputId_TouchXPositive = 145,
-    ElemInputId_TouchYNegative = 146,
-    ElemInputId_TouchYPositive = 147,
-    ElemInputId_TouchXAbsolutePosition = 148,
-    ElemInputId_TouchYAbsolutePosition = 149
+    ElemInputId_GamepadTouchButton = 143,
+    ElemInputId_GamepadAngularVelocityXNegative = 144,
+    ElemInputId_GamepadAngularVelocityXPositive = 145,
+    ElemInputId_GamepadAngularVelocityYNegative = 146,
+    ElemInputId_GamepadAngularVelocityYPositive = 147,
+    ElemInputId_GamepadAngularVelocityZNegative = 148,
+    ElemInputId_GamepadAngularVelocityZPositive = 149,
+    ElemInputId_Touch = 150,
+    ElemInputId_TouchXNegative = 151,
+    ElemInputId_TouchXPositive = 152,
+    ElemInputId_TouchYNegative = 153,
+    ElemInputId_TouchYPositive = 154,
+    ElemInputId_TouchXAbsolutePosition = 155,
+    ElemInputId_TouchYAbsolutePosition = 156
 } ElemInputId;
 
 typedef struct
 {
     ElemInputDevice Handle;
     ElemInputDeviceType DeviceType;
+    // TODO: Add device name
+    // TODO: Add device capabilities for gamepad: Gyros, Touchpad, etc.
 } ElemInputDeviceInfo;
-
-typedef struct
-{
-    ElemInputDeviceInfo* Items;
-    uint32_t Length;
-} ElemInputDeviceInfoSpan;
 
 typedef struct
 {
