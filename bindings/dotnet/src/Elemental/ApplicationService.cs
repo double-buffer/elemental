@@ -1,5 +1,35 @@
 namespace Elemental;
 
+internal static class InitApplicationHandler<T> where T : unmanaged
+{
+    public static ApplicationHandler<T>? _interceptorEntry;
+
+    public static void Interceptor(ref T payload)
+    {
+        if (_interceptorEntry == null)
+        {
+            return;
+        }
+
+        _interceptorEntry(ref payload);
+    }
+}
+
+internal static class FreeApplicationHandler<T> where T : unmanaged
+{
+    public static ApplicationHandler<T>? _interceptorEntry;
+
+    public static void Interceptor(ref T payload)
+    {
+        if (_interceptorEntry == null)
+        {
+            return;
+        }
+
+        _interceptorEntry(ref payload);
+    }
+}
+
 /// <inheritdoc />
 public class ApplicationService : IApplicationService
 {

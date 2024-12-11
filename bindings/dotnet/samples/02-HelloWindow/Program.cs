@@ -3,6 +3,7 @@
 var applicationService = new ApplicationService();
 applicationService.ConfigureLogHandler(DefaultLogHandlers.ConsoleLogHandler);
 
+// TODO: Scenario with no payloads
 applicationService.RunApplication<TestPayload>(new ()
 {
     ApplicationName = "Hello Window"u8,
@@ -20,7 +21,7 @@ void InitSample(ref TestPayload payload)
 
     Console.WriteLine($"Path: {System.Text.Encoding.UTF8.GetString(systemInfo.ApplicationPath)}");
 
-    payload.Window = applicationService.CreateWindow();
+    payload.Window = applicationService.CreateWindow(new WindowOptions { Title = "Test"u8 });
     Console.WriteLine($"Test: {payload.Test}");
 }
 
