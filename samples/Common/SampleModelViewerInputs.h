@@ -40,13 +40,13 @@ typedef struct
     float TouchRotateSide;
     float Action;
 
-    float GyroRotate;
-    float GyroRotateXNegative;
-    float GyroRotateXPositive;
-    float GyroRotateYNegative;
-    float GyroRotateYPositive;
-    float GyroRotateZNegative;
-    float GyroRotateZPositive;
+    float AngularVelocity;
+    float AngularVelocityXNegative;
+    float AngularVelocityXPositive;
+    float AngularVelocityYNegative;
+    float AngularVelocityYPositive;
+    float AngularVelocityZNegative;
+    float AngularVelocityZPositive;
 } SampleModelViewerInputActions;
 
 typedef struct
@@ -94,13 +94,13 @@ void SampleModelViewerInputsInit(SampleModelViewerInputs* inputs)
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_MouseMiddleButton, 0, SampleInputActionBindingType_Value, &inputs->InputActions.Action);
 
     // TODO: Be careful because it can cause side issues with the touch controls
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadButtonX, 0, SampleInputActionBindingType_Value, &inputs->InputActions.GyroRotate);
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadAngularVelocityYNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.GyroRotateYNegative);
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadAngularVelocityYPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.GyroRotateYPositive);
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadAngularVelocityXNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.GyroRotateXNegative); // TODO: It seems inverted
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadAngularVelocityXPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.GyroRotateXPositive);
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadAngularVelocityZNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.GyroRotateZNegative);
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadAngularVelocityZPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.GyroRotateZPositive);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadButtonX, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocity);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityYNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityYNegative);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityYPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityYPositive);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityXNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityXNegative); // TODO: It seems inverted
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityXPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityXPositive);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityZNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityZNegative);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityZPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityZPositive);
 
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadLeftStickXNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateLeft);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadLeftStickXPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateRight);
@@ -189,11 +189,11 @@ void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewe
         state->RotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
         state->RotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
-    else if (inputActions->GyroRotate)
+    else if (inputActions->AngularVelocity)
     {
-        state->RotationDelta.X = -(inputActions->GyroRotateXPositive - inputActions->GyroRotateXNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds; // TODO: Is it inverted?
-        state->RotationDelta.Y = -(inputActions->GyroRotateYPositive - inputActions->GyroRotateYNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds; // TODO: Is it inverted?
-        state->RotationDelta.Z = (inputActions->GyroRotateZPositive - inputActions->GyroRotateZNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+        state->RotationDelta.X = -(inputActions->AngularVelocityXPositive - inputActions->AngularVelocityXNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds; // TODO: Is it inverted?
+        state->RotationDelta.Y = -(inputActions->AngularVelocityYPositive - inputActions->AngularVelocityYNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds; // TODO: Is it inverted?
+        state->RotationDelta.Z = (inputActions->AngularVelocityZPositive - inputActions->AngularVelocityZNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else
     {

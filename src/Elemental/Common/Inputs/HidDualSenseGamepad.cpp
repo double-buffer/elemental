@@ -471,13 +471,13 @@ void ProcessHidDualSenseGamepadInputReport(ElemWindow window, ElemInputDevice in
         auto calibration = hidData->CalibrationData;
 
         auto angularVelocityX = NormalizeHidDualSenseGamepadAngularVelocity(inputReport->AngularVelocityX, calibration.GyroPitchBias, calibration.GyroPitchMinus, calibration.GyroPitchPlus, calibration.GyroSpeedMinus, calibration.GyroSpeedPlus);
-        ProcessHidGamepadDeltaAxe(window, inputDevice, elapsedSeconds, angularVelocityX, ElemInputId_GamepadAngularVelocityXNegative, ElemInputId_GamepadAngularVelocityXPositive);
+        ProcessHidGamepadDeltaAxe(window, inputDevice, elapsedSeconds, angularVelocityX, ElemInputId_AngularVelocityXNegative, ElemInputId_AngularVelocityXPositive);
 
         auto angularVelocityY = NormalizeHidDualSenseGamepadAngularVelocity(inputReport->AngularVelocityY, calibration.GyroYawBias, calibration.GyroYawMinus, calibration.GyroYawPlus, calibration.GyroSpeedMinus, calibration.GyroSpeedPlus);
-        ProcessHidGamepadDeltaAxe(window, inputDevice, elapsedSeconds, angularVelocityY, ElemInputId_GamepadAngularVelocityYNegative, ElemInputId_GamepadAngularVelocityYPositive);
+        ProcessHidGamepadDeltaAxe(window, inputDevice, elapsedSeconds, angularVelocityY, ElemInputId_AngularVelocityYNegative, ElemInputId_AngularVelocityYPositive);
 
         auto angularVelocityZ = NormalizeHidDualSenseGamepadAngularVelocity(inputReport->AngularVelocityZ, calibration.GyroRollBias, calibration.GyroRollMinus, calibration.GyroRollPlus, calibration.GyroSpeedMinus, calibration.GyroSpeedPlus);
-        ProcessHidGamepadDeltaAxe(window, inputDevice, elapsedSeconds, angularVelocityZ, ElemInputId_GamepadAngularVelocityZNegative, ElemInputId_GamepadAngularVelocityZPositive);
+        ProcessHidGamepadDeltaAxe(window, inputDevice, elapsedSeconds, angularVelocityZ, ElemInputId_AngularVelocityZNegative, ElemInputId_AngularVelocityZPositive);
 
         hidData->PreviousLeftStickX = leftStickX;
         hidData->PreviousLeftStickY = leftStickY;
@@ -551,6 +551,7 @@ void ProcessHidDualSenseGamepadInputReport(ElemWindow window, ElemInputDevice in
             .ReportId = 0x05,
         };
 
+        // TODO: When this call fail we should retry next time and process the normal report
         auto result = PlatformHidGetFeatureReport(inputDevice, ReadOnlySpan<uint8_t>((uint8_t*)&calibrationFeatureReport, sizeof(calibrationFeatureReport)));
         SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Get Feature Result: %d", result);
 
