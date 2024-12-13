@@ -8,17 +8,23 @@
 
 // Based on the spec: https://controllers.fandom.com/wiki/Sony_DualSense
 
+#define HID_DUALSENSE_VENDOR_ID 0x054C
+#define HID_DUALSENSE_PRODUCT_ID 0x0CE6
+
 #define HID_DUALSENSE_STICK_RANGE 255
 #define HID_DUALSENSE_STICK_DEAD_ZONE 0.1f
 #define HID_DUALSENSE_TOUCH_MAX_FINGERS 2
 #define HID_DUALSENSE_TOUCH_DEAD_ZONE 0.75f
+#define HID_DUALSENSE_TOUCH_SENSITIVITY 0.15f
+#define HID_DUALSENSE_TOUCH_WIDTH 1920.0f
+#define HID_DUALSENSE_TOUCH_HEIGHT 1070.0f
 #define HID_DUALSENSE_ANGULAR_VELOCITY_DEAD_ZONE 0.1f
+#define HID_DUALSENSE_ACCELEROMETER_DEAD_ZONE 0.05f
 
 enum HidDualSenseGamepadInputReportType
 {
     HidDualSenseGamepadInputReportType_BluetoothStandard = 0x01,
     HidDualSenseGamepadInputReportType_BluetoothExtended = 0x31,
-    //HidDualSenseGamepadInputReportType_SubCommand = 0x21
 };
 
 enum HidDualSenseGamepadOutputReportType
@@ -26,18 +32,10 @@ enum HidDualSenseGamepadOutputReportType
     //HidDualSenseGamepadOutputReportType_SubCommand = 0x01
 };
 
-/*
-enum HidDualSenseGamepadSubCommandType : uint8_t
+enum HidDualSenseGamepadFeatureReportType
 {
-    HidDualSenseGamepadSubCommandType_DeviceInfo = 0x02
+    HidDualSenseGamepadFeatureReportType_Calibration = 0x05
 };
-
-enum HidDualSenseGamepadControllerType : uint8_t
-{
-    HidDualSenseGamepadControllerType_LeftJoyCon = 0x01,  
-    HidDualSenseGamepadControllerType_RightJoyCon = 0x02,  
-    HidDualSenseGamepadControllerType_ProController = 0x03,  
-};*/
 
 enum HidDualSenseGamepadButton : uint16_t
 {
@@ -107,31 +105,6 @@ struct __attribute__((__packed__)) HidDualSenseGamepadInputReportBluetoothStanda
     uint8_t RightTrigger;
 };
 
-/*
-struct __attribute__((__packed__)) HidDualSenseGamepadInputReportDeviceInfo
-{
-    uint16_t FirmwareVersion;
-    HidDualSenseGamepadControllerType ControllerType;
-};
-
-struct __attribute__((__packed__)) HidDualSenseGamepadOutputReportSubCommand
-{
-    uint8_t ReportId;
-    uint8_t GlobalPacketNumber;
-    // TODO: Rumble Data
-    uint8_t RumbleData[8];
-    HidDualSenseGamepadSubCommandType SubCommandId;
-    uint8_t Data[53];
-};
-
-struct __attribute__((__packed__)) HidDualSenseGamepadFeatureReportSetupMemoryRead
-{
-    uint8_t ReportId;
-    uint32_t Address;
-    uint16_t Size;
-    uint8_t Checksum;
-};*/
-
 struct __attribute__((__packed__)) HidDualSenseGamepadFeatureReportCalibration
 {
     uint8_t ReportId;
@@ -178,7 +151,11 @@ struct HidDualSenseGamepadData
     uint16_t PreviousButtons;
     uint8_t PreviousMappedDpad;
     uint8_t PreviousSystemButtons;
+    float PreviousAccelerometerX;
+    float PreviousAccelerometerY;
+    float PreviousAccelerometerZ;
     HidDualSenseGamepadTouchState TouchState[HID_DUALSENSE_TOUCH_MAX_FINGERS];
+    bool IsCalibrated;
     HidDualSenseGamepadFeatureReportCalibration CalibrationData;
 };
 
@@ -196,27 +173,6 @@ HidDualSenseGamepadData* GetHidDualSenseGamepadData(ElemHandle hidDevice)
 {
     return SystemGetDataPoolItem(hidDualSenseGamepadDataPool, hidDevice);
 }
-
-/*
-bool SendHidDualSenseGamepadSubCommand(ElemInputDevice inputDevice, HidDualSenseGamepadSubCommandType subCommandType, ReadOnlySpan<uint8_t> data)
-{
-    auto inputDeviceData = GetInputDeviceData(inputDevice);
-    SystemAssert(inputDeviceData != ELEM_HANDLE_NULL);
-
-    auto hidData = GetHidDualSenseGamepadData(inputDeviceData->HidDeviceData);
-    SystemAssert(hidData);
-
-    HidDualSenseGamepadOutputReportSubCommand outputReport =
-    {
-        .ReportId = HidDualSenseGamepadOutputReportType_SubCommand,
-        .GlobalPacketNumber = hidData->CurrentOutputPacketNumber,
-        .SubCommandId = subCommandType
-    };
-
-    hidData->CurrentOutputPacketNumber = (hidData->CurrentOutputPacketNumber + 1) % 255;
-
-    return PlatformHidSendOutputReport(inputDevice, ReadOnlySpan<uint8_t>((uint8_t*)&outputReport, sizeof(outputReport)));
-}*/
 
 uint8_t MapHidDualSenseGamepadDpad(uint8_t dpadData)
 {
@@ -236,9 +192,6 @@ uint8_t MapHidDualSenseGamepadDpad(uint8_t dpadData)
 
 void ParseHidDualSenseGamepadTouchData(ElemWindow window, ElemInputDevice inputDevice, double elapsedSeconds, HidDualSenseGamepadTouchState* touchState, uint8_t fingerIndex, uint32_t touchData)
 {
-    // TODO: Replace Magic numbers with constant values
-
-    auto fingerId = (touchData >> 0) & 0x7F;
     auto isTouching = !((touchData >> 7) & 0x01);
     auto positionX = (int32_t)((touchData >> 8) & 0xFFF);
     auto positionY = (int32_t)((touchData >> 20) & 0xFFF);
@@ -273,8 +226,8 @@ void ParseHidDualSenseGamepadTouchData(ElemWindow window, ElemInputDevice inputD
     }
     else 
     {
-        deltaX = (float)(positionX - touchState->PreviousPositionX) * 0.15f;
-        deltaY = (float)(positionY - touchState->PreviousPositionY) * 2.0f * 0.15f;
+        deltaX = (float)(positionX - touchState->PreviousPositionX) * HID_DUALSENSE_TOUCH_SENSITIVITY;
+        deltaY = (float)(positionY - touchState->PreviousPositionY) * (HID_DUALSENSE_TOUCH_WIDTH / HID_DUALSENSE_TOUCH_HEIGHT) * HID_DUALSENSE_TOUCH_SENSITIVITY;
     }
 
     if (deltaX < -HID_DUALSENSE_TOUCH_DEAD_ZONE)
@@ -341,10 +294,9 @@ void ParseHidDualSenseGamepadTouchData(ElemWindow window, ElemInputDevice inputD
         touchState->PreviousDeltaYSteps = 0;
     }
 
-    // TODO: Replace magic numbers
     if (touchState->PreviousDeltaXSteps == 0 || (isTouching != touchState->IsTouching))
     {
-        auto normalizedPositionX = (float)positionX / 1920.0f;
+        auto normalizedPositionX = (float)positionX / HID_DUALSENSE_TOUCH_WIDTH;
 
         AddInputEvent({
             .Window = window,
@@ -359,7 +311,7 @@ void ParseHidDualSenseGamepadTouchData(ElemWindow window, ElemInputDevice inputD
 
     if (touchState->PreviousDeltaYSteps == 0 || (isTouching != touchState->IsTouching))
     {
-        auto normalizedPositionY = (float)positionY / 1070.0f;
+        auto normalizedPositionY = (float)positionY / HID_DUALSENSE_TOUCH_HEIGHT;
 
         AddInputEvent({
             .Window = window,
@@ -403,6 +355,20 @@ float NormalizeHidDualSenseGamepadAngularVelocity(int16_t value, int16_t bias, i
     if (normalizedValue < HID_DUALSENSE_ANGULAR_VELOCITY_DEAD_ZONE && normalizedValue > -HID_DUALSENSE_ANGULAR_VELOCITY_DEAD_ZONE)
     {
         return 0.0f;
+    }
+
+    return normalizedValue;
+}
+
+float NormalizeHidDualSenseGamepadAccelerometer(int16_t value, float previousValue, int16_t thresholdMinus, int16_t thresholdPlus)
+{
+    auto bias = (thresholdPlus + thresholdMinus) / 2.0f;
+    auto scaleFactor = (thresholdPlus - thresholdMinus) / 2.0f;
+    float normalizedValue = (value - bias) / scaleFactor;
+
+    if (SystemAbs(normalizedValue - previousValue) < HID_DUALSENSE_ACCELEROMETER_DEAD_ZONE)
+    {
+        return previousValue;
     }
 
     return normalizedValue;
@@ -459,8 +425,7 @@ void ProcessHidDualSenseGamepadInputReport(ElemWindow window, ElemInputDevice in
 
         // TODO: DualSense Edge buttons?
 
-        // TODO: Find another way to check if we are in advanced format
-        if (hidData->CalibrationData.AccelXPlus != 0)
+        if (hidData->IsCalibrated)
         {
             for (uint32_t i = 0; i < HID_DUALSENSE_TOUCH_MAX_FINGERS; i++)
             {
@@ -479,6 +444,15 @@ void ProcessHidDualSenseGamepadInputReport(ElemWindow window, ElemInputDevice in
         auto angularVelocityZ = NormalizeHidDualSenseGamepadAngularVelocity(inputReport->AngularVelocityZ, calibration.GyroRollBias, calibration.GyroRollMinus, calibration.GyroRollPlus, calibration.GyroSpeedMinus, calibration.GyroSpeedPlus);
         ProcessHidGamepadDeltaAxe(window, inputDevice, elapsedSeconds, angularVelocityZ, ElemInputId_AngularVelocityZNegative, ElemInputId_AngularVelocityZPositive);
 
+        auto accelerometerX = NormalizeHidDualSenseGamepadAccelerometer(inputReport->AccelerometerX, hidData->PreviousAccelerometerX, calibration.AccelXMinus, calibration.AccelXPlus);
+        ProcessHidGamepadStick(window, inputDevice, elapsedSeconds, accelerometerX, hidData->PreviousAccelerometerX, ElemInputId_AccelerometerXNegative, ElemInputId_AccelerometerXPositive);
+
+        auto accelerometerY = NormalizeHidDualSenseGamepadAccelerometer(inputReport->AccelerometerY, hidData->PreviousAccelerometerY, calibration.AccelYMinus, calibration.AccelYPlus);
+        ProcessHidGamepadStick(window, inputDevice, elapsedSeconds, accelerometerY, hidData->PreviousAccelerometerY, ElemInputId_AccelerometerYNegative, ElemInputId_AccelerometerYPositive);
+
+        auto accelerometerZ = NormalizeHidDualSenseGamepadAccelerometer(inputReport->AccelerometerZ, hidData->PreviousAccelerometerZ, calibration.AccelZMinus, calibration.AccelZPlus);
+        ProcessHidGamepadStick(window, inputDevice, elapsedSeconds, accelerometerZ, hidData->PreviousAccelerometerZ, ElemInputId_AccelerometerZNegative, ElemInputId_AccelerometerZPositive);
+
         hidData->PreviousLeftStickX = leftStickX;
         hidData->PreviousLeftStickY = leftStickY;
         hidData->PreviousRightStickX = rightStickX;
@@ -488,12 +462,15 @@ void ProcessHidDualSenseGamepadInputReport(ElemWindow window, ElemInputDevice in
         hidData->PreviousButtons = inputReport->Buttons;
         hidData->PreviousMappedDpad = mappedDpad;
         hidData->PreviousSystemButtons = inputReport->SystemButtons;
+        hidData->PreviousAccelerometerX = accelerometerX;
+        hidData->PreviousAccelerometerY = accelerometerY;
+        hidData->PreviousAccelerometerZ = accelerometerZ;
     }
 }
 
 void ProcessHidDualSenseGamepadInputReportBluetoothStandard(ElemWindow window, ElemInputDevice inputDevice, HidDualSenseGamepadInputReportBluetoothStandard* inputReport, double elapsedSeconds)
 {
-    //SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Using DualSense GamePad Bluetooth Standard Report %f", elapsedSeconds);
+    SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "Using DualSense GamePad Bluetooth Standard Report %f", elapsedSeconds);
 
     HidDualSenseGamepadInputReport mappedInputReport = 
     {
@@ -519,43 +496,32 @@ void ProcessHidDualSenseGamepadInputReport(ElemWindow window, ElemInputDevice in
     auto inputDeviceData = GetInputDeviceData(inputDevice);
     SystemAssert(inputDeviceData != ELEM_HANDLE_NULL);
 
-    // TODO: This part is to get the calibration data
     if (inputDeviceData->HidDeviceData == ELEM_HANDLE_NULL)
     {
-        /*
-        // Read Config
-        HidDualSenseGamepadFeatureReportSetupMemoryRead featureReport =
-        {
-            .ReportId = 0x71,
-            .Address = 0xF8000000 + 0x6000,
-            .Size = 0xA000,
-            .Checksum = 0
-        };
+        inputDeviceData->HidDeviceData = SystemAddDataPoolItem(hidDualSenseGamepadDataPool, {});
+    }
 
-        auto pointer = (uint8_t*)&featureReport;
-        auto sumBytes = 0u;
+    auto hidDeviceData = GetHidDualSenseGamepadData(inputDeviceData->HidDeviceData);
+    SystemAssert(hidDeviceData);
 
-        for (uint32_t i = 0; i < sizeof(featureReport); i++)
-        {
-            sumBytes += pointer[i];
-        }
-        
-        featureReport.Checksum = 0x100 - sumBytes;
-
-        auto result = PlatformHidSendFeatureReport(inputDevice, ReadOnlySpan<uint8_t>((uint8_t*)&featureReport, sizeof(featureReport)));
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Send Feature Result: %d", result);
-*/
+    if (!hidDeviceData->IsCalibrated)
+    {
         HidDualSenseGamepadFeatureReportCalibration calibrationFeatureReport =
         {
-            // TODO: Replace with enum
-            .ReportId = 0x05,
+            .ReportId = HidDualSenseGamepadFeatureReportType_Calibration,
         };
 
-        // TODO: When this call fail we should retry next time and process the normal report
         auto result = PlatformHidGetFeatureReport(inputDevice, ReadOnlySpan<uint8_t>((uint8_t*)&calibrationFeatureReport, sizeof(calibrationFeatureReport)));
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Get Feature Result: %d", result);
+        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Reading DualSense Calibration Data: (Result=%d)", result);
 
-        inputDeviceData->HidDeviceData = SystemAddDataPoolItem(hidDualSenseGamepadDataPool, { .CalibrationData = calibrationFeatureReport });
+        if (result)
+        {
+            hidDeviceData->IsCalibrated = true;
+            hidDeviceData->CalibrationData = calibrationFeatureReport;
+
+            // TODO: Set light of current player
+            // TODO: Have a system to deactivate some features if not needed or to optin. (Like the gyro and accel)
+        }
     }
 
     auto reportId = hidReport[0];
@@ -570,20 +536,14 @@ void ProcessHidDualSenseGamepadInputReport(ElemWindow window, ElemInputDevice in
         auto inputReport = (HidDualSenseGamepadInputReport*)(hidReport.Pointer + 2);
         ProcessHidDualSenseGamepadInputReport(window, inputDevice, inputReport, elapsedSeconds);
     }
-    /*
-    else if (reportId == HidDualSenseGamepadInputReportType_SubCommand)
+}
+
+ProcessHidGamepadInputReportPtr CheckHidDualSenseGamepadSupport(uint32_t vendorId, uint32_t productId)
+{
+    if (vendorId == HID_DUALSENSE_VENDOR_ID && productId == HID_DUALSENSE_PRODUCT_ID)
     {
-        auto hidData = GetHidDualSenseGamepadData(inputDeviceData->HidDeviceData);
-        SystemAssert(hidData);
+        return ProcessHidDualSenseGamepadInputReport;
+    }
 
-
-        auto inputReport = (HidDualSenseGamepadInputReportExtended*)(++hidReport.Pointer);
-
-        uint8_t *data = inputReport->LeftStick;
-        uint16_t stick_horizontal = data[0] | ((data[1] & 0xF) << 8);
-        uint16_t stick_vertical = (data[1] >> 4) | (data[2] << 4);
-
-        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Report: Timer=%d, X=%d, Y=%d", inputReport->Timer, stick_horizontal, stick_vertical);
-        //SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "ProcessSubCommandtype: %d, Version: %d, Type: %d", subCommandType, inputReport->FirmwareVersion, inputReport->ControllerType);
-    }*/
+    return nullptr;
 }

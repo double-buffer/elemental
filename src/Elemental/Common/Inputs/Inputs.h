@@ -14,6 +14,7 @@ struct InputDeviceData
     uint32_t HidProductId;
     void* PlatformData;
     ElemHandle HidDeviceData;
+    void* HidDeviceHandler;
 };
 
 struct InputDeviceDataFull

@@ -3,7 +3,11 @@
 #include "../Elemental.h"
 #include "Inputs.h"
 
+typedef void (*ProcessHidGamepadInputReportPtr)(ElemWindow window, ElemInputDevice inputDevice, ReadOnlySpan<uint8_t> hidReport, double elapsedSeconds);
+typedef ProcessHidGamepadInputReportPtr (*CheckHidGamepadSupportPtr)(uint32_t vendorId, uint32_t productId);
+
 // TODO: Create a CPP file
+// TODO: Rename that file
 
 inline float NormalizeInputValue(uint32_t value, uint32_t maxValue, float deadZone)
 {

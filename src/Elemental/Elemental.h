@@ -1023,6 +1023,8 @@ ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemComm
  */
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 
+// TODO: Add a create fence function for a given commanduque?
+
 // TODO: Still in draft!
 ElemAPI ElemIOCommandQueue ElemCreateIOCommandQueue(const ElemIOCommandQueueOptions* options);
 ElemAPI void ElemFreeIOCommandQueue(ElemIOCommandQueue ioQueue);
@@ -1367,13 +1369,19 @@ typedef enum
     ElemInputId_AngularVelocityYPositive = 147,
     ElemInputId_AngularVelocityZNegative = 148,
     ElemInputId_AngularVelocityZPositive = 149,
-    ElemInputId_Touch = 150,
-    ElemInputId_TouchXNegative = 151,
-    ElemInputId_TouchXPositive = 152,
-    ElemInputId_TouchYNegative = 153,
-    ElemInputId_TouchYPositive = 154,
-    ElemInputId_TouchXAbsolutePosition = 155,
-    ElemInputId_TouchYAbsolutePosition = 156
+    ElemInputId_AccelerometerXNegative = 150,
+    ElemInputId_AccelerometerXPositive = 151,
+    ElemInputId_AccelerometerYNegative = 152,
+    ElemInputId_AccelerometerYPositive = 153,
+    ElemInputId_AccelerometerZNegative = 154,
+    ElemInputId_AccelerometerZPositive = 155,
+    ElemInputId_Touch = 156,
+    ElemInputId_TouchXNegative = 157,
+    ElemInputId_TouchXPositive = 158,
+    ElemInputId_TouchYNegative = 159,
+    ElemInputId_TouchYPositive = 160,
+    ElemInputId_TouchXAbsolutePosition = 161,
+    ElemInputId_TouchYAbsolutePosition = 162
 } ElemInputId;
 
 typedef struct

@@ -74,7 +74,7 @@ void ImGuiInitBackend(ApplicationPayload* payload)
     ImFontAtlas_GetTexDataAsRGBA32(imGuiIO->Fonts, &fontPixels, &fontWidth, &fontHeight, &fontBytesPerPixel);
 
     payload->ImGuiBackendData.FontTextureId = 1;
-    imGuiIO->Fonts->TexID = (void*)&imGuiData->FontTextureId;
+    imGuiIO->Fonts->TexID = (ImTextureID)&imGuiData->FontTextureId;
 
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(payload->SwapChain);
 

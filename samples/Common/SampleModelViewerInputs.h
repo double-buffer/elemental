@@ -41,12 +41,16 @@ typedef struct
     float Action;
 
     float AngularVelocity;
+    float AngularVelocityReleased;
     float AngularVelocityXNegative;
     float AngularVelocityXPositive;
     float AngularVelocityYNegative;
     float AngularVelocityYPositive;
     float AngularVelocityZNegative;
     float AngularVelocityZPositive;
+
+    float AccelerometerZNegative;
+    float AccelerometerZPositive;
 } SampleModelViewerInputActions;
 
 typedef struct
@@ -58,6 +62,7 @@ typedef struct
     float PreviousTouchAngle;
     float Zoom;
     float Action;
+    float InitialAccelerometerZDelta;
 } SampleModelViewerInputState;
 
 typedef struct
@@ -95,12 +100,15 @@ void SampleModelViewerInputsInit(SampleModelViewerInputs* inputs)
 
     // TODO: Be careful because it can cause side issues with the touch controls
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadButtonX, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocity);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadButtonX, 0, SampleInputActionBindingType_Released, &inputs->InputActions.AngularVelocityReleased);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityYNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityYNegative);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityYPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityYPositive);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityXNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityXNegative); // TODO: It seems inverted
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityXPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityXPositive);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityZNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityZNegative);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AngularVelocityZPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AngularVelocityZPositive);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AccelerometerZNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AccelerometerZNegative);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_AccelerometerZPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.AccelerometerZPositive);
 
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadLeftStickXNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateLeft);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadLeftStickXPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateRight);
@@ -180,6 +188,7 @@ void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewe
     else if (inputActions->TouchRotateSide)
     {
         SampleModelViewerInputsResetTouchParameters(state);
+
         state->RotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else if (inputActions->TouchReleased && !inputActions->Touch2)
@@ -194,6 +203,22 @@ void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewe
         state->RotationDelta.X = -(inputActions->AngularVelocityXPositive - inputActions->AngularVelocityXNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds; // TODO: Is it inverted?
         state->RotationDelta.Y = -(inputActions->AngularVelocityYPositive - inputActions->AngularVelocityYNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds; // TODO: Is it inverted?
         state->RotationDelta.Z = (inputActions->AngularVelocityZPositive - inputActions->AngularVelocityZNegative) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
+
+        // TODO: Use the accelerometer
+        /*float accelerometerZDelta = inputActions->AccelerometerZPositive - inputActions->AccelerometerZNegative;
+
+        if (state->InitialAccelerometerZDelta)
+        {
+            float finalDelta = accelerometerZDelta - state->InitialAccelerometerZDelta;
+            printf("Zoom: final=%f, AccDelta=%f, Initial=%f\n", finalDelta, accelerometerZDelta, state->InitialAccelerometerZDelta);
+            state->Zoom += finalDelta * 2.0;
+        }
+
+        state->InitialAccelerometerZDelta = accelerometerZDelta;*/
+    }
+    else if (inputActions->AngularVelocityReleased)
+    {
+        state->InitialAccelerometerZDelta = 0.0f;
     }
     else
     {

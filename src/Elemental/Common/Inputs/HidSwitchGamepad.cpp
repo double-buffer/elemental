@@ -8,6 +8,9 @@
 
 // Based on the spec: https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/bluetooth_hid_notes.md
 
+#define HID_SWITCH_VENDOR_ID 0x057E
+#define HID_SWITCH_PRODUCT_ID 0x2009
+
 #define HID_SWITCH_STICK_RANGE 65535
 #define HID_SWITCH_STICK_DEAD_ZONE 0.2f
 
@@ -254,4 +257,14 @@ inline void ProcessHidSwitchGamepadInputReport(ElemWindow window, ElemInputDevic
         SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Report: Timer=%d, X=%d, Y=%d", inputReport->Timer, stick_horizontal, stick_vertical);
         //SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "ProcessSubCommandtype: %d, Version: %d, Type: %d", subCommandType, inputReport->FirmwareVersion, inputReport->ControllerType);
     }
+}
+
+ProcessHidGamepadInputReportPtr CheckHidSwitchProGamepadSupport(uint32_t vendorId, uint32_t productId)
+{
+    if (vendorId == HID_SWITCH_VENDOR_ID && productId == HID_SWITCH_PRODUCT_ID)
+    {
+        return ProcessHidSwitchGamepadInputReport;
+    }
+
+    return nullptr;
 }
