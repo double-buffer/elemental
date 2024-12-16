@@ -122,7 +122,7 @@ size_t SystemPlatformFileGetSizeInBytes(ReadOnlySpan<char> path)
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
 
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr);
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
@@ -141,7 +141,7 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
     
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
@@ -163,7 +163,7 @@ void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
 
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr);
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {

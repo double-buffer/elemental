@@ -22,3 +22,6 @@
 [submodule "external/cimgui"]
 	path = external/cimgui
 	url = https://github.com/cimgui/cimgui.git
+[submodule "external/fast_obj"]
+	path = external/fast_obj
+	url = https://github.com/thisistherk/fast_obj.git

@@ -23,8 +23,10 @@ static int functionPointersLoadedElementalTools = 0;
 
 typedef struct ElementalToolsFunctions 
 {
+    void (*ElemToolsConfigureFileIO)(ElemToolsLoadFileHandlerPtr);
     bool (*ElemCanCompileShader)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform);
-    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, ElemShaderSourceData const *, ElemCompileShaderOptions const *);
+    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, char const *, ElemCompileShaderOptions const *);
+    ElemLoadMeshResult (*ElemLoadMesh)(ElemToolsDataSpan, ElemMeshFormat, ElemLoadMeshOptions const *);
     ElemBuildMeshletResult (*ElemBuildMeshlets)(ElemVertexBuffer, ElemBuildMeshletsOptions const *);
     
 } ElementalToolsFunctions;
@@ -78,13 +80,32 @@ static bool LoadElementalToolsFunctionPointers(void)
         return functionPointersLoadedElementalTools;
     }
 
+    listElementalToolsFunctions.ElemToolsConfigureFileIO = (void (*)(ElemToolsLoadFileHandlerPtr))GetElementalToolsFunctionPointer("ElemToolsConfigureFileIO");
     listElementalToolsFunctions.ElemCanCompileShader = (bool (*)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform))GetElementalToolsFunctionPointer("ElemCanCompileShader");
-    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, ElemShaderSourceData const *, ElemCompileShaderOptions const *))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
+    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, char const *, ElemCompileShaderOptions const *))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
+    listElementalToolsFunctions.ElemLoadMesh = (ElemLoadMeshResult (*)(ElemToolsDataSpan, ElemMeshFormat, ElemLoadMeshOptions const *))GetElementalToolsFunctionPointer("ElemLoadMesh");
     listElementalToolsFunctions.ElemBuildMeshlets = (ElemBuildMeshletResult (*)(ElemVertexBuffer, ElemBuildMeshletsOptions const *))GetElementalToolsFunctionPointer("ElemBuildMeshlets");
     
 
     functionPointersLoadedElementalTools = 1;
     return true;
+}
+
+static inline void ElemToolsConfigureFileIO(ElemToolsLoadFileHandlerPtr loadFileHandler)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+        return;
+    }
+
+    if (!listElementalToolsFunctions.ElemToolsConfigureFileIO) 
+    {
+        assert(listElementalToolsFunctions.ElemToolsConfigureFileIO);
+        return;
+    }
+
+    listElementalToolsFunctions.ElemToolsConfigureFileIO(loadFileHandler);
 }
 
 static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform)
@@ -118,7 +139,7 @@ static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemT
     return listElementalToolsFunctions.ElemCanCompileShader(shaderLanguage, graphicsApi, platform);
 }
 
-static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, ElemShaderSourceData const * sourceData, ElemCompileShaderOptions const * options)
+static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, char const * path, ElemCompileShaderOptions const * options)
 {
     if (!LoadElementalToolsFunctionPointers()) 
     {
@@ -146,7 +167,38 @@ static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGrap
         return result;
     }
 
-    return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, platform, sourceData, options);
+    return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, platform, path, options);
+}
+
+static inline ElemLoadMeshResult ElemLoadMesh(ElemToolsDataSpan data, ElemMeshFormat meshFormat, ElemLoadMeshOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemLoadMeshResult result = {};
+        #else
+        ElemLoadMeshResult result = (ElemLoadMeshResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemLoadMesh) 
+    {
+        assert(listElementalToolsFunctions.ElemLoadMesh);
+
+        #ifdef __cplusplus
+        ElemLoadMeshResult result = {};
+        #else
+        ElemLoadMeshResult result = (ElemLoadMeshResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemLoadMesh(data, meshFormat, options);
 }
 
 static inline ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemBuildMeshletsOptions const * options)

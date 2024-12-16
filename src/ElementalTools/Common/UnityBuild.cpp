@@ -1,3 +1,4 @@
+#include "ToolsUtils.cpp"
 #include "ShaderCompiler.cpp"
 #include "ShaderCompilerUtils.cpp"
 #include "DirectXShaderCompiler.cpp"
@@ -6,6 +7,10 @@
 #include "MetalShaderConverter.cpp"
 #endif
 
+#define FAST_OBJ_IMPLEMENTATION
+#include "fast_obj.h"
+
+#include "MeshLoader.cpp"
 #include "MeshletBuilder.cpp"
 
 #include "SystemFunctions.cpp"

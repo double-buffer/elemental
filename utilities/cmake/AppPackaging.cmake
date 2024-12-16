@@ -1,97 +1,179 @@
-function(configure_resource_compilation target_name resource_list)
+function(get_compiler_bin_path binary_name out_var)
     if(BUILD_FOR_IOS)
-        set(SHADER_COMPILER_BIN "${CMAKE_SOURCE_DIR}/build/bin/ShaderCompiler.app/Contents/MacOS/ShaderCompiler")
-        set(DEFAULT_SHADER_COMPILER_OPTIONS "--target-platform" "iOS")
+        set(bin_path "${CMAKE_SOURCE_DIR}/build/bin/${binary_name}.app/Contents/MacOS/${binary_name}")
     else()
         if(CMAKE_GENERATOR STREQUAL "Ninja")
-            if (APPLE)
-                set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ShaderCompiler.app/Contents/MacOS/ShaderCompiler")
+            if(APPLE)
+                set(bin_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${binary_name}.app/Contents/MacOS/${binary_name}")
             else()
-                set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ShaderCompiler/ShaderCompiler")
+                set(bin_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${binary_name}/${binary_name}")
             endif()
         else()
-            set(SHADER_COMPILER_BIN "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/ShaderCompiler")
+            set(bin_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/${binary_name}")
         endif()
-        set(DEFAULT_SHADER_COMPILER_OPTIONS "")
-        add_dependencies(${target_name} ShaderCompiler)
     endif()
-        
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        list(APPEND DEFAULT_SHADER_COMPILER_OPTIONS "--debug")
-    endif()
+    set(${out_var} "${bin_path}" PARENT_SCOPE)
+endfunction()
 
-    # TODO: Take into account other type of resources
-    set(hlsl_files_list "")
-    set(compiled_shaders "")
+function(configure_resources_for_compiler target_name result_var name binary_name source_exts dest_ext)
+    # Convert commas to semicolons if present
+    string(REPLACE "," ";" source_exts "${source_exts}")
 
     get_target_property(target_sources ${target_name} SOURCES)
-
-    foreach(source IN LISTS target_sources)
-        if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${source})
-            file(GLOB_RECURSE directory_hlsl_files "${CMAKE_CURRENT_SOURCE_DIR}/${source}/*.hlsl")
-            list(APPEND hlsl_files_list ${directory_hlsl_files})
+    set(resource_files "")
+    foreach(src IN LISTS target_sources)
+        set(abs_src "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
+        if(IS_DIRECTORY ${abs_src})
+            foreach(ext IN LISTS source_exts)
+                file(GLOB_RECURSE matched_files "${abs_src}/*${ext}")
+                list(APPEND resource_files ${matched_files})
+            endforeach()
         else()
-            get_filename_component(ext ${source} EXT)
-            if("${ext}" STREQUAL ".hlsl")
-                list(APPEND hlsl_files_list ${CMAKE_CURRENT_SOURCE_DIR}/${source})
-            endif()
+            get_filename_component(this_ext ${abs_src} EXT)
+            foreach(ext IN LISTS source_exts)
+                if("${this_ext}" STREQUAL "${ext}")
+                    list(APPEND resource_files ${abs_src})
+                    break()
+                endif()
+            endforeach()
         endif()
     endforeach()
 
-    foreach(hlsl_file IN LISTS hlsl_files_list)
-        get_filename_component(file_path ${hlsl_file} ABSOLUTE)
+    if(resource_files STREQUAL "")
+        set(${result_var} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    get_compiler_bin_path(${binary_name} compiler_bin)
+
+    # ARGN holds default parameters passed from the main function
+    set(args_to_parse ${ARGN})
+    set(default_params "")
+    foreach(param IN LISTS args_to_parse)
+        if(NOT param STREQUAL "")
+            list(APPEND default_params ${param})
+        endif()
+    endforeach()
+
+    set(compiled_files "")
+
+    foreach(file IN LISTS resource_files)
+        get_filename_component(file_path ${file} ABSOLUTE)
         get_filename_component(file_dir ${file_path} DIRECTORY)
-        get_filename_component(file_name ${hlsl_file} NAME_WE)
+        get_filename_component(file_name ${file_path} NAME_WE)
 
         file(RELATIVE_PATH relative_dir ${CMAKE_CURRENT_SOURCE_DIR} ${file_dir})
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/${relative_dir}")
         file(MAKE_DIRECTORY ${output_dir})
 
-        set(compiled_shader "${output_dir}/${file_name}.shader")
+        set(output_file "${output_dir}/${file_name}${dest_ext}")
 
-        SET(SHADER_COMPILER_OPTIONS ${DEFAULT_SHADER_COMPILER_OPTIONS})
-
-        add_custom_command(OUTPUT ${compiled_shader}
-            COMMAND ${SHADER_COMPILER_BIN} ${SHADER_COMPILER_OPTIONS} ${hlsl_file} ${compiled_shader}
-            DEPENDS ${hlsl_file}
-            COMMENT "Compiling HLSL shader: ${hlsl_file}"
+        add_custom_command(
+            OUTPUT ${output_file}
+            COMMAND ${compiler_bin} ${default_params} ${file} ${output_file}
+            DEPENDS ${file}
+            COMMENT "Compiling ${name}: ${file}"
             WORKING_DIRECTORY ${file_dir}
         )
 
-        set_source_files_properties(${compiled_shader} PROPERTIES GENERATED TRUE)
-        target_sources(${target_name} PRIVATE ${compiled_shader})
+        set_source_files_properties(${output_file} PROPERTIES GENERATED TRUE)
+        target_sources(${target_name} PRIVATE ${output_file})
+        list(APPEND compiled_files ${output_file})
 
-        list(APPEND compiled_shaders ${compiled_shader})
-        
-        if (WIN32)
-            set(compiled_shader_vulkan "${output_dir}/${file_name}_vulkan.shader")
-            list(APPEND SHADER_COMPILER_OPTIONS "--target-api" "vulkan")
-
-            add_custom_command(OUTPUT ${compiled_shader_vulkan}
-                COMMAND ${SHADER_COMPILER_BIN} ${SHADER_COMPILER_OPTIONS} ${hlsl_file} ${compiled_shader_vulkan}
-                DEPENDS ${hlsl_file}
-                COMMENT "Compiling HLSL shader for vulkan: ${hlsl_file}"
+        # Extra Vulkan variant for HLSL on Windows
+        if("${name}" STREQUAL "HLSL" AND WIN32)
+            set(vulkan_output_file "${output_dir}/${file_name}_vulkan${dest_ext}")
+            add_custom_command(
+                OUTPUT ${vulkan_output_file}
+                COMMAND ${compiler_bin} ${default_params} --target-api vulkan ${file} ${vulkan_output_file}
+                DEPENDS ${file}
+                COMMENT "Compiling ${name} (Vulkan): ${file}"
                 WORKING_DIRECTORY ${file_dir}
             )
-
-            set_source_files_properties(${compiled_shader_vulkan} PROPERTIES GENERATED TRUE)
-            target_sources(${target_name} PRIVATE ${compiled_shader_vulkan})
-
-            list(APPEND compiled_shaders ${compiled_shader_vulkan})
+            set_source_files_properties(${vulkan_output_file} PROPERTIES GENERATED TRUE)
+            target_sources(${target_name} PRIVATE ${vulkan_output_file})
+            list(APPEND compiled_files ${vulkan_output_file})
         endif()
     endforeach()
 
-    set(${resource_list} "${compiled_shaders}" PARENT_SCOPE)
+    set(${result_var} "${compiled_files}" PARENT_SCOPE)
 endfunction()
+
+function(configure_resource_compilation target_name resource_list)
+    # Reintroduce original logic for iOS and Debug
+    if(BUILD_FOR_IOS)
+        set(SHADER_COMPILER_DEFAULT_OPTIONS "--target-platform iOS")
+    else()
+        set(SHADER_COMPILER_DEFAULT_OPTIONS "")
+        add_dependencies(${target_name} ShaderCompiler)
+    endif()
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        # Append debug flag to shader options
+        if(NOT "${SHADER_COMPILER_DEFAULT_OPTIONS}" STREQUAL "")
+            set(SHADER_COMPILER_DEFAULT_OPTIONS "${SHADER_COMPILER_DEFAULT_OPTIONS} --debug")
+        else()
+            set(SHADER_COMPILER_DEFAULT_OPTIONS "--debug")
+        endif()
+    endif()
+
+    set(MESH_COMPILER_DEFAULT_OPTIONS "")
+
+    # Use '|' as delimiters to avoid semicolon issues
+    # Format: Name|BinaryName|SourceExtensions|DestExtension|DefaultParams...
+    set(COMPILERS_LIST
+        "HLSL|ShaderCompiler|.hlsl|.shader|${SHADER_COMPILER_DEFAULT_OPTIONS}"
+        "MESH|MeshCompiler|.obj|.mesh|${MESH_COMPILER_DEFAULT_OPTIONS}"
+        "MESH|MeshCompiler|.gltf|.mesh|${MESH_COMPILER_DEFAULT_OPTIONS}"
+    )
+
+    set(all_compiled_resources "")
+    foreach(compiler_entry IN LISTS COMPILERS_LIST)
+        # Convert '|' to ';' to parse fields
+        string(REPLACE "|" ";" fields_string "${compiler_entry}")
+        set(fields ${fields_string})
+        list(LENGTH fields fields_length)
+        if(fields_length LESS 4)
+            message(FATAL_ERROR "Invalid compiler definition: ${compiler_entry}")
+        endif()
+
+        list(GET fields 0 name)
+        list(GET fields 1 binary_name)
+        list(GET fields 2 source_exts)
+        list(GET fields 3 dest_ext)
+
+        if(fields_length GREATER 4)
+            list(SUBLIST fields 4 -1 default_params)
+        else()
+            set(default_params "")
+        endif()
+
+        configure_resources_for_compiler(
+            ${target_name}
+            compiled_files_for_${name}
+            ${name}
+            ${binary_name}
+            "${source_exts}"
+            ${dest_ext}
+            ${default_params}
+        )
+
+        list(APPEND all_compiled_resources ${compiled_files_for_${name}})
+    endforeach()
+
+    set(${resource_list} "${all_compiled_resources}" PARENT_SCOPE)
+endfunction()
+
+
 
 function(configure_project_package target_name install_folder)
     cmake_parse_arguments(ARG "" "" "DEPENDENCIES;RESOURCES" ${ARGV})
 
     list(LENGTH ARG_DEPENDENCIES dependencies_length)
-    message("Number of Dependencies: ${dependencies_length}")
+    # message("Number of Dependencies: ${dependencies_length}")
             
     list(LENGTH ARG_RESOURCES resources_length)
-    message("Number of resources: ${resources_length}")
+    # message("Number of resources: ${resources_length}")
 
     if(APPLE)
         set(APPFOLDER_EXTENSION ".app")
@@ -170,7 +252,6 @@ function(configure_project_package target_name install_folder)
         )
 
         foreach(dependency IN LISTS ARG_DEPENDENCIES)
-            message("Dep: ${dependency}")
             add_dependencies(CopyApplicationFolder${target_name} ${dependency})
         
             add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD

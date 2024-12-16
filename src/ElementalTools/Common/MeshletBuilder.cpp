@@ -11,7 +11,6 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     auto vertexRemap = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
     
     auto vertexCount = meshopt_generateVertexRemap(vertexRemap.Pointer, nullptr, indexCount, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize);
-    printf("VertexCount after remap: %zu\n", vertexCount);
 
     auto vertexList = SystemPushArrayZero<uint8_t>(stackMemoryArena, vertexCount * vertexBuffer.VertexSize);
     auto indexList = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
@@ -31,7 +30,6 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     auto coneWeight = 0.5f;
 
     auto meshletCount = (uint32_t)meshopt_buildMeshletsBound(indexCount, meshletMaxVertexCount, meshletMaxTriangleCount);
-    printf("MeshletCount: %d\n", meshletCount);
 
     auto meshOptMeshletList = SystemPushArray<meshopt_Meshlet>(stackMemoryArena, meshletCount);
     auto meshletVertexIndexList = SystemPushArray<uint32_t>(stackMemoryArena, meshletCount * meshletMaxVertexCount);
@@ -54,7 +52,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     auto meshletVertexIndexCount = 0u;
     auto meshletTriangleIndexCount = 0u;
 
-    printf("MeshletCount: %d\n", meshletCount);
+    //printf("MeshletCount: %d\n", meshletCount);
 
     auto meshletList = SystemPushArray<ElemMeshlet>(stackMemoryArena, meshletCount);
 
@@ -99,6 +97,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
         meshletTriangleIndexCount = fmax(meshletTriangleIndexCount, meshlet.triangle_offset / 3 + meshlet.triangle_count);
     }
 
+    // TODO: Output everything in separate memory arena
     return 
     {
         .MeshletMaxVertexCount = meshletMaxVertexCount,

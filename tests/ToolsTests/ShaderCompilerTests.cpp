@@ -4,11 +4,10 @@
 enum ShaderType
 {
     ShaderType_Unknown = 0,
-    ShaderType_Amplification = 1,
-    ShaderType_Mesh = 2,
-    ShaderType_Pixel = 3,
-    ShaderType_Compute = 4,
-    ShaderType_Library = 5
+    ShaderType_Mesh = 1,
+    ShaderType_Pixel = 2,
+    ShaderType_Compute = 3,
+    ShaderType_Library = 4
 };
 
 enum ShaderMetadataType
@@ -22,20 +21,6 @@ auto hlslTestSource = R"(
     [numthreads(16, 16, 1)]
     void TestCompute(uint3 threadId: SV_DispatchThreadID)
     {
-    }
-
-    struct AmplificationPayload
-    {
-        float Test;
-    };
-
-    groupshared AmplificationPayload sharedPayload;
-
-    [shader("amplification")]
-    [numthreads(1, 1, 1)] 
-    void TestAmplification(in uint3 groupID : SV_GroupID)    
-    { 
-        DispatchMesh(1, 1, 1, sharedPayload);
     }
 
     struct VertexOutput
@@ -76,6 +61,7 @@ auto hlslTestSourceError = R"(
         return input.color;
     }
 )";
+
 
 UTEST(ShaderCompiler, CanCompileShaderTest_HlslToDirectX12) 
 {
@@ -122,7 +108,7 @@ struct ShaderInfo
 
 struct ShaderCompiler_CompileShader
 {
-    ElemShaderLanguage SourceLanguage;
+    const char* ShaderPath;
     ElemToolsGraphicsApi TargetGraphicsApi;
     ElemToolsPlatform TargetPlatform;
     ShaderInfo ExpectedShaders[16];
@@ -142,18 +128,6 @@ UTEST_F_SETUP(ShaderCompiler_CompileShader)
         {
             .Type = ShaderMetadataType_ThreadGroupSize,
             .Value = { 16u, 16u, 1u, 0u }
-        }},
-        .MetaDataCount = 1
-    };
-
-    utest_fixture->ExpectedShaders[utest_fixture->ExpectedShaderCount++] = 
-    { 
-        .Type = ShaderType_Amplification,
-        .Name = "TestAmplification",
-        .Metadata = {
-        {
-            .Type = ShaderMetadataType_ThreadGroupSize,
-            .Value = { 1u, 1u, 1u, 0u }
         }},
         .MetaDataCount = 1
     };
@@ -181,6 +155,9 @@ UTEST_F_SETUP(ShaderCompiler_CompileShader)
         }},
         .MetaDataCount = 1
     };
+
+    AddTestFile("HlslTestSource.hlsl", { .Items = (uint8_t*)hlslTestSource, .Length = (uint32_t)strlen(hlslTestSource) });
+    AddTestFile("HlslTestSourceError.hlsl", { .Items = (uint8_t*)hlslTestSourceError, .Length = (uint32_t)strlen(hlslTestSourceError) });
 }
 
 void AssertCompilationErrors(int32_t* utest_result, ShaderCompiler_CompileShader* utest_fixture, const ElemShaderCompilationResult* compilationResult)
@@ -296,21 +273,8 @@ void AssertShaderData(int32_t* utest_result, ShaderCompiler_CompileShader* utest
 
 UTEST_F_TEARDOWN(ShaderCompiler_CompileShader) 
 {
-    // Arrange
-    auto sourceCode = !utest_fixture->WithError ? hlslTestSource : hlslTestSourceError;
-
-    ElemShaderSourceData sourceData =
-    {
-        .ShaderLanguage = utest_fixture->SourceLanguage, 
-        .Data = 
-        { 
-            .Items = (uint8_t*)sourceCode, 
-            .Length = (uint32_t)strlen(sourceCode)
-        }
-    };
-
     // Act
-    auto compilationResult = ElemCompileShaderLibrary(utest_fixture->TargetGraphicsApi, utest_fixture->TargetPlatform, &sourceData, nullptr);
+    auto compilationResult = ElemCompileShaderLibrary(utest_fixture->TargetGraphicsApi, utest_fixture->TargetPlatform, utest_fixture->ShaderPath, nullptr);
 
     // Assert
     AssertCompilationErrors(utest_result, utest_fixture, &compilationResult);
@@ -319,7 +283,7 @@ UTEST_F_TEARDOWN(ShaderCompiler_CompileShader)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Windows) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSource.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_DirectX12;
     utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
     utest_fixture->WithError = false;
@@ -327,7 +291,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Windows)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Windows_Error) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSourceError.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_DirectX12;
     utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
     utest_fixture->WithError = true;
@@ -335,7 +299,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_DirectX12_Windows_Error)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Windows) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSource.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
     utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
     utest_fixture->WithError = false;
@@ -343,7 +307,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Windows)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Windows_Error) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSourceError.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
     utest_fixture->TargetPlatform = ElemToolsPlatform_Windows;
     utest_fixture->WithError = true;
@@ -351,7 +315,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Windows_Error)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Linux) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSource.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
     utest_fixture->TargetPlatform = ElemToolsPlatform_Linux;
     utest_fixture->WithError = false;
@@ -359,7 +323,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Linux)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Linux_Error) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSourceError.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Vulkan;
     utest_fixture->TargetPlatform = ElemToolsPlatform_Linux;
     utest_fixture->WithError = true;
@@ -368,7 +332,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Vulkan_Linux_Error)
 #ifndef __linux__
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSource.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
     utest_fixture->TargetPlatform = ElemToolsPlatform_MacOS;
     utest_fixture->WithError = false;
@@ -376,7 +340,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS_Error) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSourceError.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
     utest_fixture->TargetPlatform = ElemToolsPlatform_MacOS;
     utest_fixture->WithError = true;
@@ -384,7 +348,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_MacOS_Error)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_iOS) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSource.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
     utest_fixture->TargetPlatform = ElemToolsPlatform_iOS;
     utest_fixture->WithError = false;
@@ -392,7 +356,7 @@ UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_iOS)
 
 UTEST_F(ShaderCompiler_CompileShader, Hlsl_Metal_iOS_Error) 
 {
-    utest_fixture->SourceLanguage = ElemShaderLanguage_Hlsl;
+    utest_fixture->ShaderPath = "HlslTestSourceError.hlsl";
     utest_fixture->TargetGraphicsApi = ElemToolsGraphicsApi_Metal;
     utest_fixture->TargetPlatform = ElemToolsPlatform_iOS;
     utest_fixture->WithError = true;

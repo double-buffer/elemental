@@ -41,27 +41,6 @@
 //------------------------------------------------------------------------
 
 /**
- * Enumerates supported shader languages.
- */
-typedef enum
-{
-    // Unknown shader language.
-    ElemShaderLanguage_Unknown = 0,
-    // High Level Shading Language used by DirectX.
-    ElemShaderLanguage_Hlsl = 1,
-    // OpenGL Shading Language.
-    ElemShaderLanguage_Glsl = 2,
-    // Metal Shading Language for Apple devices.
-    ElemShaderLanguage_Msl = 3,
-    // DirectX Intermediate Language.
-    ElemShaderLanguage_Dxil = 4,
-    // Standard Portable Intermediate Representation.
-    ElemShaderLanguage_Spirv = 5,
-    // Intermediate representation for Metal.
-    ElemShaderLanguage_MetalIR = 6
-} ElemShaderLanguage;
-
-/**
  * Enumerates supported graphics APIs.
  */
 typedef enum
@@ -135,6 +114,37 @@ typedef struct
     uint32_t Length;
 } ElemToolsMessageSpan;
 
+typedef ElemToolsDataSpan (*ElemToolsLoadFileHandlerPtr)(const char* path);
+
+ElemToolsAPI void ElemToolsConfigureFileIO(ElemToolsLoadFileHandlerPtr loadFileHandler);
+
+
+//------------------------------------------------------------------------
+// ##Module_Shaders##
+//------------------------------------------------------------------------
+
+// TODO: Change the list
+/**
+ * Enumerates supported shader languages.
+ */
+typedef enum
+{
+    // Unknown shader language.
+    ElemShaderLanguage_Unknown = 0,
+    // High Level Shading Language used by DirectX.
+    ElemShaderLanguage_Hlsl = 1,
+    // OpenGL Shading Language.
+    ElemShaderLanguage_Glsl = 2,
+    // Metal Shading Language for Apple devices.
+    ElemShaderLanguage_Msl = 3,
+    // DirectX Intermediate Language.
+    ElemShaderLanguage_Dxil = 4,
+    // Standard Portable Intermediate Representation.
+    ElemShaderLanguage_Spirv = 5,
+    // Intermediate representation for Metal.
+    ElemShaderLanguage_MetalIR = 6
+} ElemShaderLanguage;
+
 /**
  * Represents shader source data, including language and the actual code.
  */
@@ -153,6 +163,8 @@ typedef struct
 {
     // If true, compile shaders in debug mode to provide more information.
     bool DebugMode;
+
+    // TODO: Add the ability to add an override for shader language
 } ElemCompileShaderOptions;
 
 /**
@@ -186,15 +198,30 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
  * @return The result of the compilation, including any binaries and messages.
  */
 // TODO: Put graphics api and platform into options (default to current one)
-ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
+ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const char* path, const ElemCompileShaderOptions* options);
 
 // TODO: Can we compile multiple source files into one library?
+
+
+//------------------------------------------------------------------------
+// ##Module_Meshes##
+//------------------------------------------------------------------------
+
+typedef enum
+{
+    ElemMeshFormat_Obj = 0,
+} ElemMeshFormat;
 
 typedef struct
 {
     ElemToolsDataSpan Data;
     uint32_t VertexSize;
 } ElemVertexBuffer;
+
+typedef struct
+{
+    uint32_t Reserved;
+} ElemLoadMeshOptions;
 
 // TODO: Allow to specify the offset of the vertex position? (For now we assume vertex position is at offset 0)
 typedef struct
@@ -224,6 +251,14 @@ typedef struct
 
 typedef struct
 {
+    ElemVertexBuffer VertexBuffer;
+    uint32_t VertexCount;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemLoadMeshResult;
+
+typedef struct
+{
     uint8_t MeshletMaxVertexCount;
     uint8_t MeshletMaxTriangleCount;
     ElemVertexBuffer VertexBuffer;
@@ -233,6 +268,11 @@ typedef struct
     ElemToolsMessageSpan Messages;
     bool HasErrors;
 } ElemBuildMeshletResult;
+
+// TODO: Add a way to pass multiple files?
+// TODO: We need to have also a callback system for providing data based on files. Because for shaders and meshes you don't know
+// in advance what files are used. The model of fast_obj is actually pretty good
+ElemToolsAPI ElemLoadMeshResult ElemLoadMesh(ElemToolsDataSpan data, ElemMeshFormat meshFormat, const ElemLoadMeshOptions* options);
 
 ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
 

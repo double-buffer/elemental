@@ -1,5 +1,7 @@
 #pragma once
 
 #include "ElementalTools.h"
+#include "utest.h"
 
-// TODO: Add Utils functions
+void ConfigureTestFileIO();
+void AddTestFile(const char* path, ElemToolsDataSpan data);

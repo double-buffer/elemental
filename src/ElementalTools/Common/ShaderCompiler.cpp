@@ -1,4 +1,5 @@
 #include "ElementalTools.h"
+#include "ToolsUtils.h"
 #include "DirectXShaderCompiler.h"
 #include "MetalShaderConverter.h"
 #include "SystemFunctions.h"
@@ -83,6 +84,25 @@ ElemShaderLanguage GetApiTargetLanguage(ElemToolsGraphicsApi graphicsApi)
     }
 }
 
+ElemShaderLanguage GetShaderLanguageFromPath(const char* path)
+{
+    auto pathSpan = ReadOnlySpan<char>(path);
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    auto lastIndex = SystemLastIndexOf(path, '.');
+    SystemAssert(lastIndex != -1);
+
+    auto extension = SystemPushArray<char>(stackMemoryArena, pathSpan.Length - lastIndex);
+    SystemCopyBuffer(extension, pathSpan.Slice(lastIndex + 1));
+
+    if (SystemFindSubString(extension, "hlsl") != -1)
+    {
+        return ElemShaderLanguage_Hlsl;
+    }
+
+    return ElemShaderLanguage_Unknown;
+}
+
 void ReverseCompilerChainArray(Span<ShaderCompilerStep> steps, uint32_t count)
 {
     for (uint32_t i = 0; i < count - 1; i++)
@@ -163,9 +183,9 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
     return FindShaderCompilerChain(shaderLanguage, targetLanguage, compilerSteps, &level);
 }
 
-ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
+ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const char* path, const ElemCompileShaderOptions* options)
 {
-    SystemAssert(sourceData);
+    SystemAssert(path);
 
     InitShaderCompiler();
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -176,7 +196,10 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
     auto compilationMessages = Span<ElemToolsMessage>();
     auto compilationData = ReadOnlySpan<uint8_t>();
 
-    if (!FindShaderCompilerChain(sourceData->ShaderLanguage, targetLanguage, compilerSteps, &level))
+    auto shaderLanguage = GetShaderLanguageFromPath(path);
+    SystemAssert(shaderLanguage != ElemShaderLanguage_Unknown);
+
+    if (!FindShaderCompilerChain(shaderLanguage, targetLanguage, compilerSteps, &level))
     {
         auto messageItem = SystemPushStruct<ElemToolsMessage>(stackMemoryArena);
         messageItem->Type = ElemToolsMessageType_Error;
@@ -195,7 +218,24 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
 
     auto hasErrors = false;
 
-    auto stepSourceData = ReadOnlySpan<uint8_t>((uint8_t*)sourceData->Data.Items, sourceData->Data.Length);
+    auto stepSourceData = LoadFileData(path); 
+
+    if (stepSourceData.Length == 0)
+    {
+        auto messageItem = SystemPushStruct<ElemToolsMessage>(stackMemoryArena);
+        messageItem->Type = ElemToolsMessageType_Error;
+        messageItem->Message = "Cannot read input file.";
+
+        return
+        {
+            .Messages = 
+            {
+                .Items = messageItem,
+                .Length = 1
+            },
+            .HasErrors = true
+        };
+    }
 
     for (uint32_t i = 0; i < level; i++)
     {
@@ -227,6 +267,9 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
         stepSourceData = compilationData;
     }
 
+    ResetLoadFileDataMemory();
+
+    // TODO: output the values in a separate arena
     return 
     {
         .Data = 

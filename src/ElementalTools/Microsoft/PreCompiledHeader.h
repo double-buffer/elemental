@@ -36,6 +36,7 @@ using namespace Microsoft::WRL;
 #include "metal_irconverter/metal_irconverter.h"
 
 #include "meshoptimizer.h"
+#include "fast_obj.h"
 
 #ifdef _WASDEBUG
 #define _DEBUG

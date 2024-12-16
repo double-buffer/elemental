@@ -482,7 +482,7 @@ Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, ReadOnlySpan<char> pa
     auto fileData = SystemPushArray<uint8_t>(memoryArena, fileSizeInBytes);
 
     SystemPlatformFileReadBytes(path, fileData);
-
+    
     return fileData;
 }
 

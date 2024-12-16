@@ -5,10 +5,10 @@
 enum ShaderType
 {
     ShaderType_Unknown = 0,
-    ShaderType_Mesh = 2,
-    ShaderType_Pixel = 3,
-    ShaderType_Compute = 4,
-    ShaderType_Library = 5
+    ShaderType_Mesh = 1,
+    ShaderType_Pixel = 2,
+    ShaderType_Compute = 3,
+    ShaderType_Library = 4
 };
 
 enum ShaderMetadataType

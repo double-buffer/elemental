@@ -201,6 +201,7 @@ InputMeshData ReadObjMesh(ElemToolsDataSpan data, bool reverseHandedness)
             if (SampleCompareString(lineParts[0], "g"))
             {
                 printf("ERROR: Group not implemented yet!\n");
+                return (InputMeshData) { 0 };
             }
             else if (SampleCompareString(lineParts[0], "v"))
             {
@@ -302,8 +303,19 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
+    ElemLoadMeshResult inputMesh = ElemLoadMesh(inputData, ElemMeshFormat_Obj, NULL);
+    printf("Input mesh vertex Count: %d\n", inputMesh.VertexCount);
+
     InputMeshData inputMeshData = ReadObjMesh(inputData, true); 
     printf("Input mesh vertex Count: %d\n", inputMeshData.VertexCount);
+
+    // TODO: Temporary
+    if (inputMeshData.VertexCount == 0)
+    {
+        uint8_t test = { 1 };
+    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = &test, .Length = 1 }, false);
+        return 0;
+    }
 
     ElemVertexBuffer vertexBuffer =
     {

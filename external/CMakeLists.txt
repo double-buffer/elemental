@@ -211,10 +211,17 @@ if(NOT BUILD_FOR_IOS)
 endif()
 
 #=======================================================================
+# Fast Obj
+#=======================================================================
+if(NOT BUILD_FOR_IOS)
+    add_subdirectory(./fast_obj)
+endif()
+
+#=======================================================================
 # Tools External Dependencies
 #=======================================================================
 add_library(tools_external_dependencies INTERFACE)
-target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer)
+target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj)
 
 #=======================================================================
 # xxHash
