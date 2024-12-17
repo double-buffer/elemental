@@ -1,8 +1,23 @@
 #include "ElementalTools.h"
 #include "SystemMemory.h"
 
+// TODO: Do one for each thread
+static MemoryArena MeshletBuilderMemoryArena;
+
+void InitMeshletBuilderMemoryArena()
+{
+    if (MeshletBuilderMemoryArena.Storage == nullptr)
+    {
+        MeshletBuilderMemoryArena = SystemAllocateMemoryArena(512 * 1024 * 1024);
+    }
+
+    SystemClearMemoryArena(MeshletBuilderMemoryArena);
+}
+
 ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options)
 {
+    InitMeshletBuilderMemoryArena();
+
     // TODO: Error messages
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -12,7 +27,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     
     auto vertexCount = meshopt_generateVertexRemap(vertexRemap.Pointer, nullptr, indexCount, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize);
 
-    auto vertexList = SystemPushArrayZero<uint8_t>(stackMemoryArena, vertexCount * vertexBuffer.VertexSize);
+    auto vertexList = SystemPushArrayZero<uint8_t>(MeshletBuilderMemoryArena, vertexCount * vertexBuffer.VertexSize);
     auto indexList = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
 
     meshopt_remapVertexBuffer(vertexList.Pointer, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize, vertexRemap.Pointer);
@@ -32,9 +47,9 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     auto meshletCount = (uint32_t)meshopt_buildMeshletsBound(indexCount, meshletMaxVertexCount, meshletMaxTriangleCount);
 
     auto meshOptMeshletList = SystemPushArray<meshopt_Meshlet>(stackMemoryArena, meshletCount);
-    auto meshletVertexIndexList = SystemPushArray<uint32_t>(stackMemoryArena, meshletCount * meshletMaxVertexCount);
+    auto meshletVertexIndexList = SystemPushArray<uint32_t>(MeshletBuilderMemoryArena, meshletCount * meshletMaxVertexCount);
     auto meshletTriangleIndexListRaw = SystemPushArray<uint8_t>(stackMemoryArena, meshletCount * meshletMaxTriangleCount * 3);
-    auto meshletTriangleIndexList = SystemPushArrayZero<uint32_t>(stackMemoryArena, meshletCount * meshletMaxTriangleCount);
+    auto meshletTriangleIndexList = SystemPushArrayZero<uint32_t>(MeshletBuilderMemoryArena, meshletCount * meshletMaxTriangleCount);
 
     meshletCount = meshopt_buildMeshlets(meshOptMeshletList.Pointer, 
                                          meshletVertexIndexList.Pointer, 
@@ -54,7 +69,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
     //printf("MeshletCount: %d\n", meshletCount);
 
-    auto meshletList = SystemPushArray<ElemMeshlet>(stackMemoryArena, meshletCount);
+    auto meshletList = SystemPushArray<ElemMeshlet>(MeshletBuilderMemoryArena, meshletCount);
 
     for (uint32_t i = 0; i < meshletCount; i++)
     {
@@ -65,12 +80,12 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
                                 meshlet.triangle_count, 
                                 meshlet.vertex_count);
 
-        auto meshletBounds = meshopt_computeMeshletBounds(&meshletVertexIndexList[meshlet.vertex_offset], 
+        /*auto meshletBounds = meshopt_computeMeshletBounds(&meshletVertexIndexList[meshlet.vertex_offset], 
                                                           &meshletTriangleIndexListRaw[meshlet.triangle_offset], 
                                                           meshlet.triangle_count, 
                                                           (const float*)vertexList.Pointer, 
                                                           vertexCount, 
-                                                          vertexBuffer.VertexSize);
+                                                          vertexBuffer.VertexSize);*/
 
         // TODO: Cone and sphere
 

@@ -1,8 +1,7 @@
 #include "ToolsTests.h"
 #include "utest.h"
 
-auto objMeshSourceFile = R"(
-    o Cube
+auto cubeObjMeshSource = R"(o Cube
     v 1.000000 -1.000000 -1.000000
     v 1.000000 -1.000000 1.000000
     v -1.000000 -1.000000 1.000000
@@ -47,28 +46,44 @@ auto objMeshSourceFile = R"(
 
 struct MeshLoader_LoadMesh
 {
-    ElemMeshFormat MeshFormat;
-    ElemToolsDataSpan MeshSource;
+    const char* Path;
     uint32_t ExpectedVertexCount;
 };
 
 UTEST_F_SETUP(MeshLoader_LoadMesh)
 {
+    AddTestFile("Cube.obj", { .Items = (uint8_t*)cubeObjMeshSource, .Length = (uint32_t)strlen(cubeObjMeshSource) });
 }
 
 UTEST_F_TEARDOWN(MeshLoader_LoadMesh)
 {
     // Act
-    auto result = ElemLoadMesh(utest_fixture->MeshSource, utest_fixture->MeshFormat, NULL);
+    auto result = ElemLoadMesh(utest_fixture->Path, NULL);
 
     // Assert
     ASSERT_FALSE(result.HasErrors);
     ASSERT_EQ_MSG(result.VertexCount, utest_fixture->ExpectedVertexCount, "LoadMesh vertex count is not correct."); 
+    ASSERT_GT_MSG(result.VertexBuffer.VertexSize, 0u, "Vertex size must be greater than 0.");
+    ASSERT_GT_MSG(result.VertexBuffer.Data.Length, 0u, "VertexBuffer size must be greater than 0.");
+
+    bool isEmpty = true;
+
+    for (uint32_t i = 0; i < result.VertexBuffer.Data.Length; i++)
+    {
+        if (result.VertexBuffer.Data.Items[i] != 0)
+        {
+            isEmpty = false;
+            break;
+        }
+    }
+
+    ASSERT_FALSE_MSG(isEmpty, "VertexBuffer must contains data.");
+
+    // TODO: Add more data checks based on the format
 }
 
 UTEST_F(MeshLoader_LoadMesh, Obj) 
 {
-    utest_fixture->MeshFormat = ElemMeshFormat_Obj;
-    utest_fixture->MeshSource = { .Items = (uint8_t*)objMeshSourceFile, .Length = (uint32_t)strlen(objMeshSourceFile) };
-    utest_fixture->ExpectedVertexCount = 8;
+    utest_fixture->Path = "Cube.obj";
+    utest_fixture->ExpectedVertexCount = 36;
 }

@@ -29,7 +29,7 @@ void InitStorageMemoryArena()
 {
     if (FileIOMemoryArena.Storage == nullptr)
     {
-        FileIOMemoryArena = SystemAllocateMemoryArena();
+        FileIOMemoryArena = SystemAllocateMemoryArena(512 * 1024 * 1024);
     }
 }
 

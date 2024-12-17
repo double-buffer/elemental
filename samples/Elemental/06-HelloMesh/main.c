@@ -156,6 +156,7 @@ void InitSample(void* payload)
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     LoadMesh(&applicationPayload->TestMeshData, "kitten.mesh", applicationPayload);
+    //LoadMesh(&applicationPayload->TestMeshData, "buddha.mesh", applicationPayload);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);

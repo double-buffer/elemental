@@ -84,7 +84,7 @@ void SampleUpdateInputActions(SampleInputActionBindingSpan* inputActionBindings,
     {
         ElemInputEvent* inputEvent = &inputStream.Events.Items[i];
 
-        printf("Input Event: %d, %f\n", inputEvent->InputId, inputEvent->Value);
+        //printf("Input Event: %d, %f\n", inputEvent->InputId, inputEvent->Value);
 
         for (uint32_t j = 0; j < inputActionBindings->Length; j++)
         {

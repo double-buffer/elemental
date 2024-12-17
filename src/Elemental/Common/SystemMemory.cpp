@@ -5,7 +5,7 @@
 #ifdef ElemAPI
 #include "SystemLogging.h"
 #else
-#define SystemLogErrorMessage(category, format, ...)
+#define SystemLogErrorMessage(category, format, ...) printf(format __VA_OPT__(,) __VA_ARGS__)
 #endif
 
 #define MEMORYARENA_DEFAULT_SIZE 64 * 1024 * 1024
@@ -431,7 +431,7 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
 
     if (allocatedSize + sizeInBytes > storage->SizeInBytes)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot push to memory arena with: %u (Allocated size is: %u, Max size is: %u)", sizeInBytes, allocatedSize, storage->SizeInBytes);
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot push to memory arena with: %u (Allocated size is: %u, Max size is: %u)", (uint32_t)sizeInBytes, (uint32_t)allocatedSize, (uint32_t)storage->SizeInBytes);
         return nullptr;
     }
 
@@ -462,7 +462,7 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
 
     if (sizeInBytes > allocatedSize)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", sizeInBytes, allocatedSize);
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot pop memory arena with: %u (Allocated size is: %u)", (uint32_t)sizeInBytes, (uint32_t)allocatedSize);
         return;
     }
 

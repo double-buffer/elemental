@@ -212,20 +212,29 @@ typedef enum
     ElemMeshFormat_Obj = 0,
 } ElemMeshFormat;
 
+typedef enum
+{
+    ElemMeshCoordinateSystem_LeftHanded = 0,
+    ElemMeshCoordinateSystem_RightHanded = 1
+} ElemMeshCoordinateSystem;
+
 typedef struct
 {
     ElemToolsDataSpan Data;
     uint32_t VertexSize;
+    // TODO: Add vertex description structure
 } ElemVertexBuffer;
 
 typedef struct
 {
-    uint32_t Reserved;
+    ElemMeshCoordinateSystem MeshCoordinateSystem;
+    // TODO: Add options to specify the vertex format wanted
 } ElemLoadMeshOptions;
 
 // TODO: Allow to specify the offset of the vertex position? (For now we assume vertex position is at offset 0)
 typedef struct
 {
+    // TODO: Allow bypass mesh format
     uint32_t Reserved;
 } ElemBuildMeshletsOptions;
 
@@ -251,6 +260,7 @@ typedef struct
 
 typedef struct
 {
+    ElemMeshFormat MeshFormat;
     ElemVertexBuffer VertexBuffer;
     uint32_t VertexCount;
     ElemToolsMessageSpan Messages;
@@ -269,10 +279,7 @@ typedef struct
     bool HasErrors;
 } ElemBuildMeshletResult;
 
-// TODO: Add a way to pass multiple files?
-// TODO: We need to have also a callback system for providing data based on files. Because for shaders and meshes you don't know
-// in advance what files are used. The model of fast_obj is actually pretty good
-ElemToolsAPI ElemLoadMeshResult ElemLoadMesh(ElemToolsDataSpan data, ElemMeshFormat meshFormat, const ElemLoadMeshOptions* options);
+ElemToolsAPI ElemLoadMeshResult ElemLoadMesh(const char* path, const ElemLoadMeshOptions* options);
 
 ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
 
