@@ -1,7 +1,7 @@
 #include "ToolsTests.h"
 #include "utest.h"
 
-auto cubeObjMeshSource = R"(o Cube
+auto cubeObjSceneSource = R"(o Cube
     v 1.000000 -1.000000 -1.000000
     v 1.000000 -1.000000 1.000000
     v -1.000000 -1.000000 1.000000
@@ -44,25 +44,25 @@ auto cubeObjMeshSource = R"(o Cube
     f 4/13/5 3/9/5 8/11/5
     f 5/6/6 1/12/6 8/11/6)";
 
-struct MeshLoader_LoadMesh
+struct SceneLoader_LoadScene
 {
     const char* Path;
     uint32_t ExpectedVertexCount;
 };
 
-UTEST_F_SETUP(MeshLoader_LoadMesh)
+UTEST_F_SETUP(SceneLoader_LoadScene)
 {
-    AddTestFile("Cube.obj", { .Items = (uint8_t*)cubeObjMeshSource, .Length = (uint32_t)strlen(cubeObjMeshSource) });
+    AddTestFile("Cube.obj", { .Items = (uint8_t*)cubeObjSceneSource, .Length = (uint32_t)strlen(cubeObjSceneSource) });
 }
 
-UTEST_F_TEARDOWN(MeshLoader_LoadMesh)
+UTEST_F_TEARDOWN(SceneLoader_LoadScene)
 {
     // Act
-    auto result = ElemLoadMesh(utest_fixture->Path, NULL);
+    auto result = ElemLoadScene(utest_fixture->Path, NULL);
 
     // Assert
     ASSERT_FALSE(result.HasErrors);
-    ASSERT_EQ_MSG(result.VertexCount, utest_fixture->ExpectedVertexCount, "LoadMesh vertex count is not correct."); 
+    ASSERT_EQ_MSG(result.VertexCount, utest_fixture->ExpectedVertexCount, "LoadScene vertex count is not correct."); 
     ASSERT_GT_MSG(result.VertexBuffer.VertexSize, 0u, "Vertex size must be greater than 0.");
     ASSERT_GT_MSG(result.VertexBuffer.Data.Length, 0u, "VertexBuffer size must be greater than 0.");
 
@@ -82,7 +82,7 @@ UTEST_F_TEARDOWN(MeshLoader_LoadMesh)
     // TODO: Add more data checks based on the format
 }
 
-UTEST_F(MeshLoader_LoadMesh, Obj) 
+UTEST_F(SceneLoader_LoadScene, Obj) 
 {
     utest_fixture->Path = "Cube.obj";
     utest_fixture->ExpectedVertexCount = 36;

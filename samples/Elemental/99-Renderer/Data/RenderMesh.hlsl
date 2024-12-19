@@ -1,18 +1,21 @@
 struct ShaderParameters
 {
+    uint32_t FrameDataBufferIndex;
     uint32_t VertexBufferIndex;
     uint32_t MeshletBufferIndex;
     uint32_t MeshletVertexIndexBufferIndex;
     uint32_t MeshletTriangleIndexBufferIndex;
-    float4 RotationQuaternion;
-    float Zoom;
-    float AspectRatio;
     uint32_t ShowMeshlets;
     uint32_t MeshletCount;
 };
 
 [[vk::push_constant]]
 ShaderParameters parameters : register(b0);
+
+struct FrameData
+{
+    float4x4 ViewProjMatrix;
+};
 
 struct ElemMeshlet
 {
@@ -22,8 +25,6 @@ struct ElemMeshlet
     uint32_t TriangleCount;
 };
 
-// NOTE: The vertex layout is not optimized to not add complexity to the sample. 
-// Do not use this on production code.
 struct Vertex
 {
     float3 Position;
@@ -37,7 +38,7 @@ struct VertexOutput
     float3 WorldNormal: NORMAL0;
     uint   MeshletIndex : COLOR0;
 };
-
+#define IDENTITY_MATRIX float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 // TODO: Put that in an include file
 float4x4 TransformMatrix(float4 quaternion, float3 translation)
 {
@@ -49,32 +50,6 @@ float4x4 TransformMatrix(float4 quaternion, float3 translation)
 	float4 row2 = float4(  2*(xy-zw),1-2*(xx+zz),  2*(yz+xw), 0.0);
 	float4 row3 = float4(  2*(xz+yw),  2*(yz-xw),1-2*(xx+yy), 0.0);
 	float4 row4 = float4(0.0, 0.0, 0.0, 1.0);
-
-    return float4x4(row1, row2, row3, row4);
-}
-
-float4x4 LookAtLHMatrix(float3 eyePosition, float3 targetPosition, float3 upDirection)
-{
-    float3 forwardDirection = normalize(targetPosition - eyePosition);
-    float3 rightDirection = normalize(cross(upDirection, forwardDirection));
-    float3 upDirectionNew = cross(forwardDirection, rightDirection);
-
-    float4 row1 = float4(rightDirection.x, upDirectionNew.x, forwardDirection.x, 0.0);
-    float4 row2 = float4(rightDirection.y, upDirectionNew.y, forwardDirection.y, 0.0);
-    float4 row3 = float4(rightDirection.z, upDirectionNew.z, forwardDirection.z, 0.0);
-    float4 row4 = float4(-dot(rightDirection, eyePosition), -dot(upDirectionNew, eyePosition), -dot(forwardDirection, eyePosition), 1.0);
-
-    return float4x4(row1, row2, row3, row4);
-}
-
-float4x4 PerspectiveProjectionMatrix(float fovY, float aspectRatio, float zNear)
-{
-    float height = 1.0 / tan(fovY * 0.5);
-
-    float4 row1 = float4(height / aspectRatio, 0.0f, 0.0f, 0.0f);
-    float4 row2 = float4(0.0f, height, 0.0f, 0.0f);
-    float4 row3 = float4(0.0f, 0.0f, 0, 1.0f);
-    float4 row4 = float4(0.0f, 0.0f, zNear, 0.0f);
 
     return float4x4(row1, row2, row3, row4);
 }
@@ -96,14 +71,12 @@ void MeshMain(in uint groupId: SV_GroupID,
 
     if (groupThreadId < meshlet.VertexIndexCount)
     {
-        // TODO: Compute matrix in task shader
-        float cameraZDistance = (parameters.AspectRatio >= 0.75 ? -2.0 : -4.0) + parameters.Zoom;
+        ByteAddressBuffer frameDataBuffer = ResourceDescriptorHeap[parameters.FrameDataBufferIndex];
+        FrameData frameData = frameDataBuffer.Load<FrameData>(0);
 
-        float4x4 worldMatrix = TransformMatrix(parameters.RotationQuaternion, float3(0.0, 0.0, 0.0));
-        float4x4 viewMatrix = LookAtLHMatrix(float3(0, 0, cameraZDistance), float3(0, 0, 0), float3(0, 1, 0));
-        float4x4 projectionMatrix = PerspectiveProjectionMatrix(0.78, parameters.AspectRatio, 0.001);
+        //float4x4 worldMatrix = TransformMatrix(parameters.RotationQuaternion, float3(0.0, 0.0, 0.0));
+        float4x4 worldMatrix = IDENTITY_MATRIX;
 
-        float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
         float4x4 inverseTransposeWorldMatrix = worldMatrix;
 
         ByteAddressBuffer meshletVertexIndexBuffer = ResourceDescriptorHeap[parameters.MeshletVertexIndexBufferIndex];
@@ -112,7 +85,9 @@ void MeshMain(in uint groupId: SV_GroupID,
         uint vertexIndex = meshletVertexIndexBuffer.Load<uint>((meshlet.VertexIndexOffset + groupThreadId) * sizeof(uint));
         Vertex vertex = vertexBuffer.Load<Vertex>(vertexIndex * sizeof(Vertex));
 
-        vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), worldViewProjectionMatrix);
+        //vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), mul(worldMatrix, frameData.ViewProjMatrix));
+        // NOTE: This calculation is faster because v * M is faster than M * M
+        vertices[groupThreadId].Position = mul(mul(float4(vertex.Position, 1.0), worldMatrix), frameData.ViewProjMatrix);
         vertices[groupThreadId].WorldNormal = mul(vertex.Normal, inverseTransposeWorldMatrix); // TODO: Compute inverse transpose
         vertices[groupThreadId].MeshletIndex = groupId;
     }

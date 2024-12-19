@@ -2,12 +2,14 @@
 #include "SampleUtils.h"
 #include "SampleMesh.h"
 
+// TODO: Rename this to scene compiler
+
 int main(int argc, const char* argv[]) 
 {
     // TODO: Add an option to handle handness change
     if (argc < 3)
     {
-        printf("USAGE: MeshCompiler [options] inputfile outputfile\n");
+        printf("USAGE: SceneCompiler [options] inputfile outputfile\n");
         printf("\n");
         printf("OPTIONS:\n");
         printf("   --meshlet-triangle-count\tTBD: TBD. Default: TBD.\n");
@@ -62,10 +64,10 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    ElemLoadMeshResult inputMesh = ElemLoadMesh(inputPath, &(ElemLoadMeshOptions) { .MeshCoordinateSystem = ElemMeshCoordinateSystem_LeftHanded });
-    printf("Input mesh vertex Count: %d\n", inputMesh.VertexCount);
+    ElemLoadSceneResult inputScene = ElemLoadScene(inputPath, &(ElemLoadSceneOptions) { .SceneCoordinateSystem = ElemSceneCoordinateSystem_LeftHanded });
+    printf("Input mesh vertex Count: %d\n", inputScene.VertexCount);
 
-    ElemBuildMeshletResult result = ElemBuildMeshlets(inputMesh.VertexBuffer, NULL);
+    ElemBuildMeshletResult result = ElemBuildMeshlets(inputScene.VertexBuffer, NULL);
     
     // TODO: Refactor this into an util function to display messages with proper colors
     for (uint32_t i = 0; i < result.Messages.Length; i++)
@@ -112,7 +114,7 @@ int main(int argc, const char* argv[])
         }
     }
 
-    printf("Writing mesh data to: %s\n", outputPath);
+    printf("Writing Scene data to: %s\n", outputPath);
 
     uint32_t meshletBufferSize = result.Meshlets.Length * sizeof(ElemMeshlet);
     uint32_t meshletVertexIndexBufferSize = result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t);

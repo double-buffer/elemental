@@ -18,7 +18,7 @@ typedef struct
     uint32_t RenderTextureIndex;
     float Zoom;
     uint32_t Padding[2];
-    SampleMatrix3x3 Transform;
+    SampleMatrix4x4 Transform;
 } ShaderParameters;
 
 typedef struct
@@ -282,9 +282,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     UpdateGameState(gameState, inputActions, updateParameters->DeltaTimeInSeconds);
 
-    SampleMatrix3x3 transformMatrix = SampleMulMatrix3x3(SampleCreateTranslationMatrix(gameState->TranslationDelta.X, gameState->TranslationDelta.Y), SampleCreateRotationMatrix(gameState->RotationDelta));
+    SampleMatrix4x4 transformMatrix = SampleMulMatrix4x4(SampleCreateTranslationMatrix(gameState->TranslationDelta.X, gameState->TranslationDelta.Y), SampleCreateRotationMatrix(gameState->RotationDelta));
 
-    applicationPayload->ShaderParameters.Transform = SampleMulMatrix3x3(applicationPayload->ShaderParameters.Transform, transformMatrix);
+    applicationPayload->ShaderParameters.Transform = SampleMulMatrix4x4(applicationPayload->ShaderParameters.Transform, transformMatrix);
     applicationPayload->ShaderParameters.Zoom = gameState->Zoom;
 
     // TODO: Do an example with another compute queue to demonstrate fences?

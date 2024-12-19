@@ -4,7 +4,7 @@
 #include "SystemFunctions.h"
 
 // TODO: Do one for each thread
-static MemoryArena MeshLoaderMemoryArena;
+static MemoryArena SceneLoaderMemoryArena;
 
 struct ObjLoaderFileData
 {
@@ -44,7 +44,6 @@ size_t FastObjFileRead(void* file, void* destination, size_t bytes, void* userDa
 
     if (readLength > 0)
     {
-        //printf("ReadObj: %d/%d\n", (uint32_t)bytes, (uint32_t)readLength);
         SystemCopyBuffer(destinationSpan, sourceSpan.Slice(objLoaderFileData->CurrentOffset, readLength));
     }
 
@@ -60,7 +59,7 @@ unsigned long FastObjFileSize(void* file, void* userData)
     return objLoaderFileData->FileData.Length;
 }
 
-void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemMeshCoordinateSystem coordinateSystem, uint8_t** vertexBufferPointer)
+void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSceneCoordinateSystem coordinateSystem, uint8_t** vertexBufferPointer)
 {
     // TODO: Check what to include
     auto currentVertexBufferPointer = *vertexBufferPointer;
@@ -72,7 +71,7 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemMe
             ((float*)currentVertexBufferPointer)[j] = objMesh->positions[3 * objVertex.p + j];
         }
 
-        if (coordinateSystem == ElemMeshCoordinateSystem_LeftHanded)
+        if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
         {
             ((float*)currentVertexBufferPointer)[2] = -((float*)currentVertexBufferPointer)[2];
         }
@@ -87,7 +86,7 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemMe
             ((float*)currentVertexBufferPointer)[j] = objMesh->normals[3 * objVertex.n + j];
         }
 
-        if (coordinateSystem == ElemMeshCoordinateSystem_LeftHanded)
+        if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
         {
             ((float*)currentVertexBufferPointer)[2] = -((float*)currentVertexBufferPointer)[2];
         }
@@ -108,18 +107,30 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemMe
     *vertexBufferPointer = currentVertexBufferPointer;
 }
 
-ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObjMesh* objMesh, const ElemLoadMeshOptions* options)
+ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObjMesh* objMesh, const ElemLoadSceneOptions* options)
 {
+    for (uint32_t i = 0; i < objMesh->object_count; i++)
+    {
+        auto object = objMesh->objects[i];
+        printf("Object (Node): %s\n", object.name);
+
+        /*
+        for (uint32_t j = 0; j < object.face_count; j++)
+        {
+            auto face = objMesh->face_materials
+            auto group = objMesh->face_materials[j];
+            printf("Group: %s\n", group.name);
+        }*/
+    }
+
     // TODO: Handle sub objects
-    ElemMeshCoordinateSystem coordinateSystem = ElemMeshCoordinateSystem_LeftHanded;
+    ElemSceneCoordinateSystem coordinateSystem = ElemSceneCoordinateSystem_LeftHanded;
 
     if (options != nullptr)
     {
-        coordinateSystem = options->MeshCoordinateSystem;
+        coordinateSystem = options->SceneCoordinateSystem;
     }
     
-    printf("Coord: %d\n", coordinateSystem);
-
     auto positionSize = sizeof(float) * 3;
     auto normalSize = sizeof(float) * 3;
     auto textureCoordinatesSize = sizeof(float) * 2;
@@ -135,7 +146,7 @@ ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObj
 
     for (uint32_t i = 0; i < objMesh->index_count; i += 3)
     {
-        if (coordinateSystem == ElemMeshCoordinateSystem_LeftHanded)
+        if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
         {
             ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, &currentVertexBufferPointer);
             ProcessObjVertex(objMesh->indices[i + 2], objMesh, coordinateSystem, &currentVertexBufferPointer);
@@ -156,20 +167,20 @@ ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObj
     };
 }
 
-void InitMeshLoaderMemoryArena()
+void InitSceneLoaderMemoryArena()
 {
-    if (MeshLoaderMemoryArena.Storage == nullptr)
+    if (SceneLoaderMemoryArena.Storage == nullptr)
     {
-        MeshLoaderMemoryArena = SystemAllocateMemoryArena(512 * 1024 * 1024);
+        SceneLoaderMemoryArena = SystemAllocateMemoryArena(512 * 1024 * 1024);
     }
 
-    SystemClearMemoryArena(MeshLoaderMemoryArena);
+    SystemClearMemoryArena(SceneLoaderMemoryArena);
 }
 
 // TODO: Split object loaders into multiple files
-ElemToolsAPI ElemLoadMeshResult ElemLoadMesh(const char* path, const ElemLoadMeshOptions* options)
+ElemToolsAPI ElemLoadSceneResult ElemLoadScene(const char* path, const ElemLoadSceneOptions* options)
 {
-    InitMeshLoaderMemoryArena();
+    InitSceneLoaderMemoryArena();
 
     // TODO: To output the results, we should use a separate memory arena for each modules
 
@@ -186,7 +197,8 @@ ElemToolsAPI ElemLoadMeshResult ElemLoadMesh(const char* path, const ElemLoadMes
 
     auto mesh = fast_obj_read_with_callbacks(path, &callbacks, &stackMemoryArena);
 
-    auto vertexBuffer = ConstructObjVertexBuffer(MeshLoaderMemoryArena, mesh, options);
+    // TODO: Support instances and meshes
+    auto vertexBuffer = ConstructObjVertexBuffer(SceneLoaderMemoryArena, mesh, options);
 
     return 
     {

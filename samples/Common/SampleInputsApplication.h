@@ -7,7 +7,7 @@ typedef struct
 {
     float SwitchShowCursor;
     float ExitApp;
-} SampleApplicationInputActions;
+} SampleInputsApplicationActions;
 
 typedef struct
 {
@@ -15,16 +15,16 @@ typedef struct
     bool ShowCursor;
     bool HideCursor;
     bool IsCursorDisplayed;
-} SampleApplicationInputState;
+} SampleInputsApplicationState;
 
 typedef struct
 {
-    SampleApplicationInputActions InputActions;
+    SampleInputsApplicationActions InputActions;
     SampleInputActionBindingSpan InputActionBindings;
-    SampleApplicationInputState State;
-} SampleApplicationInputs;
+    SampleInputsApplicationState State;
+} SampleInputsApplication;
 
-void SampleApplicationInputsInit(SampleApplicationInputs* inputs)
+void SampleInputsApplicationInit(SampleInputsApplication* inputs)
 {
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyF1, 0, SampleInputActionBindingType_Released, &inputs->InputActions.SwitchShowCursor);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyEscape, 0, SampleInputActionBindingType_Released, &inputs->InputActions.ExitApp);
@@ -34,10 +34,10 @@ void SampleApplicationInputsInit(SampleApplicationInputs* inputs)
     inputs->State.IsCursorDisplayed = true;
 }
 
-void SampleApplicationInputsUpdate(ElemInputStream inputStream, SampleApplicationInputs* inputs, float deltaTimeInSeconds)
+void SampleInputsApplicationUpdate(ElemInputStream inputStream, SampleInputsApplication* inputs, float deltaTimeInSeconds)
 {
-    SampleApplicationInputState* state = &inputs->State;
-    SampleApplicationInputActions* inputActions = &inputs->InputActions;
+    SampleInputsApplicationState* state = &inputs->State;
+    SampleInputsApplicationActions* inputActions = &inputs->InputActions;
 
     SampleUpdateInputActions(&inputs->InputActionBindings, inputStream);
 

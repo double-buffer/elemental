@@ -7,8 +7,7 @@
 #include "MetalShaderConverter.cpp"
 #endif
 
-#define FAST_OBJ_IMPLEMENTATION
-#include "fast_obj.h"
+#include "fast_obj.c"
 
 #include "MeshLoader.cpp"
 #include "MeshletBuilder.cpp"

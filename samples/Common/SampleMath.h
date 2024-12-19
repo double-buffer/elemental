@@ -11,7 +11,7 @@
 // TODO: Review the angle functions, we are using left handed coordinate system. So positive rotation should
 // be in clockwise order
 
-float SamplePow2f(float value)
+inline float SamplePow2f(float value)
 {
     return value * value;
 }
@@ -159,6 +159,17 @@ SampleVector3 SampleAddV3(SampleVector3 v1, SampleVector3 v2)
 	return result;
 }
 
+SampleVector3 SampleMinV3(SampleVector3 v1, SampleVector3 v2)
+{
+	SampleVector3 result;
+
+	result.X = v1.X - v2.X;
+	result.Y = v1.Y - v2.Y;
+	result.Z = v1.Z - v2.Z;
+
+	return result;
+}
+
 SampleVector3 SampleMulScalarV3(SampleVector3 v, float scalar)
 {
 	SampleVector3 result;
@@ -257,15 +268,15 @@ SampleVector4 SampleMulQuat(SampleVector4 q1, SampleVector4 q2)
     return (SampleVector4) { .X = x, .Y = y, .Z = z, .W = w };
 }
 
-// TODO: Get rid of the 4x4 here and write a function that convert it to constant buffer format
-typedef struct
+typedef union
 {
     float m[4][4];
-} SampleMatrix3x3;
+    SampleVector4 Rows[4];
+} SampleMatrix4x4;
 
-SampleMatrix3x3 SampleCreateIdentityMatrix()
+SampleMatrix4x4 SampleCreateIdentityMatrix()
 {
-    SampleMatrix3x3 result;
+    SampleMatrix4x4 result;
 
     result.m[0][0] = 1.0f;
     result.m[0][1] = 0.0f;
@@ -282,12 +293,60 @@ SampleMatrix3x3 SampleCreateIdentityMatrix()
     result.m[2][2] = 1.0f;
     result.m[2][3] = 0.0f;
 
+    result.m[3][0] = 0.0f;
+    result.m[3][1] = 0.0f;
+    result.m[3][2] = 0.0f;
+    result.m[3][3] = 1.0f;
+
     return result;
 }
 
-SampleMatrix3x3 SampleCreateRotationMatrix(float angle)
+SampleMatrix4x4 SampleCreateTransformMatrix(SampleVector4 quaternion, SampleVector3 translation)
 {
-    SampleMatrix3x3 result;
+	float xw = quaternion.X *quaternion.W , xx = quaternion.X *quaternion.X , yy = quaternion.Y *quaternion.Y ,
+      	yw = quaternion.Y *quaternion.W , xy = quaternion.X *quaternion.Y , yz = quaternion.Y *quaternion.Z ,
+      	zw = quaternion.Z *quaternion.W , xz = quaternion.X *quaternion.Z , zz = quaternion.Z *quaternion.Z ;
+
+    SampleMatrix4x4 result;
+
+	result.Rows[0] = (SampleVector4) { .X = 1-2*(yy+zz), .Y = 2*(xy+zw), .Z = 2*(xz-yw), .W = 0.0f };
+	result.Rows[1] = (SampleVector4) { .X = 2*(xy-zw), .Y = 1-2*(xx+zz), .Z = 2*(yz+xw), .W = 0.0f };
+	result.Rows[2] = (SampleVector4) { .X = 2*(xz+yw), .Y = 2*(yz-xw), .Z = 1-2*(xx+yy), .W = 0.0f };
+	result.Rows[3] = (SampleVector4) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f, .W = 1.0f };
+
+    return result;
+}
+
+SampleMatrix4x4 SampleTransposeMatrix(SampleMatrix4x4 matrix)
+{
+    SampleMatrix4x4 result;
+
+    result.m[0][0] = matrix.m[0][0];
+    result.m[0][1] = matrix.m[1][0];
+    result.m[0][2] = matrix.m[2][0];
+    result.m[0][3] = matrix.m[3][0];
+
+    result.m[1][0] = matrix.m[0][1];
+    result.m[1][1] = matrix.m[1][1];
+    result.m[1][2] = matrix.m[2][1];
+    result.m[1][3] = matrix.m[3][1];
+
+    result.m[2][0] = matrix.m[0][2];
+    result.m[2][1] = matrix.m[1][2];
+    result.m[2][2] = matrix.m[2][2];
+    result.m[2][3] = matrix.m[3][2];
+
+    result.m[3][0] = matrix.m[0][3];
+    result.m[3][1] = matrix.m[1][3];
+    result.m[3][2] = matrix.m[2][3];
+    result.m[3][3] = matrix.m[3][3];
+
+    return result;
+}
+
+SampleMatrix4x4 SampleCreateRotationMatrix(float angle)
+{
+    SampleMatrix4x4 result;
     float c = cosf(angle);
     float s = sinf(angle);
 
@@ -303,12 +362,14 @@ SampleMatrix3x3 SampleCreateRotationMatrix(float angle)
     result.m[2][1] = 0.0f;
     result.m[2][2] = 1.0f;
 
+    result.m[3][3] = 1.0f;
+
     return result;
 }
 
-SampleMatrix3x3 SampleCreateScaleMatrix(float scale)
+SampleMatrix4x4 SampleCreateScaleMatrix(float scale)
 {
-    SampleMatrix3x3 result;
+    SampleMatrix4x4 result;
 
     result.m[0][0] = scale;
     result.m[0][1] = 0.0f;
@@ -321,13 +382,15 @@ SampleMatrix3x3 SampleCreateScaleMatrix(float scale)
     result.m[2][0] = 0.0f;
     result.m[2][1] = 0.0f;
     result.m[2][2] = 1.0f;
+    
+    result.m[3][3] = 1.0f;
 
     return result;
 }
 
-SampleMatrix3x3 SampleCreateTranslationMatrix(float tx, float ty)
+SampleMatrix4x4 SampleCreateTranslationMatrix(float tx, float ty)
 {
-    SampleMatrix3x3 result;
+    SampleMatrix4x4 result;
 
     result.m[0][0] = 1.0f;
     result.m[0][1] = 0.0f;
@@ -340,31 +403,78 @@ SampleMatrix3x3 SampleCreateTranslationMatrix(float tx, float ty)
     result.m[2][0] = 0.0f;
     result.m[2][1] = 0.0f;
     result.m[2][2] = 1.0f;
+    
+    result.m[3][3] = 1.0f;
 
     return result;
 }
 
-SampleMatrix3x3 SampleMulMatrix3x3(SampleMatrix3x3 a, SampleMatrix3x3 b)
+SampleMatrix4x4 SampleCreateLookAtLHMatrix(SampleVector3 eyePosition, SampleVector3 targetPosition, SampleVector3 upDirection)
 {
-    SampleMatrix3x3 result;
+    SampleVector3 forwardDirection = SampleNormalizeV3(SampleMinV3(targetPosition, eyePosition));
+    SampleVector3 rightDirection = SampleNormalizeV3(SampleCrossProductV3(upDirection, forwardDirection));
+    SampleVector3 upDirectionNew = SampleCrossProductV3(forwardDirection, rightDirection);
 
-    for (int i = 0; i < 3; i++)
+    SampleMatrix4x4 result;
+
+    result.Rows[0] = (SampleVector4) { .X = rightDirection.X, .Y = upDirectionNew.X, .Z = forwardDirection.X, .W = 0.0f };
+    result.Rows[1] = (SampleVector4) { .X = rightDirection.Y, .Y = upDirectionNew.Y, .Z = forwardDirection.Y, .W = 0.0f };
+    result.Rows[2] = (SampleVector4) { .X = rightDirection.Z, .Y = upDirectionNew.Z, .Z = forwardDirection.Z, .W = 0.0f };
+    result.Rows[3] = (SampleVector4) { .X = -SampleDotProductV3(rightDirection, eyePosition), .Y = -SampleDotProductV3(upDirectionNew, eyePosition), .Z = -SampleDotProductV3(forwardDirection, eyePosition), .W = 1.0f };
+
+    return result;
+}
+
+SampleMatrix4x4 SampleCreatePerspectiveProjectionMatrix(float fovY, float aspectRatio, float zNear)
+{
+    float height = 1.0f / tanf(fovY * 0.5f);
+
+    SampleMatrix4x4 result;
+
+    result.Rows[0] = (SampleVector4) { .X = height / aspectRatio, .Y = 0.0f, .Z = 0.0f, .W = 0.0f };
+    result.Rows[1] = (SampleVector4) { .X = 0.0f, .Y = height, .Z = 0.0f, .W = 0.0f };
+    result.Rows[2] = (SampleVector4) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f, .W = 1.0f };
+    result.Rows[3] = (SampleVector4) { .X = 0.0f, .Y = 0.0f, .Z = zNear, .W = 0.0f };
+
+    return result;
+}
+
+SampleMatrix4x4 SampleMulMatrix4x4(SampleMatrix4x4 a, SampleMatrix4x4 b)
+{
+    SampleMatrix4x4 result;
+
+    for (int i = 0; i < 4; i++)
     {
-        for (int j = 0; j < 3; j++)
+        for (int j = 0; j < 4; j++)
         {
-            result.m[i][j] = a.m[i][0] * b.m[0][j] + a.m[i][1] * b.m[1][j] + a.m[i][2] * b.m[2][j];
+            result.m[i][j] = a.m[i][0] * b.m[0][j] + a.m[i][1] * b.m[1][j] + a.m[i][2] * b.m[2][j] + a.m[i][3] * b.m[3][j];
         }
     }
 
     return result;
 }
 
-SampleVector2 SampleTransformPoint(SampleVector2 point, SampleMatrix3x3 m)
+SampleVector2 SampleTransformPoint(SampleVector2 point, SampleMatrix4x4 m)
 {
     SampleVector2 result;
 
     result.X = m.m[0][0] * point.X + m.m[0][1] * point.Y + m.m[0][2];
     result.Y = m.m[1][0] * point.X + m.m[1][1] * point.Y + m.m[1][2];
+
+    return result;
+}
+
+SampleVector3 SampleTransformPointV3(SampleVector3 point, SampleMatrix4x4 m)
+{
+    SampleVector3 result;
+
+    result.X = m.m[0][0] * point.X + m.m[0][1] * point.Y + m.m[0][2] * point.Z + m.m[0][3];
+    result.Y = m.m[1][0] * point.X + m.m[1][1] * point.Y + m.m[1][2] * point.Z + m.m[1][3];
+    result.Z = m.m[2][0] * point.X + m.m[2][1] * point.Y + m.m[2][2] * point.Z + m.m[2][3];
+
+    //result.X = m.m[0][0] * point.X + m.m[1][0] * point.Y + m.m[2][0] * point.Z + m.m[3][0];
+    //result.Y = m.m[0][1] * point.X + m.m[1][1] * point.Y + m.m[2][1] * point.Z + m.m[3][1];
+    //result.Z = m.m[0][2] * point.X + m.m[1][2] * point.Y + m.m[2][2] * point.Z + m.m[3][2];
 
     return result;
 }

@@ -39,6 +39,7 @@ ElemInputDevice AddWin32RawInputDevice(HANDLE device, DWORD type)
     }
     else if (type == RIM_TYPEHID)
     {
+        // BUG: Crash when steam input is activated
         if (!IsHidDeviceSupported(rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId))
         {
             SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "HID Input device is not supported. (Vendor: %d, Product: %d)", rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId);

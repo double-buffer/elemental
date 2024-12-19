@@ -11,7 +11,7 @@
 #endif
 
 #define PRINT_COLOR_BUFFER(buffer, totalWidth) \
-    { \ 
+    { \
         auto floatData = (float*)buffer.Items; \
     \
         for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \
@@ -27,7 +27,7 @@
 #define ASSERT_LOG_MESSAGE_DEBUG(message) { TestInitLog(); ASSERT_TRUE_MSG(strstr(testDebugLogs, message) != NULL, message); }
 
 #define ASSERT_COLOR_BUFFER(buffer, red, green, blue, alpha) \
-    { \ 
+    { \
         auto floatData = (float*)buffer.Items; \
     \
         for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \

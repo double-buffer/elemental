@@ -37,7 +37,7 @@
 #endif
 
 //------------------------------------------------------------------------
-// ##Module_Tools##
+// Module: Elemental Tools
 //------------------------------------------------------------------------
 
 /**
@@ -92,6 +92,12 @@ typedef struct
     uint32_t Length;
 } ElemToolsDataSpan;
 
+typedef struct
+{
+    uint32_t* Items;
+    uint32_t Length;
+} ElemUInt32Span;
+
 /**
  * Represents a message produced by the tools, including a type and text.
  */
@@ -114,13 +120,20 @@ typedef struct
     uint32_t Length;
 } ElemToolsMessageSpan;
 
+typedef struct
+{
+    ElemToolsDataSpan Data;
+    uint32_t VertexSize;
+    // TODO: Add vertex description structure
+} ElemVertexBuffer;
+
 typedef ElemToolsDataSpan (*ElemToolsLoadFileHandlerPtr)(const char* path);
 
 ElemToolsAPI void ElemToolsConfigureFileIO(ElemToolsLoadFileHandlerPtr loadFileHandler);
 
 
 //------------------------------------------------------------------------
-// ##Module_Shaders##
+// Module: Shaders
 //------------------------------------------------------------------------
 
 // TODO: Change the list
@@ -133,8 +146,8 @@ typedef enum
     ElemShaderLanguage_Unknown = 0,
     // High Level Shading Language used by DirectX.
     ElemShaderLanguage_Hlsl = 1,
-    // OpenGL Shading Language.
-    ElemShaderLanguage_Glsl = 2,
+    // Slang Shading Language.
+    ElemShaderLanguage_Slang = 2,
     // Metal Shading Language for Apple devices.
     ElemShaderLanguage_Msl = 3,
     // DirectX Intermediate Language.
@@ -165,6 +178,7 @@ typedef struct
     bool DebugMode;
 
     // TODO: Add the ability to add an override for shader language
+    // TODO: Add the ability to choose Matrix packing options (default to row major for now?)
 } ElemCompileShaderOptions;
 
 /**
@@ -204,37 +218,47 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
 
 
 //------------------------------------------------------------------------
-// ##Module_Meshes##
+// Module: SceneLoading
 //------------------------------------------------------------------------
 
 typedef enum
 {
-    ElemMeshFormat_Obj = 0,
-} ElemMeshFormat;
+    ElemSceneFormat_Obj = 0,
+} ElemSceneFormat;
 
 typedef enum
 {
-    ElemMeshCoordinateSystem_LeftHanded = 0,
-    ElemMeshCoordinateSystem_RightHanded = 1
-} ElemMeshCoordinateSystem;
+    ElemSceneCoordinateSystem_LeftHanded = 0,
+    ElemSceneCoordinateSystem_RightHanded = 1
+} ElemSceneCoordinateSystem;
 
 typedef struct
 {
-    ElemToolsDataSpan Data;
-    uint32_t VertexSize;
-    // TODO: Add vertex description structure
-} ElemVertexBuffer;
-
-typedef struct
-{
-    ElemMeshCoordinateSystem MeshCoordinateSystem;
+    ElemSceneCoordinateSystem SceneCoordinateSystem;
     // TODO: Add options to specify the vertex format wanted
-} ElemLoadMeshOptions;
+} ElemLoadSceneOptions;
+
+typedef struct
+{
+    ElemSceneFormat MeshFormat;
+    ElemVertexBuffer VertexBuffer;
+    uint32_t VertexCount;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemLoadSceneResult;
+
+ElemToolsAPI ElemLoadSceneResult ElemLoadScene(const char* path, const ElemLoadSceneOptions* options);
+
+
+//------------------------------------------------------------------------
+// Module: Meshes
+//------------------------------------------------------------------------
 
 // TODO: Allow to specify the offset of the vertex position? (For now we assume vertex position is at offset 0)
 typedef struct
 {
     // TODO: Allow bypass mesh format
+    // TODO: Support index buffers
     uint32_t Reserved;
 } ElemBuildMeshletsOptions;
 
@@ -254,21 +278,6 @@ typedef struct
 
 typedef struct
 {
-    uint32_t* Items;
-    uint32_t Length;
-} ElemUInt32Span;
-
-typedef struct
-{
-    ElemMeshFormat MeshFormat;
-    ElemVertexBuffer VertexBuffer;
-    uint32_t VertexCount;
-    ElemToolsMessageSpan Messages;
-    bool HasErrors;
-} ElemLoadMeshResult;
-
-typedef struct
-{
     uint8_t MeshletMaxVertexCount;
     uint8_t MeshletMaxTriangleCount;
     ElemVertexBuffer VertexBuffer;
@@ -278,8 +287,6 @@ typedef struct
     ElemToolsMessageSpan Messages;
     bool HasErrors;
 } ElemBuildMeshletResult;
-
-ElemToolsAPI ElemLoadMeshResult ElemLoadMesh(const char* path, const ElemLoadMeshOptions* options);
 
 ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
 

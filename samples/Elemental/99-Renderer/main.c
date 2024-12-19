@@ -2,21 +2,26 @@
 #include "SampleUtils.h"
 #include "SampleMath.h"
 #include "SampleInputsApplication.h"
-#include "SampleInputsModelViewer.h"
+#include "SampleInputsCamera.h"
 #include "SampleMesh.h"
 
-typedef struct
+// TODO: Share data between shader and C code
+
+typedef struct 
 {
+    uint32_t FrameDataBuffer;
     uint32_t VertexBuffer;
     uint32_t MeshletBuffer;
     uint32_t MeshletVertexIndexBuffer;
     uint32_t MeshletTriangleIndexBuffer;
-    SampleVector4 RotationQuaternion;
-    float Zoom;
-    float AspectRatio;
     uint32_t ShowMeshlets;
     uint32_t MeshletCount;
 } ShaderParameters;
+
+typedef struct
+{
+    SampleMatrix4x4 ViewProjMatrix;
+} ShaderFrameData;
 
 typedef struct
 {
@@ -47,8 +52,12 @@ typedef struct
     ElemPipelineState GraphicsPipeline;
     ShaderParameters ShaderParameters;
     SampleInputsApplication InputsApplication;
-    SampleInputsModelViewer InputsModelViewer;
+    SampleInputsCamera InputsCamera;
     MeshData TestMeshData;
+
+    ShaderFrameData FrameData;
+    ElemGraphicsResource FrameDataBuffer;
+    ElemGraphicsResourceDescriptor FrameDataBufferReadDescriptor;
 } ApplicationPayload;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
@@ -126,6 +135,14 @@ void FreeMesh(MeshData* meshData)
     ElemFreeGraphicsResource(meshData->MeshletTriangleIndexBuffer, NULL);
 }
 
+void UpdateFrameData(ApplicationPayload* applicationPayload, SampleMatrix4x4 viewProjMatrix)
+{
+    applicationPayload->FrameData.ViewProjMatrix = viewProjMatrix;
+    
+    ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(applicationPayload->FrameDataBuffer);
+    memcpy(vertexBufferPointer.Items, &applicationPayload->FrameData, sizeof(ShaderFrameData));
+}
+
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
@@ -154,9 +171,11 @@ void InitSample(void* payload)
     // TODO: Having GPU Upload is still annoying 😞
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
 
+    CreateAndUploadDataTemp(&applicationPayload->FrameDataBuffer, &applicationPayload->FrameDataBufferReadDescriptor, applicationPayload, &applicationPayload->FrameData, sizeof(ShaderFrameData));
+    applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBufferReadDescriptor;
+
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    LoadMesh(&applicationPayload->TestMeshData, "kitten.mesh", applicationPayload);
-    //LoadMesh(&applicationPayload->TestMeshData, "buddha.mesh", applicationPayload);
+    LoadMesh(&applicationPayload->TestMeshData, "sponza.mesh", applicationPayload);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -176,10 +195,8 @@ void InitSample(void* payload)
 
     ElemFreeShaderLibrary(shaderLibrary);
 
-    applicationPayload->ShaderParameters.RotationQuaternion = (SampleVector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
-
     SampleInputsApplicationInit(&applicationPayload->InputsApplication);
-    SampleInputsModelViewerInit(&applicationPayload->InputsModelViewer);
+    SampleInputsCameraInit(&applicationPayload->InputsCamera);
     
     if (applicationPayload->AppSettings.PreferFullScreen)
     {
@@ -197,6 +214,9 @@ void FreeSample(void* payload)
     ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
 
     FreeMesh(&applicationPayload->TestMeshData);
+
+    ElemFreeGraphicsResourceDescriptor(applicationPayload->FrameDataBufferReadDescriptor, NULL);
+    ElemFreeGraphicsResource(applicationPayload->FrameDataBuffer, NULL);
 
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeSwapChain(applicationPayload->SwapChain);
@@ -221,7 +241,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemInputStream inputStream = ElemGetInputStream();
 
     SampleInputsApplicationUpdate(inputStream, &applicationPayload->InputsApplication, updateParameters->DeltaTimeInSeconds);
-    SampleInputsModelViewerUpdate(inputStream, &applicationPayload->InputsModelViewer, updateParameters->DeltaTimeInSeconds);
+    
+    // TODO: Use another type of camera
+    SampleInputsCameraUpdate(inputStream, &applicationPayload->InputsCamera, updateParameters);
 
     if (applicationPayload->InputsApplication.State.ExitApplication)
     {
@@ -239,21 +261,11 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemHideWindowCursor(applicationPayload->Window); 
     } 
 
-    SampleInputsModelViewerState* modelViewerState = &applicationPayload->InputsModelViewer.State;
+    SampleInputsCameraState* inputsCameraState = &applicationPayload->InputsCamera.State;
 
-    if (SampleMagnitudeSquaredV3(modelViewerState->RotationDelta))
-    {
-        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 1, 0, 0 }, modelViewerState->RotationDelta.X), 
-                                                         SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 0, 0, 1 }, modelViewerState->RotationDelta.Z),
-                                                                       SampleCreateQuaternion((SampleVector3){ 0, 1, 0 }, modelViewerState->RotationDelta.Y)));
+    applicationPayload->ShaderParameters.ShowMeshlets = inputsCameraState->Action;
 
-        applicationPayload->ShaderParameters.RotationQuaternion = SampleMulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
-    }
-
-    applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
-    float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
-    applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, modelViewerState->Zoom);
-    applicationPayload->ShaderParameters.ShowMeshlets = modelViewerState->Action;
+    UpdateFrameData(applicationPayload, inputsCameraState->ViewProjMatrix);
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -287,7 +299,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     if (frameMeasurement.HasNewData)
     {
-        SampleSetWindowTitle(applicationPayload->Window, "HelloMesh", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
+        SampleSetWindowTitle(applicationPayload->Window, "Renderer", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
     }
     
     SampleStartFrameMeasurement();
@@ -300,11 +312,13 @@ int main(int argc, const char* argv[])
         .AppSettings = SampleParseAppSettings(argc, argv)
     };
 
+    // TODO: Load and save state
+
     ElemConfigureLogHandler(ElemConsoleLogHandler);
 
     ElemRunApplication(&(ElemRunApplicationParameters)
     {
-        .ApplicationName = "Hello Mesh",
+        .ApplicationName = "Renderer",
         .InitHandler = InitSample,
         .FreeHandler = FreeSample,
         .Payload = &payload

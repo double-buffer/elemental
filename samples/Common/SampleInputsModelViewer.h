@@ -51,7 +51,7 @@ typedef struct
 
     float AccelerometerZNegative;
     float AccelerometerZPositive;
-} SampleModelViewerInputActions;
+} SampleInputsModelViewerActions;
 
 typedef struct
 {
@@ -63,16 +63,16 @@ typedef struct
     float Zoom;
     float Action;
     float InitialAccelerometerZDelta;
-} SampleModelViewerInputState;
+} SampleInputsModelViewerState;
 
 typedef struct
 {
-    SampleModelViewerInputActions InputActions;
+    SampleInputsModelViewerActions InputActions;
     SampleInputActionBindingSpan InputActionBindings;
-    SampleModelViewerInputState State;
-} SampleModelViewerInputs;
+    SampleInputsModelViewerState State;
+} SampleInputsModelViewer;
 
-void SampleModelViewerInputsInit(SampleModelViewerInputs* inputs)
+void SampleInputsModelViewerInit(SampleInputsModelViewer* inputs)
 {
     // TODO: Review rotation signs
 
@@ -137,18 +137,18 @@ void SampleModelViewerInputsInit(SampleModelViewerInputs* inputs)
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_Touch, 0, SampleInputActionBindingType_DoubleReleasedSwitch, &inputs->InputActions.Action);
 }
 
-void SampleModelViewerInputsResetTouchParameters(SampleModelViewerInputState* state) 
+void SampleInputsModelViewerResetTouchParameters(SampleInputsModelViewerState* state) 
 {
     state->RotationTouch = V2Zero;
     state->PreviousTouchDistance = 0.0f;
     state->PreviousTouchAngle = 0.0f;   
 }
 
-void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewerInputs* inputs, float deltaTimeInSeconds)
+void SampleInputsModelViewerUpdate(ElemInputStream inputStream, SampleInputsModelViewer* inputs, float deltaTimeInSeconds)
 {
     // TODO: Review rotation order in left handed
-    SampleModelViewerInputState* state = &inputs->State;
-    SampleModelViewerInputActions* inputActions = &inputs->InputActions;
+    SampleInputsModelViewerState* state = &inputs->State;
+    SampleInputsModelViewerActions* inputActions = &inputs->InputActions;
     state->RotationDelta = V3Zero; 
 
     SampleUpdateInputActions(&inputs->InputActionBindings, inputStream);
@@ -179,7 +179,7 @@ void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewe
         }
         else 
         {
-            SampleModelViewerInputsResetTouchParameters(state);
+            SampleInputsModelViewerResetTouchParameters(state);
 
             state->RotationDelta.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
             state->RotationDelta.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
@@ -187,13 +187,13 @@ void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewe
     }
     else if (inputActions->TouchRotateSide)
     {
-        SampleModelViewerInputsResetTouchParameters(state);
+        SampleInputsModelViewerResetTouchParameters(state);
 
         state->RotationDelta.Z = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
     }
     else if (inputActions->TouchReleased && !inputActions->Touch2)
     {
-        SampleModelViewerInputsResetTouchParameters(state);
+        SampleInputsModelViewerResetTouchParameters(state);
 
         state->RotationTouch.X = (inputActions->TouchRotateUp - inputActions->TouchRotateDown) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
         state->RotationTouch.Y = (inputActions->TouchRotateLeft - inputActions->TouchRotateRight) * SAMPLE_MODELVIEWER_ROTATION_TOUCH_SPEED * deltaTimeInSeconds;
@@ -233,7 +233,7 @@ void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewe
         {
             SampleVector3 acceleration = SampleAddV3(SampleMulScalarV3(direction, SAMPLE_MODELVIEWER_ROTATION_ACCELERATION), SampleMulScalarV3(SampleInverseV3(state->CurrentRotationSpeed), SAMPLE_MODELVIEWER_ROTATION_FRICTION));
 
-            SampleModelViewerInputsResetTouchParameters(state);
+            SampleInputsModelViewerResetTouchParameters(state);
             state->RotationDelta = SampleAddV3(SampleMulScalarV3(acceleration, 0.5f * SamplePow2f(deltaTimeInSeconds)), SampleMulScalarV3(state->CurrentRotationSpeed, deltaTimeInSeconds));
             state->CurrentRotationSpeed = SampleAddV3(SampleMulScalarV3(acceleration, deltaTimeInSeconds), state->CurrentRotationSpeed);
         }
@@ -253,7 +253,7 @@ void SampleModelViewerInputsUpdate(ElemInputStream inputStream, SampleModelViewe
 
         if (SampleMagnitudeV2(state->RotationTouch) < 0.001f)
         {
-            SampleModelViewerInputsResetTouchParameters(state);
+            SampleInputsModelViewerResetTouchParameters(state);
         }
     }
 

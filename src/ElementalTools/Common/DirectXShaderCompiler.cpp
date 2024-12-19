@@ -135,6 +135,9 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
 
     parameters[parameterIndex++] = DXC_ARG_ALL_RESOURCES_BOUND;
 
+    // TODO: Add an options for this
+    parameters[parameterIndex++] = DXC_ARG_PACK_MATRIX_ROW_MAJOR;
+
     if (options && options->DebugMode)
     {
         parameters[parameterIndex++] = DXC_ARG_DEBUG;
