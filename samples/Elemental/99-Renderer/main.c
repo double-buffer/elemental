@@ -175,7 +175,7 @@ void InitSample(void* payload)
     applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBufferReadDescriptor;
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    LoadMesh(&applicationPayload->TestMeshData, "sponza.mesh", applicationPayload);
+    LoadMesh(&applicationPayload->TestMeshData, "sponza.scene", applicationPayload);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);

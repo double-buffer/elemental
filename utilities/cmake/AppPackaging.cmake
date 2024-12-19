@@ -123,8 +123,8 @@ function(configure_resource_compilation target_name resource_list)
     # Format: Name|BinaryName|SourceExtensions|DestExtension|DefaultParams...
     set(COMPILERS_LIST
         "HLSL|ShaderCompiler|.hlsl|.shader|${SHADER_COMPILER_DEFAULT_OPTIONS}"
-        "MESH|MeshCompiler|.obj|.mesh|${MESH_COMPILER_DEFAULT_OPTIONS}"
-        "MESH|MeshCompiler|.gltf|.mesh|${MESH_COMPILER_DEFAULT_OPTIONS}"
+        "MESH|SceneCompiler|.obj|.scene|${MESH_COMPILER_DEFAULT_OPTIONS}"
+        "MESH|SceneCompiler|.gltf|.scene|${MESH_COMPILER_DEFAULT_OPTIONS}"
     )
 
     set(all_compiled_resources "")

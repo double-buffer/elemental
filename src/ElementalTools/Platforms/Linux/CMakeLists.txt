@@ -1,4 +1,4 @@
-target_include_directories(ElementalTools PRIVATE ../../Elemental/Linux/)
+target_include_directories(ElementalTools PRIVATE ../../../Elemental/Linux/)
 target_include_directories(ElementalTools PRIVATE ./Interop/)
 target_compile_options(ElementalTools PRIVATE -fms-extensions -Wno-language-extension-token)
 

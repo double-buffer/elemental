@@ -155,8 +155,8 @@ void InitSample(void* payload)
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    LoadMesh(&applicationPayload->TestMeshData, "kitten.mesh", applicationPayload);
-    //LoadMesh(&applicationPayload->TestMeshData, "buddha.mesh", applicationPayload);
+    LoadMesh(&applicationPayload->TestMeshData, "kitten.scene", applicationPayload);
+    //LoadMesh(&applicationPayload->TestMeshData, "buddha.scene", applicationPayload);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);

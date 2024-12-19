@@ -1,16 +1,16 @@
 #include "ToolsUtils.cpp"
-#include "ShaderCompiler.cpp"
-#include "ShaderCompilerUtils.cpp"
-#include "DirectXShaderCompiler.cpp"
+#include "Shaders/ShaderCompiler.cpp"
+#include "Shaders/ShaderCompilerUtils.cpp"
+#include "Shaders/DirectXShaderCompiler.cpp"
 
 #ifndef __linux__
-#include "MetalShaderConverter.cpp"
+#include "Shaders/MetalShaderConverter.cpp"
 #endif
 
 #include "fast_obj.c"
+#include "SceneLoading/SceneLoader.cpp"
 
-#include "MeshLoader.cpp"
-#include "MeshletBuilder.cpp"
+#include "Meshes/MeshletBuilder.cpp"
 
 #include "SystemFunctions.cpp"
 #include "SystemDictionary.cpp"

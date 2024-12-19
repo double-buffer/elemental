@@ -1,6 +1,6 @@
 #include "ToolsTests.cpp"
 #include "ShaderCompilerTests.cpp"
-#include "MeshLoaderTests.cpp"
+#include "SceneLoaderTests.cpp"
 #include "MeshBuilderTests.cpp"
 
 UTEST_STATE();

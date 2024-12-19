@@ -1,4 +1,4 @@
-target_include_directories(ElementalTools PRIVATE ../../Elemental/Apple/)
+target_include_directories(ElementalTools PRIVATE ../../../Elemental/Apple/)
 target_include_directories(ElementalTools PRIVATE ./Interop/)
 target_compile_options(ElementalTools PRIVATE -fms-extensions -fno-objc-arc -Wno-language-extension-token)
 target_link_options(ElementalTools PRIVATE "SHELL:-framework Metal" "SHELL:-framework Foundation")

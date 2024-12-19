@@ -1,12 +1,12 @@
 if(WIN32)
-    set(ELEM_PLATFORM_DIR Microsoft)
+    set(ELEM_PLATFORM_DIR Platforms/Microsoft)
 elseif(APPLE)
-    set(ELEM_PLATFORM_DIR Apple)
+    set(ELEM_PLATFORM_DIR Platforms/Apple)
 elseif(LINUX)
-    set(ELEM_PLATFORM_DIR Linux)
+    set(ELEM_PLATFORM_DIR Platforms/Linux)
 endif()
 
-add_library(ElementalTools SHARED Common/UnityBuild.cpp)
+add_library(ElementalTools SHARED UnityBuild.cpp)
 target_include_directories(ElementalTools PUBLIC .)
 
 target_precompile_headers(ElementalTools PRIVATE ${ELEM_PLATFORM_DIR}/PreCompiledHeader.h)
