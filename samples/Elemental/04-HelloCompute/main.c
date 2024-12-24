@@ -100,7 +100,7 @@ void InitSample(void* payload)
     
     CreateRenderTexture(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
 
-    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Fractal.shader": "Fractal_vulkan.shader");
+    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Fractal.shader": "Fractal_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
 
     applicationPayload->ComputePipeline = ElemCompileComputePipelineState(applicationPayload->GraphicsDevice, &(ElemComputePipelineStateParameters) {
@@ -111,7 +111,7 @@ void InitSample(void* payload)
 
     ElemFreeShaderLibrary(shaderLibrary);
 
-    shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Tonemap.shader": "Tonemap_vulkan.shader");
+    shaderData = SampleReadFile(!applicationPayload->PreferVulkan ? "Tonemap.shader": "Tonemap_vulkan.shader", true);
     shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
 
     applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {

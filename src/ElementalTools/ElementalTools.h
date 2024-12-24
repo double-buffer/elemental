@@ -122,8 +122,14 @@ typedef struct
 
 typedef struct
 {
+    float X, Y, Z;
+} ElemVector3;
+
+typedef struct
+{
     ElemToolsDataSpan Data;
     uint32_t VertexSize;
+    uint32_t VertexCount;
     // TODO: Add vertex description structure
 } ElemVertexBuffer;
 
@@ -223,7 +229,8 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
 
 typedef enum
 {
-    ElemSceneFormat_Obj = 0,
+    ElemSceneFormat_Unknown = 0,
+    ElemSceneFormat_Obj = 1,
 } ElemSceneFormat;
 
 typedef enum
@@ -234,15 +241,58 @@ typedef enum
 
 typedef struct
 {
-    ElemSceneCoordinateSystem SceneCoordinateSystem;
+    ElemSceneCoordinateSystem CoordinateSystem;
     // TODO: Add options to specify the vertex format wanted
 } ElemLoadSceneOptions;
 
 typedef struct
 {
-    ElemSceneFormat MeshFormat;
     ElemVertexBuffer VertexBuffer;
-    uint32_t VertexCount;
+    ElemUInt32Span IndexBuffer;
+    // TODO: Material
+} ElemSceneMeshPart;
+
+typedef struct
+{
+    ElemSceneMeshPart* Items;
+    uint32_t Length;
+} ElemSceneMeshPartSpan;
+
+typedef struct
+{
+    ElemSceneMeshPartSpan MeshParts;
+    // TODO: Bounding volumes
+} ElemSceneMesh;
+
+typedef struct
+{
+    ElemSceneMesh* Items;
+    uint32_t Length;
+} ElemSceneMeshSpan;
+
+typedef struct
+{
+    const char* Name;
+    int32_t MeshIndex;
+    ElemVector3 Rotation;
+    ElemVector3 Translation;
+    // TODO: Children
+} ElemSceneNode;
+
+typedef struct
+{
+    ElemSceneNode* Items;
+    uint32_t Length;
+} ElemSceneNodeSpan;
+
+typedef struct
+{
+    ElemSceneFormat SceneFormat;
+    ElemSceneCoordinateSystem CoordinateSystem;
+
+    ElemSceneMeshSpan Meshes;
+    ElemSceneNodeSpan Nodes;
+
     ElemToolsMessageSpan Messages;
     bool HasErrors;
 } ElemLoadSceneResult;
@@ -264,6 +314,7 @@ typedef struct
 
 typedef struct
 {
+    // TODO: Add base vertex
     uint32_t VertexIndexOffset;
     uint32_t VertexIndexCount;
     uint32_t TriangleOffset;

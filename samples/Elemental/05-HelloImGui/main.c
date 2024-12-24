@@ -78,7 +78,7 @@ void ImGuiInitBackend(ApplicationPayload* payload)
 
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(payload->SwapChain);
 
-    ElemDataSpan shaderData = SampleReadFile(!payload->PreferVulkan ? "RenderImGui.shader": "RenderImGui_vulkan.shader");
+    ElemDataSpan shaderData = SampleReadFile(!payload->PreferVulkan ? "RenderImGui.shader": "RenderImGui_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(payload->GraphicsDevice, shaderData);
 
     imGuiData->RenderPipeline = ElemCompileGraphicsPipelineState(payload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {

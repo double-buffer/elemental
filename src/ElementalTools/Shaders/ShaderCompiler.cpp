@@ -201,17 +201,9 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
 
     if (!FindShaderCompilerChain(shaderLanguage, targetLanguage, compilerSteps, &level))
     {
-        auto messageItem = SystemPushStruct<ElemToolsMessage>(stackMemoryArena);
-        messageItem->Type = ElemToolsMessageType_Error;
-        messageItem->Message = "Cannot find a compatible shader compilers chain.";
-
         return
         {
-            .Messages = 
-            {
-                .Items = messageItem,
-                .Length = 1
-            },
+            .Messages = ConstructErrorMessageSpan(ShaderCompilerMemoryArena, "Cannot find a compatible shader compilers chain."),
             .HasErrors = true
         };
     }
@@ -222,17 +214,9 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
 
     if (stepSourceData.Length == 0)
     {
-        auto messageItem = SystemPushStruct<ElemToolsMessage>(stackMemoryArena);
-        messageItem->Type = ElemToolsMessageType_Error;
-        messageItem->Message = "Cannot read input file.";
-
         return
         {
-            .Messages = 
-            {
-                .Items = messageItem,
-                .Length = 1
-            },
+            .Messages = ConstructErrorMessageSpan(ShaderCompilerMemoryArena, "Cannot read input file."),
             .HasErrors = true
         };
     }
@@ -269,7 +253,6 @@ ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraph
 
     ResetLoadFileDataMemory();
 
-    // TODO: output the values in a separate arena
     return 
     {
         .Data = 

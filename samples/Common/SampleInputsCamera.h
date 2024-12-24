@@ -89,6 +89,8 @@ void SampleInputsCameraInit(SampleInputsCamera* inputs)
     // TODO: Temporary Init code for now
     inputs->State.Camera.Position = (SampleVector3) { 0.0f, 0.0f, -0.0f };
     inputs->State.Camera.Rotation = V3Zero;
+
+    // TODO: Allow the reset of camera to the passed initial position when we press a button
 }
 
 SampleVector3 ComputeDeltaAndVelocity(SampleVector3* currentVelocity, SampleVector3 directionVector, float accelerationFactor, float frictionFactor, float deltaTimeInSeconds)

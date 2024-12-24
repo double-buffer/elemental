@@ -45,3 +45,16 @@ void ResetLoadFileDataMemory()
 {
     SystemClearMemoryArena(FileIOMemoryArena);
 }
+
+ElemToolsMessageSpan ConstructErrorMessageSpan(MemoryArena memoryArena, const char* errorMessage)
+{
+    auto messageItem = SystemPushStruct<ElemToolsMessage>(memoryArena);
+    messageItem->Type = ElemToolsMessageType_Error;
+    messageItem->Message = errorMessage;
+
+    return
+    {
+        .Items = messageItem,
+        .Length = 1
+    };
+}

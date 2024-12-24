@@ -1,8 +1,103 @@
 #include "ElementalTools.h"
 #include "SampleUtils.h"
-#include "SampleMesh.h"
+#include "SampleScene.h"
 
-// TODO: Rename this to scene compiler
+// TODO: Restore MeshBuilder to use for hello mesh?
+
+bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
+{
+    assert(file);
+    
+    SampleMeshHeader meshHeader =
+    {
+        .MeshPartCount = mesh.MeshParts.Length
+    };
+
+    fwrite(&meshHeader, sizeof(SampleMeshHeader), 1, file);
+    uint32_t meshPartHeadersOffset = ftell(file);
+    
+    SampleMeshPartHeader* meshPartHeaders = (SampleMeshPartHeader*)malloc(sizeof(SampleMeshPartHeader) * mesh.MeshParts.Length);
+    fwrite(meshPartHeaders, sizeof(SampleMeshPartHeader), mesh.MeshParts.Length, file);
+
+    uint32_t meshPartBufferStartOffset = ftell(file);
+
+    for (uint32_t i = 0; i < mesh.MeshParts.Length; i++)
+    {
+        ElemSceneMeshPart* meshPart = &mesh.MeshParts.Items[i];
+
+        // TODO: Index buffer
+        ElemBuildMeshletResult result = ElemBuildMeshlets(meshPart->VertexBuffer, NULL);
+
+        DisplayOutputMessages("BuildMeshlets", result.Messages);
+
+        if (result.HasErrors)
+        {
+            return false; 
+        }
+
+        SampleMeshPartHeader* meshPartHeader = &meshPartHeaders[i];
+        meshPartHeader->MeshletCount = result.Meshlets.Length;
+
+        meshPartHeader->VertexBufferOffset = ftell(file) - meshPartBufferStartOffset;
+        fwrite(result.VertexBuffer.Data.Items, sizeof(uint8_t), result.VertexBuffer.Data.Length, file);
+
+        meshPartHeader->MeshletOffset = ftell(file) - meshPartBufferStartOffset;
+        fwrite(result.Meshlets.Items, sizeof(ElemMeshlet), result.Meshlets.Length, file);
+
+        meshPartHeader->MeshletVertexIndexOffset = ftell(file) - meshPartBufferStartOffset;
+        fwrite(result.MeshletVertexIndexBuffer.Items, sizeof(uint32_t), result.MeshletVertexIndexBuffer.Length, file);
+
+        meshPartHeader->MeshletTriangleIndexOffset = ftell(file) - meshPartBufferStartOffset;
+        fwrite(result.MeshletTriangleIndexBuffer.Items, sizeof(uint32_t), result.MeshletTriangleIndexBuffer.Length, file);
+    }
+    
+    fseek(file, meshPartHeadersOffset, SEEK_SET);
+    fwrite(meshPartHeaders, sizeof(SampleMeshPartHeader), mesh.MeshParts.Length, file);
+
+    fseek(file, 0, SEEK_END);
+    
+    return true;
+}
+
+bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
+{
+    assert(file);
+
+    SampleSceneHeader sceneHeader =
+    {
+        .FileId = { 'S', 'C', 'E', 'N', 'E' },
+        .MeshCount = scene.Meshes.Length,
+    };
+
+    fwrite(&sceneHeader, sizeof(SampleSceneHeader), 1, file);
+
+    // TODO: Get rid of malloc?
+
+    // TODO: change the uint32_t to a struct of offset + size
+
+    SampleDataBlockEntry* meshDataOffsets = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * scene.Meshes.Length);
+    fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
+
+    double beforeMeshlets = SampleGetTimerValueInMS();
+
+    for (uint32_t i = 0; i < scene.Meshes.Length; i++)
+    {
+        uint32_t dataOffset = ftell(file);
+
+        bool result = WriteMeshData(file, scene.Meshes.Items[i]);
+        assert(result);
+
+        meshDataOffsets[i] = (SampleDataBlockEntry) { .Offset = dataOffset, .SizeInBytes = ftell(file) - dataOffset };
+        printf("MeshDataOffset: %d, size=%d\n", meshDataOffsets[i].Offset, meshDataOffsets[i].SizeInBytes);
+    }
+
+    printf("Built meshlets in %.2fs\n", (SampleGetTimerValueInMS() - beforeMeshlets) / 1000.0);
+
+    fseek(file, sizeof(sceneHeader), SEEK_SET);
+    fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
+
+    return true;
+}
 
 int main(int argc, const char* argv[]) 
 {
@@ -56,7 +151,10 @@ int main(int argc, const char* argv[])
 
     printf("Compiling mesh: %s\n", inputPath);
 
-    ElemToolsDataSpan inputData = SampleReadFile(inputPath); 
+    SampleInitTimer();
+    double initialTimer = SampleGetTimerValueInMS();
+
+    ElemToolsDataSpan inputData = SampleReadFile(inputPath, false); 
     
     if (inputData.Length == 0)
     {
@@ -64,80 +162,21 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    ElemLoadSceneResult inputScene = ElemLoadScene(inputPath, &(ElemLoadSceneOptions) { .SceneCoordinateSystem = ElemSceneCoordinateSystem_LeftHanded });
-    printf("Input mesh vertex Count: %d\n", inputScene.VertexCount);
-
-    ElemBuildMeshletResult result = ElemBuildMeshlets(inputScene.VertexBuffer, NULL);
+    ElemLoadSceneResult scene = ElemLoadScene(inputPath, &(ElemLoadSceneOptions) { .CoordinateSystem = ElemSceneCoordinateSystem_LeftHanded });
     
-    // TODO: Refactor this into an util function to display messages with proper colors
-    for (uint32_t i = 0; i < result.Messages.Length; i++)
-    {
-        printf("Compil msg (%d): %s\n", result.Messages.Items[i].Type, result.Messages.Items[i].Message);
-    }
+    DisplayOutputMessages("LoadScene", scene.Messages);
 
-    if (result.HasErrors)
+    if (scene.HasErrors)
     {
-        printf("Error while compiling shader!\n");
         return 1;
     }
 
-    // TODO: Good Unit test too!
-    for (uint32_t i = 0; i < result.Meshlets.Length; i++)
-    {
-        ElemMeshlet meshlet = result.Meshlets.Items[i];
-
-        if (i < result.Meshlets.Length - 1) 
-        {
-            ElemMeshlet nextMeshlet = result.Meshlets.Items[i + 1];
-
-            if (meshlet.TriangleOffset + meshlet.TriangleCount - 1 == nextMeshlet.TriangleOffset)
-            {
-                printf("Error not last\n");
-            }
-        }
-        else if (meshlet.TriangleOffset + meshlet.TriangleCount - 1 == result.MeshletTriangleIndexBuffer.Length)
-        {
-            printf("ERROR\n");
-        }
-    }
-
-    for (uint32_t i = result.MeshletTriangleIndexBuffer.Length - 10; i < result.MeshletTriangleIndexBuffer.Length + 3; i++)
-    {
-        printf("Trig index: %u\n", result.MeshletTriangleIndexBuffer.Items[i]);
-    }
-    
-    for (uint32_t i = 0; i < result.MeshletTriangleIndexBuffer.Length; i++)
-    {
-        if (result.MeshletTriangleIndexBuffer.Items[i] == 0)
-        {
-            printf("Zero Triangle index at: %d\n", i);
-        }
-    }
+    printf("Loaded mesh in %.2fs\n", (SampleGetTimerValueInMS() - initialTimer) / 1000.0);
 
     printf("Writing Scene data to: %s\n", outputPath);
 
-    uint32_t meshletBufferSize = result.Meshlets.Length * sizeof(ElemMeshlet);
-    uint32_t meshletVertexIndexBufferSize = result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t);
-
-    SampleMeshHeader meshHeader = 
-    {
-        .FileId = { 'M', 'E', 'S', 'H' },
-        .MeshletCount = result.Meshlets.Length,
-        .MeshletMaxVertexCount = result.MeshletMaxVertexCount,
-        .MeshletMaxTriangleCount = result.MeshletMaxTriangleCount,
-        .VertexBufferOffset = sizeof(SampleMeshHeader),
-        .VertexBufferSizeInBytes = result.VertexBuffer.Data.Length,
-        .MeshletBufferOffset = sizeof(SampleMeshHeader) + result.VertexBuffer.Data.Length,
-        .MeshletBufferSizeInBytes = meshletBufferSize,
-        .MeshletVertexIndexBufferOffset = sizeof(SampleMeshHeader) + result.VertexBuffer.Data.Length + meshletBufferSize,
-        .MeshletVertexIndexBufferSizeInBytes = meshletVertexIndexBufferSize,
-        .MeshletTriangleIndexBufferOffset = sizeof(SampleMeshHeader) + result.VertexBuffer.Data.Length + meshletBufferSize + meshletVertexIndexBufferSize,
-        .MeshletTriangleIndexBufferSizeInBytes = result.MeshletTriangleIndexBuffer.Length * sizeof(uint32_t)
-    };
-    
-    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)&meshHeader, .Length = sizeof(SampleMeshHeader) }, false);
-    SampleWriteDataToFile(outputPath, result.VertexBuffer.Data, true);
-    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)result.Meshlets.Items, .Length = meshletBufferSize}, true);
-    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)result.MeshletVertexIndexBuffer.Items, .Length = result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t) }, true);
-    SampleWriteDataToFile(outputPath, (ElemToolsDataSpan) { .Items = (uint8_t*)result.MeshletTriangleIndexBuffer.Items, .Length = result.MeshletTriangleIndexBuffer.Length * sizeof(uint32_t) }, true);
+    FILE* file = fopen(outputPath, "wb");
+    WriteSceneData(file, scene);
+    fclose(file);
+    printf("Scene compiled in %.2fs\n", (SampleGetTimerValueInMS() - initialTimer) / 1000.0);
 }

@@ -3,8 +3,12 @@
 #include "SampleMath.h"
 #include "SampleInputsApplication.h"
 #include "SampleInputsModelViewer.h"
-#include "SampleMesh.h"
+#include "SampleSceneLoader.h"
 
+// TODO: Take all the code from the common headers and integrate it here
+
+
+/*
 typedef struct
 {
     uint32_t VertexBuffer;
@@ -18,18 +22,6 @@ typedef struct
     uint32_t MeshletCount;
 } ShaderParameters;
 
-typedef struct
-{
-    uint32_t MeshletCount;
-    ElemGraphicsResource VertexBuffer;
-    ElemGraphicsResourceDescriptor VertexBufferReadDescriptor;
-    ElemGraphicsResource MeshletBuffer;
-    ElemGraphicsResourceDescriptor MeshletBufferReadDescriptor;
-    ElemGraphicsResource MeshletVertexIndexBuffer;
-    ElemGraphicsResourceDescriptor MeshletVertexIndexBufferReadDescriptor;
-    ElemGraphicsResource MeshletTriangleIndexBuffer;
-    ElemGraphicsResourceDescriptor MeshletTriangleIndexBufferReadDescriptor;
-} MeshData;
 
 // TODO: Group common variables into separate structs
 typedef struct
@@ -48,7 +40,7 @@ typedef struct
     ShaderParameters ShaderParameters;
     SampleInputsApplication InputsApplication;
     SampleInputsModelViewer InputsModelViewer;
-    MeshData TestMeshData;
+    SampleSceneData TestSceneData;
 } ApplicationPayload;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
@@ -86,46 +78,6 @@ void CreateAndUploadDataTemp(ElemGraphicsResource* buffer, ElemGraphicsResourceD
     memcpy(vertexBufferPointer.Items, dataPointer, sizeInBytes);
 }
 
-void LoadMesh(MeshData* meshData, const char* path, ApplicationPayload* applicationPayload)
-{
-    // TODO: When IOQueues are implemented, we only need to read the header, not the whole file!
-    // Add a parameter to specify the length we want to read and the offset
-    ElemDataSpan meshFileData = SampleReadFile(path);
-
-    uint8_t* fileDataPointer = meshFileData.Items;
-    SampleMeshHeader* meshHeader = (SampleMeshHeader*)fileDataPointer;
-
-    if (meshHeader->FileId[0] == 'M' && meshHeader->FileId[1] == 'E' && meshHeader->FileId[2] == 'S' && meshHeader->FileId[3] == 'H')
-    {
-        printf("OK Meshlet Count: %d\n", meshHeader->MeshletCount);
-    }
-
-    meshData->MeshletCount = meshHeader->MeshletCount;
-
-    CreateAndUploadDataTemp(&meshData->VertexBuffer, &meshData->VertexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->VertexBufferOffset, meshHeader->VertexBufferSizeInBytes);
-    CreateAndUploadDataTemp(&meshData->MeshletBuffer, &meshData->MeshletBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletBufferOffset, meshHeader->MeshletBufferSizeInBytes);
-    CreateAndUploadDataTemp(&meshData->MeshletVertexIndexBuffer, &meshData->MeshletVertexIndexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletVertexIndexBufferOffset, meshHeader->MeshletVertexIndexBufferSizeInBytes);
-    CreateAndUploadDataTemp(&meshData->MeshletTriangleIndexBuffer, &meshData->MeshletTriangleIndexBufferReadDescriptor, applicationPayload, fileDataPointer + meshHeader->MeshletTriangleIndexBufferOffset, meshHeader->MeshletTriangleIndexBufferSizeInBytes);
-
-    applicationPayload->ShaderParameters.VertexBuffer = meshData->VertexBufferReadDescriptor;
-    applicationPayload->ShaderParameters.MeshletBuffer = meshData->MeshletBufferReadDescriptor;
-    applicationPayload->ShaderParameters.MeshletVertexIndexBuffer = meshData->MeshletVertexIndexBufferReadDescriptor;
-    applicationPayload->ShaderParameters.MeshletTriangleIndexBuffer = meshData->MeshletTriangleIndexBufferReadDescriptor;
-    applicationPayload->ShaderParameters.MeshletCount = meshData->MeshletCount;
-}
-
-void FreeMesh(MeshData* meshData)
-{
-    ElemFreeGraphicsResourceDescriptor(meshData->VertexBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(meshData->VertexBuffer, NULL);
-    ElemFreeGraphicsResourceDescriptor(meshData->MeshletBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(meshData->MeshletBuffer, NULL);
-    ElemFreeGraphicsResourceDescriptor(meshData->MeshletVertexIndexBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(meshData->MeshletVertexIndexBuffer, NULL);
-    ElemFreeGraphicsResourceDescriptor(meshData->MeshletTriangleIndexBufferReadDescriptor, NULL);
-    ElemFreeGraphicsResource(meshData->MeshletTriangleIndexBuffer, NULL);
-}
-
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
@@ -155,10 +107,10 @@ void InitSample(void* payload)
     applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    LoadMesh(&applicationPayload->TestMeshData, "kitten.scene", applicationPayload);
+    //LoadMesh(&applicationPayload->TestMeshData, "kitten.scene", applicationPayload);
     //LoadMesh(&applicationPayload->TestMeshData, "buddha.scene", applicationPayload);
 
-    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader");
+    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
 
     applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
@@ -196,7 +148,7 @@ void FreeSample(void* payload)
 
     ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
 
-    FreeMesh(&applicationPayload->TestMeshData);
+    //FreeMesh(&applicationPayload->TestMeshData);
 
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeSwapChain(applicationPayload->SwapChain);
@@ -275,7 +227,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-    ElemDispatchMesh(commandList, applicationPayload->TestMeshData.MeshletCount, 1, 1);
+    //ElemDispatchMesh(commandList, applicationPayload->TestMeshData.MeshletCount, 1, 1);
 
     ElemEndRenderPass(commandList);
 
@@ -309,4 +261,8 @@ int main(int argc, const char* argv[])
         .FreeHandler = FreeSample,
         .Payload = &payload
     });
+}*/
+
+int main(int argc, const char* argv[]) 
+{
 }

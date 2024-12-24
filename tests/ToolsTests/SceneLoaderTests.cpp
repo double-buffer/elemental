@@ -47,6 +47,9 @@ auto cubeObjSceneSource = R"(o Cube
 struct SceneLoader_LoadScene
 {
     const char* Path;
+    ElemSceneFormat SceneFormat;
+    uint32_t ExpectedNodeCount;
+    uint32_t ExpectedMeshCount;
     uint32_t ExpectedVertexCount;
 };
 
@@ -62,15 +65,25 @@ UTEST_F_TEARDOWN(SceneLoader_LoadScene)
 
     // Assert
     ASSERT_FALSE(result.HasErrors);
-    ASSERT_EQ_MSG(result.VertexCount, utest_fixture->ExpectedVertexCount, "LoadScene vertex count is not correct."); 
-    ASSERT_GT_MSG(result.VertexBuffer.VertexSize, 0u, "Vertex size must be greater than 0.");
-    ASSERT_GT_MSG(result.VertexBuffer.Data.Length, 0u, "VertexBuffer size must be greater than 0.");
+
+    ASSERT_EQ_MSG(result.SceneFormat, utest_fixture->SceneFormat, "Scene format is invalid.");
+
+    // TODO: 
+    ASSERT_EQ_MSG(result.Nodes.Length, utest_fixture->ExpectedNodeCount, "Node count is not correct."); 
+    ASSERT_EQ_MSG(result.Meshes.Length, utest_fixture->ExpectedMeshCount, "Mesh count is not correct."); 
+
+    ElemSceneMesh mesh = result.Meshes.Items[0];
+    ElemSceneMeshPart meshPart = mesh.MeshParts.Items[0];
+
+    ASSERT_EQ_MSG(meshPart.VertexBuffer.VertexCount, utest_fixture->ExpectedVertexCount, "MeshPart vertex count is not correct."); 
+    ASSERT_GT_MSG(meshPart.VertexBuffer.VertexSize, 0u, "Vertex size must be greater than 0.");
+    ASSERT_GT_MSG(meshPart.VertexBuffer.Data.Length, 0u, "VertexBuffer size must be greater than 0.");
 
     bool isEmpty = true;
 
-    for (uint32_t i = 0; i < result.VertexBuffer.Data.Length; i++)
+    for (uint32_t i = 0; i < meshPart.VertexBuffer.Data.Length; i++)
     {
-        if (result.VertexBuffer.Data.Items[i] != 0)
+        if (meshPart.VertexBuffer.Data.Items[i] != 0)
         {
             isEmpty = false;
             break;
@@ -85,5 +98,10 @@ UTEST_F_TEARDOWN(SceneLoader_LoadScene)
 UTEST_F(SceneLoader_LoadScene, Obj) 
 {
     utest_fixture->Path = "Cube.obj";
+    utest_fixture->SceneFormat = ElemSceneFormat_Obj;
+    utest_fixture->ExpectedMeshCount = 1;
+    utest_fixture->ExpectedNodeCount = 1;
+
+    // TODO: To change
     utest_fixture->ExpectedVertexCount = 36;
 }

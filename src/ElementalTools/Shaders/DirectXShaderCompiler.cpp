@@ -103,6 +103,8 @@ ShaderType GetShaderTypeEnum(DxilShaderKind shaderKind)
 
 ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOnlySpan<char> target, ElemToolsGraphicsApi targetApi, ReadOnlySpan<char> entryPoint, const ElemCompileShaderOptions* options)
 {
+    // TODO: Allow passing the pass to have a correct name in the messages
+
     auto stackMemoryArena = SystemGetStackMemoryArena();
     
     ComPtr<IDxcCompiler3> compiler;
@@ -127,6 +129,9 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
         parameters[parameterIndex++] = L"-spirv";
         parameters[parameterIndex++] = L"-fspv-target-env=vulkan1.3";
         parameters[parameterIndex++] = L"-fvk-use-dx-layout";
+        // TODO: Add an options for this
+        // TODO: To review
+        parameters[parameterIndex++] = L"-fspv-use-legacy-buffer-matrix-order";
     }
 
     parameters[parameterIndex++] = L"-HV";
@@ -204,8 +209,6 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
     {
         ComPtr<IDxcBlob> shaderByteCodeComPtr;
         AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
-
-        auto shaderByteCode = Span<uint8_t>((uint8_t*)shaderByteCodeComPtr->GetBufferPointer(), shaderByteCodeComPtr->GetBufferSize());
 
         ComPtr<IDxcUtils> dxcUtils;
         AssertIfFailed(directXShaderCompilerCreateInstanceFunction(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));

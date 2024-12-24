@@ -170,8 +170,6 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_8;
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
 
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test");
-
         // TODO: Update checks
         if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
             deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 

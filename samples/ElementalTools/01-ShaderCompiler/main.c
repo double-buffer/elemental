@@ -71,18 +71,15 @@ int main(int argc, const char* argv[])
     printf("Compiling shader: %s (DebugMode=%d)\n", inputPath, debugMode);
 
     ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary(targetApi, targetPlatform, inputPath, &(ElemCompileShaderOptions) { .DebugMode = debugMode });
-
-    for (uint32_t i = 0; i < compilationResult.Messages.Length; i++)
-    {
-        printf("Compil msg (%d): %s\n", compilationResult.Messages.Items[i].Type, compilationResult.Messages.Items[i].Message);
-    }
+    
+    DisplayOutputMessages("ShaderCompiler", compilationResult.Messages);
 
     if (compilationResult.HasErrors)
     {
-        printf("Error while compiling shader!\n");
         return 1;
     }
 
+    // TODO: Add timing informations
     printf("Writing shader data to: %s\n", outputPath);
     return SampleWriteDataToFile(outputPath, compilationResult.Data, false);
 }

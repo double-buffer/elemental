@@ -22,6 +22,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
+    // TODO: Take into account the index buffer if present
     auto indexCount = vertexBuffer.Data.Length / vertexBuffer.VertexSize;
     auto vertexRemap = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
     
@@ -117,7 +118,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     {
         .MeshletMaxVertexCount = meshletMaxVertexCount,
         .MeshletMaxTriangleCount = meshletMaxTriangleCount,
-        .VertexBuffer = { .Data = { .Items = vertexList.Pointer, .Length = (uint32_t)vertexList.Length }, .VertexSize = vertexBuffer.VertexSize },
+        .VertexBuffer = { .Data = { .Items = vertexList.Pointer, .Length = (uint32_t)vertexList.Length }, .VertexSize = vertexBuffer.VertexSize, .VertexCount = vertexBuffer.VertexCount },
         .Meshlets = { .Items = meshletList.Pointer, .Length = (uint32_t)meshletList.Length },
         .MeshletVertexIndexBuffer = { .Items = meshletVertexIndexList.Pointer, .Length = meshletVertexIndexCount },
         .MeshletTriangleIndexBuffer = { .Items = meshletTriangleIndexList.Pointer, .Length = meshletTriangleIndexCount }

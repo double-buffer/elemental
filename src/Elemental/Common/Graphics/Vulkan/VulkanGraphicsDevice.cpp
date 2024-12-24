@@ -202,6 +202,7 @@ ElemGraphicsDeviceInfo VulkanConstructGraphicsDeviceInfo(MemoryArena memoryArena
 
 VulkanDescriptorHeap CreateVulkanDescriptorHeap(VkDevice graphicsDevice, MemoryArena memoryArena, VkDescriptorSetLayout descriptorSetLayout, uint32_t length)
 {
+    // TODO: Use VK_DESCRIPTOR BUFFER?
     VkDescriptorPoolSize poolSizes[]
     {
         {VK_DESCRIPTOR_TYPE_MUTABLE_EXT, length }

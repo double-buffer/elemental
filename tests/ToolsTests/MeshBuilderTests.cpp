@@ -38,7 +38,8 @@ ElemVertexBuffer TestBuildVertexBuffer(TestMeshVertex* destination, uint32_t cou
     return
     {
         .Data = { .Items = (uint8_t*)destination, .Length = (uint32_t)(count * sizeof(TestMeshVertex)) },
-        .VertexSize = sizeof(TestMeshVertex)
+        .VertexSize = sizeof(TestMeshVertex),
+        .VertexCount = count
     };
 }
 
@@ -102,7 +103,8 @@ UTEST(MeshBuilder, CheckVertexBuffer_NoDuplicates)
 
     // Assert
     ASSERT_FALSE(result.HasErrors);
-    ASSERT_EQ_MSG(result.VertexBuffer.Data.Length / result.VertexBuffer.VertexSize, vertexCount - 3, "Vertex Count is not correct.");
+    ASSERT_EQ_MSG(result.VertexBuffer.Data.Length / result.VertexBuffer.VertexSize, vertexCount - 3, "Vertex Count from vertexbuffer length is not correct.");
+    ASSERT_EQ_MSG(result.VertexBuffer.VertexCount, vertexCount - 3, "Vertex Count is not correct.");
 }
 
 UTEST(MeshBuilder, CheckMeshletVertexIndexBuffer) 

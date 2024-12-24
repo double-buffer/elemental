@@ -49,12 +49,12 @@ add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-unused-parameter>)
 add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-missing-field-initializers>)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fansi-escape-codes -fcolor-diagnostics -D_CRT_SECURE_NO_WARNINGS")
 set(CMAKE_CXX_STANDARD "23")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fansi-escape-codes -fcolor-diagnostics -D_CRT_SECURE_NO_WARNINGS")
 set(CMAKE_C_STANDARD "23")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
