@@ -44,6 +44,7 @@ struct MetalCommandListData
     ElemPipelineState PipelineState;
     bool IsCommitted;
     ResourceBarrierPool ResourceBarrierPool;
+    bool ArgumentBufferBound;
 };
 
 struct MetalCommandListDataFull

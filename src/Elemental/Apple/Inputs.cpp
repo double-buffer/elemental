@@ -49,6 +49,12 @@ void RemoveAppleInputDevice(void* device)
 
 ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
 {
+        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test: %d", keyCode);
+    if (keyCode == GC::KeyCode::UpArrow)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test");
+    }
+
     switch (keyCode)
     {
         case GC::KeyCode::GraveAccentAndTilde: return ElemInputId_KeyTilde;

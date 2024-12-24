@@ -11,7 +11,7 @@
 // TODO: Review the angle functions, we are using left handed coordinate system. So positive rotation should
 // be in clockwise order
 
-inline float SamplePow2f(float value)
+float SamplePow2f(float value)
 {
     return value * value;
 }

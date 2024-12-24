@@ -350,7 +350,6 @@ ElemPipelineState MetalCompileGraphicsPipelineState(ElemGraphicsDevice graphicsD
     auto cullMode = ConvertToMetalCullMode(parameters->CullMode);
     auto fillMode = parameters->FillMode == ElemGraphicsFillMode_Solid ? MTL::TriangleFillModeFill : MTL::TriangleFillModeLines;
     
-    MetalShaderMetaData amplificationShaderMetaData = {};
     MetalShaderMetaData meshShaderMetaData = {};
 
     if (parameters->MeshShaderFunction)
@@ -542,6 +541,9 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
 
 void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offsetInBytes, ElemDataSpan data)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto pushData = SystemDuplicateBuffer<uint8_t>(stackMemoryArena, ReadOnlySpan(data.Items, data.Length)); 
+
     SystemAssert(commandList != ELEM_HANDLE_NULL);
 
     auto commandListData = GetMetalCommandListData(commandList);
@@ -556,18 +558,23 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
 
         // TODO: Do we need to check if the shader stage is bound?
         // TODO: compute offset
-        // HACK: For the oment we set the slot 2 because it is the global one for bindless
+        // HACK: For the moment we set the slot 2 because it is the global one for bindless
         
-        renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
-        renderCommandEncoder->setMeshBytes(data.Items, data.Length, 2);
+        if (!commandListData->ArgumentBufferBound)
+        {
+            renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+            renderCommandEncoder->setFragmentBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+            commandListData->ArgumentBufferBound = true;
+        }
 
-        renderCommandEncoder->setFragmentBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
-        renderCommandEncoder->setFragmentBytes(data.Items, data.Length, 2);
+        renderCommandEncoder->setMeshBytes(pushData.Pointer, pushData.Length, 2);
+        renderCommandEncoder->setFragmentBytes(pushData.Pointer, pushData.Length, 2);
     }
     else if (commandListData->CommandEncoderType == MetalCommandEncoderType_Compute)
     {
+        // TODO: We need to bind the argument buffer too here
         auto computeCommandEncoder = (MTL::ComputeCommandEncoder*)commandListData->CommandEncoder.get();
-        computeCommandEncoder->setBytes(data.Items, data.Length, 2);
+        computeCommandEncoder->setBytes(pushData.Pointer, pushData.Length, 2);
     }
 }
 

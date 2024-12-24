@@ -265,8 +265,9 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
 
         auto nextPresentTimestampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
 
-        auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
         auto sizeChanged = false;
+
+        auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
@@ -280,6 +281,13 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         if (!swapChainData->BackBufferDrawable)
         {
             SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Cannot acquire a back buffer.");
+            return;
+        }
+
+        // BUG: On iOS, the drawable will have his size change on next update
+        if (swapChainData->BackBufferDrawable->texture()->width() != swapChainData->Width || swapChainData->BackBufferDrawable->texture()->height() != swapChainData->Height)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Error size swapchain");
             return;
         }
 

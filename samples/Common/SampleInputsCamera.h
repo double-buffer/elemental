@@ -87,8 +87,9 @@ void SampleInputsCameraInit(SampleInputsCamera* inputs)
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeySpacebar, 0, SampleInputActionBindingType_Value, &inputs->InputActions.Action);
 
     // TODO: Temporary Init code for now
-    inputs->State.Camera.Position = (SampleVector3) { 0.0f, 0.0f, -0.0f };
-    inputs->State.Camera.Rotation = V3Zero;
+    SampleCamera* camera = &(inputs->State.Camera);
+    camera->Position = (SampleVector3) { 0.0f, 100.0f, -10.0f };
+    camera->Rotation = (SampleVector3) { 0.0f, 1.2f, 0 };
 
     // TODO: Allow the reset of camera to the passed initial position when we press a button
 }

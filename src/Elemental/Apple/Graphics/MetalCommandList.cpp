@@ -75,6 +75,7 @@ void ResetMetalCommandEncoder(ElemCommandList commandList)
         commandListData->CommandEncoder->endEncoding();
         commandListData->CommandEncoder.reset();
         commandListData->CommandEncoderType = MetalCommandEncoderType_None;
+        commandListData->ArgumentBufferBound = false;
     }
 }
 
