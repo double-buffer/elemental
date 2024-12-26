@@ -7,26 +7,27 @@
 bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
 {
     assert(file);
+    uint32_t meshHeaderOffset = ftell(file);
     
     SampleMeshHeader meshHeader =
     {
-        .MeshPartCount = mesh.MeshParts.Length
+        .MeshPrimitiveCount = mesh.MeshPrimitives.Length
     };
 
     fwrite(&meshHeader, sizeof(SampleMeshHeader), 1, file);
-    uint32_t meshPartHeadersOffset = ftell(file);
+    uint32_t meshPrimitiveHeadersOffset = ftell(file);
     
-    SampleMeshPartHeader* meshPartHeaders = (SampleMeshPartHeader*)malloc(sizeof(SampleMeshPartHeader) * mesh.MeshParts.Length);
-    fwrite(meshPartHeaders, sizeof(SampleMeshPartHeader), mesh.MeshParts.Length, file);
+    SampleMeshPrimitiveHeader* meshPrimitiveHeaders = (SampleMeshPrimitiveHeader*)malloc(sizeof(SampleMeshPrimitiveHeader) * mesh.MeshPrimitives.Length);
+    fwrite(meshPrimitiveHeaders, sizeof(SampleMeshPrimitiveHeader), mesh.MeshPrimitives.Length, file);
 
-    uint32_t meshPartBufferStartOffset = ftell(file);
+    meshHeader.MeshBufferOffset = ftell(file);
 
-    for (uint32_t i = 0; i < mesh.MeshParts.Length; i++)
+    for (uint32_t i = 0; i < mesh.MeshPrimitives.Length; i++)
     {
-        ElemSceneMeshPart* meshPart = &mesh.MeshParts.Items[i];
+        ElemSceneMeshPrimitive* meshPrimitive = &mesh.MeshPrimitives.Items[i];
 
         // TODO: Index buffer
-        ElemBuildMeshletResult result = ElemBuildMeshlets(meshPart->VertexBuffer, NULL);
+        ElemBuildMeshletResult result = ElemBuildMeshlets(meshPrimitive->VertexBuffer, NULL);
 
         DisplayOutputMessages("BuildMeshlets", result.Messages);
 
@@ -35,24 +36,29 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
             return false; 
         }
 
-        SampleMeshPartHeader* meshPartHeader = &meshPartHeaders[i];
-        meshPartHeader->MeshletCount = result.Meshlets.Length;
+        SampleMeshPrimitiveHeader* meshPrimitiveHeader = &meshPrimitiveHeaders[i];
+        meshPrimitiveHeader->MeshletCount = result.Meshlets.Length;
 
-        meshPartHeader->VertexBufferOffset = ftell(file) - meshPartBufferStartOffset;
+        meshPrimitiveHeader->VertexBufferOffset = ftell(file) - meshHeader.MeshBufferOffset;
         fwrite(result.VertexBuffer.Data.Items, sizeof(uint8_t), result.VertexBuffer.Data.Length, file);
 
-        meshPartHeader->MeshletOffset = ftell(file) - meshPartBufferStartOffset;
+        meshPrimitiveHeader->MeshletOffset = ftell(file) - meshHeader.MeshBufferOffset;
         fwrite(result.Meshlets.Items, sizeof(ElemMeshlet), result.Meshlets.Length, file);
 
-        meshPartHeader->MeshletVertexIndexOffset = ftell(file) - meshPartBufferStartOffset;
+        meshPrimitiveHeader->MeshletVertexIndexOffset = ftell(file) - meshHeader.MeshBufferOffset;
         fwrite(result.MeshletVertexIndexBuffer.Items, sizeof(uint32_t), result.MeshletVertexIndexBuffer.Length, file);
 
-        meshPartHeader->MeshletTriangleIndexOffset = ftell(file) - meshPartBufferStartOffset;
+        meshPrimitiveHeader->MeshletTriangleIndexOffset = ftell(file) - meshHeader.MeshBufferOffset;
         fwrite(result.MeshletTriangleIndexBuffer.Items, sizeof(uint32_t), result.MeshletTriangleIndexBuffer.Length, file);
     }
+
+    meshHeader.MeshBufferSizeInBytes = ftell(file) - meshHeader.MeshBufferOffset;
+
+    fseek(file, meshHeaderOffset, SEEK_SET);
+    fwrite(&meshHeader, sizeof(SampleMeshHeader), 1, file);
     
-    fseek(file, meshPartHeadersOffset, SEEK_SET);
-    fwrite(meshPartHeaders, sizeof(SampleMeshPartHeader), mesh.MeshParts.Length, file);
+    fseek(file, meshPrimitiveHeadersOffset, SEEK_SET);
+    fwrite(meshPrimitiveHeaders, sizeof(SampleMeshPrimitiveHeader), mesh.MeshPrimitives.Length, file);
 
     fseek(file, 0, SEEK_END);
     
@@ -72,9 +78,6 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
     fwrite(&sceneHeader, sizeof(SampleSceneHeader), 1, file);
 
     // TODO: Get rid of malloc?
-
-    // TODO: change the uint32_t to a struct of offset + size
-
     SampleDataBlockEntry* meshDataOffsets = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * scene.Meshes.Length);
     fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
 
@@ -88,7 +91,6 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
         assert(result);
 
         meshDataOffsets[i] = (SampleDataBlockEntry) { .Offset = dataOffset, .SizeInBytes = ftell(file) - dataOffset };
-        printf("MeshDataOffset: %d, size=%d\n", meshDataOffsets[i].Offset, meshDataOffsets[i].SizeInBytes);
     }
 
     printf("Built meshlets in %.2fs\n", (SampleGetTimerValueInMS() - beforeMeshlets) / 1000.0);

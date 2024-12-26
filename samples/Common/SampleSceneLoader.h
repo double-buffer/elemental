@@ -7,8 +7,9 @@
 
 typedef struct 
 {
-    uint32_t MeshPartCount;
-    SampleMeshPartHeader* MeshParts;
+    const char* Path;
+    SampleMeshHeader MeshHeader;
+    SampleMeshPrimitiveHeader* MeshPrimitives;
     SampleGpuBuffer MeshBuffer;
 } SampleMeshData;
 
@@ -18,36 +19,60 @@ typedef struct
     SampleMeshData* Meshes;
 } SampleSceneData;
 
-void SampleLoadMesh(FILE* file, const SampleDataBlockEntry* datablock, SampleGpuMemory* gpuMemory, SampleMeshData* meshData, const char* debugName)
+void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
 {
-    fseek(file, datablock->Offset, SEEK_SET);
+    *meshData = (SampleMeshData){};
+    meshData->Path = path;
 
-    SampleMeshHeader meshHeader;
-    fread(&meshHeader, sizeof(SampleMeshHeader), 1, file);
+    FILE* file = SampleOpenFile(path, true);
+    assert(file);
 
-    meshData->MeshPartCount = meshHeader.MeshPartCount;
-    meshData->MeshParts = (SampleMeshPartHeader*)malloc(sizeof(SampleMeshPartHeader) * meshHeader.MeshPartCount);
-    fread(meshData->MeshParts, sizeof(SampleMeshPartHeader), meshHeader.MeshPartCount, file);
+    if (offset > 0)
+    {
+        fseek(file, offset, SEEK_SET);
+    }
+    
+    fread(&meshData->MeshHeader, sizeof(SampleMeshHeader), 1, file);
 
-    uint32_t currentOffset = ftell(file) - datablock->Offset;
-    uint32_t meshBufferSizeInBytes = datablock->SizeInBytes - currentOffset;
-    assert(meshBufferSizeInBytes > 0);
+    // TODO: Decode header
+    // TODO: Can we get rid of the malloc?
 
-    uint8_t* meshBufferData = (uint8_t*)malloc(sizeof(uint8_t) * meshBufferSizeInBytes);
-    fread(meshBufferData, sizeof(uint8_t), meshBufferSizeInBytes, file);
+    meshData->MeshPrimitives = (SampleMeshPrimitiveHeader*)malloc(sizeof(SampleMeshPrimitiveHeader) * meshData->MeshHeader.MeshPrimitiveCount);
+    fread(meshData->MeshPrimitives, sizeof(SampleMeshPrimitiveHeader), meshData->MeshHeader.MeshPrimitiveCount, file);
 
-    // TODO: When IOQueues are implemented, we only need to read the header, not the whole file!
-    meshData->MeshBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, meshBufferData, meshBufferSizeInBytes, debugName);
+    fclose(file);
+}
+
+// TODO: We should be able to replace this whole function with IO Queues
+void SampleLoadMeshData(SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
+{
+    assert(meshData->Path);
+
+    FILE* file = SampleOpenFile(meshData->Path, true);
+    assert(file);
+
+    fseek(file, meshData->MeshHeader.MeshBufferOffset, SEEK_SET);
+
+    uint8_t* meshBufferData = (uint8_t*)malloc(sizeof(uint8_t) * meshData->MeshHeader.MeshBufferSizeInBytes);
+    fread(meshBufferData, sizeof(uint8_t), meshData->MeshHeader.MeshBufferSizeInBytes, file);
+
+    // TODO: Construct debug name
+    meshData->MeshBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, meshBufferData, meshData->MeshHeader.MeshBufferSizeInBytes, "TO_CHANGE");
+
+    fclose(file);
 }
 
 void SampleFreeMesh(SampleMeshData* meshData)
 {
-    SampleFreeGpuBuffer(&meshData->MeshBuffer);
+    if(meshData->MeshBuffer.Buffer != ELEM_HANDLE_NULL)
+    {
+        SampleFreeGpuBuffer(&meshData->MeshBuffer);
+    }
 
     // TODO: Free mallocs
 }
 
-void SampleLoadScene(const char* path, SampleGpuMemory* gpuMemory, SampleSceneData* sceneData)
+void SampleLoadScene(const char* path, SampleSceneData* sceneData)
 {
     // TODO: When IOQueues are implemented, we only need to read the header, not the whole file!
 
@@ -72,12 +97,13 @@ void SampleLoadScene(const char* path, SampleGpuMemory* gpuMemory, SampleSceneDa
     SampleDataBlockEntry* meshDataBlocks = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * sceneHeader.MeshCount);
     fread(meshDataBlocks, sizeof(SampleDataBlockEntry), sceneHeader.MeshCount, file);
 
+    fclose(file);
+
     for (uint32_t i = 0; i < sceneData->MeshCount; i++)
     {
-        SampleLoadMesh(file, &meshDataBlocks[i], gpuMemory, &sceneData->Meshes[i], "Mesh");
+        SampleLoadMesh(path, meshDataBlocks[i].Offset, &sceneData->Meshes[i]);
+        //SampleLoadMeshData(file, gpuMemory, &sceneData->Meshes[i], "Mesh");
     }
-
-    fclose(file);
 }
 
 void SampleFreeScene(const SampleSceneData* sceneData)

@@ -13,17 +13,16 @@ typedef struct
     uint32_t FrameDataBuffer;
     // TODO: Embed that into a buffer
     uint32_t MeshBuffer;
-    uint32_t MeshletCount;
     uint32_t VertexBufferOffset;
     uint32_t MeshletOffset;
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
-    uint32_t ShowMeshlets;
 } ShaderParameters;
 
 typedef struct
 {
     SampleMatrix4x4 ViewProjMatrix;
+    uint32_t ShowMeshlets;
 } ShaderFrameData;
 
 // TODO: Group common variables into separate structs
@@ -76,9 +75,10 @@ void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, u
 
 // TODO: Copy paste the loading scene code from the common header because it is the first sample to explain how to load a mesh
 
-void UpdateFrameData(ApplicationPayload* applicationPayload, SampleMatrix4x4 viewProjMatrix)
+void UpdateFrameData(ApplicationPayload* applicationPayload, SampleMatrix4x4 viewProjMatrix, bool showMeshlets)
 {
     applicationPayload->FrameData.ViewProjMatrix = viewProjMatrix;
+    applicationPayload->FrameData.ShowMeshlets = showMeshlets;
     
     ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(applicationPayload->FrameDataBuffer.Buffer);
     memcpy(vertexBufferPointer.Items, &applicationPayload->FrameData, sizeof(ShaderFrameData));
@@ -108,7 +108,7 @@ void InitSample(void* payload)
     applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene("sponza.scene", &applicationPayload->GpuMemory, &applicationPayload->TestSceneData);
+    SampleLoadScene("sponza.scene", &applicationPayload->TestSceneData);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -206,9 +206,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     SampleInputsCameraState* inputsCameraState = &applicationPayload->InputsCamera.State;
 
-    applicationPayload->ShaderParameters.ShowMeshlets = inputsCameraState->Action;
-
-    UpdateFrameData(applicationPayload, inputsCameraState->ViewProjMatrix);
+    UpdateFrameData(applicationPayload, inputsCameraState->ViewProjMatrix, inputsCameraState->Action);
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -230,16 +228,26 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
 
-    // TODO: Replace that all here is really bad
+    // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
+    // Be carreful with the limit per dimension of 65000
     for (uint32_t i = 0; i < applicationPayload->TestSceneData.MeshCount; i++)
     {
         SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[i];
+
+        if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
+        { 
+            // TODO: This is an attempt to dissociate the loading of the mesh metadata and the buffer data
+            // Later, this will be done via streaming in parrallel. The gpu shader that will handle the mesh will need to check
+            // if the data was loaded.
+            // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
+            SampleLoadMeshData(meshData, &applicationPayload->GpuMemory);
+        }
+
         applicationPayload->ShaderParameters.MeshBuffer = meshData->MeshBuffer.ReadDescriptor;
 
-        for (uint32_t j = 0; j < meshData->MeshPartCount; j++)
+        for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
         {
-            SampleMeshPartHeader* meshPart = &meshData->MeshParts[j];
-            applicationPayload->ShaderParameters.MeshletCount = meshPart->MeshletCount;
+            SampleMeshPrimitiveHeader* meshPart = &meshData->MeshPrimitives[j];
             applicationPayload->ShaderParameters.VertexBufferOffset = meshPart->VertexBufferOffset;
             applicationPayload->ShaderParameters.MeshletOffset = meshPart->MeshletOffset;
             applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPart->MeshletVertexIndexOffset;
@@ -273,8 +281,6 @@ int main(int argc, const char* argv[])
     {
         .AppSettings = SampleParseAppSettings(argc, argv)
     };
-
-    // TODO: Load and save state
 
     ElemConfigureLogHandler(ElemConsoleLogHandler);
 

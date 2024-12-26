@@ -2,12 +2,10 @@ struct ShaderParameters
 {
     uint32_t FrameDataBufferIndex;
     uint32_t MeshBuffer;
-    uint32_t MeshletCount; // TODO: Not used
     uint32_t VertexBufferOffset;
     uint32_t MeshletOffset;
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
-    uint32_t ShowMeshlets;
 };
 
 [[vk::push_constant]]
@@ -16,6 +14,7 @@ ShaderParameters parameters : register(b0);
 struct FrameData
 {
     float4x4 ViewProjMatrix;
+    uint32_t ShowMeshlets;
 };
 
 struct ElemMeshlet
@@ -39,6 +38,7 @@ struct VertexOutput
     float3 WorldNormal: NORMAL0;
     uint   MeshletIndex : COLOR0;
 };
+
 #define IDENTITY_MATRIX float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 // TODO: Put that in an include file
 float4x4 TransformMatrix(float4 quaternion, float3 translation)
@@ -114,7 +114,11 @@ uint hash(uint a)
 [shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
-    if (parameters.ShowMeshlets == 0)
+    // TODO: Get the framedata only in the mesh shader?
+    ByteAddressBuffer frameDataBuffer = ResourceDescriptorHeap[parameters.FrameDataBufferIndex];
+    FrameData frameData = frameDataBuffer.Load<FrameData>(0);
+
+    if (frameData.ShowMeshlets == 0)
     {
         return float4(normalize(input.WorldNormal) * 0.5 + 0.5, 1.0);
     }

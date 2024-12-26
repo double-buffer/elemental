@@ -10,7 +10,7 @@ struct ObjLoaderFileData
     uint32_t CurrentOffset;
 };
 
-struct ObjMeshPartInfo
+struct ObjMeshPrimitiveInfo
 {
     uint32_t IndexOffset;
     uint32_t IndexCount; 
@@ -111,7 +111,7 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSc
     *vertexBufferPointer = currentVertexBufferPointer;
 }
 
-ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObjMesh* objMesh, const ObjMeshPartInfo* meshPartInfo, const ElemLoadSceneOptions* options)
+ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObjMesh* objMesh, const ObjMeshPrimitiveInfo* meshPartInfo, const ElemLoadSceneOptions* options)
 {
     SystemAssert(options);
     auto coordinateSystem = options->CoordinateSystem;
@@ -169,7 +169,7 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
     auto sceneLoaderMemoryArena = GetSceneLoaderMemoryArena();
     
     auto meshes = SystemPushArray<ElemSceneMesh>(sceneLoaderMemoryArena, objFileData->object_count);
-    auto meshPartInfos = SystemPushArray<ObjMeshPartInfo>(stackMemoryArena, UINT16_MAX);
+    auto meshPartInfos = SystemPushArray<ObjMeshPrimitiveInfo>(stackMemoryArena, UINT16_MAX);
 
     for (uint32_t i = 0; i < objFileData->object_count; i++)
     {
@@ -195,7 +195,7 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
         }
 
         auto currentMaterial = objFileData->face_materials[currentFaceStart];
-        printf("   MeshPart (Material: %d)\n", currentMaterial);
+        printf("   MeshPrimitive (Material: %d)\n", currentMaterial);
 
         auto meshPartCount = 0u;
 
@@ -220,7 +220,7 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
             {
                 currentMaterial = faceMaterial;
 
-                printf("   MeshPart (Material: %d)\n", currentMaterial);
+                printf("   MeshPrimitive (Material: %d)\n", currentMaterial);
 
                 auto meshPartIndexOffset = indexOffset + meshPartInfo->IndexCount;
 
@@ -231,7 +231,7 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
             meshPartInfo->IndexCount += faceVertexCount;
         }
 
-        auto meshParts = SystemPushArray<ElemSceneMeshPart>(sceneLoaderMemoryArena, meshPartCount);
+        auto meshParts = SystemPushArray<ElemSceneMeshPrimitive>(sceneLoaderMemoryArena, meshPartCount);
 
         for (uint32_t i = 0; i < meshPartCount; i++)
         {
@@ -241,7 +241,7 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
             meshPart->VertexBuffer = ConstructObjVertexBuffer(sceneLoaderMemoryArena, objFileData, meshPartInfo, options);
         }
 
-        mesh->MeshParts = { .Items = meshParts.Pointer, .Length = (uint32_t)meshParts.Length };
+        mesh->MeshPrimitives = { .Items = meshParts.Pointer, .Length = (uint32_t)meshParts.Length };
     }
 
     return 

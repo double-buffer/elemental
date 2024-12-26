@@ -250,17 +250,17 @@ typedef struct
     ElemVertexBuffer VertexBuffer;
     ElemUInt32Span IndexBuffer;
     // TODO: Material
-} ElemSceneMeshPart;
+} ElemSceneMeshPrimitive;
 
 typedef struct
 {
-    ElemSceneMeshPart* Items;
+    ElemSceneMeshPrimitive* Items;
     uint32_t Length;
-} ElemSceneMeshPartSpan;
+} ElemSceneMeshPrimitiveSpan;
 
 typedef struct
 {
-    ElemSceneMeshPartSpan MeshParts;
+    ElemSceneMeshPrimitiveSpan MeshPrimitives;
     // TODO: Bounding volumes
 } ElemSceneMesh;
 

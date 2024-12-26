@@ -73,9 +73,9 @@ UTEST_F_TEARDOWN(SceneLoader_LoadScene)
     ASSERT_EQ_MSG(result.Meshes.Length, utest_fixture->ExpectedMeshCount, "Mesh count is not correct."); 
 
     ElemSceneMesh mesh = result.Meshes.Items[0];
-    ElemSceneMeshPart meshPart = mesh.MeshParts.Items[0];
+    ElemSceneMeshPrimitive meshPart = mesh.MeshPrimitives.Items[0];
 
-    ASSERT_EQ_MSG(meshPart.VertexBuffer.VertexCount, utest_fixture->ExpectedVertexCount, "MeshPart vertex count is not correct."); 
+    ASSERT_EQ_MSG(meshPart.VertexBuffer.VertexCount, utest_fixture->ExpectedVertexCount, "MeshPrimitive vertex count is not correct."); 
     ASSERT_GT_MSG(meshPart.VertexBuffer.VertexSize, 0u, "Vertex size must be greater than 0.");
     ASSERT_GT_MSG(meshPart.VertexBuffer.Data.Length, 0u, "VertexBuffer size must be greater than 0.");
 

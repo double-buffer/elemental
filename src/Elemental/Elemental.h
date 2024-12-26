@@ -361,6 +361,7 @@ typedef enum
     ElemCommandQueueType_Compute = 1
 } ElemCommandQueueType;
 
+// TODO: Not needed?
 typedef enum
 {
     ElemIOCommandType_File = 0,
@@ -636,6 +637,7 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
 
+// TODO: Not needed?
 typedef struct
 {
     ElemIOCommandType IOCommandType; 
@@ -707,6 +709,7 @@ typedef struct
 } ElemGraphicsResourceInfoOptions;
 
 // TODO: Mip Levels
+// TODO: Clear values
 typedef struct
 {
     ElemGraphicsResourceType Type;
