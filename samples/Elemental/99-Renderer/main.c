@@ -17,6 +17,9 @@ typedef struct
     uint32_t MeshletOffset;
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
+    uint32_t Reserved1;
+    uint32_t Reserved2;
+    ElemVector3 Translation;
 } ShaderParameters;
 
 typedef struct
@@ -230,31 +233,37 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
     // Be carreful with the limit per dimension of 65000
-    for (uint32_t i = 0; i < applicationPayload->TestSceneData.MeshCount; i++)
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
     {
-        SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[i];
+        SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
 
-        if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
-        { 
-            // TODO: This is an attempt to dissociate the loading of the mesh metadata and the buffer data
-            // Later, this will be done via streaming in parrallel. The gpu shader that will handle the mesh will need to check
-            // if the data was loaded.
-            // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
-            SampleLoadMeshData(meshData, &applicationPayload->GpuMemory);
-        }
-
-        applicationPayload->ShaderParameters.MeshBuffer = meshData->MeshBuffer.ReadDescriptor;
-
-        for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
+        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {
-            SampleMeshPrimitiveHeader* meshPart = &meshData->MeshPrimitives[j];
-            applicationPayload->ShaderParameters.VertexBufferOffset = meshPart->VertexBufferOffset;
-            applicationPayload->ShaderParameters.MeshletOffset = meshPart->MeshletOffset;
-            applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPart->MeshletVertexIndexOffset;
-            applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPart->MeshletTriangleIndexOffset;
+            SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
 
-            ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-            ElemDispatchMesh(commandList, meshPart->MeshletCount, 1, 1);
+            if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
+            { 
+                // TODO: This is an attempt to dissociate the loading of the mesh metadata and the buffer data
+                // Later, this will be done via streaming in parrallel. The gpu shader that will handle the mesh will need to check
+                // if the data was loaded.
+                // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
+                SampleLoadMeshData(meshData, &applicationPayload->GpuMemory);
+            }
+
+            applicationPayload->ShaderParameters.MeshBuffer = meshData->MeshBuffer.ReadDescriptor;
+
+            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
+            {
+                SampleMeshPrimitiveHeader* meshPrimitive = &meshData->MeshPrimitives[j];
+                applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
+                applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
+                applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
+                applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
+                applicationPayload->ShaderParameters.Translation = sceneNode->Translation;
+
+                ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
+                ElemDispatchMesh(commandList, meshPrimitive->MeshletCount, 1, 1);
+            }
         }
     }
 

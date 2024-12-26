@@ -14,7 +14,46 @@ struct ObjMeshPrimitiveInfo
 {
     uint32_t IndexOffset;
     uint32_t IndexCount; 
+    ElemToolsBoundingBox BoundingBox;
 };
+
+void AddPointToBoundingBox(ElemToolsVector3 point, ElemToolsBoundingBox* boundingBox)
+{
+    float minX = (point.X < boundingBox->MinPoint.X) ? point.X : boundingBox->MinPoint.X;
+    float minY = (point.Y < boundingBox->MinPoint.Y) ? point.Y : boundingBox->MinPoint.Y;
+    float minZ = (point.Z < boundingBox->MinPoint.Z) ? point.Z : boundingBox->MinPoint.Z;
+
+    float maxX = (point.X > boundingBox->MaxPoint.X) ? point.X : boundingBox->MaxPoint.X;
+    float maxY = (point.Y > boundingBox->MaxPoint.Y) ? point.Y : boundingBox->MaxPoint.Y;
+    float maxZ = (point.Z > boundingBox->MaxPoint.Z) ? point.Z : boundingBox->MaxPoint.Z;
+
+    boundingBox->MinPoint = { minX, minY, minZ };
+    boundingBox->MaxPoint = { maxX, maxY, maxZ };
+}
+
+void AddBoundingBoxToBoundingBox(const ElemToolsBoundingBox* additional, ElemToolsBoundingBox* boundingBox)
+{
+    float minX = SystemMin(boundingBox->MinPoint.X, additional->MinPoint.X);
+    float minY = SystemMin(boundingBox->MinPoint.Y, additional->MinPoint.Y);
+    float minZ = SystemMin(boundingBox->MinPoint.Z, additional->MinPoint.Z);
+
+    float maxX = SystemMax(boundingBox->MaxPoint.X, additional->MaxPoint.X);
+    float maxY = SystemMax(boundingBox->MaxPoint.Y, additional->MaxPoint.Y);
+    float maxZ = SystemMax(boundingBox->MaxPoint.Z, additional->MaxPoint.Z);
+
+    boundingBox->MinPoint = { minX, minY, minZ };
+    boundingBox->MaxPoint = { maxX, maxY, maxZ };
+}
+
+ElemToolsVector3 GetBoundingBoxCenter(const ElemToolsBoundingBox* boundingBox)
+{
+    return
+    {
+        .X = (boundingBox->MinPoint.X + boundingBox->MaxPoint.X) * 0.5f,
+        .Y = (boundingBox->MinPoint.Y + boundingBox->MaxPoint.Y) * 0.5f,
+        .Z = (boundingBox->MinPoint.Z + boundingBox->MaxPoint.Z) * 0.5f
+    };
+}
 
 void* FastObjFileOpen(const char* path, void* userData)
 {
@@ -63,7 +102,7 @@ unsigned long FastObjFileSize(void* file, void* userData)
     return objLoaderFileData->FileData.Length;
 }
 
-void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSceneCoordinateSystem coordinateSystem, uint8_t** vertexBufferPointer)
+void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSceneCoordinateSystem coordinateSystem, float scaling, uint8_t** vertexBufferPointer, ElemToolsBoundingBox* boundingBox)
 {
     // TODO: Check what to include
     auto currentVertexBufferPointer = *vertexBufferPointer;
@@ -72,7 +111,7 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSc
     {
         for (uint32_t j = 0; j < 3; j++)
         {
-            ((float*)currentVertexBufferPointer)[j] = objMesh->positions[3 * objVertex.p + j];
+            ((float*)currentVertexBufferPointer)[j] = objMesh->positions[3 * objVertex.p + j] * scaling;
         }
 
         if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
@@ -80,6 +119,7 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSc
             ((float*)currentVertexBufferPointer)[2] = -((float*)currentVertexBufferPointer)[2];
         }
 
+        AddPointToBoundingBox({ ((float*)currentVertexBufferPointer)[0], ((float*)currentVertexBufferPointer)[1], ((float*)currentVertexBufferPointer)[2]}, boundingBox);
         currentVertexBufferPointer += 3 * sizeof(float);
     }
 
@@ -111,10 +151,11 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSc
     *vertexBufferPointer = currentVertexBufferPointer;
 }
 
-ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObjMesh* objMesh, const ObjMeshPrimitiveInfo* meshPartInfo, const ElemLoadSceneOptions* options)
+ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObjMesh* objMesh, ObjMeshPrimitiveInfo* meshPrimitiveInfo, const ElemLoadSceneOptions* options)
 {
     SystemAssert(options);
     auto coordinateSystem = options->CoordinateSystem;
+    auto scaling = options->Scaling;
     
     // TODO: Config of the vertex components to load
     auto positionSize = sizeof(float) * 3;
@@ -125,22 +166,22 @@ ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObj
     // TODO: Temporary
     auto realVertexSize = maxVertexSize;
 
-    auto vertexBuffer = SystemPushArray<uint8_t>(memoryArena, meshPartInfo->IndexCount * maxVertexSize);
+    auto vertexBuffer = SystemPushArray<uint8_t>(memoryArena, meshPrimitiveInfo->IndexCount * maxVertexSize);
     auto currentVertexBufferPointer = vertexBuffer.Pointer;
 
-    for (uint32_t i = meshPartInfo->IndexOffset; i < meshPartInfo->IndexOffset + meshPartInfo->IndexCount; i += 3)
+    for (uint32_t i = meshPrimitiveInfo->IndexOffset; i < meshPrimitiveInfo->IndexOffset + meshPrimitiveInfo->IndexCount; i += 3)
     {
         if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
         {
-            ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, &currentVertexBufferPointer);
-            ProcessObjVertex(objMesh->indices[i + 2], objMesh, coordinateSystem, &currentVertexBufferPointer);
-            ProcessObjVertex(objMesh->indices[i + 1], objMesh, coordinateSystem, &currentVertexBufferPointer);
+            ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, scaling, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
+            ProcessObjVertex(objMesh->indices[i + 2], objMesh, coordinateSystem, scaling, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
+            ProcessObjVertex(objMesh->indices[i + 1], objMesh, coordinateSystem, scaling, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
         }
         else
         {
-            ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, &currentVertexBufferPointer);
-            ProcessObjVertex(objMesh->indices[i + 1], objMesh, coordinateSystem, &currentVertexBufferPointer);
-            ProcessObjVertex(objMesh->indices[i + 2], objMesh, coordinateSystem, &currentVertexBufferPointer);
+            ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, scaling, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
+            ProcessObjVertex(objMesh->indices[i + 1], objMesh, coordinateSystem, scaling, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
+            ProcessObjVertex(objMesh->indices[i + 2], objMesh, coordinateSystem, scaling, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
         }
     }
 
@@ -148,8 +189,23 @@ ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, const fastObj
     {
         .Data = { .Items = vertexBuffer.Pointer, .Length = (uint32_t)vertexBuffer.Length },
         .VertexSize = (uint32_t)realVertexSize,
-        .VertexCount = meshPartInfo->IndexCount
+        .VertexCount = meshPrimitiveInfo->IndexCount
     };
+}
+
+void ApplyObjMeshPrimitiveInverseTranslation(ElemToolsVector3 translation, ElemVertexBuffer* vertexBuffer)
+{
+    for (uint32_t i = 0; i < vertexBuffer->VertexCount; i++)
+    {
+        auto position = (ElemToolsVector3*)(vertexBuffer->Data.Items + i * vertexBuffer->VertexSize);
+        *position = { position->X - translation.X, position->Y - translation.Y, position->Z - translation.Z };
+    }
+}
+
+void ApplyObjBoundingBoxInverseTranslation(ElemToolsVector3 translation, ElemToolsBoundingBox* boundingBox)
+{
+    boundingBox->MinPoint = { boundingBox->MinPoint.X - translation.X, boundingBox->MinPoint.Y - translation.Y, boundingBox->MinPoint.Z - translation.Y };
+    boundingBox->MaxPoint = { boundingBox->MaxPoint.X - translation.X, boundingBox->MaxPoint.Y - translation.Y, boundingBox->MaxPoint.Z - translation.Y };
 }
 
 ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* options)
@@ -169,11 +225,13 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
     auto sceneLoaderMemoryArena = GetSceneLoaderMemoryArena();
     
     auto meshes = SystemPushArray<ElemSceneMesh>(sceneLoaderMemoryArena, objFileData->object_count);
-    auto meshPartInfos = SystemPushArray<ObjMeshPrimitiveInfo>(stackMemoryArena, UINT16_MAX);
+    auto sceneNodes = SystemPushArray<ElemSceneNode>(sceneLoaderMemoryArena, objFileData->object_count);
+    auto meshPrimitiveInfos = SystemPushArray<ObjMeshPrimitiveInfo>(stackMemoryArena, UINT16_MAX);
 
     for (uint32_t i = 0; i < objFileData->object_count; i++)
     {
         auto mesh = &meshes[i];
+        auto sceneNode = &sceneNodes[i];
         auto objectData = &objFileData->objects[i];
 
         if (objectData->face_count == 0)
@@ -197,10 +255,18 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
         auto currentMaterial = objFileData->face_materials[currentFaceStart];
         printf("   MeshPrimitive (Material: %d)\n", currentMaterial);
 
-        auto meshPartCount = 0u;
+        auto meshPrimitiveCount = 0u;
 
-        auto meshPartInfo = &meshPartInfos[meshPartCount++];
-        *meshPartInfo = { .IndexOffset = indexOffset };
+        auto meshPrimitiveInfo = &meshPrimitiveInfos[meshPrimitiveCount++];
+        *meshPrimitiveInfo = 
+        { 
+            .IndexOffset = indexOffset, 
+            .BoundingBox = 
+            { 
+                .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
+                .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
+            } 
+        };
       
         for (uint32_t j = currentFaceStart; j < currentFaceEnd; j++) 
         {
@@ -222,26 +288,60 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
 
                 printf("   MeshPrimitive (Material: %d)\n", currentMaterial);
 
-                auto meshPartIndexOffset = indexOffset + meshPartInfo->IndexCount;
+                auto meshPrimitiveIndexOffset = indexOffset + meshPrimitiveInfo->IndexCount;
 
-                meshPartInfo = &meshPartInfos[meshPartCount++];
-                *meshPartInfo = { .IndexOffset = meshPartIndexOffset };
+                meshPrimitiveInfo = &meshPrimitiveInfos[meshPrimitiveCount++];
+                *meshPrimitiveInfo = 
+                { 
+                    .IndexOffset = meshPrimitiveIndexOffset, 
+                    .BoundingBox = 
+                    { 
+                        .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
+                        .MaxPoint = { FLT_MIN, FLT_MIN, FLT_MIN } 
+                    } 
+                };
             }
 
-            meshPartInfo->IndexCount += faceVertexCount;
+            meshPrimitiveInfo->IndexCount += faceVertexCount;
         }
 
-        auto meshParts = SystemPushArray<ElemSceneMeshPrimitive>(sceneLoaderMemoryArena, meshPartCount);
+        mesh->BoundingBox = 
+        { 
+            .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
+            .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
+        }; 
 
-        for (uint32_t i = 0; i < meshPartCount; i++)
+        auto meshPrimitives = SystemPushArray<ElemSceneMeshPrimitive>(sceneLoaderMemoryArena, meshPrimitiveCount);
+
+        for (uint32_t j = 0; j < meshPrimitiveCount; j++)
         {
-            auto meshPart = &meshParts[i];
-            auto meshPartInfo = &meshPartInfos[i];
+            auto meshPrimitive = &meshPrimitives[j];
+            auto meshPrimitiveInfo = &meshPrimitiveInfos[j];
 
-            meshPart->VertexBuffer = ConstructObjVertexBuffer(sceneLoaderMemoryArena, objFileData, meshPartInfo, options);
+            meshPrimitive->VertexBuffer = ConstructObjVertexBuffer(sceneLoaderMemoryArena, objFileData, meshPrimitiveInfo, options);
+            meshPrimitive->BoundingBox = meshPrimitiveInfo->BoundingBox;
+
+            AddBoundingBoxToBoundingBox(&meshPrimitive->BoundingBox, &mesh->BoundingBox);
+        }
+            
+        auto boundingBoxCenter = GetBoundingBoxCenter(&mesh->BoundingBox);
+        ApplyObjBoundingBoxInverseTranslation(boundingBoxCenter, &mesh->BoundingBox);
+
+        for (uint32_t j = 0; j < meshPrimitiveCount; j++)
+        {
+            auto meshPrimitive = &meshPrimitives[j];
+
+            ApplyObjMeshPrimitiveInverseTranslation(boundingBoxCenter, &meshPrimitive->VertexBuffer);
+            ApplyObjBoundingBoxInverseTranslation(boundingBoxCenter, &meshPrimitive->BoundingBox);
         }
 
-        mesh->MeshPrimitives = { .Items = meshParts.Pointer, .Length = (uint32_t)meshParts.Length };
+        mesh->MeshPrimitives = { .Items = meshPrimitives.Pointer, .Length = (uint32_t)meshPrimitives.Length };
+
+        sceneNode->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objectData->name)).Pointer;
+        sceneNode->NodeType = ElemSceneNodeType_Mesh;
+        sceneNode->ReferenceIndex = i;
+        sceneNode->Rotation = {};
+        sceneNode->Translation = boundingBoxCenter;
     }
 
     return 
@@ -249,6 +349,7 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
         .SceneFormat = ElemSceneFormat_Obj,
         .CoordinateSystem = options->CoordinateSystem,
         .Meshes = { .Items = meshes.Pointer, .Length = (uint32_t)meshes.Length },
+        .Nodes = { .Items = sceneNodes.Pointer, .Length = (uint32_t)sceneNodes.Length },
         .HasErrors = hasErrors
     };
 }

@@ -123,7 +123,13 @@ typedef struct
 typedef struct
 {
     float X, Y, Z;
-} ElemVector3;
+} ElemToolsVector3;
+
+typedef struct
+{
+    ElemToolsVector3 MinPoint;
+    ElemToolsVector3 MaxPoint;
+} ElemToolsBoundingBox;
 
 typedef struct
 {
@@ -239,9 +245,16 @@ typedef enum
     ElemSceneCoordinateSystem_RightHanded = 1
 } ElemSceneCoordinateSystem;
 
+typedef enum
+{
+    ElemSceneNodeType_Unknown = 0,
+    ElemSceneNodeType_Mesh = 1
+} ElemSceneNodeType;
+
 typedef struct
 {
     ElemSceneCoordinateSystem CoordinateSystem;
+    float Scaling;
     // TODO: Add options to specify the vertex format wanted
 } ElemLoadSceneOptions;
 
@@ -249,6 +262,8 @@ typedef struct
 {
     ElemVertexBuffer VertexBuffer;
     ElemUInt32Span IndexBuffer;
+    ElemToolsBoundingBox BoundingBox;
+    // TODO: SphereVolume?
     // TODO: Material
 } ElemSceneMeshPrimitive;
 
@@ -261,7 +276,8 @@ typedef struct
 typedef struct
 {
     ElemSceneMeshPrimitiveSpan MeshPrimitives;
-    // TODO: Bounding volumes
+    ElemToolsBoundingBox BoundingBox;
+    // TODO: SphereVolume?
 } ElemSceneMesh;
 
 typedef struct
@@ -273,9 +289,10 @@ typedef struct
 typedef struct
 {
     const char* Name;
-    int32_t MeshIndex;
-    ElemVector3 Rotation;
-    ElemVector3 Translation;
+    ElemSceneNodeType NodeType;
+    int32_t ReferenceIndex;
+    ElemToolsVector3 Rotation;
+    ElemToolsVector3 Translation;
     // TODO: Children
 } ElemSceneNode;
 

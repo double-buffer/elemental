@@ -73,6 +73,7 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
     {
         .FileId = { 'S', 'C', 'E', 'N', 'E' },
         .MeshCount = scene.Meshes.Length,
+        .NodeCount = scene.Nodes.Length
     };
 
     fwrite(&sceneHeader, sizeof(SampleSceneHeader), 1, file);
@@ -80,6 +81,24 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
     // TODO: Get rid of malloc?
     SampleDataBlockEntry* meshDataOffsets = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * scene.Meshes.Length);
     fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
+
+    for (uint32_t i = 0; i < scene.Nodes.Length; i++)
+    {
+        ElemSceneNode* node = &scene.Nodes.Items[i];
+
+        SampleSceneNodeHeader fileNode =
+        {
+            .NodeType = (SampleSceneNodeType)node->NodeType,
+            .ReferenceIndex = node->ReferenceIndex,
+            .Rotation = node->Rotation,
+            .Translation = node->Translation
+        };
+
+        strncpy(fileNode.Name, node->Name, 50);
+        fwrite(&fileNode, sizeof(SampleSceneNodeHeader), 1, file);
+
+        printf("Node: '%s' MeshId=%d (T=%f,%f,%f)\n", node->Name, node->ReferenceIndex, node->Translation.X, node->Translation.Y, node->Translation.Z);
+    }
 
     double beforeMeshlets = SampleGetTimerValueInMS();
 
@@ -164,7 +183,8 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    ElemLoadSceneResult scene = ElemLoadScene(inputPath, &(ElemLoadSceneOptions) { .CoordinateSystem = ElemSceneCoordinateSystem_LeftHanded });
+    // TODO: Scaling should be passed as a parameter
+    ElemLoadSceneResult scene = ElemLoadScene(inputPath, &(ElemLoadSceneOptions) { .CoordinateSystem = ElemSceneCoordinateSystem_LeftHanded, .Scaling = 0.01f });
     
     DisplayOutputMessages("LoadScene", scene.Messages);
 

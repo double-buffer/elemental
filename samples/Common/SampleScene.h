@@ -1,12 +1,30 @@
 #pragma once
 
+#include "SampleMath.h"
 #include <stdint.h>
+
+typedef enum
+{
+    SampleSceneNodeType_Unknown = 0,
+    SampleSceneNodeType_Mesh = 1
+} SampleSceneNodeType;
 
 typedef struct
 {
     char FileId[5];
     uint32_t MeshCount;
+    uint32_t NodeCount;
 } SampleSceneHeader;
+
+typedef struct
+{
+    char Name[50];
+    SampleSceneNodeType NodeType;
+    int32_t ReferenceIndex;
+    ElemVector3 Rotation;
+    ElemVector3 Translation;
+    // TODO: Children
+} SampleSceneNodeHeader;
 
 typedef struct
 {

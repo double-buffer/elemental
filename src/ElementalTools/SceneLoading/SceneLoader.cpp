@@ -50,6 +50,11 @@ ElemToolsAPI ElemLoadSceneResult ElemLoadScene(const char* path, const ElemLoadS
         loadSceneOptions = *options;
     }
 
+    if (loadSceneOptions.Scaling == 0.0f)
+    {
+        loadSceneOptions.Scaling = 1.0f;
+    }
+
     auto sceneFormat = GetSceneFormatFromPath(path);
 
     // TODO: Refactor that with array entries and function pointer

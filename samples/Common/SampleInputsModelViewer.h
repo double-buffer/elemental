@@ -55,9 +55,9 @@ typedef struct
 
 typedef struct
 {
-    SampleVector3 RotationDelta;
+    ElemVector3 RotationDelta;
     SampleVector2 RotationTouch;
-    SampleVector3 CurrentRotationSpeed;
+    ElemVector3 CurrentRotationSpeed;
     float PreviousTouchDistance;
     float PreviousTouchAngle;
     float Zoom;
@@ -222,7 +222,7 @@ void SampleInputsModelViewerUpdate(ElemInputStream inputStream, SampleInputsMode
     }
     else
     {
-        SampleVector3 direction = SampleNormalizeV3((SampleVector3) 
+        ElemVector3 direction = SampleNormalizeV3((ElemVector3) 
         { 
             .X = (inputActions->RotateUp - inputActions->RotateDown),
             .Y = (inputActions->RotateLeft - inputActions->RotateRight),
@@ -231,7 +231,7 @@ void SampleInputsModelViewerUpdate(ElemInputStream inputStream, SampleInputsMode
 
         if (SampleMagnitudeSquaredV3(direction))
         {
-            SampleVector3 acceleration = SampleAddV3(SampleMulScalarV3(direction, SAMPLE_MODELVIEWER_ROTATION_ACCELERATION), SampleMulScalarV3(SampleInverseV3(state->CurrentRotationSpeed), SAMPLE_MODELVIEWER_ROTATION_FRICTION));
+            ElemVector3 acceleration = SampleAddV3(SampleMulScalarV3(direction, SAMPLE_MODELVIEWER_ROTATION_ACCELERATION), SampleMulScalarV3(SampleInverseV3(state->CurrentRotationSpeed), SAMPLE_MODELVIEWER_ROTATION_FRICTION));
 
             SampleInputsModelViewerResetTouchParameters(state);
             state->RotationDelta = SampleAddV3(SampleMulScalarV3(acceleration, 0.5f * SamplePow2f(deltaTimeInSeconds)), SampleMulScalarV3(state->CurrentRotationSpeed, deltaTimeInSeconds));
@@ -246,7 +246,7 @@ void SampleInputsModelViewerUpdate(ElemInputStream inputStream, SampleInputsMode
             state->RotationTouch = SampleMulScalarV2(SampleNormalizeV2(state->RotationTouch), SAMPLE_MODELVIEWER_ROTATION_TOUCH_MAX_DELTA);
         }
 
-        state->RotationDelta = SampleAddV3(state->RotationDelta, (SampleVector3){ state->RotationTouch.X, state->RotationTouch.Y, 0.0f });
+        state->RotationDelta = SampleAddV3(state->RotationDelta, (ElemVector3){ state->RotationTouch.X, state->RotationTouch.Y, 0.0f });
 
         SampleVector2 inverse = SampleMulScalarV2(SampleNormalizeV2(SampleInverseV2(state->RotationTouch)), SAMPLE_MODELVIEWER_ROTATION_TOUCH_DECREASE_SPEED);
         state->RotationTouch = SampleAddV2(state->RotationTouch, inverse);

@@ -1,3 +1,5 @@
+
+// TODO: Shader parameters here are temporary
 struct ShaderParameters
 {
     uint32_t FrameDataBufferIndex;
@@ -6,6 +8,7 @@ struct ShaderParameters
     uint32_t MeshletOffset;
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
+    float3 Translation;
 };
 
 [[vk::push_constant]]
@@ -50,7 +53,7 @@ float4x4 TransformMatrix(float4 quaternion, float3 translation)
 	float4 row1 = float4(1-2*(yy+zz),  2*(xy+zw),  2*(xz-yw), 0.0);
 	float4 row2 = float4(  2*(xy-zw),1-2*(xx+zz),  2*(yz+xw), 0.0);
 	float4 row3 = float4(  2*(xz+yw),  2*(yz-xw),1-2*(xx+yy), 0.0);
-	float4 row4 = float4(0.0, 0.0, 0.0, 1.0);
+	float4 row4 = float4(translation.x, translation.y, translation.z, 1.0);
 
     return float4x4(row1, row2, row3, row4);
 }
@@ -76,8 +79,7 @@ void MeshMain(in uint groupId: SV_GroupID,
         ByteAddressBuffer frameDataBuffer = ResourceDescriptorHeap[parameters.FrameDataBufferIndex];
         FrameData frameData = frameDataBuffer.Load<FrameData>(0);
 
-        //float4x4 worldMatrix = TransformMatrix(parameters.RotationQuaternion, float3(0.0, 0.0, 0.0));
-        float4x4 worldMatrix = IDENTITY_MATRIX;
+        float4x4 worldMatrix = TransformMatrix(float4(0, 0, 0, 1), parameters.Translation);
 
         float4x4 inverseTransposeWorldMatrix = worldMatrix;
 

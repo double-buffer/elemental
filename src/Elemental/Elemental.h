@@ -887,6 +887,16 @@ typedef struct
     uint32_t Length;
 } ElemViewportSpan;
 
+typedef struct
+{
+    float X, Y, Z;
+} ElemVector3;
+
+typedef struct
+{
+    ElemVector3 MinPoint;
+    ElemVector3 MaxPoint;
+} ElemBoundingBox;
 /**
  * Configuration for a render pass target.
  */

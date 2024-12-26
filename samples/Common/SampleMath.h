@@ -1,7 +1,15 @@
 #pragma once
 
+#include <stdint.h>
+
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+#ifdef ElemToolsAPI
+typedef ElemToolsVector3 ElemVector3;
+#else
+#include "../Elemental/Elemental.h"
+#endif 
 
 /**
  * WARNING: This math code is just for demonstration purpose only. All the math functions here focus
@@ -33,11 +41,6 @@ typedef struct
     float X, Y;
 } SampleVector2;
 
-typedef struct
-{
-    float X, Y, Z;
-} SampleVector3;
-
 typedef union
 {
     struct
@@ -47,7 +50,7 @@ typedef union
 
     struct
     {
-        SampleVector3 XYZ;
+        ElemVector3 XYZ;
     }; 
 
     struct
@@ -57,7 +60,7 @@ typedef union
 } SampleVector4;
 
 #define V2Zero (SampleVector2) { .X = 0.0f, .Y = 0.0f }
-#define V3Zero (SampleVector3) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f }
+#define V3Zero (ElemVector3) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f }
 
 SampleVector2 SampleInverseV2(SampleVector2 v)
 {
@@ -137,9 +140,9 @@ SampleVector2 SampleNormalizeV2(SampleVector2 v)
 	return v;
 }
 
-SampleVector3 SampleInverseV3(SampleVector3 v)
+ElemVector3 SampleInverseV3(ElemVector3 v)
 {
-	SampleVector3 result;
+	ElemVector3 result;
 
 	result.X = -v.X;
 	result.Y = -v.Y;
@@ -148,9 +151,9 @@ SampleVector3 SampleInverseV3(SampleVector3 v)
 	return result;
 }
 
-SampleVector3 SampleAddV3(SampleVector3 v1, SampleVector3 v2)
+ElemVector3 SampleAddV3(ElemVector3 v1, ElemVector3 v2)
 {
-	SampleVector3 result;
+	ElemVector3 result;
 
 	result.X = v1.X + v2.X;
 	result.Y = v1.Y + v2.Y;
@@ -159,9 +162,9 @@ SampleVector3 SampleAddV3(SampleVector3 v1, SampleVector3 v2)
 	return result;
 }
 
-SampleVector3 SampleMinV3(SampleVector3 v1, SampleVector3 v2)
+ElemVector3 SampleMinV3(ElemVector3 v1, ElemVector3 v2)
 {
-	SampleVector3 result;
+	ElemVector3 result;
 
 	result.X = v1.X - v2.X;
 	result.Y = v1.Y - v2.Y;
@@ -170,9 +173,9 @@ SampleVector3 SampleMinV3(SampleVector3 v1, SampleVector3 v2)
 	return result;
 }
 
-SampleVector3 SampleMulScalarV3(SampleVector3 v, float scalar)
+ElemVector3 SampleMulScalarV3(ElemVector3 v, float scalar)
 {
-	SampleVector3 result;
+	ElemVector3 result;
 
 	result.X = v.X * scalar;
 	result.Y = v.Y * scalar;
@@ -181,9 +184,9 @@ SampleVector3 SampleMulScalarV3(SampleVector3 v, float scalar)
 	return result;
 }
 
-SampleVector3 SampleDivideScalarV3(SampleVector3 v, float scalar)
+ElemVector3 SampleDivideScalarV3(ElemVector3 v, float scalar)
 {
-	SampleVector3 result;
+	ElemVector3 result;
 
 	result.X = v.X / scalar;
 	result.Y = v.Y / scalar;
@@ -192,9 +195,9 @@ SampleVector3 SampleDivideScalarV3(SampleVector3 v, float scalar)
 	return result;
 }
 
-SampleVector3 SampleMulV3(SampleVector3 v1, SampleVector3 v2)
+ElemVector3 SampleMulV3(ElemVector3 v1, ElemVector3 v2)
 {
-	SampleVector3 result;
+	ElemVector3 result;
 
 	result.X = v1.X * v2.X;
 	result.Y = v1.Y * v2.Y;
@@ -203,44 +206,44 @@ SampleVector3 SampleMulV3(SampleVector3 v1, SampleVector3 v2)
 	return result;
 }
 
-float SampleDotProductV3(SampleVector3 v1, SampleVector3 v2)
+float SampleDotProductV3(ElemVector3 v1, ElemVector3 v2)
 {
 	return v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
 }
 
-float SampleMagnitudeSquaredV3(SampleVector3 v)
+float SampleMagnitudeSquaredV3(ElemVector3 v)
 {
 	return SampleDotProductV3(v, v);
 }
 
-float SampleMagnitudeV3(SampleVector3 v)
+float SampleMagnitudeV3(ElemVector3 v)
 {
 	return sqrtf(SampleMagnitudeSquaredV3(v));
 }
 
-SampleVector3 SampleNormalizeV3(SampleVector3 v)
+ElemVector3 SampleNormalizeV3(ElemVector3 v)
 {
 	float magnitude = SampleMagnitudeV3(v);
 
 	if (magnitude > 0.0f)
 	{
-		SampleVector3 result = SampleMulScalarV3(v, (1.0f / SampleMagnitudeV3(v)));
+		ElemVector3 result = SampleMulScalarV3(v, (1.0f / SampleMagnitudeV3(v)));
 		return result;
 	}
 
 	return v;
 }
 
-SampleVector3 SampleCrossProductV3(SampleVector3 v1, SampleVector3 v2) 
+ElemVector3 SampleCrossProductV3(ElemVector3 v1, ElemVector3 v2) 
 {
-    SampleVector3 result;
+    ElemVector3 result;
     result.X = v1.Y * v2.Z - v1.Z * v2.Y;
     result.Y = v1.Z * v2.X - v1.X * v2.Z;
     result.Z = v1.X * v2.Y - v1.Y * v2.X;
     return result;
 }
 
-SampleVector4 SampleCreateQuaternion(SampleVector3 v, float w)
+SampleVector4 SampleCreateQuaternion(ElemVector3 v, float w)
 {
 	SampleVector4 result;
     
@@ -301,7 +304,7 @@ SampleMatrix4x4 SampleCreateIdentityMatrix()
     return result;
 }
 
-SampleMatrix4x4 SampleCreateTransformMatrix(SampleVector4 quaternion, SampleVector3 translation)
+SampleMatrix4x4 SampleCreateTransformMatrix(SampleVector4 quaternion, ElemVector3 translation)
 {
 	float xw = quaternion.X *quaternion.W , xx = quaternion.X *quaternion.X , yy = quaternion.Y *quaternion.Y ,
       	yw = quaternion.Y *quaternion.W , xy = quaternion.X *quaternion.Y , yz = quaternion.Y *quaternion.Z ,
@@ -409,11 +412,11 @@ SampleMatrix4x4 SampleCreateTranslationMatrix(float tx, float ty)
     return result;
 }
 
-SampleMatrix4x4 SampleCreateLookAtLHMatrix(SampleVector3 eyePosition, SampleVector3 targetPosition, SampleVector3 upDirection)
+SampleMatrix4x4 SampleCreateLookAtLHMatrix(ElemVector3 eyePosition, ElemVector3 targetPosition, ElemVector3 upDirection)
 {
-    SampleVector3 forwardDirection = SampleNormalizeV3(SampleMinV3(targetPosition, eyePosition));
-    SampleVector3 rightDirection = SampleNormalizeV3(SampleCrossProductV3(upDirection, forwardDirection));
-    SampleVector3 upDirectionNew = SampleCrossProductV3(forwardDirection, rightDirection);
+    ElemVector3 forwardDirection = SampleNormalizeV3(SampleMinV3(targetPosition, eyePosition));
+    ElemVector3 rightDirection = SampleNormalizeV3(SampleCrossProductV3(upDirection, forwardDirection));
+    ElemVector3 upDirectionNew = SampleCrossProductV3(forwardDirection, rightDirection);
 
     SampleMatrix4x4 result;
 
@@ -443,9 +446,9 @@ SampleMatrix4x4 SampleMulMatrix4x4(SampleMatrix4x4 a, SampleMatrix4x4 b)
 {
     SampleMatrix4x4 result;
 
-    for (int i = 0; i < 4; i++)
+    for (uint32_t i = 0; i < 4; i++)
     {
-        for (int j = 0; j < 4; j++)
+        for (uint32_t j = 0; j < 4; j++)
         {
             result.m[i][j] = a.m[i][0] * b.m[0][j] + a.m[i][1] * b.m[1][j] + a.m[i][2] * b.m[2][j] + a.m[i][3] * b.m[3][j];
         }
@@ -454,7 +457,7 @@ SampleMatrix4x4 SampleMulMatrix4x4(SampleMatrix4x4 a, SampleMatrix4x4 b)
     return result;
 }
 
-SampleVector2 SampleTransformPoint(SampleVector2 point, SampleMatrix4x4 m)
+SampleVector2 SampleTransformPointV2(SampleVector2 point, SampleMatrix4x4 m)
 {
     SampleVector2 result;
 
@@ -464,17 +467,14 @@ SampleVector2 SampleTransformPoint(SampleVector2 point, SampleMatrix4x4 m)
     return result;
 }
 
-SampleVector3 SampleTransformPointV3(SampleVector3 point, SampleMatrix4x4 m)
+ElemVector3 SampleTransformPointV3(ElemVector3 point, SampleMatrix4x4 m)
 {
-    SampleVector3 result;
+    ElemVector3 result;
 
     result.X = m.m[0][0] * point.X + m.m[0][1] * point.Y + m.m[0][2] * point.Z + m.m[0][3];
     result.Y = m.m[1][0] * point.X + m.m[1][1] * point.Y + m.m[1][2] * point.Z + m.m[1][3];
     result.Z = m.m[2][0] * point.X + m.m[2][1] * point.Y + m.m[2][2] * point.Z + m.m[2][3];
 
-    //result.X = m.m[0][0] * point.X + m.m[1][0] * point.Y + m.m[2][0] * point.Z + m.m[3][0];
-    //result.Y = m.m[0][1] * point.X + m.m[1][1] * point.Y + m.m[2][1] * point.Z + m.m[3][1];
-    //result.Z = m.m[0][2] * point.X + m.m[1][2] * point.Y + m.m[2][2] * point.Z + m.m[3][2];
-
     return result;
 }
+

@@ -5,6 +5,7 @@
 #include "SampleScene.h"
 #include "SampleGpuMemory.h"
 
+// TODO: The struct here are temporary. The final data will be placed in buffer
 typedef struct 
 {
     const char* Path;
@@ -17,6 +18,8 @@ typedef struct
 {
     uint32_t MeshCount;
     SampleMeshData* Meshes;
+    uint32_t NodeCount;
+    SampleSceneNodeHeader* Nodes;
 } SampleSceneData;
 
 void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
@@ -87,15 +90,19 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData)
         printf("ERROR: Wrong scene format\n");
     }
     
-    printf("OK Meshes Count: %d\n", sceneHeader.MeshCount);
+    printf("Scene Loaded: Meshes Count=%d, Nodes Count=%d\n", sceneHeader.MeshCount, sceneHeader.NodeCount);
 
     sceneData->MeshCount = sceneHeader.MeshCount;
+    sceneData->NodeCount = sceneHeader.NodeCount;
 
     // TODO: Replace malloc with an utility function that we will replace
     sceneData->Meshes = (SampleMeshData*)malloc(sizeof(SampleMeshData) * sceneHeader.MeshCount);
 
     SampleDataBlockEntry* meshDataBlocks = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * sceneHeader.MeshCount);
     fread(meshDataBlocks, sizeof(SampleDataBlockEntry), sceneHeader.MeshCount, file);
+
+    sceneData->Nodes = (SampleSceneNodeHeader*)malloc(sizeof(SampleSceneNodeHeader) * sceneHeader.NodeCount);
+    fread(sceneData->Nodes, sizeof(SampleSceneNodeHeader), sceneHeader.NodeCount, file);
 
     fclose(file);
 
@@ -104,6 +111,8 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData)
         SampleLoadMesh(path, meshDataBlocks[i].Offset, &sceneData->Meshes[i]);
         //SampleLoadMeshData(file, gpuMemory, &sceneData->Meshes[i], "Mesh");
     }
+
+    free(meshDataBlocks);
 }
 
 void SampleFreeScene(const SampleSceneData* sceneData)
