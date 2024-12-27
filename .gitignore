@@ -10,6 +10,8 @@
 *.obj
 *.mesh
 *.ini
+*.gltf
+*.bin
 
 xcuserdata/
 packages/

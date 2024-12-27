@@ -531,6 +531,7 @@ ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
         auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
         SystemAssert(graphicsHeapData);
 
+        // TODO: use vkMapMemory2 just for consistency
         AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject, resourceDataFull->GraphicsHeapOffset, resourceData->Width, 0, &resourceData->CpuDataPointer));
 	}
 

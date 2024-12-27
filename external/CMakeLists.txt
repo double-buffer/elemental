@@ -218,10 +218,18 @@ if(NOT BUILD_FOR_IOS)
 endif()
 
 #=======================================================================
+# cgltf
+#=======================================================================
+if(NOT BUILD_FOR_IOS)
+    add_library(cgltf INTERFACE)
+    target_include_directories(cgltf INTERFACE ./cgltf/)
+endif()
+
+#=======================================================================
 # Tools External Dependencies
 #=======================================================================
 add_library(tools_external_dependencies INTERFACE)
-target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj)
+target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj cgltf)
 
 #=======================================================================
 # xxHash

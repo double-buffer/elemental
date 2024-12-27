@@ -892,6 +892,19 @@ typedef struct
     float X, Y, Z;
 } ElemVector3;
 
+typedef union
+{
+    struct
+    {
+        float X, Y, Z, W;
+    };
+
+    struct
+    {
+        ElemVector3 XYZ;
+    }; 
+} ElemVector4;
+
 typedef struct
 {
     ElemVector3 MinPoint;

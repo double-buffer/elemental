@@ -38,6 +38,7 @@ using namespace Microsoft::WRL;
 
 #include "meshoptimizer.h"
 #include "fast_obj.h"
+#include "cgltf.h"
 
 #ifdef _WASDEBUG
 #define _DEBUG

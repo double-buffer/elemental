@@ -25,3 +25,6 @@
 [submodule "external/fast_obj"]
 	path = external/fast_obj
 	url = https://github.com/thisistherk/fast_obj.git
+[submodule "external/cgltf"]
+	path = external/cgltf
+	url = https://github.com/jkuhlmann/cgltf.git

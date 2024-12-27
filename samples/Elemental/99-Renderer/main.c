@@ -18,8 +18,10 @@ typedef struct
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
     uint32_t Reserved1;
-    uint32_t Reserved2;
+    float Scale;
     ElemVector3 Translation;
+    uint32_t Reserved2;
+    ElemVector4 Rotation;
 } ShaderParameters;
 
 typedef struct
@@ -32,6 +34,8 @@ typedef struct
 typedef struct
 {
     SampleAppSettings AppSettings;
+    const char* ScenePath;
+
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
@@ -105,13 +109,13 @@ void InitSample(void* payload)
 
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     // TODO: Having GPU Upload is still annoying 😞
-    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64));
+    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(256));
 
     applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");
     applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene("sponza.scene", &applicationPayload->TestSceneData);
+    SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -259,7 +263,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
                 applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
                 applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
                 applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
+                applicationPayload->ShaderParameters.Scale = sceneNode->Scale;
                 applicationPayload->ShaderParameters.Translation = sceneNode->Translation;
+                applicationPayload->ShaderParameters.Rotation = sceneNode->Rotation;
 
                 ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
                 ElemDispatchMesh(commandList, meshPrimitive->MeshletCount, 1, 1);
@@ -288,8 +294,16 @@ int main(int argc, const char* argv[])
 {
     ApplicationPayload payload =
     {
-        .AppSettings = SampleParseAppSettings(argc, argv)
+        .AppSettings = SampleParseAppSettings(argc, argv),
+        .ScenePath = "sponza.scene"
     };
+
+    int32_t scenePathIndex = argc - 1;
+
+    if (strstr(argv[scenePathIndex], ".scene"))
+    {
+        payload.ScenePath = argv[scenePathIndex];
+    }
 
     ElemConfigureLogHandler(ElemConsoleLogHandler);
 

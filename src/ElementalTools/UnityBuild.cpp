@@ -7,6 +7,9 @@
 #include "Shaders/MetalShaderConverter.cpp"
 #endif
 
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+
 #include "fast_obj.c"
 #include "SceneLoading/SceneLoader.cpp"
 

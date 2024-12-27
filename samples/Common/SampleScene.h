@@ -21,13 +21,15 @@ typedef struct
     char Name[50];
     SampleSceneNodeType NodeType;
     int32_t ReferenceIndex;
-    ElemVector3 Rotation;
+    ElemVector4 Rotation;
+    float Scale;
     ElemVector3 Translation;
     // TODO: Children
 } SampleSceneNodeHeader;
 
 typedef struct
 {
+    char Name[50];
     // TODO: Vertex size, etc.
     uint32_t MeshPrimitiveCount;
     uint32_t MeshBufferOffset;

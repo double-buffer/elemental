@@ -13,6 +13,8 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
     {
         .MeshPrimitiveCount = mesh.MeshPrimitives.Length
     };
+    
+    strncpy(meshHeader.Name, mesh.Name, 50);
 
     fwrite(&meshHeader, sizeof(SampleMeshHeader), 1, file);
     uint32_t meshPrimitiveHeadersOffset = ftell(file);
@@ -26,8 +28,8 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
     {
         ElemSceneMeshPrimitive* meshPrimitive = &mesh.MeshPrimitives.Items[i];
 
-        // TODO: Index buffer
-        ElemBuildMeshletResult result = ElemBuildMeshlets(meshPrimitive->VertexBuffer, NULL);
+        // TODO: LOD!
+        ElemBuildMeshletResult result = ElemBuildMeshlets(meshPrimitive->VertexBuffer, meshPrimitive->IndexBuffer, NULL);
 
         DisplayOutputMessages("BuildMeshlets", result.Messages);
 
@@ -91,13 +93,14 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
             .NodeType = (SampleSceneNodeType)node->NodeType,
             .ReferenceIndex = node->ReferenceIndex,
             .Rotation = node->Rotation,
+            .Scale = node->Scale,
             .Translation = node->Translation
         };
 
         strncpy(fileNode.Name, node->Name, 50);
         fwrite(&fileNode, sizeof(SampleSceneNodeHeader), 1, file);
 
-        printf("Node: '%s' MeshId=%d (T=%f,%f,%f)\n", node->Name, node->ReferenceIndex, node->Translation.X, node->Translation.Y, node->Translation.Z);
+        //printf("Node: '%s' MeshId=%d (T=%f,%f,%f)\n", node->Name, node->ReferenceIndex, node->Translation.X, node->Translation.Y, node->Translation.Z);
     }
 
     double beforeMeshlets = SampleGetTimerValueInMS();
@@ -182,9 +185,21 @@ int main(int argc, const char* argv[])
         printf("File doesn't exist.\n");
         return 1;
     }
+    
+    ElemLoadSceneOptions loadSceneOptions = {};
 
+    // HACK: For now we hardcode options
+    if (strstr(inputPath, "sponza"))
+    {
+        loadSceneOptions.Scaling = 0.01f;
+    }
+    else if (strstr(inputPath, "bistro"))
+    {
+        //loadSceneOptions.CoordinateSystem = ElemSceneCoordinateSystem_RightHanded;
+    }
+    
     // TODO: Scaling should be passed as a parameter
-    ElemLoadSceneResult scene = ElemLoadScene(inputPath, &(ElemLoadSceneOptions) { .CoordinateSystem = ElemSceneCoordinateSystem_LeftHanded, .Scaling = 0.01f });
+    ElemLoadSceneResult scene = ElemLoadScene(inputPath, &loadSceneOptions);
     
     DisplayOutputMessages("LoadScene", scene.Messages);
 

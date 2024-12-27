@@ -33,9 +33,12 @@
 
 #include "dxcapi.h"
 #include "d3d12shader.h"
-#include "meshoptimizer.h"
 
 #include "metal_irconverter/metal_irconverter.h"
+
+#include "meshoptimizer.h"
+#include "fast_obj.h"
+#include "cgltf.h"
 
 #ifdef _WASDEBUG
 #define _DEBUG

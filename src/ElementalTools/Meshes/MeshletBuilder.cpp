@@ -14,7 +14,7 @@ void InitMeshletBuilderMemoryArena()
     SystemClearMemoryArena(MeshletBuilderMemoryArena);
 }
 
-ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options)
+ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemUInt32Span indexBuffer, const ElemBuildMeshletsOptions* options)
 {
     InitMeshletBuilderMemoryArena();
 
@@ -22,17 +22,24 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    // TODO: Take into account the index buffer if present
     auto indexCount = vertexBuffer.Data.Length / vertexBuffer.VertexSize;
+    uint32_t* indexBufferPointer = nullptr;
+
+    if (indexBuffer.Length > 0)
+    {
+        indexBufferPointer = indexBuffer.Items;
+        indexCount = indexBuffer.Length;
+    }
+
     auto vertexRemap = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
     
-    auto vertexCount = meshopt_generateVertexRemap(vertexRemap.Pointer, nullptr, indexCount, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize);
+    auto vertexCount = meshopt_generateVertexRemap(vertexRemap.Pointer, indexBufferPointer, indexCount, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize);
 
     auto vertexList = SystemPushArrayZero<uint8_t>(MeshletBuilderMemoryArena, vertexCount * vertexBuffer.VertexSize);
     auto indexList = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
 
     meshopt_remapVertexBuffer(vertexList.Pointer, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize, vertexRemap.Pointer);
-    meshopt_remapIndexBuffer(indexList.Pointer, nullptr, indexCount, vertexRemap.Pointer);
+    meshopt_remapIndexBuffer(indexList.Pointer, indexBufferPointer, indexCount, vertexRemap.Pointer);
 
     meshopt_optimizeVertexCache(indexList.Pointer, indexList.Pointer, indexCount, vertexCount);
     meshopt_optimizeVertexFetch(vertexList.Pointer, indexList.Pointer, indexCount, vertexList.Pointer, vertexCount, vertexBuffer.VertexSize);

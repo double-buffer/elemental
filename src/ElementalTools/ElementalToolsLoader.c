@@ -27,7 +27,7 @@ typedef struct ElementalToolsFunctions
     bool (*ElemCanCompileShader)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform);
     ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, char const *, ElemCompileShaderOptions const *);
     ElemLoadSceneResult (*ElemLoadScene)(char const *, ElemLoadSceneOptions const *);
-    ElemBuildMeshletResult (*ElemBuildMeshlets)(ElemVertexBuffer, ElemBuildMeshletsOptions const *);
+    ElemBuildMeshletResult (*ElemBuildMeshlets)(ElemVertexBuffer, ElemUInt32Span, ElemBuildMeshletsOptions const *);
     
 } ElementalToolsFunctions;
 
@@ -84,7 +84,7 @@ static bool LoadElementalToolsFunctionPointers(void)
     listElementalToolsFunctions.ElemCanCompileShader = (bool (*)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform))GetElementalToolsFunctionPointer("ElemCanCompileShader");
     listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, char const *, ElemCompileShaderOptions const *))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
     listElementalToolsFunctions.ElemLoadScene = (ElemLoadSceneResult (*)(char const *, ElemLoadSceneOptions const *))GetElementalToolsFunctionPointer("ElemLoadScene");
-    listElementalToolsFunctions.ElemBuildMeshlets = (ElemBuildMeshletResult (*)(ElemVertexBuffer, ElemBuildMeshletsOptions const *))GetElementalToolsFunctionPointer("ElemBuildMeshlets");
+    listElementalToolsFunctions.ElemBuildMeshlets = (ElemBuildMeshletResult (*)(ElemVertexBuffer, ElemUInt32Span, ElemBuildMeshletsOptions const *))GetElementalToolsFunctionPointer("ElemBuildMeshlets");
     
 
     functionPointersLoadedElementalTools = 1;
@@ -201,7 +201,7 @@ static inline ElemLoadSceneResult ElemLoadScene(char const * path, ElemLoadScene
     return listElementalToolsFunctions.ElemLoadScene(path, options);
 }
 
-static inline ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemBuildMeshletsOptions const * options)
+static inline ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemUInt32Span indexBuffer, ElemBuildMeshletsOptions const * options)
 {
     if (!LoadElementalToolsFunctionPointers()) 
     {
@@ -229,5 +229,5 @@ static inline ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBu
         return result;
     }
 
-    return listElementalToolsFunctions.ElemBuildMeshlets(vertexBuffer, options);
+    return listElementalToolsFunctions.ElemBuildMeshlets(vertexBuffer, indexBuffer, options);
 }

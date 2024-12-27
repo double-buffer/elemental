@@ -60,7 +60,7 @@ void SampleLoadMeshData(SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
     fread(meshBufferData, sizeof(uint8_t), meshData->MeshHeader.MeshBufferSizeInBytes, file);
 
     // TODO: Construct debug name
-    meshData->MeshBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, meshBufferData, meshData->MeshHeader.MeshBufferSizeInBytes, "TO_CHANGE");
+    meshData->MeshBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, meshBufferData, meshData->MeshHeader.MeshBufferSizeInBytes, meshData->MeshHeader.Name);
 
     fclose(file);
 }

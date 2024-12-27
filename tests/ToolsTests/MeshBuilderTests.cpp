@@ -43,15 +43,30 @@ ElemVertexBuffer TestBuildVertexBuffer(TestMeshVertex* destination, uint32_t cou
     };
 }
 
+ElemUInt32Span TestBuildIndexBuffer(uint32_t* destination, uint32_t count)
+{
+    for (uint32_t i = 0; i < count; i++)
+    {
+        destination[i] = i;
+    }
+    
+    return
+    {
+        .Items = destination, .Length = count
+    };
+}
+
 UTEST(MeshBuilder, CheckVertexBuffer) 
 {
     // Arrange
     const uint32_t vertexCount = 210;
     TestMeshVertex vertexList[vertexCount];
+    uint32_t indexList[vertexCount / 3];
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
 
     // Act
-    auto result = ElemBuildMeshlets(vertexBuffer, NULL);
+    auto result = ElemBuildMeshlets(vertexBuffer, indexBuffer, NULL);
 
     // Assert
     ASSERT_FALSE(result.HasErrors);
@@ -89,7 +104,9 @@ UTEST(MeshBuilder, CheckVertexBuffer_NoDuplicates)
     // Arrange
     const uint32_t vertexCount = 210;
     TestMeshVertex vertexList[vertexCount];
+    uint32_t indexList[vertexCount / 3];
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount - 3);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
 
     for (uint32_t i = 0; i < 3; i++)
     {
@@ -99,7 +116,7 @@ UTEST(MeshBuilder, CheckVertexBuffer_NoDuplicates)
     vertexBuffer.Data.Length += vertexBuffer.VertexSize * 3;
 
     // Act
-    auto result = ElemBuildMeshlets(vertexBuffer, NULL);
+    auto result = ElemBuildMeshlets(vertexBuffer, indexBuffer, NULL);
 
     // Assert
     ASSERT_FALSE(result.HasErrors);
@@ -112,10 +129,12 @@ UTEST(MeshBuilder, CheckMeshletVertexIndexBuffer)
     // Arrange
     const uint32_t vertexCount = 210;
     TestMeshVertex vertexList[vertexCount];
+    uint32_t indexList[vertexCount / 3];
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount - 3);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
 
     // Act
-    auto result = ElemBuildMeshlets(vertexBuffer, NULL);
+    auto result = ElemBuildMeshlets(vertexBuffer, indexBuffer, NULL);
 
     // Assert
     ASSERT_FALSE(result.HasErrors);
@@ -141,10 +160,12 @@ UTEST(MeshBuilder, CheckMeshletTriangleIndexBuffer)
     // Arrange
     const uint32_t vertexCount = 210;
     TestMeshVertex vertexList[vertexCount];
+    uint32_t indexList[vertexCount / 3];
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount - 3);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
 
     // Act
-    auto result = ElemBuildMeshlets(vertexBuffer, NULL);
+    auto result = ElemBuildMeshlets(vertexBuffer, indexBuffer, NULL);
 
     // Assert
     ASSERT_FALSE(result.HasErrors);

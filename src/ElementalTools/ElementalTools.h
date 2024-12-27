@@ -125,6 +125,25 @@ typedef struct
     float X, Y, Z;
 } ElemToolsVector3;
 
+typedef union
+{
+    struct
+    {
+        float X, Y, Z, W;
+    };
+
+    struct
+    {
+        ElemToolsVector3 XYZ;
+    }; 
+} ElemToolsVector4;
+
+typedef union
+{
+    float m[4][4];
+    ElemToolsVector4 Rows[4];
+} ElemToolsMatrix4x4;
+
 typedef struct
 {
     ElemToolsVector3 MinPoint;
@@ -237,6 +256,7 @@ typedef enum
 {
     ElemSceneFormat_Unknown = 0,
     ElemSceneFormat_Obj = 1,
+    ElemSceneFormat_Gltf = 2
 } ElemSceneFormat;
 
 typedef enum
@@ -255,6 +275,11 @@ typedef struct
 {
     ElemSceneCoordinateSystem CoordinateSystem;
     float Scaling;
+    ElemToolsVector3 Rotation;
+    ElemToolsVector3 Translation;
+    // TODO: Don't add options for the format here but in the builder instead
+    // we still want the same format mechanism but hardcoded 
+
     // TODO: Add options to specify the vertex format wanted
 } ElemLoadSceneOptions;
 
@@ -275,6 +300,7 @@ typedef struct
 
 typedef struct
 {
+    const char* Name;
     ElemSceneMeshPrimitiveSpan MeshPrimitives;
     ElemToolsBoundingBox BoundingBox;
     // TODO: SphereVolume?
@@ -291,7 +317,8 @@ typedef struct
     const char* Name;
     ElemSceneNodeType NodeType;
     int32_t ReferenceIndex;
-    ElemToolsVector3 Rotation;
+    ElemToolsVector4 Rotation;
+    float Scale;
     ElemToolsVector3 Translation;
     // TODO: Children
 } ElemSceneNode;
@@ -325,7 +352,6 @@ ElemToolsAPI ElemLoadSceneResult ElemLoadScene(const char* path, const ElemLoadS
 typedef struct
 {
     // TODO: Allow bypass mesh format
-    // TODO: Support index buffers
     uint32_t Reserved;
 } ElemBuildMeshletsOptions;
 
@@ -356,7 +382,7 @@ typedef struct
     bool HasErrors;
 } ElemBuildMeshletResult;
 
-ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, const ElemBuildMeshletsOptions* options);
+ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemUInt32Span indexBuffer, const ElemBuildMeshletsOptions* options);
 
 // TODO: Do an optimize mesh function that can be used to optimize a normal mesh (for Raytracing for example)
 

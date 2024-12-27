@@ -7,6 +7,7 @@
 
 #ifdef ElemToolsAPI
 typedef ElemToolsVector3 ElemVector3;
+typedef ElemToolsVector4 ElemVector4;
 #else
 #include "../Elemental/Elemental.h"
 #endif 
@@ -271,6 +272,7 @@ SampleVector4 SampleMulQuat(SampleVector4 q1, SampleVector4 q2)
     return (SampleVector4) { .X = x, .Y = y, .Z = z, .W = w };
 }
 
+// TODO: Get rid of this
 typedef union
 {
     float m[4][4];
@@ -304,6 +306,7 @@ SampleMatrix4x4 SampleCreateIdentityMatrix()
     return result;
 }
 
+// TODO: To review
 SampleMatrix4x4 SampleCreateTransformMatrix(SampleVector4 quaternion, ElemVector3 translation)
 {
 	float xw = quaternion.X *quaternion.W , xx = quaternion.X *quaternion.X , yy = quaternion.Y *quaternion.Y ,
@@ -349,6 +352,7 @@ SampleMatrix4x4 SampleTransposeMatrix(SampleMatrix4x4 matrix)
 
 SampleMatrix4x4 SampleCreateRotationMatrix(float angle)
 {
+    // BUG: Uninit values!
     SampleMatrix4x4 result;
     float c = cosf(angle);
     float s = sinf(angle);
@@ -372,6 +376,7 @@ SampleMatrix4x4 SampleCreateRotationMatrix(float angle)
 
 SampleMatrix4x4 SampleCreateScaleMatrix(float scale)
 {
+    // BUG: Uninit values!
     SampleMatrix4x4 result;
 
     result.m[0][0] = scale;
@@ -384,7 +389,7 @@ SampleMatrix4x4 SampleCreateScaleMatrix(float scale)
 
     result.m[2][0] = 0.0f;
     result.m[2][1] = 0.0f;
-    result.m[2][2] = 1.0f;
+    result.m[2][2] = scale;
     
     result.m[3][3] = 1.0f;
 
@@ -393,6 +398,7 @@ SampleMatrix4x4 SampleCreateScaleMatrix(float scale)
 
 SampleMatrix4x4 SampleCreateTranslationMatrix(float tx, float ty)
 {
+    // BUG: Uninit values!
     SampleMatrix4x4 result;
 
     result.m[0][0] = 1.0f;
