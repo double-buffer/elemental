@@ -232,7 +232,6 @@ ElemLoadSceneResult LoadGltfScene(const char* path, const ElemLoadSceneOptions* 
     {
         auto sceneNode = &sceneNodes[i];
         auto gltfNode = &data->nodes[i];
-        printf("Test: %s\n", gltfNode->name);
 
         sceneNode->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(gltfNode->name)).Pointer;
         sceneNode->Rotation = {};

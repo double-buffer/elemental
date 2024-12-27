@@ -15,24 +15,40 @@ function(get_compiler_bin_path binary_name out_var)
     set(${out_var} "${bin_path}" PARENT_SCOPE)
 endfunction()
 
-function(configure_resources_for_compiler target_name result_var name binary_name source_exts dest_ext)
+
+function(configure_resources_for_compiler
+    target_name         # e.g. MyApp
+    result_var         # e.g. compiled_files_for_X
+    name               # e.g. HLSL
+    binary_name        # e.g. ShaderCompiler
+    source_exts        # ".hlsl"
+    dest_ext           # ".shader"
+    resource_root      # the folder from resource_list if it is a directory
+    )
     # Convert commas to semicolons if present
     string(REPLACE "," ";" source_exts "${source_exts}")
 
     get_target_property(target_sources ${target_name} SOURCES)
+
     set(resource_files "")
     foreach(src IN LISTS target_sources)
+        # Combine the "folder or file" from resource_root with the target source
+        # if your calling code is using it that way. (This part might vary depending on your usage.)
         set(abs_src "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
-        if(IS_DIRECTORY ${abs_src})
+
+        # If we are dealing with a directory in resource_root or if 'src' *is* that directory,
+        # then GLOB_RECURSE subfiles
+        if(IS_DIRECTORY "${abs_src}")
             foreach(ext IN LISTS source_exts)
                 file(GLOB_RECURSE matched_files "${abs_src}/*${ext}")
                 list(APPEND resource_files ${matched_files})
             endforeach()
         else()
-            get_filename_component(this_ext ${abs_src} EXT)
+            # It's a single file—check extension
+            get_filename_component(this_ext "${abs_src}" EXT)
             foreach(ext IN LISTS source_exts)
                 if("${this_ext}" STREQUAL "${ext}")
-                    list(APPEND resource_files ${abs_src})
+                    list(APPEND resource_files "${abs_src}")
                     break()
                 endif()
             endforeach()
@@ -44,9 +60,18 @@ function(configure_resources_for_compiler target_name result_var name binary_nam
         return()
     endif()
 
+    # Use the new param as the "root" for the relative subfolder structure
+    # If resource_root is empty or not a directory, you might choose a fallback:
+    if(NOT IS_DIRECTORY "${resource_root}")
+        # fallback if needed
+        set(resource_root "${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
+
+    # Get path to the compiler binary
     get_compiler_bin_path(${binary_name} compiler_bin)
 
-    # ARGN holds default parameters passed from the main function
+    # Grab any remaining ARGN as default parameters
+    # (If you’re using ARGN for something else, adapt accordingly.)
     set(args_to_parse ${ARGN})
     set(default_params "")
     foreach(param IN LISTS args_to_parse)
@@ -58,49 +83,53 @@ function(configure_resources_for_compiler target_name result_var name binary_nam
     set(compiled_files "")
 
     foreach(file IN LISTS resource_files)
-        get_filename_component(file_path ${file} ABSOLUTE)
-        get_filename_component(file_dir ${file_path} DIRECTORY)
-        get_filename_component(file_name ${file_path} NAME_WE)
+        get_filename_component(file_path "${file}" ABSOLUTE)
+        get_filename_component(file_dir  "${file_path}" DIRECTORY)
+        get_filename_component(file_name "${file_path}" NAME_WE)
 
-        file(RELATIVE_PATH relative_dir ${CMAKE_CURRENT_SOURCE_DIR} ${file_dir})
+        # Compute the relative subfolder structure from 'resource_root'
+        file(RELATIVE_PATH relative_dir "${resource_root}" "${file_dir}")
+
+          # Reproduce that structure inside the build folder
         set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/${relative_dir}")
-        file(MAKE_DIRECTORY ${output_dir})
+        file(MAKE_DIRECTORY "${output_dir}")
 
         set(output_file "${output_dir}/${file_name}${dest_ext}")
 
         add_custom_command(
-            OUTPUT ${output_file}
-            COMMAND ${compiler_bin} ${default_params} ${file} ${output_file}
-            DEPENDS ${file}
+            OUTPUT  "${output_file}"
+            COMMAND "${compiler_bin}" ${default_params} "${file}" "${output_file}"
+            DEPENDS "${file}"
             COMMENT "Compiling ${name}: ${file}"
-            WORKING_DIRECTORY ${file_dir}
+            WORKING_DIRECTORY "${file_dir}"
         )
 
-        set_source_files_properties(${output_file} PROPERTIES GENERATED TRUE)
-        target_sources(${target_name} PRIVATE ${output_file})
-        list(APPEND compiled_files ${output_file})
+        set_source_files_properties("${output_file}" PROPERTIES GENERATED TRUE)
+        target_sources("${target_name}" PRIVATE "${output_file}")
+        list(APPEND compiled_files "${output_file}")
 
         # Extra Vulkan variant for HLSL on Windows
         if("${name}" STREQUAL "HLSL" AND WIN32)
             set(vulkan_output_file "${output_dir}/${file_name}_vulkan${dest_ext}")
             add_custom_command(
-                OUTPUT ${vulkan_output_file}
-                COMMAND ${compiler_bin} ${default_params} --target-api vulkan ${file} ${vulkan_output_file}
-                DEPENDS ${file}
+                OUTPUT  "${vulkan_output_file}"
+                COMMAND "${compiler_bin}" ${default_params} --target-api vulkan "${file}" "${vulkan_output_file}"
+                DEPENDS "${file}"
                 COMMENT "Compiling ${name} (Vulkan): ${file}"
-                WORKING_DIRECTORY ${file_dir}
+                WORKING_DIRECTORY "${file_dir}"
             )
-            set_source_files_properties(${vulkan_output_file} PROPERTIES GENERATED TRUE)
-            target_sources(${target_name} PRIVATE ${vulkan_output_file})
-            list(APPEND compiled_files ${vulkan_output_file})
+            set_source_files_properties("${vulkan_output_file}" PROPERTIES GENERATED TRUE)
+            target_sources("${target_name}" PRIVATE "${vulkan_output_file}")
+            list(APPEND compiled_files "${vulkan_output_file}")
         endif()
     endforeach()
 
     set(${result_var} "${compiled_files}" PARENT_SCOPE)
 endfunction()
 
+
 function(configure_resource_compilation target_name resource_list)
-    # Reintroduce original logic for iOS and Debug
+    # iOS, debug logic, etc.
     if(BUILD_FOR_IOS)
         set(SHADER_COMPILER_DEFAULT_OPTIONS "--target-platform iOS")
     else()
@@ -109,7 +138,6 @@ function(configure_resource_compilation target_name resource_list)
     endif()
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        # Append debug flag to shader options
         if(NOT "${SHADER_COMPILER_DEFAULT_OPTIONS}" STREQUAL "")
             set(SHADER_COMPILER_DEFAULT_OPTIONS "${SHADER_COMPILER_DEFAULT_OPTIONS} --debug")
         else()
@@ -119,8 +147,7 @@ function(configure_resource_compilation target_name resource_list)
 
     set(MESH_COMPILER_DEFAULT_OPTIONS "")
 
-    # Use '|' as delimiters to avoid semicolon issues
-    # Format: Name|BinaryName|SourceExtensions|DestExtension|DefaultParams...
+    # Use '|' as delimiters
     set(COMPILERS_LIST
         "HLSL|ShaderCompiler|.hlsl|.shader|${SHADER_COMPILER_DEFAULT_OPTIONS}"
         "MESH|SceneCompiler|.obj|.scene|${MESH_COMPILER_DEFAULT_OPTIONS}"
@@ -129,7 +156,6 @@ function(configure_resource_compilation target_name resource_list)
 
     set(all_compiled_resources "")
     foreach(compiler_entry IN LISTS COMPILERS_LIST)
-        # Convert '|' to ';' to parse fields
         string(REPLACE "|" ";" fields_string "${compiler_entry}")
         set(fields ${fields_string})
         list(LENGTH fields fields_length)
@@ -148,13 +174,22 @@ function(configure_resource_compilation target_name resource_list)
             set(default_params "")
         endif()
 
+        #-----------------------------------------------------------------
+        # Here we call our new configure_resources_for_compiler.
+        # The last param is the folder from resource_list if you want
+        # to treat it as the "root" for preserving subfolders.
+        #
+        # You could pass `resource_list` directly. If your `resource_list`
+        # has multiple entries, you might loop them or parse them individually.
+        #-----------------------------------------------------------------
         configure_resources_for_compiler(
-            ${target_name}
+            "${target_name}"
             compiled_files_for_${name}
-            ${name}
-            ${binary_name}
+            "${name}"
+            "${binary_name}"
             "${source_exts}"
-            ${dest_ext}
+            "${dest_ext}"
+            "${resource_list}"  # TODO: We can remove that parameter
             ${default_params}
         )
 
@@ -264,7 +299,15 @@ function(configure_project_package target_name install_folder)
             foreach(file IN LISTS ARG_RESOURCES)
                 get_filename_component(file_name "${file}" NAME)
                 get_filename_component(full_path "${file}" ABSOLUTE)
-                set(output_file "${output_folder}/Data/${file_name}")
+                get_filename_component(file_dir "${full_path}" DIRECTORY)
+
+                set(resource_root "${CMAKE_CURRENT_BINARY_DIR}/Data") 
+
+                file(RELATIVE_PATH relative_dir "${resource_root}" "${file_dir}")
+                set(output_subdir "${output_folder}/Data/${relative_dir}")
+                file(MAKE_DIRECTORY "${output_subdir}")
+
+                set(output_file "${output_subdir}/${file_name}")
                 
                 add_custom_command(
                     OUTPUT "${output_file}"

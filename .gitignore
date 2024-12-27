@@ -12,6 +12,8 @@
 *.ini
 *.gltf
 *.bin
+*.tga
+*.mtl
 
 xcuserdata/
 packages/
@@ -37,3 +39,4 @@ bld/
 external/shader-compilers/
 .DS_Store
 artifacts/
+*.db

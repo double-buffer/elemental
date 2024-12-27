@@ -166,10 +166,10 @@ ElemToolsMatrix4x4 ElemToolsCreateScaleMatrix(float scale)
 {
     ElemToolsMatrix4x4 result;
 
-    result.Rows[0] = { scale, 0.0f, 0.0f, 0.0f };
-    result.Rows[1] = { 0.0f, scale, 0.0f, 0.0f };
-    result.Rows[2] = { 0.0f, 0.0f, scale, 0.0f };
-    result.Rows[3] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    result.Rows[0] = {{ scale, 0.0f, 0.0f, 0.0f }};
+    result.Rows[1] = {{ 0.0f, scale, 0.0f, 0.0f }};
+    result.Rows[2] = {{ 0.0f, 0.0f, scale, 0.0f }};
+    result.Rows[3] = {{ 0.0f, 0.0f, 0.0f, 1.0f }};
 
     return result;
 }
@@ -178,10 +178,10 @@ ElemToolsMatrix4x4 ElemToolsCreateTranslationMatrix(ElemToolsVector3 translation
 {
     ElemToolsMatrix4x4 result;
 
-    result.Rows[0] = { 1.0f, 0.0f, 0.0f, 0.0f };
-    result.Rows[1] = { 0.0f, 1.0f, 0.0f, 0.0f };
-    result.Rows[2] = { 0.0f, 0.0f, 1.0f, 0.0f };
-    result.Rows[3] = { translation.X, translation.Y, translation.Z, 1.0f };
+    result.Rows[0] = {{ 1.0f, 0.0f, 0.0f, 0.0f }};
+    result.Rows[1] = {{ 0.0f, 1.0f, 0.0f, 0.0f }};
+    result.Rows[2] = {{ 0.0f, 0.0f, 1.0f, 0.0f }};
+    result.Rows[3] = {{ translation.X, translation.Y, translation.Z, 1.0f }};
 
     return result;
 }

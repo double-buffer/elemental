@@ -6,15 +6,19 @@
 #include "SampleSceneLoader.h"
 
 // TODO: Take all the code from the common headers and integrate it here
+// SampleSceneLoaderNeeds to disappear
 
-
-/*
 typedef struct
 {
-    uint32_t VertexBuffer;
-    uint32_t MeshletBuffer;
-    uint32_t MeshletVertexIndexBuffer;
-    uint32_t MeshletTriangleIndexBuffer;
+    // TODO: Embed that into a buffer
+    uint32_t MeshBuffer;
+    uint32_t VertexBufferOffset;
+    uint32_t MeshletOffset;
+    uint32_t MeshletVertexIndexOffset;
+    uint32_t MeshletTriangleIndexOffset;
+    uint32_t Reserved1;
+    uint32_t Reserved2;
+    uint32_t Reserved3;
     SampleVector4 RotationQuaternion;
     float Zoom;
     float AspectRatio;
@@ -41,6 +45,7 @@ typedef struct
     SampleInputsApplication InputsApplication;
     SampleInputsModelViewer InputsModelViewer;
     SampleSceneData TestSceneData;
+    SampleGpuMemory GpuMemory; // TODO: To remove
 } ApplicationPayload;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
@@ -104,11 +109,13 @@ void InitSample(void* payload)
 
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     // TODO: Having GPU Upload is still annoying 😞
-    applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
+    //applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
+    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(256));
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    //LoadMesh(&applicationPayload->TestMeshData, "kitten.scene", applicationPayload);
-    //LoadMesh(&applicationPayload->TestMeshData, "buddha.scene", applicationPayload);
+    SampleLoadScene("kitten.scene", &applicationPayload->TestSceneData);
+    SampleLoadMeshData(&applicationPayload->TestSceneData.Meshes[0], &applicationPayload->GpuMemory);
+    //SampleLoadScene("buddha.scene", &applicationPayload->TestSceneData);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -148,7 +155,7 @@ void FreeSample(void* payload)
 
     ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
 
-    //FreeMesh(&applicationPayload->TestMeshData);
+    SampleFreeScene(&applicationPayload->TestSceneData);
 
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeSwapChain(applicationPayload->SwapChain);
@@ -195,9 +202,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     if (SampleMagnitudeSquaredV3(modelViewerState->RotationDelta))
     {
-        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 1, 0, 0 }, modelViewerState->RotationDelta.X), 
-                                                         SampleMulQuat(SampleCreateQuaternion((SampleVector3){ 0, 0, 1 }, modelViewerState->RotationDelta.Z),
-                                                                       SampleCreateQuaternion((SampleVector3){ 0, 1, 0 }, modelViewerState->RotationDelta.Y)));
+        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((ElemVector3){ 1, 0, 0 }, modelViewerState->RotationDelta.X), 
+                                                         SampleMulQuat(SampleCreateQuaternion((ElemVector3){ 0, 0, 1 }, modelViewerState->RotationDelta.Z),
+                                                                       SampleCreateQuaternion((ElemVector3){ 0, 1, 0 }, modelViewerState->RotationDelta.Y)));
 
         applicationPayload->ShaderParameters.RotationQuaternion = SampleMulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
@@ -227,7 +234,13 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-    //ElemDispatchMesh(commandList, applicationPayload->TestMeshData.MeshletCount, 1, 1);
+
+    SampleMeshPrimitiveHeader* meshPrimitive = &applicationPayload->TestSceneData.Meshes[0].MeshPrimitives[0];
+    applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
+    applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
+    applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
+    applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
+    ElemDispatchMesh(commandList, meshPrimitive->MeshletCount, 1, 1);
 
     ElemEndRenderPass(commandList);
 
@@ -261,8 +274,4 @@ int main(int argc, const char* argv[])
         .FreeHandler = FreeSample,
         .Payload = &payload
     });
-}*/
-
-int main(int argc, const char* argv[]) 
-{
 }

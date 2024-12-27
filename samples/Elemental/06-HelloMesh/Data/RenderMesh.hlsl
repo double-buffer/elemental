@@ -1,9 +1,13 @@
 struct ShaderParameters
 {
-    uint32_t VertexBufferIndex;
-    uint32_t MeshletBufferIndex;
-    uint32_t MeshletVertexIndexBufferIndex;
-    uint32_t MeshletTriangleIndexBufferIndex;
+    uint32_t MeshBuffer;
+    uint32_t VertexBufferOffset;
+    uint32_t MeshletOffset;
+    uint32_t MeshletVertexIndexOffset;
+    uint32_t MeshletTriangleIndexOffset;
+    uint32_t Reserved1;
+    uint32_t Reserved2;
+    uint32_t Reserved3;
     float4 RotationQuaternion;
     float Zoom;
     float AspectRatio;
@@ -89,8 +93,8 @@ void MeshMain(in uint groupId: SV_GroupID,
 {
     uint meshletIndex = groupId;
 
-    ByteAddressBuffer meshletBuffer = ResourceDescriptorHeap[parameters.MeshletBufferIndex];
-    ElemMeshlet meshlet = meshletBuffer.Load<ElemMeshlet>(meshletIndex * sizeof(ElemMeshlet));
+    ByteAddressBuffer meshBuffer = ResourceDescriptorHeap[parameters.MeshBuffer];
+    ElemMeshlet meshlet = meshBuffer.Load<ElemMeshlet>(parameters.MeshletOffset + meshletIndex * sizeof(ElemMeshlet));
 
     SetMeshOutputCounts(meshlet.VertexIndexCount, meshlet.TriangleCount);
 
@@ -106,11 +110,8 @@ void MeshMain(in uint groupId: SV_GroupID,
         float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
         float4x4 inverseTransposeWorldMatrix = worldMatrix;
 
-        ByteAddressBuffer meshletVertexIndexBuffer = ResourceDescriptorHeap[parameters.MeshletVertexIndexBufferIndex];
-        ByteAddressBuffer vertexBuffer = ResourceDescriptorHeap[parameters.VertexBufferIndex];
-
-        uint vertexIndex = meshletVertexIndexBuffer.Load<uint>((meshlet.VertexIndexOffset + groupThreadId) * sizeof(uint));
-        Vertex vertex = vertexBuffer.Load<Vertex>(vertexIndex * sizeof(Vertex));
+        uint vertexIndex = meshBuffer.Load<uint>(parameters.MeshletVertexIndexOffset + (meshlet.VertexIndexOffset + groupThreadId) * sizeof(uint));
+        Vertex vertex = meshBuffer.Load<Vertex>(parameters.VertexBufferOffset + vertexIndex * sizeof(Vertex));
 
         vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), worldViewProjectionMatrix);
         vertices[groupThreadId].WorldNormal = mul(vertex.Normal, inverseTransposeWorldMatrix); // TODO: Compute inverse transpose
@@ -119,9 +120,7 @@ void MeshMain(in uint groupId: SV_GroupID,
 
     if (groupThreadId < meshlet.TriangleCount)
     {
-        ByteAddressBuffer meshletTriangleIndexBuffer = ResourceDescriptorHeap[parameters.MeshletTriangleIndexBufferIndex];
-        uint triangleIndex = meshletTriangleIndexBuffer.Load<uint>((meshlet.TriangleOffset + groupThreadId) * sizeof(uint));
-
+        uint triangleIndex = meshBuffer.Load<uint>(parameters.MeshletTriangleIndexOffset + (meshlet.TriangleOffset + groupThreadId) * sizeof(uint));
         indices[groupThreadId] = unpack_u8u32(triangleIndex).xyz;
     }
 }

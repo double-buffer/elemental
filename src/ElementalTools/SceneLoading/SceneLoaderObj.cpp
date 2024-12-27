@@ -309,10 +309,26 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
             ApplyObjBoundingBoxInverseTranslation(boundingBoxCenter, &meshPrimitive->BoundingBox);
         }
         
-        mesh->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objectData->name)).Pointer;
+        if (objectData->name)
+        {
+            mesh->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objectData->name)).Pointer;
+        }
+        else
+        {
+            mesh->Name = "Mesh";
+        }
+
         mesh->MeshPrimitives = { .Items = meshPrimitives.Pointer, .Length = (uint32_t)meshPrimitives.Length };
 
-        sceneNode->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objectData->name)).Pointer;
+        if (objectData->name)
+        {
+            sceneNode->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objectData->name)).Pointer;
+        }
+        else
+        {
+            sceneNode->Name = "Node";
+        }
+
         sceneNode->NodeType = ElemSceneNodeType_Mesh;
         sceneNode->ReferenceIndex = i;
 
