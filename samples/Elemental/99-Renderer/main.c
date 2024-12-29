@@ -295,7 +295,7 @@ int main(int argc, const char* argv[])
     ApplicationPayload payload =
     {
         .AppSettings = SampleParseAppSettings(argc, argv),
-        .ScenePath = "sponza.scene"
+        .ScenePath = "Sponza/sponza.scene"
     };
 
     int32_t scenePathIndex = argc - 1;

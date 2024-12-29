@@ -178,14 +178,6 @@ int main(int argc, const char* argv[])
     SampleInitTimer();
     double initialTimer = SampleGetTimerValueInMS();
 
-    ElemToolsDataSpan inputData = SampleReadFile(inputPath, false); 
-    
-    if (inputData.Length == 0)
-    {
-        printf("File doesn't exist.\n");
-        return 1;
-    }
-    
     ElemLoadSceneOptions loadSceneOptions = {};
 
     // HACK: For now we hardcode options

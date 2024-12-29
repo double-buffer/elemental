@@ -39,6 +39,8 @@ using namespace Microsoft::WRL;
 #include "meshoptimizer.h"
 #include "fast_obj.h"
 #include "cgltf.h"
+#include "stb_image.h"
+#include "stb_image_resize2.h"
 
 #ifdef _WASDEBUG
 #define _DEBUG

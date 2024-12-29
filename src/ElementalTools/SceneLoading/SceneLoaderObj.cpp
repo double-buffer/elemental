@@ -201,6 +201,11 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
     auto sceneNodes = SystemPushArray<ElemSceneNode>(sceneLoaderMemoryArena, objFileData->object_count);
     auto meshPrimitiveInfos = SystemPushArray<ObjMeshPrimitiveInfo>(stackMemoryArena, UINT16_MAX);
 
+    for (uint32_t i = 0; i < objFileData->material_count; i++)
+    {
+        printf("Material: %s\n", objFileData->materials[i].name);
+    }
+
     for (uint32_t i = 0; i < objFileData->object_count; i++)
     {
         auto mesh = &meshes[i];
@@ -213,8 +218,6 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
             continue;
         }
 
-        printf("Object/Mesh: %s\n", objectData->name);
-
         auto currentFaceStart = objectData->face_offset;
         auto currentFaceEnd = objectData->face_offset + objectData->face_count; 
 
@@ -226,8 +229,6 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
         }
 
         auto currentMaterial = objFileData->face_materials[currentFaceStart];
-        printf("   MeshPrimitive (Material: %d)\n", currentMaterial);
-
         auto meshPrimitiveCount = 0u;
 
         auto meshPrimitiveInfo = &meshPrimitiveInfos[meshPrimitiveCount++];
@@ -258,8 +259,6 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
             if (faceMaterial != currentMaterial)
             {
                 currentMaterial = faceMaterial;
-
-                printf("   MeshPrimitive (Material: %d)\n", currentMaterial);
 
                 auto meshPrimitiveIndexOffset = indexOffset + meshPrimitiveInfo->IndexCount;
 

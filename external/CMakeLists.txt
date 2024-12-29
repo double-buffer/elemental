@@ -1,3 +1,5 @@
+# TODO: Make a folder per bin external dep
+
 #=======================================================================
 # DirectX Shader Compiler
 #=======================================================================
@@ -226,10 +228,18 @@ if(NOT BUILD_FOR_IOS)
 endif()
 
 #=======================================================================
+# stb
+#=======================================================================
+if(NOT BUILD_FOR_IOS)
+    add_library(stb INTERFACE)
+    target_include_directories(stb INTERFACE ./stb/)
+endif()
+
+#=======================================================================
 # Tools External Dependencies
 #=======================================================================
 add_library(tools_external_dependencies INTERFACE)
-target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj cgltf)
+target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj cgltf stb)
 
 #=======================================================================
 # xxHash

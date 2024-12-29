@@ -352,6 +352,7 @@ ElemToolsAPI ElemLoadSceneResult ElemLoadScene(const char* path, const ElemLoadS
 typedef struct
 {
     // TODO: Allow bypass mesh format
+    // TODO: Allow customize index packing
     uint32_t Reserved;
 } ElemBuildMeshletsOptions;
 
@@ -385,6 +386,67 @@ typedef struct
 ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemUInt32Span indexBuffer, const ElemBuildMeshletsOptions* options);
 
 // TODO: Do an optimize mesh function that can be used to optimize a normal mesh (for Raytracing for example)
+
+//------------------------------------------------------------------------
+// Module: Textures
+//------------------------------------------------------------------------
+
+typedef enum
+{
+    ElemToolsGraphicsFormat_R8G8B8A8_SRGB
+} ElemToolsGraphicsFormat;
+
+typedef enum
+{
+    ElemLoadTextureFileFormat_Unknown = 0,
+    ElemLoadTextureFileFormat_Tga = 1,
+} ElemLoadTextureFileFormat;
+
+typedef struct
+{
+    uint32_t Width;
+    uint32_t Height;
+    ElemToolsDataSpan Data;
+} ElemTextureMipData;
+
+typedef struct
+{
+    ElemTextureMipData* Items;
+    uint32_t Length;
+} ElemTextureMipDataSpan;
+
+typedef struct
+{
+    uint32_t Reserved;
+} ElemLoadTextureOptions;
+
+typedef struct
+{
+    ElemLoadTextureFileFormat FileFormat;
+    ElemToolsGraphicsFormat Format;
+    uint32_t Width;
+    uint32_t Height;
+    ElemTextureMipDataSpan MipData;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemLoadTextureResult;
+
+typedef struct
+{
+    // TODO: Alpha options
+    uint32_t Reserved;
+} ElemGenerateTextureMipDataOptions;
+
+typedef struct
+{
+    ElemTextureMipDataSpan MipData;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemGenerateTextureMipDataResult;
+
+ElemToolsAPI ElemLoadTextureResult ElemLoadTexture(const char* path, const ElemLoadTextureOptions* options);
+
+ElemToolsAPI ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemToolsGraphicsFormat format, ElemTextureMipData baseMip, const ElemGenerateTextureMipDataOptions* options);
 
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader
