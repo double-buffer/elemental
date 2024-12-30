@@ -23,6 +23,8 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize2.h"
 
+#include "bc7enc.cpp"
+
 #include "Textures/TextureLoader.cpp"
 #include "Textures/TextureProcessing.cpp"
 

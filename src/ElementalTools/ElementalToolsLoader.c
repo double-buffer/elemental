@@ -29,7 +29,8 @@ typedef struct ElementalToolsFunctions
     ElemLoadSceneResult (*ElemLoadScene)(char const *, ElemLoadSceneOptions const *);
     ElemBuildMeshletResult (*ElemBuildMeshlets)(ElemVertexBuffer, ElemUInt32Span, ElemBuildMeshletsOptions const *);
     ElemLoadTextureResult (*ElemLoadTexture)(char const *, ElemLoadTextureOptions const *);
-    ElemGenerateTextureMipDataResult (*ElemGenerateTextureMipData)(ElemToolsGraphicsFormat, ElemTextureMipData, ElemGenerateTextureMipDataOptions const *);
+    ElemGenerateTextureMipDataResult (*ElemGenerateTextureMipData)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemGenerateTextureMipDataOptions const *);
+    ElemCompressTextureMipDataResult (*ElemCompressTextureMipData)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemCompressTextureMipDataOptions const *);
     
 } ElementalToolsFunctions;
 
@@ -88,7 +89,8 @@ static bool LoadElementalToolsFunctionPointers(void)
     listElementalToolsFunctions.ElemLoadScene = (ElemLoadSceneResult (*)(char const *, ElemLoadSceneOptions const *))GetElementalToolsFunctionPointer("ElemLoadScene");
     listElementalToolsFunctions.ElemBuildMeshlets = (ElemBuildMeshletResult (*)(ElemVertexBuffer, ElemUInt32Span, ElemBuildMeshletsOptions const *))GetElementalToolsFunctionPointer("ElemBuildMeshlets");
     listElementalToolsFunctions.ElemLoadTexture = (ElemLoadTextureResult (*)(char const *, ElemLoadTextureOptions const *))GetElementalToolsFunctionPointer("ElemLoadTexture");
-    listElementalToolsFunctions.ElemGenerateTextureMipData = (ElemGenerateTextureMipDataResult (*)(ElemToolsGraphicsFormat, ElemTextureMipData, ElemGenerateTextureMipDataOptions const *))GetElementalToolsFunctionPointer("ElemGenerateTextureMipData");
+    listElementalToolsFunctions.ElemGenerateTextureMipData = (ElemGenerateTextureMipDataResult (*)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemGenerateTextureMipDataOptions const *))GetElementalToolsFunctionPointer("ElemGenerateTextureMipData");
+    listElementalToolsFunctions.ElemCompressTextureMipData = (ElemCompressTextureMipDataResult (*)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemCompressTextureMipDataOptions const *))GetElementalToolsFunctionPointer("ElemCompressTextureMipData");
     
 
     functionPointersLoadedElementalTools = 1;
@@ -267,7 +269,7 @@ static inline ElemLoadTextureResult ElemLoadTexture(char const * path, ElemLoadT
     return listElementalToolsFunctions.ElemLoadTexture(path, options);
 }
 
-static inline ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemToolsGraphicsFormat format, ElemTextureMipData baseMip, ElemGenerateTextureMipDataOptions const * options)
+static inline ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemToolsGraphicsFormat format, ElemTextureMipData const * baseMip, ElemGenerateTextureMipDataOptions const * options)
 {
     if (!LoadElementalToolsFunctionPointers()) 
     {
@@ -296,4 +298,35 @@ static inline ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemTo
     }
 
     return listElementalToolsFunctions.ElemGenerateTextureMipData(format, baseMip, options);
+}
+
+static inline ElemCompressTextureMipDataResult ElemCompressTextureMipData(ElemToolsGraphicsFormat format, ElemTextureMipData const * mipData, ElemCompressTextureMipDataOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemCompressTextureMipDataResult result = {};
+        #else
+        ElemCompressTextureMipDataResult result = (ElemCompressTextureMipDataResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemCompressTextureMipData) 
+    {
+        assert(listElementalToolsFunctions.ElemCompressTextureMipData);
+
+        #ifdef __cplusplus
+        ElemCompressTextureMipDataResult result = {};
+        #else
+        ElemCompressTextureMipDataResult result = (ElemCompressTextureMipDataResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemCompressTextureMipData(format, mipData, options);
 }

@@ -393,7 +393,8 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
 typedef enum
 {
-    ElemToolsGraphicsFormat_R8G8B8A8_SRGB
+    ElemToolsGraphicsFormat_R8G8B8A8,
+    ElemToolsGraphicsFormat_BC7
 } ElemToolsGraphicsFormat;
 
 typedef enum
@@ -444,9 +445,22 @@ typedef struct
     bool HasErrors;
 } ElemGenerateTextureMipDataResult;
 
-ElemToolsAPI ElemLoadTextureResult ElemLoadTexture(const char* path, const ElemLoadTextureOptions* options);
+typedef struct
+{
+    uint32_t Reserved;
+} ElemCompressTextureMipDataOptions;
 
-ElemToolsAPI ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemToolsGraphicsFormat format, ElemTextureMipData baseMip, const ElemGenerateTextureMipDataOptions* options);
+typedef struct
+{
+    ElemToolsGraphicsFormat Format;
+    ElemTextureMipData MipData;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemCompressTextureMipDataResult;
+
+ElemToolsAPI ElemLoadTextureResult ElemLoadTexture(const char* path, const ElemLoadTextureOptions* options);
+ElemToolsAPI ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemToolsGraphicsFormat format, const ElemTextureMipData* baseMip, const ElemGenerateTextureMipDataOptions* options);
+ElemToolsAPI ElemCompressTextureMipDataResult ElemCompressTextureMipData(ElemToolsGraphicsFormat format, const ElemTextureMipData* mipData, const ElemCompressTextureMipDataOptions* options);
 
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader

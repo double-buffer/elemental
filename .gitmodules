@@ -31,3 +31,6 @@
 [submodule "external/stb"]
 	path = external/stb
 	url = https://github.com/nothings/stb.git
+[submodule "external/bc7enc_rdo"]
+	path = external/bc7enc_rdo
+	url = https://github.com/richgel999/bc7enc_rdo.git

@@ -236,10 +236,23 @@ if(NOT BUILD_FOR_IOS)
 endif()
 
 #=======================================================================
+# bc7encoder_rdo
+#=======================================================================
+if(NOT BUILD_FOR_IOS)
+    set(SUPPORT_BC7E FALSE) # TODO: Needs to set it to true for GPU accell and ISPC
+    if(WIN32)
+        set(MSVC FALSE)
+    endif()
+    #add_subdirectory(./bc7enc_rdo)
+    add_library(bc7enc INTERFACE)
+    target_include_directories(bc7enc INTERFACE ./bc7enc_rdo/)
+endif()
+
+#=======================================================================
 # Tools External Dependencies
 #=======================================================================
 add_library(tools_external_dependencies INTERFACE)
-target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj cgltf stb)
+target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj cgltf stb bc7enc)
 
 #=======================================================================
 # xxHash

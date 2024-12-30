@@ -42,7 +42,7 @@ ElemLoadTextureResult LoadStbTexture(const char* path, ElemLoadTextureFileFormat
     return 
     {
         .FileFormat = fileFormat,
-        .Format = ElemToolsGraphicsFormat_R8G8B8A8_SRGB,
+        .Format = ElemToolsGraphicsFormat_R8G8B8A8,
         .Width = (uint32_t)width,
         .Height = (uint32_t)height,
         .MipData = { .Items = mipData, .Length = 1 },
