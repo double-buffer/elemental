@@ -49,7 +49,7 @@ VkFormat ConvertToVulkanTextureFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_B8G8R8A8_SRGB:
             return VK_FORMAT_B8G8R8A8_SRGB;
 
-        case ElemGraphicsFormat_B8G8R8A8_UNORM:
+        case ElemGraphicsFormat_B8G8R8A8:
             return VK_FORMAT_B8G8R8A8_UNORM;
 
         case ElemGraphicsFormat_R16G16B16A16_FLOAT:
@@ -60,6 +60,9 @@ VkFormat ConvertToVulkanTextureFormat(ElemGraphicsFormat format)
         
         case ElemGraphicsFormat_D32_FLOAT:
             return VK_FORMAT_D32_SFLOAT;
+
+        case ElemGraphicsFormat_BC7_SRGB:
+            return VK_FORMAT_BC7_SRGB_BLOCK;
 
         case ElemGraphicsFormat_Raw:
             return VK_FORMAT_UNDEFINED;

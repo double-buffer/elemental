@@ -394,10 +394,11 @@ typedef enum
 {
     ElemGraphicsFormat_Raw,
     ElemGraphicsFormat_B8G8R8A8_SRGB,
-    ElemGraphicsFormat_B8G8R8A8_UNORM,
+    ElemGraphicsFormat_B8G8R8A8,
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
-    ElemGraphicsFormat_D32_FLOAT 
+    ElemGraphicsFormat_D32_FLOAT, 
+    ElemGraphicsFormat_BC7_SRGB 
 } ElemGraphicsFormat;
 
 typedef enum
@@ -1049,15 +1050,7 @@ ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemComm
  */
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 
-// TODO: Add a create fence function for a given commanduque?
-
-// TODO: Still in draft!
-ElemAPI ElemIOCommandQueue ElemCreateIOCommandQueue(const ElemIOCommandQueueOptions* options);
-ElemAPI void ElemFreeIOCommandQueue(ElemIOCommandQueue ioQueue);
-ElemAPI void ElemEnqueueIOCommand(ElemIOCommandQueue ioCommandQueue, const ElemIOCommandParameters* parameters);
-ElemAPI ElemFence ElemSubmitIOCommandQueue();
-
-ElemAPI ElemFence ElemExecuteIOCommands();
+// TODO: Add a create fence function for a given commandqueue?
 
 /**
  * Waits for a fence to reach its signaled state on the CPU, effectively synchronizing CPU and GPU operations.

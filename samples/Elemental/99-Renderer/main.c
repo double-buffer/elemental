@@ -177,6 +177,8 @@ void FreeSample(void* payload)
 
     SavedState savedState = { .CameraState = applicationPayload->InputsCamera.State }; 
     SampleWriteDataToApplicationFile("SavedState.bin", (ElemDataSpan) { .Items = (uint8_t*)&savedState, .Length = sizeof(SavedState) }, false);
+
+    printf("Exit application...\n");
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
@@ -234,6 +236,19 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     });
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
+
+    // TODO: Fow now, we load all the material textures in one shot
+    // We do it in the main loop now because later it will be a streaming system.
+    // Doing it in the main loop force us to decouple the loading
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.MaterialCount; i++)
+    {
+        SampleMaterialData* material = &applicationPayload->TestSceneData.Materials[i];
+
+        if (material->AlbedoTexture.Path && !material->AlbedoTexture.IsLoaded)
+        {
+            SampleLoadTextureData(&material->AlbedoTexture, &applicationPayload->GpuMemory);
+        }
+    }
 
     // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
     // Be carreful with the limit per dimension of 65000

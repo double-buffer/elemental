@@ -110,7 +110,7 @@ int main(int argc, const char* argv[])
     printf("Compressed data in %.2fs\n", (SampleGetTimerValueInMS() - beforeEncodeTimer) / 1000.0);
 
     fseek(file, sizeof(SampleTextureHeader), SEEK_SET);
-    fwrite(mipDataOffsets, sizeof(SampleTextureHeader), mipData.Length, file);
+    fwrite(mipDataOffsets, sizeof(SampleTextureDataBlockEntry), mipData.Length, file);
 
     fclose(file);
     printf("Texture compiled in %.2fs\n", (SampleGetTimerValueInMS() - initialTimer) / 1000.0);

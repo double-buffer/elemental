@@ -5,6 +5,7 @@
 
 #define TEXTURE_BC_BLOCK_SIZE_IN_BYTES 16
 
+// TODO: See example: https://github.com/Hork-Engine/Hork-Source/blob/97c3630480983b20bd054e06ca6c26ae2e87095a/Hork/Image/ImageEncoders.cpp
 // TODO: Do one for each thread
 static MemoryArena generateMipDataMemoryArena;
 static MemoryArena compressMipDataMemoryArena;

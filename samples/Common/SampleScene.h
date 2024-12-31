@@ -14,7 +14,16 @@ typedef struct
     char FileId[5];
     uint32_t MeshCount;
     uint32_t NodeCount;
+    uint32_t MaterialCount;
 } SampleSceneHeader;
+
+typedef struct
+{
+    char Name[50];
+    char AlbedoTexturePath[255];
+    char NormalTexturePath[255];
+    ElemVector4 AlbedoFactor;
+} SampleSceneMaterialHeader;
 
 typedef struct
 {

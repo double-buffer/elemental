@@ -137,7 +137,7 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_B8G8R8A8_SRGB:
             return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 
-        case ElemGraphicsFormat_B8G8R8A8_UNORM:
+        case ElemGraphicsFormat_B8G8R8A8:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
         case ElemGraphicsFormat_R16G16B16A16_FLOAT:
@@ -148,6 +148,9 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
 
         case ElemGraphicsFormat_D32_FLOAT:
             return DXGI_FORMAT_D32_FLOAT;
+
+        case ElemGraphicsFormat_BC7_SRGB:
+            return DXGI_FORMAT_BC7_UNORM_SRGB;
 
         case ElemGraphicsFormat_Raw:
             return DXGI_FORMAT_UNKNOWN;
@@ -162,7 +165,7 @@ ElemGraphicsFormat ConvertFromDirectX12TextureFormat(DXGI_FORMAT format)
             return ElemGraphicsFormat_B8G8R8A8_SRGB;
 
         case DXGI_FORMAT_B8G8R8A8_UNORM:
-            return ElemGraphicsFormat_B8G8R8A8_UNORM;
+            return ElemGraphicsFormat_B8G8R8A8;
 
         case DXGI_FORMAT_R16G16B16A16_FLOAT:
             return ElemGraphicsFormat_R16G16B16A16_FLOAT;
@@ -172,6 +175,9 @@ ElemGraphicsFormat ConvertFromDirectX12TextureFormat(DXGI_FORMAT format)
 
         case DXGI_FORMAT_D32_FLOAT:
             return ElemGraphicsFormat_D32_FLOAT;
+
+        case DXGI_FORMAT_BC7_UNORM_SRGB:
+            return ElemGraphicsFormat_BC7_SRGB;
 
         default:
             return ElemGraphicsFormat_Raw;

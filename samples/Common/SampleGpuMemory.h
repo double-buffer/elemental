@@ -16,6 +16,12 @@ typedef struct
     ElemGraphicsResourceDescriptor ReadDescriptor;
 } SampleGpuBuffer;
 
+typedef struct
+{
+    ElemGraphicsResource Texture;
+    ElemGraphicsResourceDescriptor ReadDescriptor;
+} SampleGpuTexture;
+
 SampleGpuMemory SampleCreateGpuMemory(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes)
 {
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
@@ -65,4 +71,32 @@ void SampleFreeGpuBuffer(SampleGpuBuffer* gpuBuffer)
 
     ElemFreeGraphicsResource(gpuBuffer->Buffer, NULL);
     gpuBuffer->Buffer = ELEM_HANDLE_NULL;
+}
+
+SampleGpuTexture SampleCreateGpuTexture(SampleGpuMemory* gpuMemory, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const char* debugName)
+{
+    ElemGraphicsResourceInfo textureDescription = ElemCreateTexture2DResourceInfo(gpuMemory->GraphicsDevice, width, height, mipLevels, format, ElemGraphicsResourceUsage_Read, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
+
+    gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, textureDescription.Alignment);
+    ElemGraphicsResource texture = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &textureDescription);
+    gpuMemory->CurrentHeapOffset += textureDescription.SizeInBytes;
+
+    ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+
+    return (SampleGpuTexture)
+    {
+        .Texture = texture,
+        .ReadDescriptor = readDescriptor
+    };
+}
+
+void SampleFreeGpuTexture(SampleGpuTexture* gpuTexture)
+{
+    assert(gpuTexture);
+
+    ElemFreeGraphicsResourceDescriptor(gpuTexture->ReadDescriptor, NULL);
+    gpuTexture->ReadDescriptor = ELEM_HANDLE_NULL;
+
+    ElemFreeGraphicsResource(gpuTexture->Texture, NULL);
+    gpuTexture->Texture = ELEM_HANDLE_NULL;
 }

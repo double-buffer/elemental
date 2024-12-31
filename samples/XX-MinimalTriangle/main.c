@@ -49,8 +49,15 @@ typedef struct
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
 
+ElemToolsDataSpan LoadShaderDataHandler(const char* path)
+{
+    return (ElemToolsDataSpan) { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) };
+}
+
 void InitSample(void* payload)
 {
+    ElemToolsConfigureFileIO(LoadShaderDataHandler);
+
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
     applicationPayload->Window = ElemCreateWindow(NULL);
@@ -63,8 +70,7 @@ void InitSample(void* payload)
     ElemSystemInfo systemInfo = ElemGetSystemInfo();
     ElemGraphicsDeviceInfo graphicsDeviceInfo = ElemGetGraphicsDeviceInfo(applicationPayload->GraphicsDevice);
 
-    ElemShaderSourceData shaderSourceData = { .ShaderLanguage = ElemShaderLanguage_Hlsl, .Data = { .Items = (uint8_t*)shaderSource, .Length = strlen(shaderSource) } };
-    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, (ElemToolsPlatform)systemInfo.Platform, &shaderSourceData, NULL);
+    ElemShaderCompilationResult compilationResult = ElemCompileShaderLibrary((ElemToolsGraphicsApi)graphicsDeviceInfo.GraphicsApi, (ElemToolsPlatform)systemInfo.Platform, "Triangle.hlsl", NULL);
 
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, (ElemDataSpan) { .Items = compilationResult.Data.Items, .Length = compilationResult.Data.Length });
 

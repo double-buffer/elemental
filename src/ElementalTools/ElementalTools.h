@@ -190,17 +190,6 @@ typedef enum
 } ElemShaderLanguage;
 
 /**
- * Represents shader source data, including language and the actual code.
- */
-typedef struct
-{
-    // Language of the shader source code.
-    ElemShaderLanguage ShaderLanguage;
-    // Raw shader source code data.
-    ElemToolsDataSpan Data;
-} ElemShaderSourceData;
-
-/**
  * Configuration options for compiling shaders.
  */
 typedef struct
@@ -217,6 +206,7 @@ typedef struct
  */
 typedef struct
 {
+    // TODO: Add source language
     // Compiled shader binary data.
     ElemToolsDataSpan Data;
     // Messages generated during the compilation.
@@ -315,6 +305,20 @@ typedef struct
 typedef struct
 {
     const char* Name;
+    const char* AlbedoTexturePath;
+    const char* NormalTexturePath;
+    ElemToolsVector4 AlbedoFactor;
+} ElemSceneMaterial;
+
+typedef struct
+{
+    ElemSceneMaterial* Items;
+    uint32_t Length;
+} ElemSceneMaterialSpan;
+
+typedef struct
+{
+    const char* Name;
     ElemSceneNodeType NodeType;
     int32_t ReferenceIndex;
     ElemToolsVector4 Rotation;
@@ -335,6 +339,7 @@ typedef struct
     ElemSceneCoordinateSystem CoordinateSystem;
 
     ElemSceneMeshSpan Meshes;
+    ElemSceneMaterialSpan Materials;
     ElemSceneNodeSpan Nodes;
 
     ElemToolsMessageSpan Messages;

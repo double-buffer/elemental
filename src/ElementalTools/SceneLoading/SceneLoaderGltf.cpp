@@ -228,6 +228,7 @@ ElemLoadSceneResult LoadGltfScene(const char* path, const ElemLoadSceneOptions* 
         mesh->MeshPrimitives = { .Items = meshPrimitives.Pointer, .Length = (uint32_t)meshPrimitives.Length };
     }
 
+    // TODO: Children?
     for (uint32_t i = 0; i < data->nodes_count; i++)
     {
         auto sceneNode = &sceneNodes[i];

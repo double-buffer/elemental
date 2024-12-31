@@ -67,7 +67,7 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
     return true;
 }
 
-bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
+bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInputPath)
 {
     assert(file);
 
@@ -75,6 +75,7 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
     {
         .FileId = { 'S', 'C', 'E', 'N', 'E' },
         .MeshCount = scene.Meshes.Length,
+        .MaterialCount = scene.Materials.Length,
         .NodeCount = scene.Nodes.Length
     };
 
@@ -83,6 +84,30 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene)
     // TODO: Get rid of malloc?
     SampleDataBlockEntry* meshDataOffsets = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * scene.Meshes.Length);
     fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
+    
+    for (uint32_t i = 0; i < scene.Materials.Length; i++)
+    {
+        ElemSceneMaterial* material = &scene.Materials.Items[i];
+
+        SampleSceneMaterialHeader materialHeader =
+        {
+            .AlbedoFactor = material->AlbedoFactor
+        };
+
+        strncpy(materialHeader.Name, material->Name, 50);
+
+        if (material->AlbedoTexturePath)
+        {
+            GetRelativeResourcePath(sceneInputPath, material->AlbedoTexturePath, ".texture", materialHeader.AlbedoTexturePath, 255);
+        }
+        
+        if (material->NormalTexturePath)
+        {
+            GetRelativeResourcePath(sceneInputPath, material->NormalTexturePath, ".texture", materialHeader.NormalTexturePath, 255);
+        }
+
+        fwrite(&materialHeader, sizeof(SampleSceneMaterialHeader), 1, file);
+    }
 
     for (uint32_t i = 0; i < scene.Nodes.Length; i++)
     {
@@ -205,7 +230,7 @@ int main(int argc, const char* argv[])
     printf("Writing Scene data to: %s\n", outputPath);
 
     FILE* file = fopen(outputPath, "wb");
-    WriteSceneData(file, scene);
+    WriteSceneData(file, scene, inputPath);
     fclose(file);
     printf("Scene compiled in %.2fs\n", (SampleGetTimerValueInMS() - initialTimer) / 1000.0);
 }

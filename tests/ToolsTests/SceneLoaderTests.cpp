@@ -1,6 +1,8 @@
 #include "ToolsTests.h"
 #include "utest.h"
 
+// TODO: Add real test files on disk?
+
 auto cubeObjSceneSource = R"(o Cube
     v 1.000000 -1.000000 -1.000000
     v 1.000000 -1.000000 1.000000

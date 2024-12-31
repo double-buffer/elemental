@@ -44,6 +44,7 @@ uint32_t SampleAlignValue(uint32_t value, uint32_t alignment)
 // -----------------------------------------------------------------------------
 void SampleGetFullPath(char* destination, const char* path, bool prefixData)
 {
+    // TODO: Pass destination length
     memset(destination, 0, MAX_PATH);
 
     char* pointer = destination;
@@ -167,29 +168,6 @@ int SampleWriteDataToFile(const char* filename, ElemDataSpan data, bool append)
     return 0; // Success
 }
 
-uint32_t SampleGetFileSize(const char* filename)
-{
-    if (filename == NULL) 
-    {
-        printf("ERROR 1\n");
-        return -1;
-    }
-
-    FILE* file = fopen(filename, "ab");
-
-    if (file == NULL) 
-    {
-        printf("ERROR 2\n");
-        return -1;
-    }
-
-    fseek(file, 0, SEEK_END);
-    uint32_t fileSize = ftell(file);
-    fclose(file);
-
-    return fileSize;
-}
-
 int SampleWriteDataToApplicationFile(const char* filename, ElemDataSpan data, bool append) 
 {
     char absolutePath[MAX_PATH];
@@ -198,85 +176,65 @@ int SampleWriteDataToApplicationFile(const char* filename, ElemDataSpan data, bo
     return SampleWriteDataToFile(absolutePath, data, append);
 }
 
-ElemDataSpan SampleReadLine(ElemDataSpan* data)
+// TODO: Add Sample prefix
+void ReplaceFileExtension(const char* path, const char* extension, char* destination, uint32_t destinationSize)
 {
-    for (uint32_t i = 0; i < data->Length; i++)
-    {
-        if (data->Items[i] == '\n')
-        {
-            ElemDataSpan result =
-            {
-                .Items = data->Items,
-                .Length = i
-            };
-            
-            data->Items += i + 1;
-            data->Length -= i + 1;
-            return result;
-        }
-    }
+    assert(destinationSize >= strlen(path));
+    memset(destination, 0, destinationSize);
 
-    return (ElemDataSpan) 
+    const char* extensionSeparator = strrchr(path, '.');
+    uint32_t prefixLength = extensionSeparator ? (extensionSeparator - path) : strlen(path);
+
+    for (uint32_t i = 0; i < prefixLength; i++)
     {
-        .Items = NULL,
-        .Length = 0
-    };
+        destination[i] = path[i] == '\\' ? '/' : path[i];
+    }
+    
+    strncat(destination, extension, prefixLength);
 }
 
-void SamplePrintDataSpan(ElemDataSpan data)
-{    
-    for (uint32_t i = 0; i < data.Length; i++)
+void GetFileDirectory(const char* path, char* destination, uint32_t destinationSize)
+{
+    assert(destinationSize >= strlen(path));
+    memset(destination, 0, destinationSize);
+    
+    for (uint32_t i = 0; i < strlen(path); i++)
     {
-        printf("%c", data.Items[i]);
+        destination[i] = path[i] == '\\' ? '/' : path[i];
     }
 
-    printf("\n");
+    char* lastSeparator = strrchr(destination, '/');
+
+    if (lastSeparator) 
+    {
+        *(lastSeparator + 1) = '\0';
+    }
+    else 
+    {
+        destination[0] = '\0';
+    }
 }
 
-void SampleSplitString(ElemDataSpan* destination, uint32_t* destinationCount, ElemDataSpan source, char separator)
+void GetRelativeResourcePath(const char* mainPath, const char* path, const char* extension, char* destination, uint32_t destinationSize)
 {
-    uint8_t* pointer = source.Items;
+    assert(destinationSize >= strlen(path));
+    memset(destination, 0, destinationSize);
 
-    for (uint32_t i = 0; i < source.Length; i++)
+    char mainDirectory[destinationSize];
+    GetFileDirectory(mainPath, mainDirectory, destinationSize);
+
+    char resourcePath[MAX_PATH];
+    ReplaceFileExtension(path, extension, resourcePath, sizeof(resourcePath));
+
+    size_t mainDirectoryLength = strlen(mainDirectory);
+    const char* startPath = resourcePath;
+
+    if (strncmp(resourcePath, mainDirectory, mainDirectoryLength) == 0) 
     {
-        if (source.Items[i] == separator)
-        {
-            destination[(*destinationCount)++] = (ElemDataSpan)
-            {
-                .Items = pointer,
-                .Length = (source.Items + i) - pointer
-            };
-
-            if (i + 1 < source.Length)
-            {
-                pointer = source.Items + i + 1;
-            }
-        }
+        startPath = resourcePath + mainDirectoryLength;
     }
 
-    destination[(*destinationCount)++] = (ElemDataSpan)
-    {
-        .Items = pointer,
-        .Length = (source.Items + source.Length) - pointer
-    };
-}
-
-bool SampleCompareString(ElemDataSpan data, const char* value)
-{
-    if (strlen(value) != data.Length)
-    {
-        return false;
-    }
-
-    for (uint32_t i = 0; i < data.Length; i++)
-    {
-        if (data.Items[i] != value[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
+    strncpy(destination, startPath, startPath - resourcePath);
 }
 
 // -----------------------------------------------------------------------------

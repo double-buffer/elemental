@@ -47,6 +47,7 @@ size_t FastObjFileRead(void* file, void* destination, size_t bytes, void* userDa
 
     auto readLength = SystemMin(sourceSpan.Length - objLoaderFileData->CurrentOffset, bytes);
 
+    // TODO: For the map_Dist that isn't parsed by the lib, maybe we can replace it with bump here?
     if (readLength > 0)
     {
         SystemCopyBuffer(destinationSpan, sourceSpan.Slice(objLoaderFileData->CurrentOffset, readLength));
@@ -179,32 +180,18 @@ void ApplyObjBoundingBoxInverseTranslation(ElemToolsVector3 translation, ElemToo
     boundingBox->MaxPoint = { boundingBox->MaxPoint.X - translation.X, boundingBox->MaxPoint.Y - translation.Y, boundingBox->MaxPoint.Z - translation.Y };
 }
 
-ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* options)
+ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const ElemLoadSceneOptions* options)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto hasErrors = false;
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto sceneLoaderMemoryArena = GetSceneLoaderMemoryArena();
 
     auto globalTransformMatrix = CreateSceneLoaderGlobalTransformMatrix(options);
 
-    auto callbacks = fastObjCallbacks
-    {
-        .file_open = FastObjFileOpen,
-        .file_close = FastObjFileClose,
-        .file_read = FastObjFileRead,
-        .file_size = FastObjFileSize
-    };
-
-    auto objFileData = fast_obj_read_with_callbacks(path, &callbacks, &stackMemoryArena);
-    auto sceneLoaderMemoryArena = GetSceneLoaderMemoryArena();
-    
     auto meshes = SystemPushArray<ElemSceneMesh>(sceneLoaderMemoryArena, objFileData->object_count);
     auto sceneNodes = SystemPushArray<ElemSceneNode>(sceneLoaderMemoryArena, objFileData->object_count);
     auto meshPrimitiveInfos = SystemPushArray<ObjMeshPrimitiveInfo>(stackMemoryArena, UINT16_MAX);
-
-    for (uint32_t i = 0; i < objFileData->material_count; i++)
-    {
-        printf("Material: %s\n", objFileData->materials[i].name);
-    }
 
     for (uint32_t i = 0; i < objFileData->object_count; i++)
     {
@@ -337,8 +324,6 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
         DecomposeTransform(nodeTransform, &sceneNode->Scale, &sceneNode->Rotation, &sceneNode->Translation);
     }
 
-    ResetLoadFileDataMemory();
-
     return 
     {
         .SceneFormat = ElemSceneFormat_Obj,
@@ -347,4 +332,61 @@ ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* o
         .Nodes = { .Items = sceneNodes.Pointer, .Length = (uint32_t)sceneNodes.Length },
         .HasErrors = hasErrors
     };
+}
+
+ElemSceneMaterialSpan LoadObjMaterials(const fastObjMesh* objFileData, const ElemLoadSceneOptions* options)
+{
+    auto sceneLoaderMemoryArena = GetSceneLoaderMemoryArena();
+    auto materials = SystemPushArray<ElemSceneMaterial>(sceneLoaderMemoryArena, objFileData->material_count);
+
+    for (uint32_t i = 0; i < objFileData->material_count; i++)
+    {
+        auto objMaterial = &objFileData->materials[i];
+        auto material = &materials[i];
+
+        if (objMaterial->name)
+        {
+            material->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objMaterial->name)).Pointer;
+        }
+        else
+        {
+            material->Name = "Material";
+        }
+
+        if (objMaterial->map_Kd > 0)
+        {
+            material->AlbedoTexturePath = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objFileData->textures[objMaterial->map_Kd].path)).Pointer;
+        }
+
+        if (objMaterial->map_bump > 0)
+        {
+            material->NormalTexturePath = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objFileData->textures[objMaterial->map_bump].path)).Pointer;
+        }
+
+        material->AlbedoFactor = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
+
+        printf("material: %s\n", objFileData->materials[i].name);
+    }
+
+    return { .Items = materials.Pointer, .Length = (uint32_t)materials.Length };
+}
+
+ElemLoadSceneResult LoadObjScene(const char* path, const ElemLoadSceneOptions* options)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    auto callbacks = fastObjCallbacks
+    {
+        .file_open = FastObjFileOpen,
+        .file_close = FastObjFileClose,
+        .file_read = FastObjFileRead,
+        .file_size = FastObjFileSize
+    };
+
+    auto objFileData = fast_obj_read_with_callbacks(path, &callbacks, &stackMemoryArena);
+
+    auto result = LoadObjSceneAndNodes(objFileData, options);
+    result.Materials = LoadObjMaterials(objFileData, options);
+
+    return result;
 }

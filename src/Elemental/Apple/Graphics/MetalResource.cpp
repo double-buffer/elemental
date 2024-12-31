@@ -52,7 +52,7 @@ MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_B8G8R8A8_SRGB:
             return MTL::PixelFormatBGRA8Unorm_sRGB;
 
-        case ElemGraphicsFormat_B8G8R8A8_UNORM:
+        case ElemGraphicsFormat_B8G8R8A8:
             return MTL::PixelFormatBGRA8Unorm;
 
         case ElemGraphicsFormat_R16G16B16A16_FLOAT:
@@ -63,6 +63,9 @@ MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
 
         case ElemGraphicsFormat_D32_FLOAT:
             return MTL::PixelFormatDepth32Float;
+
+        case ElemGraphicsFormat_BC7_SRGB:
+            return MTL:PixelFormatBC7_RGBAUnorm_sRGB;
 
         default:
             return MTL::PixelFormatR8Unorm;
@@ -77,7 +80,7 @@ ElemGraphicsFormat ConvertFromMetalResourceFormat(MTL::PixelFormat format)
             return ElemGraphicsFormat_B8G8R8A8_SRGB;
 
         case MTL::PixelFormatBGRA8Unorm:
-            return ElemGraphicsFormat_B8G8R8A8_UNORM;
+            return ElemGraphicsFormat_B8G8R8A8;
 
         case MTL::PixelFormatRGBA16Float:
             return ElemGraphicsFormat_R16G16B16A16_FLOAT;
@@ -87,6 +90,9 @@ ElemGraphicsFormat ConvertFromMetalResourceFormat(MTL::PixelFormat format)
 
         case MTL::PixelFormatDepth32Float:
             return ElemGraphicsFormat_D32_FLOAT;
+
+        case MTL:PixelFormatBC7_RGBAUnorm_sRGB:
+            return ElemGraphicsFormat_BC7_SRGB;
 
         default:
             return ElemGraphicsFormat_Raw;
