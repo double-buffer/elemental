@@ -48,7 +48,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);
@@ -122,7 +122,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferWriteAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeAddBufferDataPipelineState);
@@ -201,7 +201,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_DifferentBuffers)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);
@@ -269,7 +269,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readTextureDataPipelineState);
     ElemFreePipelineState(writeTextureDataPipelineState);
@@ -379,7 +379,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureRenderTargetAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readTextureDataPipelineState);
     ElemFreePipelineState(writeTextureDataPipelineState);
@@ -721,7 +721,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteMultiCommandL
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);

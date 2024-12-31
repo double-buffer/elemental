@@ -45,7 +45,7 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);
@@ -87,7 +87,7 @@ UTEST(Rendering, RenderPassClearDepthBuffer)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)depthBuffer.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTextureFloat", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(depthBuffer);
@@ -151,7 +151,7 @@ UTEST(Rendering, DispatchMesh)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);
@@ -223,7 +223,7 @@ UTEST(Rendering, BeginRenderPass_SetViewport)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);
@@ -298,7 +298,7 @@ UTEST(Rendering, BeginRenderPass_SetScissorRectangle)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);
@@ -369,7 +369,7 @@ UTEST(Rendering, SetViewport)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);
@@ -440,7 +440,7 @@ UTEST(Rendering, SetScissorRectangle)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);

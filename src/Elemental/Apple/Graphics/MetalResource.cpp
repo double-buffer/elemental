@@ -420,7 +420,7 @@ ElemGraphicsResourceInfo MetalGetGraphicsResourceInfo(ElemGraphicsResource resou
         .Usage = resourceData->Usage
     };
 }
-
+/*
 ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);
@@ -441,6 +441,33 @@ ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
         .Items = (uint8_t*)dataPointer,
         .Length = resourceData->Width
     }; 
+}*/
+
+void MetalUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
+{
+}
+
+ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+{
+    /*auto offset = 0u;
+    auto sizeInBytes = resourceData->Width;
+
+    if (options)
+    {
+        offset = options->Offset;
+
+        if (options->SizeInBytes != 0)
+        {
+            sizeInBytes = options->SizeInBytes;
+        }
+    }
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto downloadedData = SystemPushArray<uint8_t>(directX12ReadBackMemoryArena, sizeInBytes);
+    memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
+
+	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };*/
+    return {};
 }
 
 ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)

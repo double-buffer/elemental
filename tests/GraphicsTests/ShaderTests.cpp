@@ -87,7 +87,7 @@ UTEST(Shader, DispatchCompute)
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "ShaderTests.shader", "TestCompute", 1, 1, 1, &readbackBuffer.WriteDescriptor);
 
     // Assert
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     ElemFreeCommandQueue(commandQueue);
@@ -168,7 +168,7 @@ UTEST_F_TEARDOWN(Shader_CompileGraphicsPipelineStateFillAndCullMode)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);
@@ -341,7 +341,7 @@ UTEST_F_TEARDOWN(Shader_CompileGraphicsPipelineStateDepthCompare)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);
@@ -501,7 +501,7 @@ UTEST_F_TEARDOWN(Shader_CompileGraphicsPipelineStateBlendState)
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
     TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
     TestFreeGpuTexture(renderTarget);

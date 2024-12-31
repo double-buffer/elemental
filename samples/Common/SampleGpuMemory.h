@@ -54,8 +54,7 @@ SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, c
 
     ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 
-    ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(buffer);
-    memcpy(vertexBufferPointer.Items, dataPointer, sizeInBytes);
+    ElemUploadGraphicsBufferData(buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)dataPointer, .Length = sizeInBytes });
 
     return (SampleGpuBuffer)
     {

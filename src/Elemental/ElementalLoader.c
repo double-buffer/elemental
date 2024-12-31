@@ -61,7 +61,8 @@ typedef struct ElementalFunctions
     ElemGraphicsResource (*ElemCreateGraphicsResource)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *);
     void (*ElemFreeGraphicsResource)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *);
     ElemGraphicsResourceInfo (*ElemGetGraphicsResourceInfo)(ElemGraphicsResource);
-    ElemDataSpan (*ElemGetGraphicsResourceDataSpan)(ElemGraphicsResource);
+    void (*ElemUploadGraphicsBufferData)(ElemGraphicsResource, unsigned int, ElemDataSpan);
+    ElemDataSpan (*ElemDownloadGraphicsBufferData)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *);
     ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *);
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
@@ -174,7 +175,8 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateGraphicsResource = (ElemGraphicsResource (*)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResource");
     listElementalFunctions.ElemFreeGraphicsResource = (void (*)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResource");
     listElementalFunctions.ElemGetGraphicsResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceInfo");
-    listElementalFunctions.ElemGetGraphicsResourceDataSpan = (ElemDataSpan (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceDataSpan");
+    listElementalFunctions.ElemUploadGraphicsBufferData = (void (*)(ElemGraphicsResource, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemUploadGraphicsBufferData");
+    listElementalFunctions.ElemDownloadGraphicsBufferData = (ElemDataSpan (*)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *))GetElementalFunctionPointer("ElemDownloadGraphicsBufferData");
     listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
@@ -1216,7 +1218,24 @@ static inline ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsR
     return listElementalFunctions.ElemGetGraphicsResourceInfo(resource);
 }
 
-static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+static inline void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, unsigned int offset, ElemDataSpan data)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemUploadGraphicsBufferData) 
+    {
+        assert(listElementalFunctions.ElemUploadGraphicsBufferData);
+        return;
+    }
+
+    listElementalFunctions.ElemUploadGraphicsBufferData(resource, offset, data);
+}
+
+static inline ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, ElemDownloadGraphicsBufferDataOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1231,9 +1250,9 @@ static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource 
         return result;
     }
 
-    if (!listElementalFunctions.ElemGetGraphicsResourceDataSpan) 
+    if (!listElementalFunctions.ElemDownloadGraphicsBufferData) 
     {
-        assert(listElementalFunctions.ElemGetGraphicsResourceDataSpan);
+        assert(listElementalFunctions.ElemDownloadGraphicsBufferData);
 
         #ifdef __cplusplus
         ElemDataSpan result = {};
@@ -1244,7 +1263,7 @@ static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource 
         return result;
     }
 
-    return listElementalFunctions.ElemGetGraphicsResourceDataSpan(resource);
+    return listElementalFunctions.ElemDownloadGraphicsBufferData(resource, options);
 }
 
 static inline ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, ElemGraphicsResourceDescriptorOptions const * options)

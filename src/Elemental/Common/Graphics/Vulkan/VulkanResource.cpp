@@ -15,6 +15,7 @@ SystemDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull> vulka
 Span<ElemGraphicsResourceDescriptorInfo> vulkanResourceDescriptorInfos;
 // TODO: To refactor 
 Span<VkImageView> vulkanResourceDescriptorImageViews;
+MemoryArena vulkanReadBackMemoryArena;
 
 void InitVulkanResourceMemory()
 {
@@ -24,6 +25,7 @@ void InitVulkanResourceMemory()
         vulkanGraphicsResourcePool = SystemCreateDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
         vulkanResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
         vulkanResourceDescriptorImageViews = SystemPushArray<VkImageView>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
+        vulkanReadBackMemoryArena = SystemAllocateMemoryArena();
     }
 }
 
@@ -510,7 +512,7 @@ ElemGraphicsResourceInfo VulkanGetGraphicsResourceInfo(ElemGraphicsResource reso
     };
 }
 
-ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+void VulkanUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
@@ -519,7 +521,39 @@ ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GetGraphicsResourceDataSpan only works with graphics buffers.");
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers.");
+        return;
+    }
+	
+    if (resourceData->CpuDataPointer == nullptr)
+	{
+        auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
+        SystemAssert(resourceDataFull);
+
+        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
+        SystemAssert(graphicsHeapData);
+
+        // TODO: use vkMapMemory2 just for consistency
+        AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject, resourceDataFull->GraphicsHeapOffset, resourceData->Width, 0, &resourceData->CpuDataPointer));
+	}
+    
+    auto destinationPointer = (uint8_t*)resourceData->CpuDataPointer + offset;
+    memcpy(destinationPointer, data.Items, data.Length);
+}
+
+ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+{
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto resourceData = GetVulkanGraphicsResourceData(resource);
+    SystemAssert(resourceData);
+
+    if (resourceData->Type != ElemGraphicsResourceType_Buffer)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "DownloadGraphicsBufferData only works with graphics buffers.");
         return {};
     }
 
@@ -538,7 +572,24 @@ ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
         AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject, resourceDataFull->GraphicsHeapOffset, resourceData->Width, 0, &resourceData->CpuDataPointer));
 	}
 
-	return { .Items = (uint8_t*)resourceData->CpuDataPointer, .Length = resourceData->Width };
+    auto offset = 0u;
+    auto sizeInBytes = resourceData->Width;
+
+    if (options)
+    {
+        offset = options->Offset;
+
+        if (options->SizeInBytes != 0)
+        {
+            sizeInBytes = options->SizeInBytes;
+        }
+    }
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto downloadedData = SystemPushArray<uint8_t>(vulkanReadBackMemoryArena, sizeInBytes);
+    memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
+
+	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
 }
 
 ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
@@ -679,4 +730,5 @@ void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descrip
 void VulkanProcessGraphicsResourceDeleteQueue()
 {
     ProcessResourceDeleteQueue();
+    SystemClearMemoryArena(vulkanReadBackMemoryArena);
 }

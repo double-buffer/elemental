@@ -1,4 +1,4 @@
-add_executable(GraphicsTests UnityBuild.cpp Shaders)
+add_executable(GraphicsTests UnityBuild.cpp Data)
 target_link_libraries(GraphicsTests PRIVATE utest)
 target_link_libraries(GraphicsTests PRIVATE ElementalInterface)
 

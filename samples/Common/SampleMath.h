@@ -353,7 +353,7 @@ SampleMatrix4x4 SampleTransposeMatrix(SampleMatrix4x4 matrix)
 SampleMatrix4x4 SampleCreateRotationMatrix(float angle)
 {
     // BUG: Uninit values!
-    SampleMatrix4x4 result;
+    SampleMatrix4x4 result = {};
     float c = cosf(angle);
     float s = sinf(angle);
 
@@ -377,7 +377,7 @@ SampleMatrix4x4 SampleCreateRotationMatrix(float angle)
 SampleMatrix4x4 SampleCreateScaleMatrix(float scale)
 {
     // BUG: Uninit values!
-    SampleMatrix4x4 result;
+    SampleMatrix4x4 result = {};
 
     result.m[0][0] = scale;
     result.m[0][1] = 0.0f;
@@ -399,21 +399,8 @@ SampleMatrix4x4 SampleCreateScaleMatrix(float scale)
 SampleMatrix4x4 SampleCreateTranslationMatrix(float tx, float ty)
 {
     // BUG: Uninit values!
-    SampleMatrix4x4 result;
-
-    result.m[0][0] = 1.0f;
-    result.m[0][1] = 0.0f;
-    result.m[0][2] = tx;
-
-    result.m[1][0] = 0.0f;
-    result.m[1][1] = 1.0f;
-    result.m[1][2] = ty;
-
-    result.m[2][0] = 0.0f;
-    result.m[2][1] = 0.0f;
-    result.m[2][2] = 1.0f;
-    
-    result.m[3][3] = 1.0f;
+    SampleMatrix4x4 result = SampleCreateIdentityMatrix();
+    result.Rows[3].XY = (SampleVector2) { tx, ty };
 
     return result;
 }

@@ -93,7 +93,7 @@ void Fractal(uint3 threadId: SV_DispatchThreadID)
         uv.x *= aspectRatio;
         uv *= parameters.Zoom;
 
-        uv = mul(float3(uv, 1.0), parameters.Transform);
+        uv = mul(float4(uv, 0.0, 1.0), parameters.Transform);
 
         float gradient = ComputeJuliaSet(uv);
         //float gradient = ComputeMandelbrotSet(uv);

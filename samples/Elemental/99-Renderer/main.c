@@ -86,9 +86,8 @@ void UpdateFrameData(ApplicationPayload* applicationPayload, SampleMatrix4x4 vie
 {
     applicationPayload->FrameData.ViewProjMatrix = viewProjMatrix;
     applicationPayload->FrameData.ShowMeshlets = showMeshlets;
-    
-    ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(applicationPayload->FrameDataBuffer.Buffer);
-    memcpy(vertexBufferPointer.Items, &applicationPayload->FrameData, sizeof(ShaderFrameData));
+
+    ElemUploadGraphicsBufferData(applicationPayload->FrameDataBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->FrameData, .Length = sizeof(ShaderFrameData) });
 }
 
 void InitSample(void* payload)

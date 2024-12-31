@@ -155,10 +155,7 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
     ElemImGuiBackendData* imGuiData = &payload->ImGuiBackendData;
 
     uint32_t currentVertexOffset = 0;
-    ElemDataSpan vertexBufferPointer = ElemGetGraphicsResourceDataSpan(imGuiData->VertexBuffer);
-
     uint32_t currentIndexOffset = 0;
-    ElemDataSpan indexBufferPointer = ElemGetGraphicsResourceDataSpan(imGuiData->IndexBuffer);
 
     for (int32_t i = 0; i < drawData->CmdListsCount; i++)
     {
@@ -193,10 +190,18 @@ void ImGuiRenderDrawData(ImDrawData* drawData, ElemCommandList commandList, Appl
             ElemDispatchMesh(commandList, dispatchCount, 1, 1);
         }
 
-        memcpy(vertexBufferPointer.Items + currentVertexOffset * sizeof(ImDrawVert), imCommandList->VtxBuffer.Data, imCommandList->VtxBuffer.Size * sizeof(ImDrawVert));
+        ElemUploadGraphicsBufferData(imGuiData->VertexBuffer, currentVertexOffset * sizeof(ImDrawVert), (ElemDataSpan) { 
+            .Items = (uint8_t*)imCommandList->VtxBuffer.Data, 
+            .Length = imCommandList->VtxBuffer.Size * sizeof(ImDrawVert) 
+        });
+
         currentVertexOffset += imCommandList->VtxBuffer.Size;
 
-        memcpy(indexBufferPointer.Items + currentIndexOffset * sizeof(ImDrawIdx), imCommandList->IdxBuffer.Data, imCommandList->IdxBuffer.Size * sizeof(ImDrawIdx));
+        ElemUploadGraphicsBufferData(imGuiData->IndexBuffer, currentIndexOffset * sizeof(ImDrawIdx), (ElemDataSpan) { 
+            .Items = (uint8_t*)imCommandList->IdxBuffer.Data, 
+            .Length = imCommandList->IdxBuffer.Size * sizeof(ImDrawIdx) 
+        });
+
         currentIndexOffset += imCommandList->IdxBuffer.Size;
     }
 }

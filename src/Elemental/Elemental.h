@@ -358,7 +358,9 @@ typedef enum
     // Command queue for graphics operations.
     ElemCommandQueueType_Graphics = 0,
     // Command queue for compute operations.
-    ElemCommandQueueType_Compute = 1
+    ElemCommandQueueType_Compute = 1,
+    // TODO: Create a dedicated IO queue
+    //ElemCommandQueueType_IO = 2
 } ElemCommandQueueType;
 
 // TODO: Not needed?
@@ -751,6 +753,12 @@ typedef struct
 
 typedef struct
 {
+    uint32_t Offset;
+    uint32_t SizeInBytes;
+} ElemDownloadGraphicsBufferDataOptions;
+
+typedef struct
+{
     ElemGraphicsFormat Format;
     ElemGraphicsBlendOperation BlendOperation;
     ElemGraphicsBlendFactor SourceBlendFactor;
@@ -1099,6 +1107,7 @@ ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
+// TODO: uint64_t for sizeInBytes?
 ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 
@@ -1106,9 +1115,10 @@ ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphic
 ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
 
-// TODO: Rename taht UploadDataToGraphicsBuffer and pass as a parameter the span in input. We will issue the memcpy, it is too dangerous to manipulate the span
-// TODO: We need to make sure then name explain that it is a direct upload without a command list and queue!
-ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
+// TODO: uint64_t for offset?
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+//ElemAPI ElemFence ElemCopyDataToGraphicsResource(ElemCommandQueue commandQueue);
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);

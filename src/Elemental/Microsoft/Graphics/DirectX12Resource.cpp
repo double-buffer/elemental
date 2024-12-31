@@ -13,6 +13,7 @@ SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull>
 
 // TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
+MemoryArena directX12ReadBackMemoryArena;
 
 void InitDirectX12ResourceMemory()
 {
@@ -21,6 +22,8 @@ void InitDirectX12ResourceMemory()
         directX12GraphicsHeapPool = SystemCreateDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_GRAPHICSHEAP);
         directX12GraphicsResourcePool = SystemCreateDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
         directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
+
+        directX12ReadBackMemoryArena = SystemAllocateMemoryArena();
     }
 }
 
@@ -548,7 +551,7 @@ ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource r
     };
 }
 
-ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
@@ -557,7 +560,30 @@ ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GetGraphicsResourceDataSpan only works with graphics buffers.");
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers.");
+        return;
+    }
+
+	if (resourceData->CpuDataPointer == nullptr)
+	{
+	    D3D12_RANGE readRange = { 0, 0 };
+	    resourceData->DeviceObject->Map(0, &readRange, &resourceData->CpuDataPointer);
+	}
+    
+    auto destinationPointer = (uint8_t*)resourceData->CpuDataPointer + offset;
+    memcpy(destinationPointer, data.Items, data.Length);
+}
+
+ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+{
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto resourceData = GetDirectX12GraphicsResourceData(resource);
+    SystemAssert(resourceData);
+
+    if (resourceData->Type != ElemGraphicsResourceType_Buffer)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers.");
         return {};
     }
 
@@ -567,7 +593,24 @@ ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 	    resourceData->DeviceObject->Map(0, &readRange, &resourceData->CpuDataPointer);
 	}
 
-	return { .Items = (uint8_t*)resourceData->CpuDataPointer, .Length = resourceData->Width };
+    auto offset = 0u;
+    auto sizeInBytes = resourceData->Width;
+
+    if (options)
+    {
+        offset = options->Offset;
+
+        if (options->SizeInBytes != 0)
+        {
+            sizeInBytes = options->SizeInBytes;
+        }
+    }
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto downloadedData = SystemPushArray<uint8_t>(directX12ReadBackMemoryArena, sizeInBytes);
+    memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
+
+	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
 }
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
@@ -711,4 +754,5 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
 void DirectX12ProcessGraphicsResourceDeleteQueue()
 {
     ProcessResourceDeleteQueue();
+    SystemClearMemoryArena(directX12ReadBackMemoryArena);
 }

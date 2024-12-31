@@ -46,9 +46,14 @@ ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResourc
     DispatchReturnGraphicsFunction(GetGraphicsResourceInfo, resource);
 }
 
-ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
 {
-    DispatchReturnGraphicsFunction(GetGraphicsResourceDataSpan, resource);
+    DispatchGraphicsFunction(UploadGraphicsBufferData, resource, offset, data);
+}
+
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+{
+    DispatchReturnGraphicsFunction(DownloadGraphicsBufferData, resource, options);
 }
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
