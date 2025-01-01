@@ -107,7 +107,8 @@ void InitDirectX12GraphicsDeviceMemory()
 {
     if (!DirectX12MemoryArena.Storage)
     {
-        DirectX12MemoryArena = SystemAllocateMemoryArena();
+        // TODO: To review
+        DirectX12MemoryArena = SystemAllocateMemoryArena(128 * 1024 * 1024);
         directX12GraphicsDevicePool = SystemCreateDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_DEVICES);
 
         InitDirectX12();
@@ -296,6 +297,43 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     AssertIfFailed(graphicsDevice->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(), IID_PPV_ARGS(rootSignature.GetAddressOf())));
 
     return rootSignature;
+}
+
+// TODO: We create an initial 256 MB buffer for now. This buffer will need to be resized if a big upload is asked.
+ElemGraphicsResource CreateDirectX12TextureUploadBuffer(ComPtr<ID3D12Device10> graphicsDevice, uint64_t sizeInBytes)
+{
+    D3D12_RESOURCE_DESC bufferDescription =
+    {
+        .Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+        .Alignment = 0,
+        .Width = sizeInBytes,
+        .Height = 1,
+        .DepthOrArraySize = 1,
+        .MipLevels = 1,
+        .Format = DXGI_FORMAT_UNKNOWN,
+        .SampleDesc =
+        {
+            .Count = 1,
+            .Quality = 0
+        },
+        .Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+        .Flags = D3D12_RESOURCE_FLAG_NONE
+    };
+    
+    /*
+    ComPtr<ID3D12Resource> resource;
+    AssertIfFailed(graphicsDevice->CreateCommittedResource2(const D3D12_HEAP_PROPERTIES *pHeapProperties, 
+                                                            D3D12_HEAP_FLAGS HeapFlags, 
+                                                            const D3D12_RESOURCE_DESC1 *pDesc, 
+                                                            D3D12_RESOURCE_STATES InitialResourceState, 
+                                                            const D3D12_CLEAR_VALUE *pOptimizedClearValue, 
+                                                            ID3D12ProtectedResourceSession *pProtectedSession, 
+                                                            const IID &riidResource, void **ppvResource)
+
+    if (DirectX12DebugLayerEnabled && resourceInfo->DebugName)
+    {
+        resource->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, resourceInfo->DebugName).Pointer);
+    }*/
 }
 
 void DirectX12SetGraphicsOptions(const ElemGraphicsOptions* options)

@@ -23,6 +23,7 @@ struct DirectX12GraphicsDeviceData
     DirectX12DescriptorHeap RTVDescriptorHeap;
     DirectX12DescriptorHeap DSVDescriptorHeap;
     MemoryArena MemoryArena;
+    ComPtr<ID3D12Resource> TextureUploadBuffer;
 };
 
 struct DirectX12GraphicsDeviceDataFull

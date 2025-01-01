@@ -7,12 +7,14 @@ struct DirectX12GraphicsHeapData
     ComPtr<ID3D12Heap> DeviceObject;
     uint64_t SizeInBytes;
     ElemGraphicsDevice GraphicsDevice;
+    D3D12_HEAP_DESC HeapDescription;
+    D3D12_HEAP_TYPE HeapType;
 };
 
 // TODO: To review we don't use it!!!
 struct DirectX12GraphicsHeapDataFull
 {
-    D3D12_HEAP_DESC HeapDescription;
+    uint32_t reserved;
 };
 
 struct DirectX12GraphicsResourceData
@@ -23,6 +25,7 @@ struct DirectX12GraphicsResourceData
     ElemGraphicsResourceType Type;
     DXGI_FORMAT DirectX12Format;
     D3D12_RESOURCE_FLAGS DirectX12Flags;
+    ElemGraphicsHeap GraphicsHeap;
     uint32_t Width;
     uint32_t Height;
     uint32_t MipLevels;
@@ -41,7 +44,7 @@ DirectX12GraphicsHeapDataFull* GetDirectX12GraphicsHeapDataFull(ElemGraphicsHeap
 DirectX12GraphicsResourceData* GetDirectX12GraphicsResourceData(ElemGraphicsResource resource);
 DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGraphicsResource resource);
 
-ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
+ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
 DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format);
 bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format);
 
@@ -57,6 +60,7 @@ ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource r
 
 void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
 ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemGraphicsResourceDescriptorInfo DirectX12GetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);

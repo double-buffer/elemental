@@ -1,5 +1,6 @@
 #include "DirectX12Resource.h"
 #include "DirectX12GraphicsDevice.h"
+#include "DirectX12CommandList.h"
 #include "Graphics/Resource.h"
 #include "Graphics/ResourceDeleteQueue.h"
 #include "SystemDataPool.h"
@@ -77,7 +78,7 @@ DXGI_FORMAT ConvertDirectX12FormatWithoutSrgbIfNeeded(DXGI_FORMAT format)
     }
 }
 
-ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture)
+ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture)
 {
     InitDirectX12ResourceMemory();
 
@@ -120,10 +121,11 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
         .Type = type,
         .DirectX12Format = resourceDesc.Format,
         .DirectX12Flags = resourceDesc.Flags,
+        .GraphicsHeap = heap,
         .Width = (uint32_t)resourceDesc.Width,
         .Height = type != ElemGraphicsResourceType_Buffer ? (uint32_t)resourceDesc.Height : 0,
         .MipLevels = resourceDesc.MipLevels,
-        .IsPresentTexture = isPresentTexture
+        .IsPresentTexture = isPresentTexture,
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsResourcePool, handle, {
@@ -323,11 +325,9 @@ ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, 
         .DeviceObject = graphicsHeap,
         .SizeInBytes = sizeInBytes,
         .GraphicsDevice = graphicsDevice,
+        .HeapDescription = heapDesc,
+        .HeapType = heapProperties.Type
     }); 
-
-    SystemAddDataPoolItemFull(directX12GraphicsHeapPool, handle, {
-        .HeapDescription = heapDesc 
-    });
 
     return handle;
 }
@@ -495,7 +495,7 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
         resource->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, resourceInfo->DebugName).Pointer);
     }
 
-    return CreateDirectX12GraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, resource, false);
+    return CreateDirectX12GraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, graphicsHeap, resource, false);
 }
 
 void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
@@ -558,9 +558,18 @@ void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t o
     auto resourceData = GetDirectX12GraphicsResourceData(resource);
     SystemAssert(resourceData);
 
+    auto heapData = GetDirectX12GraphicsHeapData(resourceData->GraphicsHeap);
+    SystemAssert(heapData);
+
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
     {
         SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers.");
+        return;
+    }
+
+    if (heapData->HeapType != D3D12_HEAP_TYPE_GPU_UPLOAD)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers allocated in a GpuUpload heap.");
         return;
     }
 
@@ -581,10 +590,24 @@ ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, 
     auto resourceData = GetDirectX12GraphicsResourceData(resource);
     SystemAssert(resourceData);
 
+    auto heapData = GetDirectX12GraphicsHeapData(resourceData->GraphicsHeap);
+    SystemAssert(heapData);
+
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
     {
         SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers.");
         return {};
+    }
+
+    if (heapData->HeapType != D3D12_HEAP_TYPE_CUSTOM && heapData->HeapType != D3D12_HEAP_TYPE_GPU_UPLOAD)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers allocated in a Readback heap or GpuUpload heap. (%d)", heapData->HeapType);
+        return {};
+    }
+
+    if (heapData->HeapType != D3D12_HEAP_TYPE_CUSTOM)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData works faster with graphics buffers allocated in a Readback heap.");
     }
 
 	if (resourceData->CpuDataPointer == nullptr)
@@ -611,6 +634,34 @@ ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, 
     memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
 
 	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
+}
+
+void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
+{
+    // TODO: Implement optimizations on the copy queue. On windows, use DirectStorage
+    // TODO: Implement file source
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    SystemAssert(parameters);
+    SystemAssert(parameters->Resource != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto resourceData = GetDirectX12GraphicsResourceData(parameters->Resource);
+    SystemAssert(resourceData);
+
+    if (resourceData->Type == ElemGraphicsResourceType_Buffer)
+    {
+        //commandListData->DeviceObject->CopyBufferRegion(resourceData->DeviceObject, parameters->BufferOffset, ID3D12Resource *pSrcBuffer, parameters., UINT64 NumBytes)
+    }
+    else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+    //commandListData->DeviceObject->CopyTextureRegion(const D3D12_TEXTURE_COPY_LOCATION *pDst, UINT DstX, UINT DstY, UINT DstZ, const D3D12_TEXTURE_COPY_LOCATION *pSrc, const D3D12_BOX *pSrcBox)
+    }
 }
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)

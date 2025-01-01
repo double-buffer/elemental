@@ -56,6 +56,11 @@ ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resourc
     DispatchReturnGraphicsFunction(DownloadGraphicsBufferData, resource, options);
 }
 
+ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
+{
+    DispatchGraphicsFunction(CopyDataToGraphicsResource, commandList, parameters);
+}
+
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
     DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, resource, usage, options);

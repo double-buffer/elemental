@@ -384,7 +384,6 @@ typedef enum
 typedef enum
 {
     ElemGraphicsHeapType_Gpu = 0,
-    // TODO: Get rid of this?
     ElemGraphicsHeapType_GpuUpload = 1,
     ElemGraphicsHeapType_Readback = 2
 } ElemGraphicsHeapType;
@@ -406,7 +405,7 @@ typedef enum
 typedef enum
 {
     ElemGraphicsResourceType_Buffer,
-    ElemGraphicsResourceType_Texture2D
+    ElemGraphicsResourceType_Texture2D // TODO: Do we keep the distinction for 2D? Maybe just Texture is enough
 } ElemGraphicsResourceType;
 
 typedef enum
@@ -756,6 +755,24 @@ typedef struct
     uint32_t Offset;
     uint32_t SizeInBytes;
 } ElemDownloadGraphicsBufferDataOptions;
+
+typedef enum
+{
+    ElemCopyDataSourceType_Memory = 0,
+    ElemCopyDataSourceType_File = 1,
+} ElemCopyDataSourceType;
+
+typedef struct
+{
+    ElemGraphicsResource Resource;
+    uint32_t BufferOffset;
+    uint32_t TextureMipLevel;
+    ElemCopyDataSourceType SourceType;
+    uint32_t SourceFilePath;
+    uint32_t SourceFileOffset;
+    uint32_t SourceFileSizeInBytes;
+    ElemDataSpan SourceMemoryData;
+} ElemCopyDataToGraphicsResourceParameters;
 
 typedef struct
 {
@@ -1118,7 +1135,7 @@ ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResourc
 // TODO: uint64_t for offset?
 ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
 ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
-//ElemAPI ElemFence ElemCopyDataToGraphicsResource(ElemCommandQueue commandQueue);
+ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);

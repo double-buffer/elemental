@@ -236,9 +236,7 @@ ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uin
 
     VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     allocateInfo.allocationSize = sizeInBytes;
-    // TODO: Still need to investigate this
-    //allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuMemoryTypeIndex;
-    allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuUploadMemoryTypeIndex;
+    allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuMemoryTypeIndex;
 
     if (options)
     {
@@ -590,6 +588,10 @@ ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, con
     memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
 
 	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
+}
+
+void VulkanCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
+{
 }
 
 ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)

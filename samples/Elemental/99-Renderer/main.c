@@ -80,8 +80,6 @@ void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, u
     applicationPayload->DepthBuffer = ElemCreateGraphicsResource(applicationPayload->DepthBufferHeap, 0, &resourceInfo);
 }
 
-// TODO: Copy paste the loading scene code from the common header because it is the first sample to explain how to load a mesh
-
 void UpdateFrameData(ApplicationPayload* applicationPayload, SampleMatrix4x4 viewProjMatrix, bool showMeshlets)
 {
     applicationPayload->FrameData.ViewProjMatrix = viewProjMatrix;

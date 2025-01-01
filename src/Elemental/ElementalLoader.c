@@ -63,6 +63,7 @@ typedef struct ElementalFunctions
     ElemGraphicsResourceInfo (*ElemGetGraphicsResourceInfo)(ElemGraphicsResource);
     void (*ElemUploadGraphicsBufferData)(ElemGraphicsResource, unsigned int, ElemDataSpan);
     ElemDataSpan (*ElemDownloadGraphicsBufferData)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *);
+    void (*ElemCopyDataToGraphicsResource)(ElemCommandList, ElemCopyDataToGraphicsResourceParameters const *);
     ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *);
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
@@ -177,6 +178,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetGraphicsResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceInfo");
     listElementalFunctions.ElemUploadGraphicsBufferData = (void (*)(ElemGraphicsResource, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemUploadGraphicsBufferData");
     listElementalFunctions.ElemDownloadGraphicsBufferData = (ElemDataSpan (*)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *))GetElementalFunctionPointer("ElemDownloadGraphicsBufferData");
+    listElementalFunctions.ElemCopyDataToGraphicsResource = (void (*)(ElemCommandList, ElemCopyDataToGraphicsResourceParameters const *))GetElementalFunctionPointer("ElemCopyDataToGraphicsResource");
     listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
@@ -1264,6 +1266,23 @@ static inline ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource r
     }
 
     return listElementalFunctions.ElemDownloadGraphicsBufferData(resource, options);
+}
+
+static inline void ElemCopyDataToGraphicsResource(ElemCommandList commandList, ElemCopyDataToGraphicsResourceParameters const * parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemCopyDataToGraphicsResource) 
+    {
+        assert(listElementalFunctions.ElemCopyDataToGraphicsResource);
+        return;
+    }
+
+    listElementalFunctions.ElemCopyDataToGraphicsResource(commandList, parameters);
 }
 
 static inline ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, ElemGraphicsResourceDescriptorOptions const * options)

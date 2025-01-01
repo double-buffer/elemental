@@ -470,6 +470,10 @@ ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource resource, cons
     return {};
 }
 
+void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
+{
+}
+
 ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);

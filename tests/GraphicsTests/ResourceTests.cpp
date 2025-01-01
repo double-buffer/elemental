@@ -479,176 +479,6 @@ UTEST(Resource, CreateTexture2DResourceInfo_RenderTargetWrite)
     ASSERT_STREQ_MSG(resourceInfo.DebugName, "TestTexture2D", "Debug name should match the creation usage.");
 }
 
-UTEST(Resource, ElemUploadGraphicsBufferData_WithBuffer) 
-{
-    // Arrange
-    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
-
-    ElemGraphicsHeapOptions options =
-    {
-        .HeapType = ElemGraphicsHeapType_GpuUpload
-    };
-
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
-    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-    uint8_t data[] = { 1, 2, 3, 4 };
-
-
-    // Act
-    ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
-
-    // Assert
-    ElemFreeGraphicsResource(resource, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
-    ElemFreeGraphicsDevice(graphicsDevice);
-
-    ASSERT_LOG_NOERROR();
-}
-
-UTEST(Resource, ElemUploadGraphicsBufferData_WithBufferOffsetSize) 
-{
-    // Arrange
-    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
-
-    ElemGraphicsHeapOptions options =
-    {
-        .HeapType = ElemGraphicsHeapType_GpuUpload
-    };
-
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
-    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-
-    uint8_t data[] = { 1, 2, 3, 4 };
-    ElemUploadGraphicsBufferData(resource, 2, { .Items = data, .Length = 2 });
-
-    // Act
-    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
-
-    // Assert
-    ElemFreeGraphicsResource(resource, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
-    ElemFreeGraphicsDevice(graphicsDevice);
-
-    ASSERT_LOG_NOERROR();
-
-    ASSERT_TRUE_MSG(resourceDataSpan.Items != nullptr, "Resource dataspan pointer should not be null.");
-    ASSERT_EQ_MSG(resourceDataSpan.Items[0], 0, "Resource dataspan element 0 should be equal to 0.");
-    ASSERT_EQ_MSG(resourceDataSpan.Items[1], 0, "Resource dataspan element 1 should be equal to 0.");
-    ASSERT_EQ_MSG(resourceDataSpan.Items[2], data[0], "Resource dataspan element 2 should be equal to test data at offset 0.");
-    ASSERT_EQ_MSG(resourceDataSpan.Items[3], data[1], "Resource dataspan element 3 should be equal to test data at offset 1.");
-    ASSERT_EQ_MSG(resourceDataSpan.Items[4], 0, "Resource dataspan element 2 should be equal to 0.");
-}
-
-UTEST(Resource, ElemUploadGraphicsBufferData_WithTexture2D) 
-{
-    // Arrange
-    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Read, nullptr);
-    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-    uint8_t data[] = { 1, 2, 3, 4 };
-
-    // Act
-    ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
-
-    // Assert
-    ElemFreeGraphicsResource(resource, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
-    ElemFreeGraphicsDevice(graphicsDevice);
-
-    ASSERT_LOG_MESSAGE("UploadGraphicsBufferData only works with graphics buffers.");
-}
-
-UTEST(Resource, ElemDownloadGraphicsBufferData_WithBuffer) 
-{
-    // Arrange
-    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
-
-    ElemGraphicsHeapOptions options =
-    {
-        .HeapType = ElemGraphicsHeapType_GpuUpload
-    };
-
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
-    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-
-    // Act
-    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
-
-    // Assert
-    ElemFreeGraphicsResource(resource, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
-    ElemFreeGraphicsDevice(graphicsDevice);
-
-    ASSERT_LOG_NOERROR();
-
-    ASSERT_TRUE_MSG(resourceDataSpan.Items != nullptr, "Resource dataspan pointer should not be null.");
-    ASSERT_EQ_MSG(resourceDataSpan.Length, 1024u, "Resource dataspan length should be equals to buffer size.");
-}
-
-UTEST(Resource, ElemDownloadGraphicsBufferData_WithBufferOffsetAndSize) 
-{
-    // Arrange
-    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
-
-    ElemGraphicsHeapOptions options =
-    {
-        .HeapType = ElemGraphicsHeapType_GpuUpload
-    };
-
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
-    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
-    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-
-    uint8_t data[] = { 1, 2, 3, 4 };
-    ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
-
-    // Act
-    ElemDownloadGraphicsBufferDataOptions downloadOptions =
-    {
-        .Offset = 2,
-        .SizeInBytes = 2
-    };
-
-    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, &downloadOptions);
-
-    // Assert
-    ElemFreeGraphicsResource(resource, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
-    ElemFreeGraphicsDevice(graphicsDevice);
-
-    ASSERT_LOG_NOERROR();
-
-    ASSERT_TRUE_MSG(resourceDataSpan.Items != nullptr, "Resource dataspan pointer should not be null.");
-    ASSERT_EQ_MSG(resourceDataSpan.Length, 2u, "Resource dataspan length should be equals to specified SizeInBytes.");
-    ASSERT_EQ_MSG(resourceDataSpan.Items[0], data[2], "Resource dataspan element 0 should be equal to test data at offset 2.");
-}
-
-UTEST(Resource, ElemDownloadGraphicsBufferData_WithTexture2D) 
-{
-    // Arrange
-    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Read, nullptr);
-    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
-
-    // Act
-    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
-
-    // Assert
-    ElemFreeGraphicsResource(resource, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
-    ElemFreeGraphicsDevice(graphicsDevice);
-
-    ASSERT_LOG_MESSAGE("ElemDownloadGraphicsBufferData only works with graphics buffers.");
-
-    ASSERT_TRUE_MSG(resourceDataSpan.Items == nullptr, "Resource dataspan pointer should be null.");
-    ASSERT_EQ_MSG(resourceDataSpan.Length, 0u, "Resource dataspan length should be 0.");
-}
-
 UTEST(Resource, FreeGraphicsResource) 
 {
     // Arrange
@@ -725,6 +555,282 @@ UTEST(Resource, FreeGraphicsResource_WithFenceExecuted)
 
     ASSERT_LOG_NOERROR();
     ASSERT_EQ_MSG(afterFreeResourceInfo.Width, 0u, "Width should be equals to 0.");
+}
+
+UTEST(Resource, UploadGraphicsBufferData_WithBuffer) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_GpuUpload
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+    uint8_t data[] = { 1, 2, 3, 4 };
+
+
+    // Act
+    ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+}
+
+UTEST(Resource, UploadGraphicsBufferData_WithNoGpuUploadHeap) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_Gpu
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+    uint8_t data[] = { 1, 2, 3, 4 };
+
+
+    // Act
+    ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("UploadGraphicsBufferData only works with graphics buffers allocated in a GpuUpload heap.");
+}
+
+UTEST(Resource, UploadGraphicsBufferData_WithBufferOffsetSize) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_GpuUpload
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    uint8_t data[] = { 1, 2, 3, 4 };
+    ElemUploadGraphicsBufferData(resource, 2, { .Items = data, .Length = 2 });
+
+    // Act
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    ASSERT_TRUE_MSG(resourceDataSpan.Items != nullptr, "Resource dataspan pointer should not be null.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[0], 0, "Resource dataspan element 0 should be equal to 0.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[1], 0, "Resource dataspan element 1 should be equal to 0.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[2], data[0], "Resource dataspan element 2 should be equal to test data at offset 0.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[3], data[1], "Resource dataspan element 3 should be equal to test data at offset 1.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[4], 0, "Resource dataspan element 2 should be equal to 0.");
+}
+
+UTEST(Resource, UploadGraphicsBufferData_WithTexture2D) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+    uint8_t data[] = { 1, 2, 3, 4 };
+
+    // Act
+    ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("UploadGraphicsBufferData only works with graphics buffers.");
+}
+
+UTEST(Resource, DownloadGraphicsBufferData_WithBuffer) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_GpuUpload
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Act
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    ASSERT_TRUE_MSG(resourceDataSpan.Items != nullptr, "Resource dataspan pointer should not be null.");
+    ASSERT_EQ_MSG(resourceDataSpan.Length, 1024u, "Resource dataspan length should be equals to buffer size.");
+}
+
+UTEST(Resource, DownloadGraphicsBufferData_WithNoReadbackHeap) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_Gpu
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Act
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("DownloadGraphicsBufferData only works with graphics buffers allocated in a Readback heap or GpuUpload heap.");
+}
+
+UTEST(Resource, DownloadGraphicsBufferData_WithBufferOffsetAndSize) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_GpuUpload
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    uint8_t data[] = { 1, 2, 3, 4 };
+    ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
+
+    // Act
+    ElemDownloadGraphicsBufferDataOptions downloadOptions =
+    {
+        .Offset = 2,
+        .SizeInBytes = 2
+    };
+
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, &downloadOptions);
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    ASSERT_TRUE_MSG(resourceDataSpan.Items != nullptr, "Resource dataspan pointer should not be null.");
+    ASSERT_EQ_MSG(resourceDataSpan.Length, 2u, "Resource dataspan length should be equals to specified SizeInBytes.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[0], data[2], "Resource dataspan element 0 should be equal to test data at offset 2.");
+}
+
+UTEST(Resource, DownloadGraphicsBufferData_WithTexture2D) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, 256, 256, 1, ElemGraphicsFormat_B8G8R8A8_SRGB, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Act
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+
+    // Assert
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_MESSAGE("ElemDownloadGraphicsBufferData only works with graphics buffers.");
+
+    ASSERT_TRUE_MSG(resourceDataSpan.Items == nullptr, "Resource dataspan pointer should be null.");
+    ASSERT_EQ_MSG(resourceDataSpan.Length, 0u, "Resource dataspan length should be 0.");
+}
+
+UTEST(Resource, CopyDataToGraphicsResource_WithBuffer) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_GpuUpload
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), &options);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    uint8_t data[] = { 1, 2, 3, 4 };
+
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    // Act
+    ElemCopyDataToGraphicsResourceParameters parameters =
+    {
+        .Resource = resource,
+        .BufferOffset = 2,
+        .SourceType = ElemCopyDataSourceType_Memory,
+        .SourceMemoryData = { .Items = data, .Length = 2 } 
+    };
+
+    ElemCopyDataToGraphicsResource(commandList, &parameters);
+
+    // Assert
+    ElemCommitCommandList(commandList);
+
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+    ElemWaitForFenceOnCpu(fence);
+
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    ASSERT_TRUE_MSG(resourceDataSpan.Items != nullptr, "Resource dataspan pointer should not be null.");
+
+    ASSERT_EQ_MSG(resourceDataSpan.Items[0], 0, "Resource dataspan element 0 should be equal to 0.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[1], 0, "Resource dataspan element 1 should be equal to 0.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[2], data[0], "Resource dataspan element 2 should be equal to test data at offset 0.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[3], data[1], "Resource dataspan element 3 should be equal to test data at offset 1.");
+    ASSERT_EQ_MSG(resourceDataSpan.Items[4], 0, "Resource dataspan element 2 should be equal to 0.");
 }
 
 UTEST(Resource, CreateGraphicsResourceDescriptor_ReadWithBuffer) 
