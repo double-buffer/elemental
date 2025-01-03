@@ -178,7 +178,8 @@ void InitVulkanGraphicsDeviceMemory()
 {
     if (!VulkanGraphicsMemoryArena.Storage)
     {
-        VulkanGraphicsMemoryArena = SystemAllocateMemoryArena();
+        // TODO: To Review
+        VulkanGraphicsMemoryArena = SystemAllocateMemoryArena(256 * 1024 * 1024);
         vulkanGraphicsDevicePool = SystemCreateDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_DEVICES);
 
         InitVulkan();

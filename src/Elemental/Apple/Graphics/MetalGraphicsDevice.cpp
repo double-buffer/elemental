@@ -113,7 +113,8 @@ void InitMetalGraphicsDeviceMemory()
 {
     if (!MetalGraphicsMemoryArena.Storage)
     {
-        MetalGraphicsMemoryArena = SystemAllocateMemoryArena();
+        // TODO: To Review
+        MetalGraphicsMemoryArena = SystemAllocateMemoryArena(128 * 1024 * 1024);
         metalGraphicsDevicePool = SystemCreateDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull>(MetalGraphicsMemoryArena, METAL_MAXDEVICES);
 
         InitMetal();

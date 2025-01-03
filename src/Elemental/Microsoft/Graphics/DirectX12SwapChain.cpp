@@ -478,5 +478,5 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     #endif
     
     DirectX12ResetCommandAllocation(swapChainDataFull->GraphicsDevice);
-    DirectX12ProcessGraphicsResourceDeleteQueue();
+    DirectX12ProcessGraphicsResourceDeleteQueue(swapChainDataFull->GraphicsDevice);
 }

@@ -1,11 +1,13 @@
 #pragma once
 
 #include "Elemental.h"
+#include "Graphics/UploadBufferPool.h"
 #include "SystemMemory.h"
 
 #define DIRECTX12_MAX_DEVICES 10u
-//#define DIRECTX12_MAX_RESOURCES 1000000
-#define DIRECTX12_MAX_RESOURCES 500000 
+
+// TODO: Put this value a a config? 
+#define DIRECTX12_MAX_RESOURCES 1000000
 
 struct DirectX12DescriptorHeapStorage;
 
@@ -19,11 +21,13 @@ struct DirectX12GraphicsDeviceData
     ComPtr<ID3D12Device10> Device;
     ComPtr<ID3D12RootSignature> RootSignature;
     uint64_t CommandAllocationGeneration;
+    uint64_t UploadBufferGeneration;
     DirectX12DescriptorHeap ResourceDescriptorHeap;
     DirectX12DescriptorHeap RTVDescriptorHeap;
     DirectX12DescriptorHeap DSVDescriptorHeap;
     MemoryArena MemoryArena;
-    ComPtr<ID3D12Resource> TextureUploadBuffer;
+    Span<UploadBufferDevicePool<ComPtr<ID3D12Resource>>*> UploadBufferPools;
+    uint32_t CurrentUploadBufferPoolIndex;
 };
 
 struct DirectX12GraphicsDeviceDataFull

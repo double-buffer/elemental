@@ -81,7 +81,7 @@ ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphi
     DispatchGraphicsFunction(GraphicsResourceBarrier, commandList, descriptor, options);
 }
 
-ElemAPI void ElemProcessGraphicsResourceDeleteQueue()
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
-    DispatchGraphicsFunction(ProcessGraphicsResourceDeleteQueue);
+    DispatchGraphicsFunction(ProcessGraphicsResourceDeleteQueue, graphicsDevice);
 }

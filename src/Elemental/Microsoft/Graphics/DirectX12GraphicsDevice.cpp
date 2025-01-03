@@ -299,43 +299,6 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     return rootSignature;
 }
 
-// TODO: We create an initial 256 MB buffer for now. This buffer will need to be resized if a big upload is asked.
-ElemGraphicsResource CreateDirectX12TextureUploadBuffer(ComPtr<ID3D12Device10> graphicsDevice, uint64_t sizeInBytes)
-{
-    D3D12_RESOURCE_DESC bufferDescription =
-    {
-        .Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-        .Alignment = 0,
-        .Width = sizeInBytes,
-        .Height = 1,
-        .DepthOrArraySize = 1,
-        .MipLevels = 1,
-        .Format = DXGI_FORMAT_UNKNOWN,
-        .SampleDesc =
-        {
-            .Count = 1,
-            .Quality = 0
-        },
-        .Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-        .Flags = D3D12_RESOURCE_FLAG_NONE
-    };
-    
-    /*
-    ComPtr<ID3D12Resource> resource;
-    AssertIfFailed(graphicsDevice->CreateCommittedResource2(const D3D12_HEAP_PROPERTIES *pHeapProperties, 
-                                                            D3D12_HEAP_FLAGS HeapFlags, 
-                                                            const D3D12_RESOURCE_DESC1 *pDesc, 
-                                                            D3D12_RESOURCE_STATES InitialResourceState, 
-                                                            const D3D12_CLEAR_VALUE *pOptimizedClearValue, 
-                                                            ID3D12ProtectedResourceSession *pProtectedSession, 
-                                                            const IID &riidResource, void **ppvResource)
-
-    if (DirectX12DebugLayerEnabled && resourceInfo->DebugName)
-    {
-        resource->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, resourceInfo->DebugName).Pointer);
-    }*/
-}
-
 void DirectX12SetGraphicsOptions(const ElemGraphicsOptions* options)
 {
     SystemAssert(options);
@@ -447,13 +410,16 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     auto dsvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
 
+    auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<ComPtr<ID3D12Resource>>*>(DirectX12MemoryArena, MAX_UPLOAD_BUFFERS);
+
     auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
         .Device = device,
         .RootSignature = rootSignature,
         .ResourceDescriptorHeap = resourceDescriptorHeap,
         .RTVDescriptorHeap = rtvDescriptorHeap,
         .DSVDescriptorHeap = dsvDescriptorHeap,
-        .MemoryArena = memoryArena
+        .MemoryArena = memoryArena,
+        .UploadBufferPools = uploadBuffers
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
@@ -475,9 +441,32 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     auto graphicsDeviceDataFull = GetDirectX12GraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            for (uint32_t j = 0; j < MAX_UPLOAD_BUFFERS; j++)
+            {
+                auto uploadBuffer = &bufferPool->UploadBuffers[j];
+
+                if (uploadBuffer && uploadBuffer->Buffer)
+                {
+                    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Deleting upload buffer");
+                    uploadBuffer->Buffer.Reset();
+                    *uploadBuffer = {};
+                }
+            }
+
+            *bufferPool = {};
+        }
+    }
+
     FreeDirectX12DescriptorHeap(graphicsDeviceData->ResourceDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->RTVDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->DSVDescriptorHeap);
+
     graphicsDeviceData->Device.Reset();
     graphicsDeviceData->RootSignature.Reset();
 

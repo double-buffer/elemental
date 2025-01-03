@@ -11,7 +11,10 @@
 #include "volk.h"
 
 #define VULKAN_MAX_DEVICES 10u
-#define VULKAN_MAX_RESOURCES 400000
+
+// TODO: Investigate why we cannot bump this to 1 million
+//#define VULKAN_MAX_RESOURCES 400000
+#define VULKAN_MAX_RESOURCES 1000000
 
 struct VulkanDescriptorHeapStorage;
 

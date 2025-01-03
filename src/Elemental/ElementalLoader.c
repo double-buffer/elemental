@@ -67,7 +67,7 @@ typedef struct ElementalFunctions
     ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *);
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
-    void (*ElemProcessGraphicsResourceDeleteQueue)(void);
+    void (*ElemProcessGraphicsResourceDeleteQueue)(ElemGraphicsDevice);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
@@ -182,7 +182,7 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
-    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(void))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
@@ -1364,7 +1364,7 @@ static inline void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescri
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor(descriptor, options);
 }
 
-static inline void ElemProcessGraphicsResourceDeleteQueue(void)
+static inline void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1378,7 +1378,7 @@ static inline void ElemProcessGraphicsResourceDeleteQueue(void)
         return;
     }
 
-    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue();
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
 }
 
 static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)

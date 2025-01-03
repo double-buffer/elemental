@@ -363,13 +363,6 @@ typedef enum
     //ElemCommandQueueType_IO = 2
 } ElemCommandQueueType;
 
-// TODO: Not needed?
-typedef enum
-{
-    ElemIOCommandType_File = 0,
-    ElemIOCommandType_Memory = 1
-} ElemIOCommandType;
-
 /**
  * Enumerates swap chain formats.
  */
@@ -384,7 +377,7 @@ typedef enum
 typedef enum
 {
     ElemGraphicsHeapType_Gpu = 0,
-    ElemGraphicsHeapType_GpuUpload = 1,
+    ElemGraphicsHeapType_GpuUpload = 1, // TODO: Still not convinced about that one. should we let GPU be gpu upload by default?
     ElemGraphicsHeapType_Readback = 2
 } ElemGraphicsHeapType;
 
@@ -638,12 +631,6 @@ typedef struct
     // Fences that the execution should wait on before starting.
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
-
-// TODO: Not needed?
-typedef struct
-{
-    ElemIOCommandType IOCommandType; 
-} ElemIOCommandParameters;
 
 /**
  * Options for configuring a swap chain.
@@ -1141,7 +1128,7 @@ ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(Elem
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
-ElemAPI void ElemProcessGraphicsResourceDeleteQueue(void);
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

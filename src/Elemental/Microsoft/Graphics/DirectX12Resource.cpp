@@ -3,6 +3,7 @@
 #include "DirectX12CommandList.h"
 #include "Graphics/Resource.h"
 #include "Graphics/ResourceDeleteQueue.h"
+#include "Graphics/UploadBufferPool.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
@@ -11,6 +12,8 @@
 
 SystemDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull> directX12GraphicsHeapPool;
 SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull> directX12GraphicsResourcePool;
+
+thread_local UploadBufferDevicePool<ComPtr<ID3D12Resource>> threadDirectX12UploadBufferPools[DIRECTX12_MAX_DEVICES];
 
 // TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
@@ -22,9 +25,13 @@ void InitDirectX12ResourceMemory()
     {
         directX12GraphicsHeapPool = SystemCreateDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_GRAPHICSHEAP);
         directX12GraphicsResourcePool = SystemCreateDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
-        directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
 
-        directX12ReadBackMemoryArena = SystemAllocateMemoryArena();
+        // TODO: That push array cause a massive memory increase
+        // TODO: We can push the array with reserved memory but we need to be carreful to commit the memory
+        directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES, AllocationState_Reserved);
+
+        // TODO: Allow to increase the size as a parameter
+        directX12ReadBackMemoryArena = SystemAllocateMemoryArena(32 * 1024 * 1024);
     }
 }
 
@@ -629,18 +636,102 @@ ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, 
         }
     }
 
-    auto stackMemoryArena = SystemGetStackMemoryArena();
     auto downloadedData = SystemPushArray<uint8_t>(directX12ReadBackMemoryArena, sizeInBytes);
     memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
 
 	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
 }
 
+// TODO: We create an initial 256 MB buffer for now. This buffer will need to be resized if a big upload is asked.
+ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphicsDevice, uint64_t sizeInBytes)
+{
+    D3D12_RESOURCE_DESC bufferDescription =
+    {
+        .Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+        .Alignment = 0,
+        .Width = sizeInBytes,
+        .Height = 1,
+        .DepthOrArraySize = 1,
+        .MipLevels = 1,
+        .Format = DXGI_FORMAT_UNKNOWN,
+        .SampleDesc =
+        {
+            .Count = 1,
+            .Quality = 0
+        },
+        .Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+        .Flags = D3D12_RESOURCE_FLAG_NONE
+    };
+    
+    D3D12_HEAP_PROPERTIES heapProperties = { .Type = D3D12_HEAP_TYPE_UPLOAD };
+    
+    ComPtr<ID3D12Resource> resource;
+    AssertIfFailed(graphicsDevice->CreateCommittedResource1(&heapProperties, 
+                                                            D3D12_HEAP_FLAG_NONE, 
+                                                            &bufferDescription, 
+                                                            D3D12_RESOURCE_STATE_COMMON, 
+                                                            nullptr, 
+                                                            nullptr, 
+                                                            IID_PPV_ARGS(resource.GetAddressOf())));
+
+    resource->SetName(L"ElementalUploadBuffer");
+
+    return resource;
+}
+
+UploadBufferMemory<ComPtr<ID3D12Resource>> GetUploadBuffer(ElemCommandList commandList, uint64_t sizeInBytes)
+{
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandListData->GraphicsDevice);
+    auto uploadBufferPool = &threadDirectX12UploadBufferPools[graphicsIdUnpacked.Index];
+
+    if (!uploadBufferPool->IsInited)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init pool");
+
+        auto poolIndex = SystemAtomicAdd(graphicsDeviceData->CurrentUploadBufferPoolIndex, 1);
+        graphicsDeviceData->UploadBufferPools[poolIndex] = uploadBufferPool;
+        uploadBufferPool->IsInited = true;
+    }
+
+    auto uploadBuffer = GetUploadBufferPoolItem(uploadBufferPool, graphicsDeviceData->UploadBufferGeneration, sizeInBytes);
+
+    if (uploadBuffer.PoolItem->IsResetNeeded)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to create upload buffer with size: %d...", uploadBuffer.PoolItem->SizeInBytes);
+
+        if (uploadBuffer.PoolItem->Fence.FenceValue > 0)
+        {
+            DirectX12WaitForFenceOnCpu(uploadBuffer.PoolItem->Fence);
+        }
+        
+        // TODO: We need another flag to know if we need to delete
+        if (uploadBuffer.PoolItem->Buffer != nullptr)
+        {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to delete buffer");
+            uploadBuffer.PoolItem->Buffer.Reset();
+        }
+
+        uploadBuffer.PoolItem->Buffer = CreateDirectX12UploadBuffer(graphicsDeviceData->Device, uploadBuffer.PoolItem->SizeInBytes);
+
+	    D3D12_RANGE readRange = { 0, 0 };
+	    uploadBuffer.PoolItem->Buffer->Map(0, &readRange, (void**)&uploadBuffer.PoolItem->CpuPointer);
+
+        uploadBuffer.PoolItem->IsResetNeeded = false;
+    }
+
+    return uploadBuffer;
+}
+
 void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
 {
     // TODO: Implement optimizations on the copy queue. On windows, use DirectStorage
     // TODO: Implement file source
-
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandList != ELEM_HANDLE_NULL);
@@ -654,14 +745,54 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
     auto resourceData = GetDirectX12GraphicsResourceData(parameters->Resource);
     SystemAssert(resourceData);
 
+    ReadOnlySpan<uint8_t> sourceData;
+
+    if (parameters->SourceType == ElemCopyDataSourceType_Memory)
+    {
+        sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
+    }
+    
+    auto uploadBuffer = GetUploadBuffer(commandList, sourceData.Length);
+
+    SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
+    memcpy(uploadBuffer.PoolItem->CpuPointer + uploadBuffer.Offset, sourceData.Pointer, sourceData.Length);
+
     if (resourceData->Type == ElemGraphicsResourceType_Buffer)
     {
-        //commandListData->DeviceObject->CopyBufferRegion(resourceData->DeviceObject, parameters->BufferOffset, ID3D12Resource *pSrcBuffer, parameters., UINT64 NumBytes)
+        commandListData->DeviceObject->CopyBufferRegion(resourceData->DeviceObject.Get(), parameters->BufferOffset, uploadBuffer.PoolItem->Buffer.Get(), uploadBuffer.Offset, sourceData.Length);
     }
     else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
     //commandListData->DeviceObject->CopyTextureRegion(const D3D12_TEXTURE_COPY_LOCATION *pDst, UINT DstX, UINT DstY, UINT DstZ, const D3D12_TEXTURE_COPY_LOCATION *pSrc, const D3D12_BOX *pSrcBox)
     }
+
+    /*
+    // TODO: File Source
+
+    // TODO: This is just a sanity check for now.
+    // TODO: We need to lock this area and maybe create a bigger buffer, etc. 
+    // To do so fast, we can have a double buffer approach so the pending operations are not impacted and everyone switch to the 
+    // new bigger buffer
+    // TODO: The best way is to write functions in graphics device like resource descriptor heap
+    // TODO: Call a function GetDirectX12ScratchBuffer(size) and then ReleaseDirectX12ScratchBuffer(fence);
+    // add a list of scratch buffers in the current command list and when submitted, call the functions with the fence
+    if (graphicsDeviceData->CurrentUploadBufferOffset + sourceData.Length > graphicsDeviceData->UploadBuffer->GetDesc().Width)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Upload Heap doesn't have enough memory. Resetting the offset.");
+        graphicsDeviceData->CurrentUploadBufferOffset = 0;
+    }
+
+    auto dataOffset = SystemAtomicAdd(graphicsDeviceData->CurrentUploadBufferOffset, sourceData.Length);
+    memcpy(graphicsDeviceData->UploadBufferCpuPointer + dataOffset, sourceData.Pointer, sourceData.Length);
+
+    if (resourceData->Type == ElemGraphicsResourceType_Buffer)
+    {
+        commandListData->DeviceObject->CopyBufferRegion(resourceData->DeviceObject.Get(), parameters->BufferOffset, graphicsDeviceData->UploadBuffer.Get(), dataOffset, sourceData.Length);
+    }
+    else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+    //commandListData->DeviceObject->CopyTextureRegion(const D3D12_TEXTURE_COPY_LOCATION *pDst, UINT DstX, UINT DstY, UINT DstZ, const D3D12_TEXTURE_COPY_LOCATION *pSrc, const D3D12_BOX *pSrcBox)
+    }*/
 }
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
@@ -768,6 +899,11 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
     auto index = ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
 
+    if ((index % 1000) == 0)
+    {
+        SystemPlatformCommitMemory(&directX12ResourceDescriptorInfos[index], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+    }
+
     directX12ResourceDescriptorInfos[index].Resource = resource;
     directX12ResourceDescriptorInfos[index].Usage = usage;
 
@@ -802,8 +938,13 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
     directX12ResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 
-void DirectX12ProcessGraphicsResourceDeleteQueue()
+void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
     ProcessResourceDeleteQueue();
     SystemClearMemoryArena(directX12ReadBackMemoryArena);
+    
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    graphicsDeviceData->UploadBufferGeneration++;
 }

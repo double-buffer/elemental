@@ -21,7 +21,7 @@ void InitMetalResourceMemory()
         metalResourcePool = SystemCreateDataPool<MetalResourceData, MetalResourceDataFull>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES);
 
         // TODO: This should be part of the graphics device data
-        metalResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES);
+        metalResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES, AllocationState_Reserved);
     }
 }
 
@@ -511,8 +511,14 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
         handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
     }
 
+    if ((handle % 1000) == 0)
+    {
+        SystemPlatformCommitMemory(&metalResourceDescriptorInfos[descriptorHandle], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+    }
+
     metalResourceDescriptorInfos[handle].Resource = resource;
     metalResourceDescriptorInfos[handle].Usage = usage;
+
     return handle;
 }
 
@@ -544,7 +550,7 @@ void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descript
     metalResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 
-void MetalProcessGraphicsResourceDeleteQueue()
+void MetalProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
     ProcessResourceDeleteQueue();
 }

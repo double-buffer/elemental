@@ -23,9 +23,11 @@ void InitVulkanResourceMemory()
     {
         vulkanGraphicsHeapPool = SystemCreateDataPool<VulkanGraphicsHeapData, SystemDataPoolDefaultFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_GRAPHICSHEAP);
         vulkanGraphicsResourcePool = SystemCreateDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
-        vulkanResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
-        vulkanResourceDescriptorImageViews = SystemPushArray<VkImageView>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES);
-        vulkanReadBackMemoryArena = SystemAllocateMemoryArena();
+
+        vulkanResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES, AllocationState_Reserved);
+        vulkanResourceDescriptorImageViews = SystemPushArray<VkImageView>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES, AllocationState_Reserved);
+
+        vulkanReadBackMemoryArena = SystemAllocateMemoryArena(32 * 1024 * 1024);
     }
 }
 
@@ -636,6 +638,12 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
     auto descriptorHeap = graphicsDeviceData->ResourceDescriptorHeap;
     auto descriptorHandle = CreateVulkanDescriptorHandle(descriptorHeap);
 
+    if ((descriptorHandle % 1000) == 0)
+    {
+        SystemPlatformCommitMemory(&vulkanResourceDescriptorInfos[descriptorHandle], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+        SystemPlatformCommitMemory(&vulkanResourceDescriptorImageViews[descriptorHandle], 1000 *  sizeof(VkImageView));
+    }
+
     VkWriteDescriptorSet descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
     descriptor.dstSet = descriptorHeap.Storage->DescriptorSet;
     descriptor.dstBinding = 0;
@@ -729,7 +737,7 @@ void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descrip
     vulkanResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 
-void VulkanProcessGraphicsResourceDeleteQueue()
+void VulkanProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
     ProcessResourceDeleteQueue();
     SystemClearMemoryArena(vulkanReadBackMemoryArena);

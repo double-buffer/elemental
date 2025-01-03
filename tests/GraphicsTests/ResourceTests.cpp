@@ -514,7 +514,7 @@ UTEST(Resource, FreeGraphicsResource_WithFenceNotExecuted)
     ElemFreeGraphicsResource(resource, &options);
 
     // Assert
-    ElemProcessGraphicsResourceDeleteQueue();
+    ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
     auto afterFreeResourceInfo = ElemGetGraphicsResourceInfo(resource);
     
     ElemFreeGraphicsResource(resource, nullptr);
@@ -546,7 +546,7 @@ UTEST(Resource, FreeGraphicsResource_WithFenceExecuted)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    ElemProcessGraphicsResourceDeleteQueue();
+    ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
 
     auto afterFreeResourceInfo = ElemGetGraphicsResourceInfo(resource);
     ElemFreeGraphicsHeap(graphicsHeap);
@@ -709,7 +709,7 @@ UTEST(Resource, DownloadGraphicsBufferData_WithNoReadbackHeap)
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
 
     // Act
-    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+    ElemDownloadGraphicsBufferData(resource, nullptr);
 
     // Assert
     ElemFreeGraphicsResource(resource, nullptr);
@@ -833,6 +833,147 @@ UTEST(Resource, CopyDataToGraphicsResource_WithBuffer)
     ASSERT_EQ_MSG(resourceDataSpan.Items[4], 0, "Resource dataspan element 2 should be equal to 0.");
 }
 
+// TODO: Do the same test but with the copy operations spread accross multiple frames
+// TODO: Bigger item count to check the error
+UTEST(Resource, CopyDataToGraphicsResource_WithBufferMultiCopies) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_Readback
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(256), &options);
+
+    auto itemCount = 20000u;
+    auto resourceSize = itemCount * sizeof(uint32_t);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, resourceSize, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    auto data = (uint32_t*)malloc(resourceSize);
+
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    // Act
+    for (uint32_t i = 0; i < itemCount; i++)
+    {
+        for (uint32_t j = 0; j < itemCount; j++)
+        {
+            data[j] = i;
+        }
+
+        ElemCopyDataToGraphicsResourceParameters parameters =
+        {
+            .Resource = resource,
+            .BufferOffset = (uint32_t)(i * sizeof(uint32_t)),
+            .SourceType = ElemCopyDataSourceType_Memory,
+            .SourceMemoryData = { .Items = (uint8_t*)data, .Length = (uint32_t)(resourceSize - i * sizeof(uint32_t)) } 
+        };
+
+        ElemCopyDataToGraphicsResource(commandList, &parameters);
+    }
+
+    // Assert
+    ElemCommitCommandList(commandList);
+
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+    ElemWaitForFenceOnCpu(fence);
+
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    auto bufferValues = (uint32_t*)resourceDataSpan.Items;
+
+    for (uint32_t i = 0; i < itemCount; i++)
+    {
+        ASSERT_EQ_MSG(bufferValues[i], i, "Resource dataspan element should be equal to initial data.");
+    }
+    
+    free(data);
+}
+
+UTEST(Resource, CopyDataToGraphicsResource_WithBufferMultiCopiesCommandLists) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_Readback
+    };
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(256), &options);
+
+    auto itemCount = 50000u;
+    auto resourceSize = itemCount * sizeof(uint32_t);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, resourceSize, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    auto data = (uint32_t*)malloc(resourceSize);
+
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    // Act
+    ElemFence fence;
+
+    for (uint32_t i = 0; i < itemCount; i++)
+    {
+        auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+        for (uint32_t j = 0; j < itemCount; j++)
+        {
+            data[j] = i;
+        }
+
+        ElemCopyDataToGraphicsResourceParameters parameters =
+        {
+            .Resource = resource,
+            .BufferOffset = (uint32_t)(i * sizeof(uint32_t)),
+            .SourceType = ElemCopyDataSourceType_Memory,
+            .SourceMemoryData = { .Items = (uint8_t*)data, .Length = (uint32_t)(resourceSize - i * sizeof(uint32_t)) } 
+        };
+
+        ElemCopyDataToGraphicsResource(commandList, &parameters);
+        ElemCommitCommandList(commandList);
+        fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+    }
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+
+    auto resourceDataSpan = ElemDownloadGraphicsBufferData(resource, nullptr);
+
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+
+    auto bufferValues = (uint32_t*)resourceDataSpan.Items;
+
+    for (uint32_t i = 0; i < itemCount; i++)
+    {
+        ASSERT_EQ_MSG(bufferValues[i], i, "Resource dataspan element should be equal to initial data.");
+    }
+    
+    free(data);
+}
+
+// TODO: File source
+// TODO: Textures
+// TODO: Big source (so that the upload heap can grow)
+// TODO: Test buffer offset and length if too much
+
 UTEST(Resource, CreateGraphicsResourceDescriptor_ReadWithBuffer) 
 {
     // Arrange
@@ -843,6 +984,35 @@ UTEST(Resource, CreateGraphicsResourceDescriptor_ReadWithBuffer)
 
     // Act
     auto descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
+
+    // Assert
+    auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
+    
+    ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_EQ_MSG(descriptorInfo.Resource, resource, "Resource should be equals to the one used during creation.");
+    ASSERT_EQ_MSG(descriptorInfo.Usage, ElemGraphicsResourceDescriptorUsage_Read, "Usage should be equals to the one used during creation.");
+}
+
+UTEST(Resource, CreateGraphicsResourceDescriptor_BigAmount) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(1), nullptr);
+    auto resourceInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, 1024u, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    // Act
+    ElemGraphicsResourceDescriptor descriptor;
+
+    for (uint32_t i = 0; i < 100000; i++)
+    {
+        descriptor = ElemCreateGraphicsResourceDescriptor(resource, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
+    }
 
     // Assert
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
@@ -1009,7 +1179,7 @@ UTEST(Resource, FreeGraphicsResourceDescriptor_WithFenceNotExecuted)
     ElemFreeGraphicsResourceDescriptor(descriptor, &options);
 
     // Assert
-    ElemProcessGraphicsResourceDeleteQueue();
+    ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
 
     ElemFreeGraphicsResourceDescriptor(descriptor, nullptr);
@@ -1043,7 +1213,7 @@ UTEST(Resource, FreeGraphicsResourceDescriptor_WithFenceExecuted)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    ElemProcessGraphicsResourceDeleteQueue();
+    ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
     auto descriptorInfo = ElemGetGraphicsResourceDescriptorInfo(descriptor);
 
     ElemFreeGraphicsResource(resource, nullptr);

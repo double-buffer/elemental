@@ -518,7 +518,7 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     AssertIfFailed(vkQueuePresentKHR(commandQueueData->DeviceObject, &presentInfo));
     
     VulkanResetCommandAllocation(swapChainData->GraphicsDevice);
-    VulkanProcessGraphicsResourceDeleteQueue();
+    VulkanProcessGraphicsResourceDeleteQueue(swapChainData->GraphicsDevice);
     swapChainData->PresentId++;
 }
 
