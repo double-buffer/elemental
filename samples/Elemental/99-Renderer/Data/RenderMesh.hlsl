@@ -4,14 +4,14 @@ struct ShaderParameters
 {
     uint32_t FrameDataBufferIndex;
     uint32_t MeshBuffer;
+    uint32_t MaterialBuffer;
     uint32_t VertexBufferOffset;
     uint32_t MeshletOffset;
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
-    uint32_t Reserved1;
     float Scale;
     float3 Translation;
-    uint32_t Reserved2;
+    uint32_t MaterialId;
     float4 Rotation;
 };
 
@@ -23,6 +23,13 @@ struct FrameData
     float4x4 ViewProjMatrix;
     uint32_t ShowMeshlets;
 };
+
+typedef struct
+{
+    int32_t AlbedoTextureId;
+    int32_t NormalTextureId;
+    float4 AlbedoFactor;
+} ShaderMaterial;
 
 struct ElemMeshlet
 {
@@ -43,7 +50,9 @@ struct VertexOutput
 {
     float4 Position: SV_Position;
     float3 WorldNormal: NORMAL0;
+    float2 TextureCoordinates: TEXCOORD0;
     uint   MeshletIndex : COLOR0;
+    uint   MaterialId : COLOR1;
 };
 
 #define IDENTITY_MATRIX float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
@@ -84,7 +93,9 @@ void MeshMain(in uint groupId: SV_GroupID,
         // NOTE: This calculation is faster because v * M is faster than M * M
         vertices[groupThreadId].Position = mul(float4(worldPosition, 1.0), frameData.ViewProjMatrix);
         vertices[groupThreadId].WorldNormal = worldNormal;
+        vertices[groupThreadId].TextureCoordinates = vertex.TextureCoordinates;
         vertices[groupThreadId].MeshletIndex = groupId;
+        vertices[groupThreadId].MaterialId = parameters.MaterialId;
     }
 
     if (groupThreadId < meshlet.TriangleCount)
@@ -114,13 +125,40 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     ByteAddressBuffer frameDataBuffer = ResourceDescriptorHeap[parameters.FrameDataBufferIndex];
     FrameData frameData = frameDataBuffer.Load<FrameData>(0);
 
+    ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[parameters.MaterialBuffer];
+    ShaderMaterial material = materialBuffer.Load<ShaderMaterial>(parameters.MaterialId * sizeof(ShaderMaterial));
+
     if (frameData.ShowMeshlets == 0)
     {
+        if (material.AlbedoTextureId >= 0)
+        {
+            Texture2D<float4> albedoTexture = ResourceDescriptorHeap[material.AlbedoTextureId];
+
+            // TODO: This is a hack because we don't have a sampler for now
+            float width;
+            float height;
+            albedoTexture.GetDimensions(width, height);
+
+            // Scale UV by texture size
+            float2 scaledUV = input.TextureCoordinates * float2(width, height);
+
+            // Convert to integer.  Use floor (or round) for nearest:
+            int coordX = ( (int)floor(scaledUV.x) % (int)width + (int)width ) % (int)width;
+            int coordY = ( (int)floor(scaledUV.y) % (int)height + (int)height ) % (int)height;
+
+            // If your texture is oriented with y=0 at the top, you might flip here:
+            coordY = ((int)height - 1 - coordY);
+
+            return albedoTexture.Load(int3(coordX, coordY, 0));
+        }
+
+        return float4(0, 0, 1, 1);;
         return float4(normalize(input.WorldNormal) * 0.5 + 0.5, 1.0);
     }
     else
     {
-        uint hashResult = hash(input.MeshletIndex);
+        //uint hashResult = hash(input.MeshletIndex);
+        uint hashResult = hash(input.MaterialId);
         float3 meshletColor = float3(float(hashResult & 255), float((hashResult >> 8) & 255), float((hashResult >> 16) & 255)) / 255.0;
 
         return float4(meshletColor, 1.0);

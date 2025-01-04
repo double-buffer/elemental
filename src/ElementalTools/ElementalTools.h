@@ -279,7 +279,7 @@ typedef struct
     ElemUInt32Span IndexBuffer;
     ElemToolsBoundingBox BoundingBox;
     // TODO: SphereVolume?
-    // TODO: Material
+    int32_t MaterialId;
 } ElemSceneMeshPrimitive;
 
 typedef struct

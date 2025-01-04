@@ -42,8 +42,7 @@ void SampleFreeGpuMemory(SampleGpuMemory* gpuMemory)
     gpuMemory->GraphicsHeap = ELEM_HANDLE_NULL;
 }
 
-// TODO: To remove when IOQueues
-SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, const void* dataPointer, uint32_t sizeInBytes, const char* debugName)
+SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
 {
     // TODO: Alignment should be used with the offset before adding the size of the resource!
     ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Read, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
@@ -54,12 +53,23 @@ SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, c
 
     ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 
-    ElemUploadGraphicsBufferData(buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)dataPointer, .Length = sizeInBytes });
-
     return (SampleGpuBuffer)
     {
         .Buffer = buffer,
         .ReadDescriptor = readDescriptor
+    };
+}
+
+// TODO: To remove when IOQueues
+SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, const void* dataPointer, uint32_t sizeInBytes, const char* debugName)
+{
+    SampleGpuBuffer result = SampleCreateGpuBuffer(gpuMemory, sizeInBytes, debugName);
+    ElemUploadGraphicsBufferData(result.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)dataPointer, .Length = sizeInBytes });
+
+    return (SampleGpuBuffer)
+    {
+        .Buffer = result.Buffer,
+        .ReadDescriptor = result.ReadDescriptor
     };
 }
 

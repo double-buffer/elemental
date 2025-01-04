@@ -39,6 +39,7 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
         }
 
         SampleMeshPrimitiveHeader* meshPrimitiveHeader = &meshPrimitiveHeaders[i];
+        meshPrimitiveHeader->MaterialId = meshPrimitive->MaterialId;
         meshPrimitiveHeader->MeshletCount = result.Meshlets.Length;
 
         meshPrimitiveHeader->VertexBufferOffset = ftell(file) - meshHeader.MeshBufferOffset;

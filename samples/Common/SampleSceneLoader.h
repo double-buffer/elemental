@@ -31,6 +31,14 @@ typedef struct
     SampleTextureData NormalTexture;
 } SampleMaterialData;
 
+// TODO: Do otherwise
+typedef struct
+{
+    int32_t AlbedoTextureId;
+    int32_t NormalTextureId;
+    ElemVector4 AlbedoFactor;
+} ShaderMaterial;
+
 typedef struct
 {
     uint32_t MeshCount;
@@ -39,6 +47,7 @@ typedef struct
     SampleMaterialData* Materials;
     uint32_t NodeCount;
     SampleSceneNodeHeader* Nodes;
+    SampleGpuBuffer MaterialBuffer;
 } SampleSceneData;
 
 void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
@@ -65,22 +74,31 @@ void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
 }
 
 // TODO: We should be able to replace this whole function with IO Queues
-void SampleLoadMeshData(SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
+void SampleLoadMeshData(ElemCommandList commandList, SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
 {
+    // TODO: Construct debug name
+    meshData->MeshBuffer = SampleCreateGpuBuffer(gpuMemory, meshData->MeshHeader.MeshBufferSizeInBytes, meshData->MeshHeader.Name);
+
+    // TODO: To replace with file IO 
     assert(meshData->Path);
+    uint8_t* meshBufferData = (uint8_t*)malloc(sizeof(uint8_t) * meshData->MeshHeader.MeshBufferSizeInBytes);
 
     FILE* file = SampleOpenFile(meshData->Path, true);
     assert(file);
 
     fseek(file, meshData->MeshHeader.MeshBufferOffset, SEEK_SET);
-
-    uint8_t* meshBufferData = (uint8_t*)malloc(sizeof(uint8_t) * meshData->MeshHeader.MeshBufferSizeInBytes);
     fread(meshBufferData, sizeof(uint8_t), meshData->MeshHeader.MeshBufferSizeInBytes, file);
-
-    // TODO: Construct debug name
-    meshData->MeshBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, meshBufferData, meshData->MeshHeader.MeshBufferSizeInBytes, meshData->MeshHeader.Name);
-
     fclose(file);
+
+    ElemCopyDataToGraphicsResourceParameters copyParameters =
+    {
+        .Resource = meshData->MeshBuffer.Buffer,
+        .SourceType = ElemCopyDataSourceType_Memory,
+        .SourceMemoryData = { .Items = (uint8_t*)meshBufferData, .Length = meshData->MeshHeader.MeshBufferSizeInBytes } 
+    };
+
+    ElemCopyDataToGraphicsResource(commandList, &copyParameters);
+    free(meshBufferData);
 }
 
 void SampleFreeMesh(SampleMeshData* meshData)
@@ -93,7 +111,7 @@ void SampleFreeMesh(SampleMeshData* meshData)
     // TODO: Free mallocs
 }
 
-void SampleLoadTexture(const char* path, SampleTextureData* textureData)
+void SampleLoadTexture(const char* path, SampleTextureData* textureData, SampleGpuMemory* gpuMemory)
 {
     *textureData = (SampleTextureData){};
 
@@ -111,24 +129,44 @@ void SampleLoadTexture(const char* path, SampleTextureData* textureData)
     fread(textureData->MipDataEntries, sizeof(SampleTextureDataBlockEntry), textureData->TextureHeader.MipCount, file);
 
     fclose(file);
-}
 
-// TODO: In the future we will need to load individual mips from disk
-void SampleLoadTextureData(SampleTextureData* textureData, SampleGpuMemory* gpuMemory)
-{
-    assert(textureData->Path);
-
+    // TODO: For now we create the texture here but later, we should do it on the fly and update the material buffer
     // TODO: Get texture name without folder and extension
     // TODO: Get the correct format
     textureData->GpuTexture = SampleCreateGpuTexture(gpuMemory, textureData->TextureHeader.Width, textureData->TextureHeader.Height, textureData->TextureHeader.MipCount, ElemGraphicsFormat_BC7_SRGB, textureData->Path);
+}
 
-    FILE* file = SampleOpenFile(textureData->Path, true);
-    assert(file);
+// TODO: In the future we will need to load individual mips from disk
+void SampleLoadTextureData(ElemCommandList commandList, SampleTextureData* textureData, SampleGpuMemory* gpuMemory)
+{
+    assert(textureData->Path);
 
-    //fseek(file, meshData->MeshHeader.MeshBufferOffset, SEEK_SET);
+    // TODO: Replace that with file logic
+    for (uint32_t i = 0; i < textureData->TextureHeader.MipCount; i++)
+    {
+        SampleTextureDataBlockEntry mipEntry = textureData->MipDataEntries[i];
+        uint8_t* mipData = (uint8_t*)malloc(sizeof(uint8_t) * mipEntry.SizeInBytes);
 
-    fclose(file);
+        FILE* file = SampleOpenFile(textureData->Path, true);
+        assert(file);
 
+        fseek(file, mipEntry.Offset, SEEK_SET);
+        fread(mipData, sizeof(uint8_t), mipEntry.SizeInBytes, file);
+        fclose(file);
+
+        ElemCopyDataToGraphicsResourceParameters copyParameters =
+        {
+            .Resource = textureData->GpuTexture.Texture,
+            .TextureMipLevel = i,
+            .SourceType = ElemCopyDataSourceType_Memory,
+            .SourceMemoryData = { .Items = (uint8_t*)mipData, .Length = mipEntry.SizeInBytes } 
+        };
+
+        ElemCopyDataToGraphicsResource(commandList, &copyParameters);
+        free(mipData);
+    }
+
+    // TODO: This is not true, the data will be loaded when the command list is executed
     textureData->IsLoaded = true;
 }
 
@@ -141,10 +179,14 @@ void SampleFreeTexture(SampleTextureData* textureData)
     // TODO: Free mallocs
 }
 
-void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleMaterialData* materialData, const char* directoryPath)
+void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleMaterialData* materialData, ShaderMaterial* shaderMaterial, SampleGpuMemory* gpuMemory, const char* directoryPath)
 {
     *materialData = (SampleMaterialData){};
     materialData->MaterialHeader = *materialHeader;
+
+    shaderMaterial->AlbedoFactor = materialData->MaterialHeader.AlbedoFactor;
+    shaderMaterial->AlbedoTextureId = -1;
+    shaderMaterial->NormalTextureId = -1;
 
     // TODO: Some materials can use the same texture so we need to load it only once
     if (strlen(materialHeader->AlbedoTexturePath) > 0)
@@ -153,7 +195,8 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
         strcpy(fullTexturePath, directoryPath);
         strcat(fullTexturePath, materialHeader->AlbedoTexturePath);
 
-        SampleLoadTexture(fullTexturePath, &materialData->AlbedoTexture);
+        SampleLoadTexture(fullTexturePath, &materialData->AlbedoTexture, gpuMemory);
+        shaderMaterial->AlbedoTextureId = materialData->AlbedoTexture.GpuTexture.ReadDescriptor;
     }
 
     // TODO: NormalMap
@@ -167,7 +210,7 @@ void SampleFreeMaterial(SampleMaterialData* materialData)
     }
 }
 
-void SampleLoadScene(const char* path, SampleSceneData* sceneData)
+void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemory* gpuMemory)
 {
     // TODO: When IOQueues are implemented, we only need to read the header, not the whole file!
 
@@ -211,16 +254,24 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData)
     char directoryPath[MAX_PATH];
     GetFileDirectory(path, directoryPath, MAX_PATH);
 
-    for (uint32_t i = 0; i < sceneData->MaterialCount; i++)
+    if (sceneHeader.MaterialCount > 0)
     {
-        SampleLoadMaterial(&materialHeaders[i], &sceneData->Materials[i], directoryPath);
+        ShaderMaterial* shaderMaterials = (ShaderMaterial*)malloc(sizeof(ShaderMaterial) * sceneHeader.MaterialCount);
+
+        for (uint32_t i = 0; i < sceneData->MaterialCount; i++)
+        {
+            SampleLoadMaterial(&materialHeaders[i], &sceneData->Materials[i], &shaderMaterials[i], gpuMemory, directoryPath);
+        }
+
+        sceneData->MaterialBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, shaderMaterials, sceneHeader.MaterialCount * sizeof(ShaderMaterial), "MaterialBuffer");
+        free(shaderMaterials);
     }
 
     free(materialHeaders);
     free(meshDataBlocks);
 }
 
-void SampleFreeScene(const SampleSceneData* sceneData)
+void SampleFreeScene(SampleSceneData* sceneData)
 {
     for (uint32_t i = 0; i < sceneData->MeshCount; i++)
     {
@@ -230,5 +281,10 @@ void SampleFreeScene(const SampleSceneData* sceneData)
     for (uint32_t i = 0; i < sceneData->MaterialCount; i++)
     {
         SampleFreeMaterial(&sceneData->Materials[i]);
+    }
+
+    if (sceneData->MaterialBuffer.Buffer != ELEM_HANDLE_NULL)
+    {
+        SampleFreeGpuBuffer(&sceneData->MaterialBuffer);
     }
 }

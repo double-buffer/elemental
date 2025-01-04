@@ -410,6 +410,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     auto dsvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
 
+    // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<ComPtr<ID3D12Resource>>*>(DirectX12MemoryArena, MAX_UPLOAD_BUFFERS);
 
     auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
@@ -453,7 +454,6 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
                 if (uploadBuffer && uploadBuffer->Buffer)
                 {
-                    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Deleting upload buffer");
                     uploadBuffer->Buffer.Reset();
                     *uploadBuffer = {};
                 }

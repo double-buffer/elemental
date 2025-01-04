@@ -98,6 +98,7 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
         commandQueue->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
     }
 
+    // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     auto commandAllocators = SystemPushArray<ComPtr<ID3D12CommandAllocator>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
     auto commandLists = SystemPushArray<ComPtr<ID3D12GraphicsCommandList10>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS * DIRECTX12_MAX_COMMANDLISTS);
 

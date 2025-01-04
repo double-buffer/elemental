@@ -901,7 +901,7 @@ UTEST(Resource, CopyDataToGraphicsResource_WithBufferMultiCopies)
     free(data);
 }
 
-UTEST(Resource, CopyDataToGraphicsResource_WithBufferMultiCopiesCommandLists) 
+UTEST(Resource, CopyDataToGraphicsResource_WithBufferMultiCopiesAndCommandLists) 
 {
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);

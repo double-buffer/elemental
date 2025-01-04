@@ -14,6 +14,7 @@ struct ObjMeshPrimitiveInfo
 {
     uint32_t IndexOffset;
     uint32_t IndexCount; 
+    int32_t MaterialId;
     ElemToolsBoundingBox BoundingBox;
 };
 
@@ -222,11 +223,12 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
         *meshPrimitiveInfo = 
         { 
             .IndexOffset = indexOffset, 
+            .MaterialId = (int32_t)currentMaterial,
             .BoundingBox = 
             { 
                 .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
                 .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
-            } 
+            }
         };
       
         for (uint32_t j = currentFaceStart; j < currentFaceEnd; j++) 
@@ -280,6 +282,7 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
             meshPrimitive->VertexBuffer = ConstructObjVertexBuffer(sceneLoaderMemoryArena, options->CoordinateSystem, objFileData, meshPrimitiveInfo);
             meshPrimitive->IndexBuffer = ConstructObjIndexBuffer(sceneLoaderMemoryArena, options->CoordinateSystem, objFileData, meshPrimitiveInfo);
             meshPrimitive->BoundingBox = meshPrimitiveInfo->BoundingBox;
+            meshPrimitive->MaterialId = meshPrimitiveInfo->MaterialId;
 
             AddBoundingBoxToBoundingBox(&meshPrimitive->BoundingBox, &mesh->BoundingBox);
         }

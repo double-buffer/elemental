@@ -13,14 +13,14 @@ typedef struct
     uint32_t FrameDataBuffer;
     // TODO: Embed that into a buffer
     uint32_t MeshBuffer;
+    uint32_t MaterialBuffer;
     uint32_t VertexBufferOffset;
     uint32_t MeshletOffset;
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
-    uint32_t Reserved1;
     float Scale;
     ElemVector3 Translation;
-    uint32_t Reserved2;
+    uint32_t MaterialId;
     ElemVector4 Rotation;
 } ShaderParameters;
 
@@ -112,7 +112,7 @@ void InitSample(void* payload)
     applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData);
+    SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -190,10 +190,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemInputStream inputStream = ElemGetInputStream();
 
     SampleInputsApplicationUpdate(inputStream, &applicationPayload->InputsApplication, updateParameters->DeltaTimeInSeconds);
-    
-    // TODO: Use another type of camera
     SampleInputsCameraUpdate(inputStream, &applicationPayload->InputsCamera, updateParameters);
 
+    // TODO: We shold move this into the application update function (we can pass the window if needed)
     if (applicationPayload->InputsApplication.State.ExitApplication)
     {
         ElemExitApplication(0);
@@ -213,6 +212,45 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     SampleInputsCameraState* inputsCameraState = &applicationPayload->InputsCamera.State;
 
     UpdateFrameData(applicationPayload, inputsCameraState->ViewProjMatrix, inputsCameraState->Action);
+
+    // TODO: We need to have a kind of queue system. The problem here is that if we don't have any
+    // data to load we will create empty lists
+    ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
+
+    // TODO: Fow now, we load all the material textures in one shot
+    // We do it in the main loop now because later it will be a streaming system.
+    // Doing it in the main loop force us to decouple the loading
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.MaterialCount; i++)
+    {
+        SampleMaterialData* material = &applicationPayload->TestSceneData.Materials[i];
+
+        if (material->AlbedoTexture.Path && !material->AlbedoTexture.IsLoaded)
+        {
+            SampleLoadTextureData(loadDataCommandList, &material->AlbedoTexture, &applicationPayload->GpuMemory);
+        }
+    }
+
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
+    {
+        SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
+
+        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
+        {
+            SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
+
+            if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
+            { 
+                // TODO: This is an attempt to dissociate the loading of the mesh metadata and the buffer data
+                // Later, this will be done via streaming in parrallel. The gpu shader that will handle the mesh will need to check
+                // if the data was loaded.
+                // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
+                SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemory);
+            }
+        }
+    }
+
+    ElemCommitCommandList(loadDataCommandList);
+    ElemFence loadDataFence = ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -234,18 +272,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
 
-    // TODO: Fow now, we load all the material textures in one shot
-    // We do it in the main loop now because later it will be a streaming system.
-    // Doing it in the main loop force us to decouple the loading
-    for (uint32_t i = 0; i < applicationPayload->TestSceneData.MaterialCount; i++)
-    {
-        SampleMaterialData* material = &applicationPayload->TestSceneData.Materials[i];
-
-        if (material->AlbedoTexture.Path && !material->AlbedoTexture.IsLoaded)
-        {
-            SampleLoadTextureData(&material->AlbedoTexture, &applicationPayload->GpuMemory);
-        }
-    }
+    applicationPayload->ShaderParameters.MaterialBuffer = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
 
     // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
     // Be carreful with the limit per dimension of 65000
@@ -256,15 +283,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {
             SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
-
-            if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
-            { 
-                // TODO: This is an attempt to dissociate the loading of the mesh metadata and the buffer data
-                // Later, this will be done via streaming in parrallel. The gpu shader that will handle the mesh will need to check
-                // if the data was loaded.
-                // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
-                SampleLoadMeshData(meshData, &applicationPayload->GpuMemory);
-            }
+            
+            // TODO: We need to check if the data is loaded into the gpu
 
             applicationPayload->ShaderParameters.MeshBuffer = meshData->MeshBuffer.ReadDescriptor;
 
@@ -277,6 +297,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
                 applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
                 applicationPayload->ShaderParameters.Scale = sceneNode->Scale;
                 applicationPayload->ShaderParameters.Translation = sceneNode->Translation;
+                applicationPayload->ShaderParameters.MaterialId = meshPrimitive->MaterialId;
                 applicationPayload->ShaderParameters.Rotation = sceneNode->Rotation;
 
                 ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
@@ -288,7 +309,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemEndRenderPass(commandList);
 
     ElemCommitCommandList(commandList);
-    applicationPayload->LastExecutionFence = ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
+
+    applicationPayload->LastExecutionFence = ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, &(ElemExecuteCommandListOptions) { .FencesToWait = { .Items = &loadDataFence, .Length = 1 }});
 
     ElemPresentSwapChain(applicationPayload->SwapChain);
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();

@@ -53,6 +53,7 @@ typedef struct
     uint32_t MeshletOffset;
     uint32_t MeshletVertexIndexOffset;
     uint32_t MeshletTriangleIndexOffset;
+    int32_t MaterialId;
 } SampleMeshPrimitiveHeader;
 
 typedef struct

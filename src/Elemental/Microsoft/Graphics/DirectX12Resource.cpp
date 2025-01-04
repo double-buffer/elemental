@@ -742,6 +742,9 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
 
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
     auto resourceData = GetDirectX12GraphicsResourceData(parameters->Resource);
     SystemAssert(resourceData);
 
@@ -763,7 +766,42 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
     }
     else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-    //commandListData->DeviceObject->CopyTextureRegion(const D3D12_TEXTURE_COPY_LOCATION *pDst, UINT DstX, UINT DstY, UINT DstZ, const D3D12_TEXTURE_COPY_LOCATION *pSrc, const D3D12_BOX *pSrcBox)
+        // TODO: Unit test first !!!!!
+
+        // TODO: We should move this code on texture creation to cache the info for each mip level
+        auto textureDesc   = resourceData->DeviceObject->GetDesc();
+        UINT64 totalBytes  = 0;
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedFootprint = {};
+
+        graphicsDeviceData->Device->GetCopyableFootprints(
+            &textureDesc,
+            parameters->TextureMipLevel,  // First subresource
+            1,                            // Number of subresources
+            uploadBuffer.Offset,          // Base offset in the upload buffer
+            &placedFootprint,            // [out] footprints
+            nullptr,                      // row size in bytes
+            nullptr,                      // row count
+            &totalBytes);                 // total bytes
+
+        // TODO: We should call the GetFootprints with offset 0 at texture creation and then change it here
+        //placedFootprint.Offset = uploadBuffer.Offset;
+
+        D3D12_TEXTURE_COPY_LOCATION sourceLocation = 
+        {
+            .pResource = uploadBuffer.PoolItem->Buffer.Get(),
+            .Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+            .PlacedFootprint = placedFootprint
+        };
+
+        D3D12_TEXTURE_COPY_LOCATION destinationLocation = 
+        {
+            .pResource = resourceData->DeviceObject.Get(),
+            .Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+            .SubresourceIndex = parameters->TextureMipLevel
+        };
+
+        commandListData->DeviceObject->CopyTextureRegion(&destinationLocation, 0, 0, 0, &sourceLocation, nullptr);
     }
 
     /*

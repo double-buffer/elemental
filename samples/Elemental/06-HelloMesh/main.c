@@ -112,9 +112,13 @@ void InitSample(void* payload)
     applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(256));
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene("kitten.scene", &applicationPayload->TestSceneData);
-    SampleLoadMeshData(&applicationPayload->TestSceneData.Meshes[0], &applicationPayload->GpuMemory);
+    SampleLoadScene("kitten.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
     //SampleLoadScene("buddha.scene", &applicationPayload->TestSceneData);
+    
+    ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
+    SampleLoadMeshData(loadDataCommandList, &applicationPayload->TestSceneData.Meshes[0], &applicationPayload->GpuMemory);
+    ElemCommitCommandList(loadDataCommandList);
+    ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
