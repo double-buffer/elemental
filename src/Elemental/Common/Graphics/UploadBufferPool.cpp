@@ -2,7 +2,7 @@
 #include "SystemFunctions.h"
 
 template<typename T>
-UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation, uint64_t sizeInBytes)
+UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation, uint64_t alignment, uint64_t sizeInBytes)
 {
     if (uploadBufferPool->Generation != generation)
     {
@@ -30,31 +30,42 @@ UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadB
         currentUploadBuffer->IsResetNeeded = true;
         currentUploadBuffer->CurrentOffset = 0u;
 
-        uint64_t alignedSize = SystemMin(uploadBufferPool->LastBufferSize * 2u, 512llu * 1024u * 1024u);
+        uint64_t uploadBufferSize = SystemMin(uploadBufferPool->LastBufferSize * 2u, 512llu * 1024u * 1024u);
 
-        if (alignedSize == 0)
+        if (uploadBufferSize == 0)
         {
             // TODO: put that in a constant
-            alignedSize = 16u * 1024u * 1024u;
+            uploadBufferSize = 16u * 1024u * 1024u;
         }
 
-        while (alignedSize < sizeInBytes)
+        while (uploadBufferSize < sizeInBytes)
         {
-            alignedSize <<= 1;
+            uploadBufferSize <<= 1;
         }
 
-        uploadBufferPool->LastBufferSize = alignedSize;
-        currentUploadBuffer->SizeInBytes = alignedSize;
+        uploadBufferPool->LastBufferSize = uploadBufferSize;
+        currentUploadBuffer->SizeInBytes = uploadBufferSize;
     }
 
     // TODO: Check alignment
     auto offset = uploadBufferPool->CurrentUploadBuffer->CurrentOffset;
-    uploadBufferPool->CurrentUploadBuffer->CurrentOffset += sizeInBytes;
+    uint64_t alignedOffset = (offset + (alignment - 1)) & ~(alignment - 1);
+
+    uint64_t newOffset = alignedOffset + sizeInBytes;
+
+    if (newOffset > uploadBufferPool->CurrentUploadBuffer->SizeInBytes)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Not enough space after alignment");
+        return { nullptr, 0ull };
+    }
+
+    // Update buffer offset to reflect our allocation
+    uploadBufferPool->CurrentUploadBuffer->CurrentOffset = newOffset;
 
     return 
     {
         .PoolItem = uploadBufferPool->CurrentUploadBuffer,
-        .Offset = offset
+        .Offset = alignedOffset
     };
 }
 

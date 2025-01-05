@@ -1,4 +1,5 @@
 #include "DirectX12Resource.h"
+#include "DirectX12Config.h"
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
 #include "Graphics/Resource.h"
@@ -7,8 +8,6 @@
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define DIRECTX12_MAX_GRAPHICSHEAP 32
 
 SystemDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull> directX12GraphicsHeapPool;
 SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull> directX12GraphicsResourcePool;
@@ -31,7 +30,7 @@ void InitDirectX12ResourceMemory()
         directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES, AllocationState_Reserved);
 
         // TODO: Allow to increase the size as a parameter
-        directX12ReadBackMemoryArena = SystemAllocateMemoryArena(32 * 1024 * 1024);
+        directX12ReadBackMemoryArena = SystemAllocateMemoryArena(DIRECTX12_READBACK_MEMORY_ARENA);
     }
 }
 
@@ -136,7 +135,7 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsResourcePool, handle, {
-        .GraphicsDevice = graphicsDevice
+        .GraphicsDevice = graphicsDevice,
     });
 
     return handle;
@@ -679,15 +678,12 @@ ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphi
     return resource;
 }
 
-UploadBufferMemory<ComPtr<ID3D12Resource>> GetUploadBuffer(ElemCommandList commandList, uint64_t sizeInBytes)
+UploadBufferMemory<ComPtr<ID3D12Resource>> GetUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
 {
-    auto commandListData = GetDirectX12CommandListData(commandList);
-    SystemAssert(commandListData);
-
-    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandListData->GraphicsDevice);
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(graphicsDevice);
     auto uploadBufferPool = &threadDirectX12UploadBufferPools[graphicsIdUnpacked.Index];
 
     if (!uploadBufferPool->IsInited)
@@ -699,7 +695,7 @@ UploadBufferMemory<ComPtr<ID3D12Resource>> GetUploadBuffer(ElemCommandList comma
         uploadBufferPool->IsInited = true;
     }
 
-    auto uploadBuffer = GetUploadBufferPoolItem(uploadBufferPool, graphicsDeviceData->UploadBufferGeneration, sizeInBytes);
+    auto uploadBuffer = GetUploadBufferPoolItem(uploadBufferPool, graphicsDeviceData->UploadBufferGeneration, alignment, sizeInBytes);
 
     if (uploadBuffer.PoolItem->IsResetNeeded)
     {
@@ -748,44 +744,60 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
     auto resourceData = GetDirectX12GraphicsResourceData(parameters->Resource);
     SystemAssert(resourceData);
 
+    auto resourceDataFull = GetDirectX12GraphicsResourceDataFull(parameters->Resource);
+    SystemAssert(resourceDataFull);
+
     ReadOnlySpan<uint8_t> sourceData;
 
+    // TODO: File Source
     if (parameters->SourceType == ElemCopyDataSourceType_Memory)
     {
         sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
     }
     
-    auto uploadBuffer = GetUploadBuffer(commandList, sourceData.Length);
+    // TODO: Unit test first !!!!!
+        
+    auto uploadBufferAlignment = 4u;
+    auto uploadBufferSizeInBytes = sourceData.Length;
+    DirectX12GraphicsTextureMipCopyInfo textureMipCopyInfo = {};
 
+    if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        uploadBufferAlignment = D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
+        auto resourceDesc = resourceData->DeviceObject->GetDesc();
+
+        graphicsDeviceData->Device->GetCopyableFootprints(&resourceDesc, 
+                                                          parameters->TextureMipLevel, 1, 0, 
+                                                          &textureMipCopyInfo.PlacedFootprint, 
+                                                          &textureMipCopyInfo.RowCount, 
+                                                          &textureMipCopyInfo.SourceRowSizeInBytes, 
+                                                          &uploadBufferSizeInBytes);
+    }
+
+    auto uploadBuffer = GetUploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
     SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
-    memcpy(uploadBuffer.PoolItem->CpuPointer + uploadBuffer.Offset, sourceData.Pointer, sourceData.Length);
 
     if (resourceData->Type == ElemGraphicsResourceType_Buffer)
     {
+        memcpy(uploadBuffer.PoolItem->CpuPointer + uploadBuffer.Offset, sourceData.Pointer, sourceData.Length);
         commandListData->DeviceObject->CopyBufferRegion(resourceData->DeviceObject.Get(), parameters->BufferOffset, uploadBuffer.PoolItem->Buffer.Get(), uploadBuffer.Offset, sourceData.Length);
     }
     else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-        // TODO: Unit test first !!!!!
+        auto placedFootprint = textureMipCopyInfo.PlacedFootprint;
+        auto sourceRowSizeInBytes = textureMipCopyInfo.SourceRowSizeInBytes;
 
-        // TODO: We should move this code on texture creation to cache the info for each mip level
-        auto textureDesc   = resourceData->DeviceObject->GetDesc();
-        UINT64 totalBytes  = 0;
+        auto destData = uploadBuffer.PoolItem->CpuPointer + uploadBuffer.Offset;
 
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedFootprint = {};
+        for (uint32_t i = 0; i < textureMipCopyInfo.RowCount; i++)
+        {
+            auto uploadBufferRowData = destData + i * placedFootprint.Footprint.RowPitch;
+            auto sourceRowData = sourceData.Pointer + i * sourceRowSizeInBytes;
 
-        graphicsDeviceData->Device->GetCopyableFootprints(
-            &textureDesc,
-            parameters->TextureMipLevel,  // First subresource
-            1,                            // Number of subresources
-            uploadBuffer.Offset,          // Base offset in the upload buffer
-            &placedFootprint,            // [out] footprints
-            nullptr,                      // row size in bytes
-            nullptr,                      // row count
-            &totalBytes);                 // total bytes
+            memcpy(uploadBufferRowData, sourceRowData, sourceRowSizeInBytes);
+        }
 
-        // TODO: We should call the GetFootprints with offset 0 at texture creation and then change it here
-        //placedFootprint.Offset = uploadBuffer.Offset;
+        placedFootprint.Offset = uploadBuffer.Offset;
 
         D3D12_TEXTURE_COPY_LOCATION sourceLocation = 
         {
@@ -803,34 +815,6 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
 
         commandListData->DeviceObject->CopyTextureRegion(&destinationLocation, 0, 0, 0, &sourceLocation, nullptr);
     }
-
-    /*
-    // TODO: File Source
-
-    // TODO: This is just a sanity check for now.
-    // TODO: We need to lock this area and maybe create a bigger buffer, etc. 
-    // To do so fast, we can have a double buffer approach so the pending operations are not impacted and everyone switch to the 
-    // new bigger buffer
-    // TODO: The best way is to write functions in graphics device like resource descriptor heap
-    // TODO: Call a function GetDirectX12ScratchBuffer(size) and then ReleaseDirectX12ScratchBuffer(fence);
-    // add a list of scratch buffers in the current command list and when submitted, call the functions with the fence
-    if (graphicsDeviceData->CurrentUploadBufferOffset + sourceData.Length > graphicsDeviceData->UploadBuffer->GetDesc().Width)
-    {
-        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Upload Heap doesn't have enough memory. Resetting the offset.");
-        graphicsDeviceData->CurrentUploadBufferOffset = 0;
-    }
-
-    auto dataOffset = SystemAtomicAdd(graphicsDeviceData->CurrentUploadBufferOffset, sourceData.Length);
-    memcpy(graphicsDeviceData->UploadBufferCpuPointer + dataOffset, sourceData.Pointer, sourceData.Length);
-
-    if (resourceData->Type == ElemGraphicsResourceType_Buffer)
-    {
-        commandListData->DeviceObject->CopyBufferRegion(resourceData->DeviceObject.Get(), parameters->BufferOffset, graphicsDeviceData->UploadBuffer.Get(), dataOffset, sourceData.Length);
-    }
-    else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
-    {
-    //commandListData->DeviceObject->CopyTextureRegion(const D3D12_TEXTURE_COPY_LOCATION *pDst, UINT DstX, UINT DstY, UINT DstZ, const D3D12_TEXTURE_COPY_LOCATION *pSrc, const D3D12_BOX *pSrcBox)
-    }*/
 }
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)

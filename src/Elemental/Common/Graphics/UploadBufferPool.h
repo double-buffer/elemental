@@ -34,7 +34,7 @@ struct UploadBufferDevicePool
 };
 
 template<typename T>
-UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation, uint64_t sizeInBytes);
+UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation, uint64_t alignment, uint64_t sizeInBytes);
 
 /*
 template<typename TCommandList>

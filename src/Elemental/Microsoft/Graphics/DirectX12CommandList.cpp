@@ -1,11 +1,9 @@
 #include "DirectX12CommandList.h"
+#include "DirectX12Config.h"
 #include "DirectX12GraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define DIRECTX12_MAX_COMMANDQUEUES 10u
-#define DIRECTX12_MAX_COMMANDLISTS 64u
 
 SystemDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull> directX12CommandQueuePool;
 SystemDataPool<DirectX12CommandListData, DirectX12CommandListDataFull> directX12CommandListPool;

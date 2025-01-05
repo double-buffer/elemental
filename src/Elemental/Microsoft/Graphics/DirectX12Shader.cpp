@@ -9,9 +9,6 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-#define DIRECTX12_MAX_LIBRARIES UINT16_MAX
-#define DIRECTX12_MAX_PIPELINESTATES UINT16_MAX
-
 SystemDataPool<DirectX12ShaderLibraryData, SystemDataPoolDefaultFull> directX12ShaderLibraryPool;
 SystemDataPool<DirectX12PipelineStateData, DirectX12PipelineStateDataFull> directX12PipelineStatePool;
 

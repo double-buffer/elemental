@@ -17,9 +17,19 @@ struct DirectX12GraphicsHeapDataFull
     uint32_t reserved;
 };
 
+struct DirectX12GraphicsTextureMipCopyInfo
+{
+    uint32_t RowCount;
+    uint64_t SourceRowSizeInBytes;
+    uint32_t UploadBufferSizeInBytes;
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT PlacedFootprint;
+};
+
+// TODO: Optimize this structure because it is the most used
 struct DirectX12GraphicsResourceData
 {
     ComPtr<ID3D12Resource> DeviceObject;
+    // TODO: We can maybe merge the two?
     D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle;
     D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle;
     ElemGraphicsResourceType Type;

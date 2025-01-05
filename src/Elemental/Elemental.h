@@ -759,6 +759,7 @@ typedef struct
     uint32_t SourceFileOffset;
     uint32_t SourceFileSizeInBytes;
     ElemDataSpan SourceMemoryData;
+    // TODO: Allow specifying texture rowSizeInBytes?
 } ElemCopyDataToGraphicsResourceParameters;
 
 typedef struct

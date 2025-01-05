@@ -971,6 +971,7 @@ UTEST(Resource, CopyDataToGraphicsResource_WithBufferMultiCopiesAndCommandLists)
 
 // TODO: File source
 // TODO: Textures
+// TODO: Check alignement after mip 5
 // TODO: Big source (so that the upload heap can grow)
 // TODO: Test buffer offset and length if too much
 

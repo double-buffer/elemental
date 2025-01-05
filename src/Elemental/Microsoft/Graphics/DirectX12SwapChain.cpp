@@ -9,7 +9,6 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-#define DIRECTX12_MAX_SWAPCHAINS 10u
 
 // TODO: Without FPS limit we can maybe debug UAV Barrier
 #define ENABLE_TEARING 0

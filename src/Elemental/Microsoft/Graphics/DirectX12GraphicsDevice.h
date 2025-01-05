@@ -4,11 +4,6 @@
 #include "Graphics/UploadBufferPool.h"
 #include "SystemMemory.h"
 
-#define DIRECTX12_MAX_DEVICES 10u
-
-// TODO: Put this value a a config? 
-#define DIRECTX12_MAX_RESOURCES 1000000
-
 struct DirectX12DescriptorHeapStorage;
 
 struct DirectX12DescriptorHeap

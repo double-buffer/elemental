@@ -1,12 +1,9 @@
 #include "DirectX12GraphicsDevice.h"
+#include "DirectX12Config.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
-
-#define D3D12SDK_VERSION 614
-#define D3D12SDK_PATH ".\\"
-#define DIRECTX12_MAX_RTVS 1024u
 
 struct DirectX12DescriptorHeapFreeListItem
 {
@@ -108,7 +105,7 @@ void InitDirectX12GraphicsDeviceMemory()
     if (!DirectX12MemoryArena.Storage)
     {
         // TODO: To review
-        DirectX12MemoryArena = SystemAllocateMemoryArena(128 * 1024 * 1024);
+        DirectX12MemoryArena = SystemAllocateMemoryArena(DIRECTX12_MEMORY_ARENA);
         directX12GraphicsDevicePool = SystemCreateDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_DEVICES);
 
         InitDirectX12();

@@ -90,7 +90,7 @@ int main(int argc, const char* argv[])
     for (uint32_t i = 0; i < mipData.Length; i++)
     {
         ElemTextureMipData* mipLevelData = &mipData.Items[i];
-        printf("Size: %dx%d\n", mipLevelData->Width, mipLevelData->Height);
+        printf("Mip level %d Size: %dx%d\n", i, mipLevelData->Width, mipLevelData->Height);
 
         ElemCompressTextureMipDataResult compressedTextureData = ElemCompressTextureMipData(ElemToolsGraphicsFormat_BC7, mipLevelData, NULL);
 
