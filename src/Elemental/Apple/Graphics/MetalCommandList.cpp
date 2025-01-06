@@ -1,11 +1,9 @@
 #include "MetalCommandList.h"
+#include "MetalConfig.h"
 #include "MetalGraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define METAL_MAX_COMMANDQUEUES 10u
-#define METAL_MAX_COMMANDLISTS 64u
 
 SystemDataPool<MetalCommandQueueData, MetalCommandQueueDataFull> metalCommandQueuePool;
 SystemDataPool<MetalCommandListData, MetalCommandListDataFull> metalCommandListPool;

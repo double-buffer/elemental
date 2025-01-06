@@ -1,4 +1,5 @@
 #include "MetalResource.h"
+#include "MetalConfig.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalCommandList.h"
 #include "Graphics/UploadBufferPool.h"
@@ -7,10 +8,6 @@
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-// TODO: Move that to config header like DirectX12
-#define METAL_MAX_GRAPHICSHEAP 32
-#define METAL_READBACK_MEMORY_ARENA 32 * 1024 * 1024
 
 SystemDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull> metalGraphicsHeapPool;
 SystemDataPool<MetalResourceData, MetalResourceDataFull> metalResourcePool;

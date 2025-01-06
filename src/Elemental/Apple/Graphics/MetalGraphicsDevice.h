@@ -4,10 +4,6 @@
 #include "Elemental.h"
 #include "SystemMemory.h"
 
-#define METAL_MAX_DEVICES 10u
-// TODO: Increase to 1.000.000?
-#define METAL_MAX_RESOURCES 500000
-
 struct MetalArgumentBufferStorage;
 
 struct MetalArgumentBuffer

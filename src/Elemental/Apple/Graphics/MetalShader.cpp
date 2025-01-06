@@ -1,4 +1,5 @@
 #include "MetalShader.h"
+#include "MetalConfig.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalCommandList.h"
 #include "MetalResource.h"
@@ -9,9 +10,6 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
-
-#define METAL_MAX_LIBRARIES UINT16_MAX
-#define METAL_MAX_PIPELINESTATES UINT16_MAX
 
 struct MetalShaderFunctionData
 {

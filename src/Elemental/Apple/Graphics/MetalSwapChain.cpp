@@ -1,4 +1,5 @@
 #include "MetalSwapChain.h"
+#include "MetalConfig.h"
 #include "MetalCommandList.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalResource.h"
@@ -26,8 +27,6 @@ struct Test
 #else
 #include "../UIKitWindow.h"
 #endif
-
-#define METAL_MAX_SWAPCHAINS 10u
 
 SystemDataPool<MetalSwapChainData, MetalSwapChainDataFull> metalSwapChainPool;
 

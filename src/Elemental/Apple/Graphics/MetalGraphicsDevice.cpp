@@ -1,9 +1,9 @@
 #include "MetalGraphicsDevice.h"
+#include "MetalConfig.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
-
 
 struct MetalArgumentBufferDescriptor
 {
@@ -115,7 +115,7 @@ void InitMetalGraphicsDeviceMemory()
     if (!MetalGraphicsMemoryArena.Storage)
     {
         // TODO: To Review
-        MetalGraphicsMemoryArena = SystemAllocateMemoryArena(128 * 1024 * 1024);
+        MetalGraphicsMemoryArena = SystemAllocateMemoryArena(METAL_MEMORY_ARENA);
         metalGraphicsDevicePool = SystemCreateDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull>(MetalGraphicsMemoryArena, METAL_MAX_DEVICES);
 
         InitMetal();
