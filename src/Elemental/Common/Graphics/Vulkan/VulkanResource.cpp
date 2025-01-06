@@ -640,8 +640,8 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
 
     if ((descriptorHandle % 1000) == 0)
     {
-        SystemPlatformCommitMemory(&vulkanResourceDescriptorInfos[descriptorHandle], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
-        SystemPlatformCommitMemory(&vulkanResourceDescriptorImageViews[descriptorHandle], 1000 *  sizeof(VkImageView));
+        SystemCommitMemory(VulkanGraphicsMemoryArena, &vulkanResourceDescriptorInfos[descriptorHandle], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+        SystemCommitMemory(VulkanGraphicsMemoryArena, &vulkanResourceDescriptorImageViews[descriptorHandle], 1000 *  sizeof(VkImageView));
     }
 
     VkWriteDescriptorSet descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };

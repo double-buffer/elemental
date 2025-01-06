@@ -219,12 +219,6 @@ function(configure_project_package target_name install_folder)
             MACOSX_BUNDLE "TRUE"
         )
 
-        if(NOT resources_length EQUAL 0)
-            set_target_properties(${target_name} PROPERTIES 
-                RESOURCE "${ARG_RESOURCES}"   
-            )
-        endif()
-
         # TODO: Use dependencies variable instead
         if(CMAKE_GENERATOR STREQUAL "Xcode")
             set(ELEMENTAL_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/Elemental.framework")
@@ -234,6 +228,23 @@ function(configure_project_package target_name install_folder)
                 XCODE_EMBED_FRAMEWORKS_CODE_SIGN_ON_COPY "YES"
                 XCODE_EMBED_FRAMEWORKS_REMOVE_HEADERS_ON_COPY "YES"
             )
+
+            foreach(res IN LISTS ARG_RESOURCES)
+                get_filename_component(file_name "${res}" NAME)
+                get_filename_component(full_path "${res}" ABSOLUTE)
+                get_filename_component(file_dir "${full_path}" DIRECTORY)
+
+                set(resource_root "${CMAKE_CURRENT_BINARY_DIR}/Data") 
+
+                file(RELATIVE_PATH relative_dir "${resource_root}" "${file_dir}")
+
+                set_source_files_properties("${full_path}"
+                    PROPERTIES MACOSX_PACKAGE_LOCATION "${relative_dir}"
+                )
+
+                # Attach file to the target so Xcode knows to include it
+                target_sources(${target_name} PRIVATE "${full_path}")
+            endforeach()
         else()
             add_custom_target(CopyFrameworkFolder${target_name} ALL)
 
@@ -254,6 +265,38 @@ function(configure_project_package target_name install_folder)
                     COMMENT "Copying ${dependency} framework folder to destination"
                 )
             endforeach()
+        
+            if(NOT resources_length EQUAL 0)
+                set(output_folder "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.app/Contents/")
+
+                foreach(file IN LISTS ARG_RESOURCES)
+                    get_filename_component(file_name "${file}" NAME)
+                    get_filename_component(full_path "${file}" ABSOLUTE)
+                    get_filename_component(file_dir "${full_path}" DIRECTORY)
+
+                    set(resource_root "${CMAKE_CURRENT_BINARY_DIR}/Data") 
+
+                    file(RELATIVE_PATH relative_dir "${resource_root}" "${file_dir}")
+                    set(output_subdir "${output_folder}/Resources/${relative_dir}")
+                    file(MAKE_DIRECTORY "${output_subdir}")
+
+                    set(output_file "${output_subdir}/${file_name}")
+
+                    add_custom_command(
+                    OUTPUT "${output_file}"
+                    COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}/Resources"
+                    COMMAND ${CMAKE_COMMAND} -E copy "${full_path}" "${output_file}"
+                    DEPENDS "${full_path}"
+                    COMMENT "Copying and checking resource file ${file_name}"
+                    )
+
+                    list(APPEND output_files "${output_file}")
+                endforeach()
+                
+                add_custom_target(CopyResources${target_name} ALL DEPENDS ${output_files})
+                add_dependencies(CopyResources${target_name} ShaderCompiler)
+                add_dependencies(${target_name} CopyResources${target_name})
+            endif()
 
             add_dependencies(${target_name} CopyFrameworkFolder${target_name})
         endif()

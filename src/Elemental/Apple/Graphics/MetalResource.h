@@ -7,6 +7,7 @@ struct MetalGraphicsHeapData
     NS::SharedPtr<MTL::Heap> DeviceObject;
     uint64_t SizeInBytes;
     ElemGraphicsDevice GraphicsDevice;
+    ElemGraphicsHeapType HeapType;
 };
 
 struct MetalGraphicsHeapDataFull
@@ -17,6 +18,7 @@ struct MetalGraphicsHeapDataFull
 struct MetalResourceData
 {
     NS::SharedPtr<MTL::Resource> DeviceObject;
+    ElemGraphicsHeap GraphicsHeap;
     ElemGraphicsResourceType Type;
     uint32_t Width;
     uint32_t Height;
@@ -59,4 +61,4 @@ void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descript
 
 void MetalProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
-ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);

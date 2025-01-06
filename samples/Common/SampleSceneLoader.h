@@ -113,10 +113,13 @@ void SampleFreeMesh(SampleMeshData* meshData)
 
 void SampleLoadTexture(const char* path, SampleTextureData* textureData, SampleGpuMemory* gpuMemory)
 {
+    // TODO: Here we need to use a global list of texture that are unique based on the path
+    // For now the same texture is loaded multiple time which is really bad
+
     *textureData = (SampleTextureData){};
 
     // TODO: Do better here
-    char* tmp = malloc(strlen(path));
+    char* tmp = malloc(strlen(path) + 1);
     strcpy(tmp, path);
     textureData->Path = tmp;
 
@@ -192,6 +195,7 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
     if (strlen(materialHeader->AlbedoTexturePath) > 0)
     {
         char fullTexturePath[MAX_PATH];
+        memset(fullTexturePath, 0, MAX_PATH);
         strcpy(fullTexturePath, directoryPath);
         strcat(fullTexturePath, materialHeader->AlbedoTexturePath);
 

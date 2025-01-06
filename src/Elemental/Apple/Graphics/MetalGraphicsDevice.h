@@ -1,8 +1,10 @@
 #pragma once
 
+#include "Graphics/UploadBufferPool.h"
 #include "Elemental.h"
 #include "SystemMemory.h"
 
+#define METAL_MAX_DEVICES 10u
 // TODO: Increase to 1.000.000?
 #define METAL_MAX_RESOURCES 500000
 
@@ -18,6 +20,9 @@ struct MetalGraphicsDeviceData
     NS::SharedPtr<MTL::Device> Device;
     MetalArgumentBuffer ResourceArgumentBuffer;
     MemoryArena MemoryArena;
+    uint64_t UploadBufferGeneration;
+    Span<UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>>*> UploadBufferPools;
+    uint32_t CurrentUploadBufferPoolIndex;
 };
 
 struct MetalGraphicsDeviceDataFull

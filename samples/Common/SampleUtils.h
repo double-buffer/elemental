@@ -85,7 +85,7 @@ FILE* SampleOpenFile(const char* filename, bool prefixData)
     char absolutePath[MAX_PATH];
     SampleGetFullPath(absolutePath, filename, prefixData);
 
-    //printf("Read path: %s\n", absolutePath);
+    //printf("Read path: '%s'\n", absolutePath);
 
     return fopen(absolutePath, "rb");
 }

@@ -199,6 +199,8 @@ ReadOnlySpan<wchar_t> SystemConvertUtf8ToWideChar(MemoryArena memoryArena, ReadO
  */
 ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena memoryArena, ReadOnlySpan<wchar_t> source);
 
+// TODO: Unit test
+ReadOnlySpan<char> SystemFormatMemorySize(MemoryArena memoryArena, uint64_t bytes);
 
 //---------------------------------------------------------------------------------------------------------------
 // IO functions

@@ -4,6 +4,7 @@
 #include "ShaderTests.cpp"
 #include "SwapChainTests.cpp"
 #include "ResourceTests.cpp"
+#include "ResourceIOTests.cpp"
 #include "ResourceBarrierTests.cpp"
 #include "RenderingTests.cpp"
 #include "utest.h"

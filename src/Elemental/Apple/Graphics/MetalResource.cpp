@@ -1,17 +1,23 @@
 #include "MetalResource.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalCommandList.h"
+#include "Graphics/UploadBufferPool.h"
 #include "Graphics/ResourceDeleteQueue.h"
 #include "Graphics/Resource.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
+// TODO: Move that to config header like DirectX12
 #define METAL_MAX_GRAPHICSHEAP 32
+#define METAL_READBACK_MEMORY_ARENA 32 * 1024 * 1024
 
 SystemDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull> metalGraphicsHeapPool;
 SystemDataPool<MetalResourceData, MetalResourceDataFull> metalResourcePool;
 Span<ElemGraphicsResourceDescriptorInfo> metalResourceDescriptorInfos;
+MemoryArena metalReadBackMemoryArena;
+
+thread_local UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>> threadDirectX12UploadBufferPools[METAL_MAX_DEVICES];
 
 void InitMetalResourceMemory()
 {
@@ -22,6 +28,9 @@ void InitMetalResourceMemory()
 
         // TODO: This should be part of the graphics device data
         metalResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES, AllocationState_Reserved);
+
+        // TODO: Allow to increase the size as a parameter
+        metalReadBackMemoryArena = SystemAllocateMemoryArena(METAL_READBACK_MEMORY_ARENA);
     }
 }
 
@@ -65,7 +74,7 @@ MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
             return MTL::PixelFormatDepth32Float;
 
         case ElemGraphicsFormat_BC7_SRGB:
-            return MTL:PixelFormatBC7_RGBAUnorm_sRGB;
+            return MTL::PixelFormatBC7_RGBAUnorm_sRGB;
 
         default:
             return MTL::PixelFormatR8Unorm;
@@ -91,7 +100,7 @@ ElemGraphicsFormat ConvertFromMetalResourceFormat(MTL::PixelFormat format)
         case MTL::PixelFormatDepth32Float:
             return ElemGraphicsFormat_D32_FLOAT;
 
-        case MTL:PixelFormatBC7_RGBAUnorm_sRGB:
+        case MTL::PixelFormatBC7_RGBAUnorm_sRGB:
             return ElemGraphicsFormat_BC7_SRGB;
 
         default:
@@ -117,7 +126,7 @@ MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
     return result;
 }
 
-ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
 {
     InitMetalResourceMemory();
 
@@ -142,6 +151,7 @@ ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice 
 
     auto handle = SystemAddDataPoolItem(metalResourcePool, {
         .DeviceObject = resource,
+        .GraphicsHeap = graphicsHeap,
         .Type = type,
         .Width = width,
         .Height = height,
@@ -183,6 +193,13 @@ NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGra
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options)
 {
     InitMetalResourceMemory();
+
+    auto heapType = ElemGraphicsHeapType_Gpu;
+
+    if (options)
+    {
+        heapType = options->HeapType;
+    }
     
     SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
 
@@ -214,6 +231,7 @@ ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint
         .DeviceObject = graphicsHeap,
         .SizeInBytes = sizeInBytes,
         .GraphicsDevice = graphicsDevice,
+        .HeapType = heapType
     }); 
 
     SystemAddDataPoolItemFull(metalGraphicsHeapPool, handle, {
@@ -377,7 +395,7 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
         resource->setLabel(NS::String::string(resourceInfo->DebugName, NS::UTF8StringEncoding));
     }
 
-    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, resourceInfo->Usage, resource, false);
+    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, graphicsHeap, resourceInfo->Usage, resource, false);
 }
 
 void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
@@ -420,36 +438,65 @@ ElemGraphicsResourceInfo MetalGetGraphicsResourceInfo(ElemGraphicsResource resou
         .Usage = resourceData->Usage
     };
 }
-/*
-ElemDataSpan MetalGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+
+void MetalUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
     auto resourceData = GetMetalResourceData(resource);
     SystemAssert(resourceData);
 
+    auto heapData = GetMetalGraphicsHeapData(resourceData->GraphicsHeap);
+    SystemAssert(heapData);
+
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GetGraphicsResourceDataSpan only works with graphics buffers.");
-        return {};
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers.");
+        return;
     }
 
-    auto dataPointer = ((MTL::Buffer*)resourceData->DeviceObject.get())->contents();
-
-    return
+    if (heapData->HeapType != ElemGraphicsHeapType_GpuUpload)
     {
-        .Items = (uint8_t*)dataPointer,
-        .Length = resourceData->Width
-    }; 
-}*/
-
-void MetalUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
-{
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers allocated in a GpuUpload heap.");
+        return;
+    }
+    
+    auto dataPointer = ((MTL::Buffer*)resourceData->DeviceObject.get())->contents();
+    
+    auto destinationPointer = (uint8_t*)dataPointer + offset;
+    memcpy(destinationPointer, data.Items, data.Length);
 }
 
 ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
 {
-    /*auto offset = 0u;
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto resourceData = GetMetalResourceData(resource);
+    SystemAssert(resourceData);
+
+    auto heapData = GetMetalGraphicsHeapData(resourceData->GraphicsHeap);
+    SystemAssert(heapData);
+
+    if (resourceData->Type != ElemGraphicsResourceType_Buffer)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers.");
+        return {};
+    }
+
+    if (heapData->HeapType != ElemGraphicsHeapType_Readback && heapData->HeapType != ElemGraphicsHeapType_GpuUpload)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers allocated in a Readback heap or GpuUpload heap. (%d)", heapData->HeapType);
+        return {};
+    }
+
+    if (heapData->HeapType != ElemGraphicsHeapType_Readback)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData works faster with graphics buffers allocated in a Readback heap.");
+    }
+
+    auto dataPointer = ((MTL::Buffer*)resourceData->DeviceObject.get())->contents();
+
+    auto offset = 0u;
     auto sizeInBytes = resourceData->Width;
 
     if (options)
@@ -462,16 +509,145 @@ ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource resource, cons
         }
     }
 
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto downloadedData = SystemPushArray<uint8_t>(directX12ReadBackMemoryArena, sizeInBytes);
-    memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
+    auto downloadedData = SystemPushArray<uint8_t>(metalReadBackMemoryArena, sizeInBytes);
+    memcpy(downloadedData.Pointer, (uint8_t*)dataPointer + offset, sizeInBytes);
 
-	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };*/
-    return {};
+	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
+}
+
+NS::SharedPtr<MTL::Buffer> CreateMetalUploadBuffer(MTL::Device* graphicsDevice, uint64_t sizeInBytes)
+{ 
+    auto resource = NS::TransferPtr(graphicsDevice->newBuffer(sizeInBytes, MTL::ResourceHazardTrackingModeUntracked));
+
+    if (MetalDebugLayerEnabled)
+    {
+        resource->setLabel(NS::String::string("ElementalUploadBuffer", NS::UTF8StringEncoding));
+    }
+
+    return resource;
+}
+
+UploadBufferMemory<NS::SharedPtr<MTL::Buffer>> GetMetalUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
+{
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(graphicsDevice);
+    auto uploadBufferPool = &threadDirectX12UploadBufferPools[graphicsIdUnpacked.Index];
+
+    // TODO: Review this
+    if (!uploadBufferPool->IsInited)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init pool");
+
+        auto poolIndex = SystemAtomicAdd(graphicsDeviceData->CurrentUploadBufferPoolIndex, 1);
+        graphicsDeviceData->UploadBufferPools[poolIndex] = uploadBufferPool;
+        uploadBufferPool->IsInited = true;
+    }
+
+    auto uploadBuffer = GetUploadBufferPoolItem(uploadBufferPool, graphicsDeviceData->UploadBufferGeneration, alignment, sizeInBytes);
+
+    if (uploadBuffer.PoolItem->IsResetNeeded)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to create upload buffer with size: %d...", uploadBuffer.PoolItem->SizeInBytes);
+
+        if (uploadBuffer.PoolItem->Fence.FenceValue > 0)
+        {
+            MetalWaitForFenceOnCpu(uploadBuffer.PoolItem->Fence);
+        }
+        
+        // TODO: We need another flag to know if we need to delete
+        if (uploadBuffer.PoolItem->Buffer.get() != nullptr)
+        {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to delete buffer");
+            uploadBuffer.PoolItem->Buffer.reset();
+        }
+
+        uploadBuffer.PoolItem->Buffer = CreateMetalUploadBuffer(graphicsDeviceData->Device.get(), uploadBuffer.PoolItem->SizeInBytes);
+
+        uploadBuffer.PoolItem->CpuPointer = (uint8_t*)uploadBuffer.PoolItem->Buffer->contents();
+        uploadBuffer.PoolItem->IsResetNeeded = false;
+    }
+
+    return uploadBuffer;
 }
 
 void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
 {
+    // TODO: Implement file source
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    SystemAssert(parameters);
+    SystemAssert(parameters->Resource != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto resourceData = GetMetalResourceData(parameters->Resource);
+    SystemAssert(resourceData);
+
+    ReadOnlySpan<uint8_t> sourceData;
+
+    // TODO: File Source
+    if (parameters->SourceType == ElemCopyDataSourceType_Memory)
+    {
+        sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
+    }
+    
+    // TODO: Unit test first !!!!!
+        
+    auto uploadBufferAlignment = 4u;
+    auto uploadBufferSizeInBytes = sourceData.Length;
+
+    if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        if (resourceData->Format == ElemGraphicsFormat_BC7_SRGB)
+        {
+            uploadBufferAlignment = 16u;
+            uploadBufferSizeInBytes = SystemAlignToPowerOf2(uploadBufferSizeInBytes, 16u);
+        }
+    }
+
+    auto uploadBuffer = GetMetalUploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
+    SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
+
+    if (commandListData->CommandEncoderType != MetalCommandEncoderType_Copy)
+    {
+        ResetMetalCommandEncoder(commandList);
+
+        commandListData->CommandEncoder = NS::RetainPtr(commandListData->DeviceObject->blitCommandEncoder()); 
+        commandListData->CommandEncoderType = MetalCommandEncoderType_Copy;
+    }
+
+    auto copyCommandEncoder = (MTL::BlitCommandEncoder*)commandListData->CommandEncoder.get();
+    memcpy(uploadBuffer.PoolItem->CpuPointer + uploadBuffer.Offset, sourceData.Pointer, sourceData.Length);
+
+    if (resourceData->Type == ElemGraphicsResourceType_Buffer)
+    {
+        copyCommandEncoder->copyFromBuffer(uploadBuffer.PoolItem->Buffer.get(), uploadBuffer.Offset, (MTL::Buffer*)resourceData->DeviceObject.get(), parameters->BufferOffset, sourceData.Length);
+    }
+    else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        auto mipLevel = parameters->TextureMipLevel;
+
+        auto mipWidth  = SystemMax(1u, resourceData->Width  >> mipLevel);
+        auto mipHeight = SystemMax(1u, resourceData->Height >> mipLevel);
+
+        auto sourceBytesPerRow = mipWidth * 4;
+
+        if (resourceData->Format == ElemGraphicsFormat_BC7_SRGB)
+        {
+            sourceBytesPerRow = ((mipWidth + 3) / 4) * 16;
+        }
+
+        copyCommandEncoder->copyFromBuffer(uploadBuffer.PoolItem->Buffer.get(), uploadBuffer.Offset, sourceBytesPerRow, 0, MTL::Size(mipWidth, mipHeight, 1), 
+                                           (MTL::Texture*)resourceData->DeviceObject.get(), 0, parameters->TextureMipLevel, MTL::Origin(0, 0, 0));
+    }
 }
 
 ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
@@ -511,13 +687,16 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
         handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
     }
 
-    if ((handle % 1000) == 0)
+    if (handle != -1)
     {
-        SystemPlatformCommitMemory(&metalResourceDescriptorInfos[descriptorHandle], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
-    }
+        if ((handle % 1000) == 0)
+        {
+            SystemCommitMemory(MetalGraphicsMemoryArena, &metalResourceDescriptorInfos[handle], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+        }
 
-    metalResourceDescriptorInfos[handle].Resource = resource;
-    metalResourceDescriptorInfos[handle].Usage = usage;
+        metalResourceDescriptorInfos[handle].Resource = resource;
+        metalResourceDescriptorInfos[handle].Usage = usage;
+    }
 
     return handle;
 }

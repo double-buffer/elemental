@@ -4,7 +4,6 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-#define METAL_MAXDEVICES 10u
 
 struct MetalArgumentBufferDescriptor
 {
@@ -44,6 +43,7 @@ void* MetalDebugReportCallback(void* arg)
     while ((bytesRead = read(fd, buffer, sizeof(buffer))) > 0) 
     {
         buffer[bytesRead - 1] = '\0';
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, buffer);
 
         auto splittedStrings = SystemSplitString(stackMemoryArena, ReadOnlySpan<char>(buffer), ']');
         if (splittedStrings.Length == 2)
@@ -72,6 +72,7 @@ void InitMetal()
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     // TODO: There is nothing in code to enable that 😢
+    return;
 
     if (MetalDebugLayerEnabled)
     {
@@ -115,7 +116,7 @@ void InitMetalGraphicsDeviceMemory()
     {
         // TODO: To Review
         MetalGraphicsMemoryArena = SystemAllocateMemoryArena(128 * 1024 * 1024);
-        metalGraphicsDevicePool = SystemCreateDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull>(MetalGraphicsMemoryArena, METAL_MAXDEVICES);
+        metalGraphicsDevicePool = SystemCreateDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull>(MetalGraphicsMemoryArena, METAL_MAX_DEVICES);
 
         InitMetal();
     }
@@ -285,7 +286,7 @@ ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices()
     InitMetalGraphicsDeviceMemory();
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, METAL_MAXDEVICES);
+    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, METAL_MAX_DEVICES);
     auto currentDeviceInfoIndex = 0u;
 
     auto device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
@@ -328,11 +329,15 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     
     residencySet->addAllocation(resourceArgumentBuffer.Storage->ArgumentBuffer.get());
     residencySet->commit();
+    
+    // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
+    auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>>*>(MetalGraphicsMemoryArena, MAX_UPLOAD_BUFFERS);
 
     auto handle = SystemAddDataPoolItem(metalGraphicsDevicePool, {
         .Device = device,
         .ResourceArgumentBuffer = resourceArgumentBuffer,
-        .MemoryArena = memoryArena
+        .MemoryArena = memoryArena,
+        .UploadBufferPools = uploadBuffers
     }); 
 
     SystemAddDataPoolItemFull(metalGraphicsDevicePool, handle, {
@@ -348,6 +353,27 @@ void MetalFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
+    
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            for (uint32_t j = 0; j < MAX_UPLOAD_BUFFERS; j++)
+            {
+                auto uploadBuffer = &bufferPool->UploadBuffers[j];
+
+                if (uploadBuffer && uploadBuffer->Buffer)
+                {
+                    uploadBuffer->Buffer.reset();
+                    *uploadBuffer = {};
+                }
+            }
+
+            *bufferPool = {};
+        }
+    }
     
     FreeMetalArgumentBuffer(graphicsDeviceData->ResourceArgumentBuffer);
     

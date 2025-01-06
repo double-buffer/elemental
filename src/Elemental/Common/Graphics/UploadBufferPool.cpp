@@ -49,7 +49,7 @@ UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadB
 
     // TODO: Check alignment
     auto offset = uploadBufferPool->CurrentUploadBuffer->CurrentOffset;
-    uint64_t alignedOffset = (offset + (alignment - 1)) & ~(alignment - 1);
+    uint64_t alignedOffset = (offset + (alignment - 1)) & ~(alignment - 1); // TODO: Use System Align power of 2
 
     uint64_t newOffset = alignedOffset + sizeInBytes;
 

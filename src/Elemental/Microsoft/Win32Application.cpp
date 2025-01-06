@@ -92,25 +92,6 @@ ElemAPI ElemSystemInfo ElemGetSystemInfo()
     };
 }
 
-// TODO: Put that in system functions
-ReadOnlySpan<char> FormatMemorySize(MemoryArena memoryArena, uint64_t bytes) 
-{
-    const char* suffixes[] = { "B", "KB", "MB", "GB", "TB" }; // Extend if more are needed
-    double size = bytes;
-    size_t i = 0;
-
-    while (size >= 1024 && i < sizeof(suffixes)/sizeof(suffixes[0]) - 1) 
-    {
-        size /= 1024.0;
-        i++;
-    }
-
-    auto result = SystemPushArray<char>(memoryArena, 50);
-    snprintf(result.Pointer, result.Length, "%.2f %s", size, suffixes[i]);
-
-    return result;
-}
-
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -138,14 +119,14 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
         }
     }
 
+    auto allocationInfos = SystemGetAllocationInfos();
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Allocated lib memory before releasing: %s/%s", 
+                            SystemFormatMemorySize(stackMemoryArena, allocationInfos.CommittedBytes).Pointer, 
+                            SystemFormatMemorySize(stackMemoryArena, allocationInfos.ReservedBytes).Pointer);
+
     if (parameters->FreeHandler)
     {
-        auto allocationInfos = SystemGetAllocationInfos();
-
-        SystemLogDebugMessage(ElemLogMessageCategory_Application, "Allocated lib memory before releasing: %s/%s", 
-                                FormatMemorySize(stackMemoryArena, allocationInfos.CommittedBytes).Pointer, 
-                                FormatMemorySize(stackMemoryArena, allocationInfos.ReservedBytes).Pointer);
-
         parameters->FreeHandler(parameters->Payload);
     }
 

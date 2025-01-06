@@ -908,6 +908,7 @@ typedef struct
 
 typedef union
 {
+    // TODO: Fix compilation warning
     struct
     {
         float X, Y, Z, W;

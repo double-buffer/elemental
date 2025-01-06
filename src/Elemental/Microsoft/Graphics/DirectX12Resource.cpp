@@ -678,7 +678,7 @@ ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphi
     return resource;
 }
 
-UploadBufferMemory<ComPtr<ID3D12Resource>> GetUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
+UploadBufferMemory<ComPtr<ID3D12Resource>> GetDirectX12UploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
 {
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
@@ -774,7 +774,7 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
                                                           &uploadBufferSizeInBytes);
     }
 
-    auto uploadBuffer = GetUploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
+    auto uploadBuffer = GetDirectX12UploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
     SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
 
     if (resourceData->Type == ElemGraphicsResourceType_Buffer)
@@ -923,7 +923,7 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
     if ((index % 1000) == 0)
     {
-        SystemPlatformCommitMemory(&directX12ResourceDescriptorInfos[index], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+        SystemCommitMemory(DirectX12MemoryArena, &directX12ResourceDescriptorInfos[index], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
     }
 
     directX12ResourceDescriptorInfos[index].Resource = resource;
