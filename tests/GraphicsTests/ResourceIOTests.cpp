@@ -419,3 +419,78 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopiesAndCommandList
     
     free(data);
 }
+
+UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+
+    ElemGraphicsHeapOptions options =
+    {
+        .HeapType = ElemGraphicsHeapType_GpuUpload
+    };
+
+    const auto width = 1024u;
+    const auto height = 1024u;
+    const auto mipLevelCount = 11u;
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(50), &options);
+    // TODO: Change that to R8G8B8A8
+    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevelCount, ElemGraphicsFormat_B8G8R8A8, ElemGraphicsResourceUsage_Read, nullptr);
+    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    uint8_t* mipData[mipLevelCount];
+
+    for (uint32_t i = 0; i < mipLevelCount; i++)
+    {
+        auto currentWidth = max(1u, width >> i);
+        auto currentHeight = max(1u, height >> i);
+
+        mipData[i] = (uint8_t*)malloc(currentWidth * currentHeight * 4);
+
+        for (uint32_t j = 0; j < currentWidth * currentHeight; j++)
+        {
+            // TODO: Colors
+            ((uint32_t*)mipData[i])[j] = 0x000000;
+        }
+    }
+
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+
+    // Act
+    for (uint32_t i = 0; i < mipLevelCount; i++)
+    {
+        auto currentWidth = max(1u, width >> i);
+        auto currentHeight = max(1u, height >> i);
+
+        ElemCopyDataToGraphicsResourceParameters parameters =
+        {
+            .Resource = resource,
+            .TextureMipLevel = i,
+            .SourceType = ElemCopyDataSourceType_Memory,
+            .SourceMemoryData = { .Items = mipData[i], .Length = currentWidth * currentHeight * 4 } 
+        };
+
+        ElemCopyDataToGraphicsResource(commandList, &parameters);
+    }
+
+    // Assert
+    ElemCommitCommandList(commandList);
+
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+    ElemWaitForFenceOnCpu(fence);
+
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsResource(resource, nullptr);
+    ElemFreeGraphicsHeap(graphicsHeap);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    for (uint32_t i = 0; i < mipLevelCount; i++)
+    {
+        free(mipData[i]);
+    }
+
+    ASSERT_LOG_NOERROR();
+
+    // TODO: Assert the data for each mips
+}
