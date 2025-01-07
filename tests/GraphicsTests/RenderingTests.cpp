@@ -15,7 +15,8 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
+    auto textureSize = 16u;
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, textureSize, textureSize, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
 
     // Act
     ElemRenderPassRenderTarget renderPassRenderTarget = 
@@ -42,9 +43,9 @@ UTEST(Rendering, RenderPassClearRenderTarget)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, textureSize * textureSize * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", textureSize / 8, textureSize / 8, 1, &resourceIdList);
     auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -63,7 +64,8 @@ UTEST(Rendering, RenderPassClearDepthBuffer)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto depthBuffer = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_D32_FLOAT, ElemGraphicsResourceUsage_DepthStencil);
+    auto textureSize = 16u;
+    auto depthBuffer = TestCreateGpuTexture(graphicsDevice, textureSize, textureSize, ElemGraphicsFormat_D32_FLOAT, ElemGraphicsResourceUsage_DepthStencil);
 
     // Act
     ElemBeginRenderPassParameters parameters =
@@ -84,9 +86,9 @@ UTEST(Rendering, RenderPassClearDepthBuffer)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * sizeof(float), ElemGraphicsHeapType_Readback);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, textureSize * textureSize * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)depthBuffer.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTextureFloat", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTextureFloat", textureSize / 8, textureSize / 8, 1, &resourceIdList);
     auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -111,7 +113,8 @@ UTEST(Rendering, DispatchMesh)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
+    auto textureSize = 16u;
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, textureSize, textureSize, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
 
     ElemGraphicsPipelineStateRenderTarget psoRenderTarget = { .Format = renderTarget.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
@@ -148,9 +151,9 @@ UTEST(Rendering, DispatchMesh)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, textureSize * textureSize * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", textureSize / 8, textureSize / 8, 1, &resourceIdList);
     auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -170,7 +173,8 @@ UTEST(Rendering, BeginRenderPass_SetViewport)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
+    auto textureSize = 16u;
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, textureSize, textureSize, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
 
     ElemGraphicsPipelineStateRenderTarget psoRenderTarget = { .Format = renderTarget.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
@@ -220,9 +224,9 @@ UTEST(Rendering, BeginRenderPass_SetViewport)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, textureSize * textureSize * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", textureSize / 8, textureSize / 8, 1, &resourceIdList);
     auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -232,7 +236,7 @@ UTEST(Rendering, BeginRenderPass_SetViewport)
     ElemFreeGraphicsDevice(graphicsDevice);
 
     ASSERT_LOG_NOERROR();
-    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, 16, 
+    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, textureSize, 
                                   2, 2, 4, 4, 
                                   1.0f, 1.0f, 0.0f, 1.0f, 
                                   0.0f, 0.0f, 1.0f, 1.0f);
@@ -245,7 +249,8 @@ UTEST(Rendering, BeginRenderPass_SetScissorRectangle)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
+    auto textureSize = 16u;
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, textureSize, textureSize, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
 
     ElemGraphicsPipelineStateRenderTarget psoRenderTarget = { .Format = renderTarget.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
@@ -295,9 +300,9 @@ UTEST(Rendering, BeginRenderPass_SetScissorRectangle)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, textureSize * textureSize * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", textureSize / 8, textureSize / 8, 1, &resourceIdList);
     auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -307,7 +312,7 @@ UTEST(Rendering, BeginRenderPass_SetScissorRectangle)
     ElemFreeGraphicsDevice(graphicsDevice);
 
     ASSERT_LOG_NOERROR();
-    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, 16, 
+    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, textureSize, 
                                   2, 2, 4, 4, 
                                   1.0f, 1.0f, 0.0f, 1.0f, 
                                   0.0f, 0.0f, 1.0f, 1.0f);
@@ -320,7 +325,8 @@ UTEST(Rendering, SetViewport)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
+    auto textureSize = 16u;
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, textureSize, textureSize, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
 
     ElemGraphicsPipelineStateRenderTarget psoRenderTarget = { .Format = renderTarget.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
@@ -366,9 +372,9 @@ UTEST(Rendering, SetViewport)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, textureSize * textureSize * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", textureSize / 8, textureSize / 8, 1, &resourceIdList);
     auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -378,7 +384,7 @@ UTEST(Rendering, SetViewport)
     ElemFreeGraphicsDevice(graphicsDevice);
 
     ASSERT_LOG_NOERROR();
-    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, 16, 
+    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, textureSize, 
                                   2, 2, 4, 4, 
                                   1.0f, 1.0f, 0.0f, 1.0f, 
                                   0.0f, 0.0f, 1.0f, 1.0f);
@@ -391,7 +397,8 @@ UTEST(Rendering, SetScissorRectangle)
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
 
-    auto renderTarget = TestCreateGpuTexture(graphicsDevice, 16, 16, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
+    auto textureSize = 16u;
+    auto renderTarget = TestCreateGpuTexture(graphicsDevice, textureSize, textureSize, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget);
 
     ElemGraphicsPipelineStateRenderTarget psoRenderTarget = { .Format = renderTarget.Format };
     ElemGraphicsPipelineStateParameters psoParameters =
@@ -437,9 +444,9 @@ UTEST(Rendering, SetScissorRectangle)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, 16 * 16 * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
+    auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, textureSize * textureSize * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
     uint32_t resourceIdList[] = { (uint32_t)renderTarget.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor };
-    TestDispatchComputeForReadbackBuffer(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", 1, 1, 1, &resourceIdList);
+    TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", textureSize / 8, textureSize / 8, 1, &resourceIdList);
     auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     TestFreeGpuBuffer(readbackBuffer);
@@ -449,7 +456,7 @@ UTEST(Rendering, SetScissorRectangle)
     ElemFreeGraphicsDevice(graphicsDevice);
 
     ASSERT_LOG_NOERROR();
-    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, 16, 
+    ASSERT_COLOR_BUFFER_RECTANGLE(bufferData, textureSize, 
                                   2, 2, 4, 4, 
                                   1.0f, 1.0f, 0.0f, 1.0f, 
                                   0.0f, 0.0f, 1.0f, 1.0f);

@@ -34,7 +34,6 @@ typedef struct
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
-    ElemGraphicsHeap GraphicsHeap;
     uint32_t CurrentHeapOffset;
     ElemFence LastExecutionFence;
     ElemSwapChain SwapChain;
@@ -67,21 +66,6 @@ void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, u
     applicationPayload->DepthBuffer = ElemCreateGraphicsResource(applicationPayload->DepthBufferHeap, 0, &resourceInfo);
 }
 
-// TODO: To remove when IOQueues
-void CreateAndUploadDataTemp(ElemGraphicsResource* buffer, ElemGraphicsResourceDescriptor* readDescriptor, ApplicationPayload* applicationPayload, void* dataPointer, uint32_t sizeInBytes)
-{
-    // TODO: Alignment should be used with the offset before adding the size of the resource!
-    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(applicationPayload->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Read, NULL);
-
-    applicationPayload->CurrentHeapOffset = SampleAlignValue(applicationPayload->CurrentHeapOffset, bufferDescription.Alignment);
-    *buffer = ElemCreateGraphicsResource(applicationPayload->GraphicsHeap, applicationPayload->CurrentHeapOffset, &bufferDescription);
-    applicationPayload->CurrentHeapOffset += bufferDescription.SizeInBytes;
-
-    *readDescriptor = ElemCreateGraphicsResourceDescriptor(*buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
-
-    ElemUploadGraphicsBufferData(*buffer, 0, (ElemDataSpan) { .Items = dataPointer, .Length = sizeInBytes });
-}
-
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
@@ -105,10 +89,6 @@ void InitSample(void* payload)
 
     // TODO: For now we create a separate heap to avoid memory management
     applicationPayload->DepthBufferHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
-
-    // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
-    // TODO: Having GPU Upload is still annoying 😞
-    //applicationPayload->GraphicsHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
     applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(256));
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
@@ -167,7 +147,8 @@ void FreeSample(void* payload)
     ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
     ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
 
-    ElemFreeGraphicsHeap(applicationPayload->GraphicsHeap);
+    SampleFreeGpuMemory(&applicationPayload->GpuMemory);
+
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 }
 

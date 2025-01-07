@@ -2,9 +2,16 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+ElemVector3 TestMipColors[] = 
+{
+    { 1.0f, 0.0f, 0.0f }, 
+    { 1.0f, 1.0f, 0.0f }, 
+    { 0.0f, 1.0f, 1.0f }, 
+    { 0.0f, 1.0f, 0.0f }, 
+    { 0.0f, 0.0f, 1.0f }, 
+};
+
 // TODO: File source
-// TODO: Textures: Check each mip map validity with different colors
-// TODO: Check alignement after mip 5
 // TODO: Big source (so that the upload heap can grow)
 // TODO: Test buffer offset and length if too much
 
@@ -425,18 +432,11 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
     // Arrange
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
 
-    ElemGraphicsHeapOptions options =
-    {
-        .HeapType = ElemGraphicsHeapType_GpuUpload
-    };
-
     const auto width = 1024u;
     const auto height = 1024u;
     const auto mipLevelCount = 11u;
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, TestMegaBytesToBytes(50), &options);
-    // TODO: Change that to R8G8B8A8
-    auto resourceInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevelCount, ElemGraphicsFormat_B8G8R8A8, ElemGraphicsResourceUsage_Read, nullptr);
-    auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
+
+    auto texture = TestCreateGpuTexture(graphicsDevice, width, height, mipLevelCount, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_Read);
 
     uint8_t* mipData[mipLevelCount];
 
@@ -445,12 +445,15 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
         auto currentWidth = max(1u, width >> i);
         auto currentHeight = max(1u, height >> i);
 
-        mipData[i] = (uint8_t*)malloc(currentWidth * currentHeight * 4);
+        mipData[i] = (uint8_t*)malloc(currentWidth * currentHeight * 16);
+        auto testColor = TestMipColors[i % ARRAYSIZE(TestMipColors)];
 
-        for (uint32_t j = 0; j < currentWidth * currentHeight; j++)
+        for (uint32_t j = 0; j < currentWidth * currentHeight * 4; j += 4)
         {
-            // TODO: Colors
-            ((uint32_t*)mipData[i])[j] = 0x000000;
+            ((float*)mipData[i])[j] = testColor.X;
+            ((float*)mipData[i])[j + 1] = testColor.Y;
+            ((float*)mipData[i])[j + 2] = testColor.Z;
+            ((float*)mipData[i])[j + 3] = 1.0f;
         }
     }
 
@@ -465,7 +468,7 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
 
         ElemCopyDataToGraphicsResourceParameters parameters =
         {
-            .Resource = resource,
+            .Resource = texture.Texture,
             .TextureMipLevel = i,
             .SourceType = ElemCopyDataSourceType_Memory,
             .SourceMemoryData = { .Items = mipData[i], .Length = currentWidth * currentHeight * 4 } 
@@ -480,17 +483,41 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
     auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
     ElemWaitForFenceOnCpu(fence);
 
-    ElemFreeCommandQueue(commandQueue);
-    ElemFreeGraphicsResource(resource, nullptr);
-    ElemFreeGraphicsHeap(graphicsHeap);
-    ElemFreeGraphicsDevice(graphicsDevice);
+    ElemDataSpan outputMipData[mipLevelCount];
 
     for (uint32_t i = 0; i < mipLevelCount; i++)
     {
-        free(mipData[i]);
+        auto currentWidth = max(1u, width >> i);
+        auto currentHeight = max(1u, height >> i);
+
+        auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, currentWidth * currentHeight * sizeof(float), ElemGraphicsHeapType_Readback);
+        uint32_t resourceIdList[] = { (uint32_t)texture.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor, i };
+        TestDispatchComputeForShader(graphicsDevice, commandQueue, "Assert.shader", "CopyTexture", (currentWidth + 7) / 8, (currentHeight + 7) / 8, 1, &resourceIdList);
+
+        auto readbackBufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
+        outputMipData[i].Items = (uint8_t*)malloc(readbackBufferData.Length);
+        outputMipData[i].Length = readbackBufferData.Length;
+        memcpy(outputMipData[i].Items, readbackBufferData.Items, readbackBufferData.Length);
+
+        TestFreeGpuBuffer(readbackBuffer);
+        ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
     }
 
+    TestFreeGpuTexture(texture);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
     ASSERT_LOG_NOERROR();
 
-    // TODO: Assert the data for each mips
+    for (uint32_t i = 0; i < mipLevelCount; i++)
+    {
+        auto outputMipDataItem = outputMipData[i];
+
+        for (uint32_t j = 0; j < outputMipDataItem.Length; j++)
+        {
+            ASSERT_EQ_MSG(outputMipDataItem.Items[j], mipData[i][j], "Test");
+        }
+
+        free(mipData[i]);
+        free(outputMipData[i].Items);
+    }
 }

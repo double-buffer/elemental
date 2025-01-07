@@ -352,7 +352,12 @@ void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer)
 
 TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage)
 {
-    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, 1, format, usage, nullptr);
+    return TestCreateGpuTexture(graphicsDevice, width, height, 1, format, usage);
+}
+
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage)
+{
+    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevels, format, usage, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, textureInfo.SizeInBytes, nullptr);
     auto texture = ElemCreateGraphicsResource(graphicsHeap, 0, &textureInfo);
     auto textureReadDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
@@ -397,7 +402,7 @@ void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipeline
 }
 
 template<typename T>
-void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
+void TestDispatchComputeForShader(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
 {
     auto pipelineState = TestOpenComputeShader(graphicsDevice, shaderName, function);
 
