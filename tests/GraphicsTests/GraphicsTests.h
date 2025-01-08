@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include <stdlib.h>
 #include <initializer_list> 
 
 #define TESTLOG_LENGTH 4096
