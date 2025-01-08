@@ -27,6 +27,13 @@ jobs:
       with:
         arch: ${{ inputs.architecture }}
 
+    # TODO: libwayland-dev wayland-protocols libdecor-devel
+    - name: Setup Dependencies (Linux)
+      if: inputs.platform == 'linux'
+      run: |
+        sudo apt-get update 
+        sudo apt-get install libwayland-dev wayland-protocols libudev-dev libdecor-0-dev
+
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
