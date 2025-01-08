@@ -30,8 +30,9 @@ jobs:
     # TODO: libwayland-dev wayland-protocols libdecor-devel
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
-      run: |
-        sudo apt-get update 
+      uses: jhchundev/install-llvm-action@v1.0.0
+      with:
+        version: "18.1.8"
 
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
