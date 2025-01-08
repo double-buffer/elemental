@@ -70,6 +70,8 @@ if(LINUX)
         ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
         ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h 
         ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
+        ${GENERATED_DIR}/xdg-shell-client-protocol.h
+        ${GENERATED_DIR}/xdg-shell-protocol.c
     )
 
     target_include_directories(Wayland INTERFACE ${GENERATED_DIR})
