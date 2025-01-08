@@ -33,6 +33,19 @@ if(LINUX)
     set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
     file(MAKE_DIRECTORY ${GENERATED_DIR})
 
+    add_custom_command(
+        OUTPUT
+            ${GENERATED_DIR}/xdg-shell-client-protocol.h
+            ${GENERATED_DIR}/xdg-shell-protocol.c
+        COMMAND wayland-scanner client-header
+                ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml
+                ${GENERATED_DIR}/xdg-shell-client-protocol.h
+        COMMAND wayland-scanner private-code
+                ${STABLE_PROTOCOLS_DIR}/xdg-shell/xdg-shell.xml
+                ${GENERATED_DIR}/xdg-shell-protocol.c
+        COMMENT "Generating xdg-shell protocol files"
+    )
+
     # Generate relative-pointer protocol files
     add_custom_command(
         OUTPUT ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
