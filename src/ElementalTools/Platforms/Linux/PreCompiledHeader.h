@@ -24,6 +24,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <stdint.h>
+#include <cmath> 
 
 #include <locale>
 #include <codecvt>
