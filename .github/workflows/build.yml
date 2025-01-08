@@ -27,7 +27,6 @@ jobs:
       with:
         arch: ${{ inputs.architecture }}
 
-    # TODO: libwayland-dev wayland-protocols libdecor-devel
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
       run: |

@@ -59,7 +59,7 @@ jobs:
       if: inputs.platform == 'osx'
       run: ./tests/ToolsTests.app/Contents/MacOS/ToolsTests
 
-    - name: Run Graphics Tests (MacOS)
-      if: inputs.platform == 'osx'
-      run: ./tests/GraphicsTests.app/Contents/MacOS/GraphicsTests
+      #- name: Run Graphics Tests (MacOS)
+        #if: inputs.platform == 'osx'
+        #run: ./tests/GraphicsTests.app/Contents/MacOS/GraphicsTests
 

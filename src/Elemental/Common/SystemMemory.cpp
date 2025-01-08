@@ -470,7 +470,6 @@ void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes)
 
     if (memoryArena.Storage == stackMemoryArenaStorage)
     {
-        pointer = storage->CurrentPointer;
         storage->CurrentPointer -= sizeInBytes;
     }
     else
