@@ -18,10 +18,14 @@
 #define STBI_WINDOWS_UTF8
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc99-extensions"
+#pragma clang diagnostic ignored "-Wmacro-redefined"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize2.h"
+#pragma clang diagnostic pop
 
 #include "bc7enc.cpp"
 

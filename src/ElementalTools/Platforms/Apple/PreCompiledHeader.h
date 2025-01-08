@@ -8,6 +8,7 @@
 #define ElemToolsAPI extern "C" __attribute__((visibility("default"))) 
 #define AssertIfFailed(expression) SystemAssert(SUCCEEDED((expression)))
 #define AssertIfFailedReturnNullHandle(expression) SystemAssertReturnNullHandle(SUCCEEDED((expression)))
+
 #define ComPtr CComPtr
 #undef _WIN32
 #include <sys/stat.h>
@@ -39,6 +40,7 @@
 #include "meshoptimizer.h"
 #include "fast_obj.h"
 #include "cgltf.h"
+
 #include "stb_image.h"
 #include "stb_image_resize2.h"
 

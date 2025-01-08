@@ -17,12 +17,6 @@ jobs:
     with:
       platform: ${{ matrix.platform }}
       architecture: ${{ matrix.architecture }}
-
-  # TODO: Do a build bindings sub workflow
-  #build_dotnet:
-    #  uses: ./.github/workflows/build-dotnet.yml
-    #name: 'build-dotnet'
-    #secrets: inherit
     
   run_tests:
     strategy:

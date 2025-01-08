@@ -442,8 +442,8 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
 
     for (uint32_t i = 0; i < mipLevelCount; i++)
     {
-        auto currentWidth = max(1u, width >> i);
-        auto currentHeight = max(1u, height >> i);
+        auto currentWidth = Max(1u, width >> i);
+        auto currentHeight = Max(1u, height >> i);
 
         mipData[i] = (uint8_t*)malloc(currentWidth * currentHeight * 16);
         auto testColor = TestMipColors[i % ARRAYSIZE(TestMipColors)];
@@ -463,8 +463,8 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
     // Act
     for (uint32_t i = 0; i < mipLevelCount; i++)
     {
-        auto currentWidth = max(1u, width >> i);
-        auto currentHeight = max(1u, height >> i);
+        auto currentWidth = Max(1u, width >> i);
+        auto currentHeight = Max(1u, height >> i);
 
         ElemCopyDataToGraphicsResourceParameters parameters =
         {
@@ -487,8 +487,8 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
 
     for (uint32_t i = 0; i < mipLevelCount; i++)
     {
-        auto currentWidth = max(1u, width >> i);
-        auto currentHeight = max(1u, height >> i);
+        auto currentWidth = Max(1u, width >> i);
+        auto currentHeight = Max(1u, height >> i);
 
         auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, currentWidth * currentHeight * sizeof(float), ElemGraphicsHeapType_Readback);
         uint32_t resourceIdList[] = { (uint32_t)texture.ReadDescriptor, (uint32_t)readbackBuffer.WriteDescriptor, i };

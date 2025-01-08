@@ -10,6 +10,9 @@
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
 #endif
 
+#define Max(a,b) ((a) > (b) ? (a) : (b))
+#define Min(a,b) ((a) < (b) ? (a) : (b))
+
 #define PRINT_COLOR_BUFFER(buffer, totalWidth) \
     { \
         auto floatData = (float*)buffer.Items; \
