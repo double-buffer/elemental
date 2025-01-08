@@ -61,5 +61,5 @@ jobs:
 
     - name: Run Graphics Tests (MacOS)
       if: inputs.platform == 'osx'
-      run: ./tests/GraphicsTests.app/Contents/MacOS/GraphicTests
+      run: ./tests/GraphicsTests.app/Contents/MacOS/GraphicsTests
 
