@@ -32,7 +32,6 @@ jobs:
       if: inputs.platform == 'linux'
       run: |
         sudo apt-get update 
-        sudo apt install libstdc++-14-dev
 
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
