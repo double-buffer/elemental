@@ -54,11 +54,11 @@ typedef struct ElementalFunctions
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemSetSwapChainTiming)(ElemSwapChain, unsigned int, unsigned int);
     void (*ElemPresentSwapChain)(ElemSwapChain);
-    ElemGraphicsHeap (*ElemCreateGraphicsHeap)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *);
+    ElemGraphicsHeap (*ElemCreateGraphicsHeap)(ElemGraphicsDevice, uint64_t, ElemGraphicsHeapOptions const *);
     void (*ElemFreeGraphicsHeap)(ElemGraphicsHeap);
     ElemGraphicsResourceInfo (*ElemCreateGraphicsBufferResourceInfo)(ElemGraphicsDevice, unsigned int, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *);
     ElemGraphicsResourceInfo (*ElemCreateTexture2DResourceInfo)(ElemGraphicsDevice, unsigned int, unsigned int, unsigned int, ElemGraphicsFormat, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *);
-    ElemGraphicsResource (*ElemCreateGraphicsResource)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *);
+    ElemGraphicsResource (*ElemCreateGraphicsResource)(ElemGraphicsHeap, uint64_t, ElemGraphicsResourceInfo const *);
     void (*ElemFreeGraphicsResource)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *);
     ElemGraphicsResourceInfo (*ElemGetGraphicsResourceInfo)(ElemGraphicsResource);
     void (*ElemUploadGraphicsBufferData)(ElemGraphicsResource, unsigned int, ElemDataSpan);
@@ -169,11 +169,11 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemSetSwapChainTiming = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemSetSwapChainTiming");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
-    listElementalFunctions.ElemCreateGraphicsHeap = (ElemGraphicsHeap (*)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsHeap");
+    listElementalFunctions.ElemCreateGraphicsHeap = (ElemGraphicsHeap (*)(ElemGraphicsDevice, uint64_t, ElemGraphicsHeapOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsHeap");
     listElementalFunctions.ElemFreeGraphicsHeap = (void (*)(ElemGraphicsHeap))GetElementalFunctionPointer("ElemFreeGraphicsHeap");
     listElementalFunctions.ElemCreateGraphicsBufferResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsDevice, unsigned int, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsBufferResourceInfo");
     listElementalFunctions.ElemCreateTexture2DResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsDevice, unsigned int, unsigned int, unsigned int, ElemGraphicsFormat, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *))GetElementalFunctionPointer("ElemCreateTexture2DResourceInfo");
-    listElementalFunctions.ElemCreateGraphicsResource = (ElemGraphicsResource (*)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResource");
+    listElementalFunctions.ElemCreateGraphicsResource = (ElemGraphicsResource (*)(ElemGraphicsHeap, uint64_t, ElemGraphicsResourceInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResource");
     listElementalFunctions.ElemFreeGraphicsResource = (void (*)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResource");
     listElementalFunctions.ElemGetGraphicsResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceInfo");
     listElementalFunctions.ElemUploadGraphicsBufferData = (void (*)(ElemGraphicsResource, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemUploadGraphicsBufferData");
@@ -1031,7 +1031,7 @@ static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
     listElementalFunctions.ElemPresentSwapChain(swapChain);
 }
 
-static inline ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, unsigned long long sizeInBytes, ElemGraphicsHeapOptions const * options)
+static inline ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, ElemGraphicsHeapOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1141,7 +1141,7 @@ static inline ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraph
     return listElementalFunctions.ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevels, format, usage, options);
 }
 
-static inline ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, unsigned long long graphicsHeapOffset, ElemGraphicsResourceInfo const * resourceInfo)
+static inline ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, ElemGraphicsResourceInfo const * resourceInfo)
 {
     if (!LoadElementalFunctionPointers()) 
     {
