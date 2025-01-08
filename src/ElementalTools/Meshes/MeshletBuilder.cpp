@@ -36,7 +36,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
     auto vertexCount = meshopt_generateVertexRemap(vertexRemap.Pointer, indexBufferPointer, indexCount, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize);
 
     auto vertexList = SystemPushArrayZero<uint8_t>(MeshletBuilderMemoryArena, vertexCount * vertexBuffer.VertexSize);
-    auto indexList = SystemPushArrayZero<uint32_t>(stackMemoryArena, indexCount);
+    auto indexList = SystemPushArrayZero<uint32_t>(MeshletBuilderMemoryArena, indexCount);
 
     meshopt_remapVertexBuffer(vertexList.Pointer, vertexBuffer.Data.Items, indexCount, vertexBuffer.VertexSize, vertexRemap.Pointer);
     meshopt_remapIndexBuffer(indexList.Pointer, indexBufferPointer, indexCount, vertexRemap.Pointer);

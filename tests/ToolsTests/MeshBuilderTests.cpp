@@ -60,10 +60,12 @@ UTEST(MeshBuilder, CheckVertexBuffer)
 {
     // Arrange
     const uint32_t vertexCount = 210;
+
     TestMeshVertex vertexList[vertexCount];
-    uint32_t indexList[vertexCount / 3];
+    uint32_t indexList[vertexCount];
+
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount);
-    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount);
 
     // Act
     auto result = ElemBuildMeshlets(vertexBuffer, indexBuffer, NULL);
@@ -103,10 +105,12 @@ UTEST(MeshBuilder, CheckVertexBuffer_NoDuplicates)
 {
     // Arrange
     const uint32_t vertexCount = 210;
+
     TestMeshVertex vertexList[vertexCount];
-    uint32_t indexList[vertexCount / 3];
+    uint32_t indexList[vertexCount];
+
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount - 3);
-    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount - 3);
 
     for (uint32_t i = 0; i < 3; i++)
     {
@@ -128,10 +132,12 @@ UTEST(MeshBuilder, CheckMeshletVertexIndexBuffer)
 {
     // Arrange
     const uint32_t vertexCount = 210;
+
     TestMeshVertex vertexList[vertexCount];
-    uint32_t indexList[vertexCount / 3];
+    uint32_t indexList[vertexCount];
+
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount - 3);
-    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount - 3);
 
     // Act
     auto result = ElemBuildMeshlets(vertexBuffer, indexBuffer, NULL);
@@ -159,10 +165,12 @@ UTEST(MeshBuilder, CheckMeshletTriangleIndexBuffer)
 {
     // Arrange
     const uint32_t vertexCount = 210;
+
     TestMeshVertex vertexList[vertexCount];
-    uint32_t indexList[vertexCount / 3];
+    uint32_t indexList[vertexCount];
+
     auto vertexBuffer = TestBuildVertexBuffer(vertexList, vertexCount - 3);
-    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount / 3);
+    auto indexBuffer = TestBuildIndexBuffer(indexList, vertexCount - 3);
 
     // Act
     auto result = ElemBuildMeshlets(vertexBuffer, indexBuffer, NULL);
