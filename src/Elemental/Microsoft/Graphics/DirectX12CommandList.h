@@ -4,6 +4,7 @@
 #include "SystemSpan.h"
 #include "Graphics/CommandAllocatorPool.h"
 #include "Graphics/ResourceBarrier.h"
+#include "Graphics/UploadBufferPool.h"
 
 enum DirectX12PipelineStateType
 {
@@ -39,6 +40,8 @@ struct DirectX12CommandListData
     ElemGraphicsDevice GraphicsDevice;
     bool IsCommitted;
     ResourceBarrierPool ResourceBarrierPool;
+    UploadBufferPoolItem<ComPtr<ID3D12Resource>>* UploadBufferPoolItems[MAX_UPLOAD_BUFFERS];
+    uint32_t UploadBufferCount;
 };
 
 struct DirectX12CommandListDataFull

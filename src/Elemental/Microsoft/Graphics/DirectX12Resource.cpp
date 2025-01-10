@@ -641,7 +641,6 @@ ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, 
 	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
 }
 
-// TODO: We create an initial 256 MB buffer for now. This buffer will need to be resized if a big upload is asked.
 ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphicsDevice, uint64_t sizeInBytes)
 {
     D3D12_RESOURCE_DESC bufferDescription =
@@ -703,10 +702,10 @@ UploadBufferMemory<ComPtr<ID3D12Resource>> GetDirectX12UploadBuffer(ElemGraphics
 
         if (uploadBuffer.PoolItem->Fence.FenceValue > 0)
         {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Fence: %d", uploadBuffer.PoolItem->Fence.FenceValue);
             DirectX12WaitForFenceOnCpu(uploadBuffer.PoolItem->Fence);
         }
         
-        // TODO: We need another flag to know if we need to delete
         if (uploadBuffer.PoolItem->Buffer != nullptr)
         {
             SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to delete buffer");
@@ -727,7 +726,6 @@ UploadBufferMemory<ComPtr<ID3D12Resource>> GetDirectX12UploadBuffer(ElemGraphics
 void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
 {
     // TODO: Implement optimizations on the copy queue. On windows, use DirectStorage
-    // TODO: Implement file source
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     SystemAssert(commandList != ELEM_HANDLE_NULL);
@@ -749,14 +747,12 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
 
     ReadOnlySpan<uint8_t> sourceData;
 
-    // TODO: File Source
+    // TODO: Implement file source
     if (parameters->SourceType == ElemCopyDataSourceType_Memory)
     {
         sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
     }
     
-    // TODO: Unit test first !!!!!
-        
     auto uploadBufferAlignment = 4u;
     auto uploadBufferSizeInBytes = sourceData.Length;
     DirectX12GraphicsTextureMipCopyInfo textureMipCopyInfo = {};
@@ -776,6 +772,23 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
 
     auto uploadBuffer = GetDirectX12UploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
     SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
+
+    // TODO: Can we do better here?
+    auto uploadBufferAlreadyInCommandList = false;
+
+    for (uint32_t i = 0; i < MAX_UPLOAD_BUFFERS; i++)
+    {
+        if (commandListData->UploadBufferPoolItems[i] == uploadBuffer.PoolItem)
+        {
+            uploadBufferAlreadyInCommandList = true;
+            break;
+        }
+    }
+        
+    if (!uploadBufferAlreadyInCommandList)
+    {
+        commandListData->UploadBufferPoolItems[commandListData->UploadBufferCount++] = uploadBuffer.PoolItem;
+    }
 
     if (resourceData->Type == ElemGraphicsResourceType_Buffer)
     {
@@ -962,6 +975,8 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
 
 void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     ProcessResourceDeleteQueue();
     SystemClearMemoryArena(directX12ReadBackMemoryArena);
     
@@ -969,4 +984,25 @@ void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevi
     SystemAssert(graphicsDeviceData);
 
     graphicsDeviceData->UploadBufferGeneration++;
+    
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            auto uploadBuffersToDelete = GetUploadBufferPoolItemsToDelete(stackMemoryArena, bufferPool, graphicsDeviceData->UploadBufferGeneration);    
+
+            for (uint32_t j = 0; j < uploadBuffersToDelete.Length; j++)
+            {
+                auto uploadBufferToDelete = uploadBuffersToDelete[j];
+
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to purge upload buffer: Size=%d", uploadBufferToDelete->SizeInBytes);
+
+                uploadBufferToDelete->Buffer.Reset();
+                uploadBufferToDelete->CurrentOffset = 0;
+                uploadBufferToDelete->SizeInBytes = 0;
+            }
+        }
+    }
 }

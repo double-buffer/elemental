@@ -244,7 +244,8 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
         .CommandListPoolItem = commandListPoolItem,
         .GraphicsDevice = commandQueueData->GraphicsDevice,
-        .ResourceBarrierPool = resourceBarrierPool
+        .ResourceBarrierPool = resourceBarrierPool,
+        .UploadBufferCount = 0
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
@@ -325,6 +326,12 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
         }
 
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
+        
+        for (uint32_t j = 0; j < commandListData->UploadBufferCount; j++)
+        {
+            UpdateUploadBufferPoolItemFence(commandListData->UploadBufferPoolItems[j], fence);
+        }
+
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
         FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 

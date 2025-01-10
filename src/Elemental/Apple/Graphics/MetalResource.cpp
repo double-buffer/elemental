@@ -560,6 +560,8 @@ UploadBufferMemory<NS::SharedPtr<MTL::Buffer>> GetMetalUploadBuffer(ElemGraphics
             uploadBuffer.PoolItem->Buffer.reset();
         }
 
+        // TODO: Need to update the fence with the command list like in DirectX12
+
         uploadBuffer.PoolItem->Buffer = CreateMetalUploadBuffer(graphicsDeviceData->Device.get(), uploadBuffer.PoolItem->SizeInBytes);
 
         uploadBuffer.PoolItem->CpuPointer = (uint8_t*)uploadBuffer.PoolItem->Buffer->contents();
@@ -612,6 +614,23 @@ void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopy
 
     auto uploadBuffer = GetMetalUploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
     SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
+
+    // TODO: Can we do better here?
+    auto uploadBufferAlreadyInCommandList = false;
+
+    for (uint32_t i = 0; i < MAX_UPLOAD_BUFFERS; i++)
+    {
+        if (commandListData->UploadBufferPoolItems[i] == uploadBuffer.PoolItem)
+        {
+            uploadBufferAlreadyInCommandList = true;
+            break;
+        }
+    }
+        
+    if (!uploadBufferAlreadyInCommandList)
+    {
+        commandListData->UploadBufferPoolItems[commandListData->UploadBufferCount++] = uploadBuffer.PoolItem;
+    }
 
     if (commandListData->CommandEncoderType != MetalCommandEncoderType_Copy)
     {
@@ -728,6 +747,35 @@ void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descript
 
 void MetalProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     ProcessResourceDeleteQueue();
+    SystemClearMemoryArena(metalReadBackMemoryArena);
+    
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    graphicsDeviceData->UploadBufferGeneration++;
+    
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            auto uploadBuffersToDelete = GetUploadBufferPoolItemsToDelete(stackMemoryArena, bufferPool, graphicsDeviceData->UploadBufferGeneration);    
+
+            for (uint32_t j = 0; j < uploadBuffersToDelete.Length; j++)
+            {
+                auto uploadBufferToDelete = uploadBuffersToDelete[j];
+
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to purge upload buffer: Size=%d", uploadBufferToDelete->SizeInBytes);
+
+                uploadBufferToDelete->Buffer.reset();
+                uploadBufferToDelete->CurrentOffset = 0;
+                uploadBufferToDelete->SizeInBytes = 0;
+            }
+        }
+    }
 }
 

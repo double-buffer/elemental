@@ -1,6 +1,8 @@
 #include "UploadBufferPool.h"
 #include "SystemFunctions.h"
 
+// TODO: Purge upload buffers after a certain amount of generations if they are not used
+
 template<typename T>
 UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation, uint64_t alignment, uint64_t sizeInBytes)
 {
@@ -22,14 +24,9 @@ UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadB
     if (uploadBufferPool->CurrentUploadBuffer == nullptr)
     {
         uploadBufferPool->CurrentUploadBuffer = &uploadBufferPool->UploadBuffers[uploadBufferPool->CurrentUploadBufferIndex];
+        uploadBufferPool->CurrentUploadBufferIndex = (uploadBufferPool->CurrentUploadBufferIndex + 1) % MAX_UPLOAD_BUFFERS;
 
         auto currentUploadBuffer = uploadBufferPool->CurrentUploadBuffer;
-        uploadBufferPool->CurrentUploadBufferIndex = uploadBufferPool->CurrentUploadBufferIndex + 1 % MAX_UPLOAD_BUFFERS;
-
-        // TODO: Split that into a NeedBufferCreation and NeedBufferDelete
-        currentUploadBuffer->IsResetNeeded = true;
-        currentUploadBuffer->CurrentOffset = 0u;
-
         uint64_t uploadBufferSize = SystemMin(uploadBufferPool->LastBufferSize * 2u, 512llu * 1024u * 1024u);
 
         if (uploadBufferSize == 0)
@@ -44,23 +41,30 @@ UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadB
         }
 
         uploadBufferPool->LastBufferSize = uploadBufferSize;
-        currentUploadBuffer->SizeInBytes = uploadBufferSize;
+
+        if (currentUploadBuffer->SizeInBytes != uploadBufferSize)
+        {
+            currentUploadBuffer->SizeInBytes = uploadBufferSize;
+            currentUploadBuffer->IsResetNeeded = true;
+        }
+
+        currentUploadBuffer->CurrentOffset = 0u;
     }
 
-    // TODO: Check alignment
     auto offset = uploadBufferPool->CurrentUploadBuffer->CurrentOffset;
-    uint64_t alignedOffset = (offset + (alignment - 1)) & ~(alignment - 1); // TODO: Use System Align power of 2
+    auto alignedOffset = SystemAlign(offset, alignment);
 
     uint64_t newOffset = alignedOffset + sizeInBytes;
 
+    // TODO: Better handle that case
     if (newOffset > uploadBufferPool->CurrentUploadBuffer->SizeInBytes)
     {
         SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Not enough space after alignment");
         return { nullptr, 0ull };
     }
 
-    // Update buffer offset to reflect our allocation
     uploadBufferPool->CurrentUploadBuffer->CurrentOffset = newOffset;
+    uploadBufferPool->CurrentUploadBuffer->LastUsedGeneration = generation;
 
     return 
     {
@@ -69,27 +73,27 @@ UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadB
     };
 }
 
-/*
-template<typename TCommandAllocator, typename TCommandList>
-CommandListPoolItem<TCommandList>* GetCommandListPoolItem(CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* commandAllocatorPoolItem)
+template<typename T>
+void UpdateUploadBufferPoolItemFence(UploadBufferPoolItem<T>* uploadBufferPoolItem, ElemFence fence)
 {
-    auto commandListPoolItem = &commandAllocatorPoolItem->CommandListPoolItems[commandAllocatorPoolItem->CurrentCommandListIndex];
-    SystemAssert (!commandListPoolItem->IsInUse);
-
-    commandAllocatorPoolItem->CurrentCommandListIndex = (commandAllocatorPoolItem->CurrentCommandListIndex + 1) % MAX_COMMANDLIST;
-
-    commandListPoolItem->IsInUse = true;
-    return commandListPoolItem;
+    uploadBufferPoolItem->Fence = fence;
 }
 
-template<typename TCommandList>
-void ReleaseCommandListPoolItem(CommandListPoolItem<TCommandList>* commandListPoolItem)
+template<typename T>
+Span<UploadBufferPoolItem<T>*> GetUploadBufferPoolItemsToDelete(MemoryArena memoryArena, UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation)
 {
-    commandListPoolItem->IsInUse = false;
-}
+    auto result = SystemPushArray<UploadBufferPoolItem<T>*>(memoryArena, MAX_UPLOAD_BUFFERS);
+    auto resultCount = 0u;
 
-template<typename TCommandAllocator, typename TCommandList>
-void UpdateCommandAllocatorPoolItemFence(CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* commandAllocatorPoolItem, ElemFence fence)
-{
-    commandAllocatorPoolItem->Fence = fence;
-}*/
+    for (uint32_t i = 0; i < MAX_UPLOAD_BUFFERS; i++)
+    {
+        auto uploadBufferPoolItem = &uploadBufferPool->UploadBuffers[i];
+
+        if (uploadBufferPoolItem->SizeInBytes > 0 && (generation - uploadBufferPoolItem->LastUsedGeneration > 500))
+        {
+            result[resultCount++] = uploadBufferPoolItem;
+        }
+    }
+
+    return result.Slice(0, resultCount);
+}

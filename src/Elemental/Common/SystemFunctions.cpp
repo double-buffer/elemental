@@ -17,7 +17,7 @@ size_t SystemRoundUpToPowerOf2(size_t value)
     return result;
 }
 
-size_t SystemAlignToPowerOf2(size_t offset, size_t alignment) 
+size_t SystemAlign(size_t offset, size_t alignment) 
 {
     return (offset + alignment - 1) & ~(alignment - 1);
 }

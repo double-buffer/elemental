@@ -423,7 +423,7 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
 
 void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationState state)
 {
-    sizeInBytes = SystemAlignToPowerOf2(sizeInBytes, MEMORYARENA_DEFAULT_ALIGNMENT);
+    sizeInBytes = SystemAlign(sizeInBytes, MEMORYARENA_DEFAULT_ALIGNMENT);
 
     auto workingMemoryArena = GetStackWorkingMemoryArena(memoryArena);
     auto storage = workingMemoryArena.Storage;

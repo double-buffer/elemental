@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include "SystemMemory.h"
 
 #define MAX_UPLOAD_BUFFERS 10
 
@@ -13,6 +14,7 @@ struct UploadBufferPoolItem
     bool IsResetNeeded;
     uint64_t CurrentOffset;
     uint8_t* CpuPointer;
+    uint64_t LastUsedGeneration;
 };
 
 template<typename T>
@@ -36,10 +38,8 @@ struct UploadBufferDevicePool
 template<typename T>
 UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation, uint64_t alignment, uint64_t sizeInBytes);
 
-/*
-template<typename TCommandList>
-void ReleaseCommandListPoolItem(CommandListPoolItem<TCommandList>* commandListPoolItem);
+template<typename T>
+void UpdateUploadBufferPoolItemFence(UploadBufferPoolItem<T>* uploadBufferPoolItem, ElemFence fence);
 
-template<typename TCommandAllocator, typename TCommandList>
-void UpdateCommandAllocatorPoolItemFence(CommandAllocatorPoolItem<TCommandAllocator, TCommandList>* commandAllocatorPoolItem, ElemFence fence);
-*/
+template<typename T>
+Span<UploadBufferPoolItem<T>*> GetUploadBufferPoolItemsToDelete(MemoryArena memoryArena, UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation);

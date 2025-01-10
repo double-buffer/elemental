@@ -39,7 +39,7 @@
 size_t SystemRoundUpToPowerOf2(size_t value);
 
 /**
- * Aligns the given offset to the specified power of two alignment.
+ * Aligns the given offset to the specified alignment.
  *
  * This function adjusts the input offset to the nearest equal or higher multiple of the specified alignment.
  * The alignment value must be a power of 2. If the alignment is not a power of 2, the behavior of the function 
@@ -50,7 +50,7 @@ size_t SystemRoundUpToPowerOf2(size_t value);
  * @return The aligned offset. If the input alignment is not a power of 2, the behavior is undefined or it 
  *         may return the input offset, depending on implementation.
  */
-size_t SystemAlignToPowerOf2(size_t offset, size_t alignment);
+size_t SystemAlign(size_t offset, size_t alignment);
 
 /**
  * Rounds the given double value to the nearest integer.
