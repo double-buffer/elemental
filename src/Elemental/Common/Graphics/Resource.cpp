@@ -85,3 +85,18 @@ ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsD
 {
     DispatchGraphicsFunction(ProcessGraphicsResourceDeleteQueue, graphicsDevice);
 }
+
+ElemAPI ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
+{
+    DispatchReturnGraphicsFunction(CreateGraphicsSampler, graphicsDevice, samplerInfo);
+}
+
+ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    DispatchReturnGraphicsFunction(GetGraphicsSamplerInfo, sampler);
+}
+
+ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
+{
+    DispatchGraphicsFunction(FreeGraphicsSampler, sampler, options);
+}

@@ -20,8 +20,10 @@ typedef struct
     uint32_t MeshletTriangleIndexOffset;
     float Scale;
     ElemVector3 Translation;
-    uint32_t MaterialId;
+    uint32_t Reserved;
     ElemVector4 Rotation;
+    uint32_t MaterialId;
+    uint32_t TextureSampler;
 } ShaderParameters;
 
 typedef struct
@@ -114,6 +116,16 @@ void InitSample(void* payload)
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
 
+    ElemGraphicsSamplerInfo samplerInfo =
+    {
+        .MinFilter = ElemGraphicsSamplerFilter_Linear,
+        .MagFilter = ElemGraphicsSamplerFilter_Linear,
+        .MipFilter = ElemGraphicsSamplerFilter_Linear,
+        .MaxAnisotropy = 16,
+    };
+
+    applicationPayload->ShaderParameters.TextureSampler = ElemCreateGraphicsSampler(applicationPayload->GraphicsDevice, &samplerInfo);
+
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
 
@@ -122,6 +134,7 @@ void InitSample(void* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
+        .CullMode = ElemGraphicsCullMode_None, // TODO: We need to deactivate cull only for transparent objects!
         .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = swapChainInfo.Format }}, .Length = 1 },
         .DepthStencil =
         {

@@ -18,6 +18,7 @@ struct DirectX12GraphicsDeviceData
     uint64_t CommandAllocationGeneration;
     uint64_t UploadBufferGeneration;
     DirectX12DescriptorHeap ResourceDescriptorHeap;
+    DirectX12DescriptorHeap SamplerDescriptorHeap;
     DirectX12DescriptorHeap RTVDescriptorHeap;
     DirectX12DescriptorHeap DSVDescriptorHeap;
     MemoryArena MemoryArena;
@@ -40,6 +41,8 @@ extern ComPtr<IDXGIInfoQueue> DxgiInfoQueue;
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 DirectX12GraphicsDeviceDataFull* GetDirectX12GraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
+
+D3D12_COMPARISON_FUNC ConvertToDirectX12CompareFunction(ElemGraphicsCompareFunction compareFunction);
 
 D3D12_CPU_DESCRIPTOR_HANDLE CreateDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap);
 void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle);

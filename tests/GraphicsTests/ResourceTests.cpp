@@ -832,3 +832,139 @@ UTEST(Resource, GetGraphicsResourceDescriptorInfo_WithInvalidDescriptor)
     ASSERT_LOG_MESSAGE("Resource Descriptor is invalid.");
     ASSERT_EQ_MSG(descriptorInfo.Resource, 0u, "Resource should be equals to 0.");
 }
+
+// TODO: Add validation tests
+// TODO: Validation MaxAnisotropy 16
+
+UTEST(Resource, CreateGraphicsSampler_WithDefaultValues) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    ElemGraphicsSamplerInfo samplerInfo = {};
+
+    // Act
+    auto sampler = ElemCreateGraphicsSampler(graphicsDevice, &samplerInfo);
+
+    // Assert
+    auto resultSamplerInfo = ElemGetGraphicsSamplerInfo(sampler);
+    
+    ElemFreeGraphicsSampler(sampler, nullptr);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_EQ_MSG(resultSamplerInfo.MinFilter, ElemGraphicsSamplerFilter_Nearest, "MinFilter should be equals to Nearest.");
+    ASSERT_EQ_MSG(resultSamplerInfo.MagFilter, ElemGraphicsSamplerFilter_Nearest, "MagFilter should be equals to Nearest.");
+    ASSERT_EQ_MSG(resultSamplerInfo.MipFilter, ElemGraphicsSamplerFilter_Nearest, "MipFilter should be equals to Nearest.");
+    ASSERT_EQ_MSG(resultSamplerInfo.AddressU, ElemGraphicsSamplerAddressMode_Repeat, "AddressU should be equals to Repeat.");
+    ASSERT_EQ_MSG(resultSamplerInfo.AddressV, ElemGraphicsSamplerAddressMode_Repeat, "AddressV should be equals to Repeat.");
+    ASSERT_EQ_MSG(resultSamplerInfo.AddressW, ElemGraphicsSamplerAddressMode_Repeat, "AddressW should be equals to Repeat.");
+    ASSERT_EQ_MSG(resultSamplerInfo.MaxAnisotropy, 1u, "Max Anisotropy should equals to 1.");
+    ASSERT_EQ_MSG(resultSamplerInfo.CompareFunction, ElemGraphicsCompareFunction_Never, "CompareFunction should equals to Never.");
+    ASSERT_EQ_MSG(resultSamplerInfo.BorderColor.Red, 0.0f, "Border Red Color should be 0.");
+    ASSERT_EQ_MSG(resultSamplerInfo.BorderColor.Green, 0.0f, "Border Green Color should be 0.");
+    ASSERT_EQ_MSG(resultSamplerInfo.BorderColor.Blue, 0.0f, "Border Blue Color should be 0.");
+    ASSERT_EQ_MSG(resultSamplerInfo.BorderColor.Alpha, 0.0f, "Border Alpha Color should be 0.");
+    ASSERT_EQ_MSG(resultSamplerInfo.MinLod, 0.0f, "Min Lod should be 0.");
+    ASSERT_EQ_MSG(resultSamplerInfo.MaxLod, 0.0f, "Max Lod should be 0.");
+}
+
+UTEST(Resource, FreeGraphicsSampler) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    ElemGraphicsSamplerInfo samplerInfo = { .MipFilter = ElemGraphicsSamplerFilter_Linear };
+    auto sampler = ElemCreateGraphicsSampler(graphicsDevice, &samplerInfo);
+
+    // Act
+    ElemFreeGraphicsSampler(sampler, nullptr);
+
+    // Assert
+    auto resultSamplerInfo = ElemGetGraphicsSamplerInfo(sampler);
+
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_EQ_MSG(resultSamplerInfo.MaxAnisotropy, 0u, "MaxAnisotropy should be equals to 0.");
+}
+
+UTEST(Resource, FreeGraphicsSampler_WithFenceNotExecuted) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    ElemGraphicsSamplerInfo samplerInfo = { .MipFilter = ElemGraphicsSamplerFilter_Linear };
+    auto sampler = ElemCreateGraphicsSampler(graphicsDevice, &samplerInfo);
+
+    ElemFence fence = { .CommandQueue = commandQueue, .FenceValue = UINT64_MAX }; 
+    ElemFreeGraphicsSamplerOptions options = { .FencesToWait = { .Items = &fence, .Length = 1 } };
+
+    // Act
+    ElemFreeGraphicsSampler(sampler, &options);
+
+    // Assert
+    ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
+    auto resultSamplerInfo = ElemGetGraphicsSamplerInfo(sampler);
+
+    ElemFreeGraphicsSampler(sampler, nullptr);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_EQ_MSG(resultSamplerInfo.MaxAnisotropy, 1u, "MaxAnisotropy should be equals to 1.");
+}
+
+UTEST(Resource, FreeGraphicsSampler_WithFenceExecuted) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+
+    ElemGraphicsSamplerInfo samplerInfo = { .MipFilter = ElemGraphicsSamplerFilter_Linear };
+    auto sampler = ElemCreateGraphicsSampler(graphicsDevice, &samplerInfo);
+
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemCommitCommandList(commandList);
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    ElemFreeGraphicsSamplerOptions options = { .FencesToWait = { .Items = &fence, .Length = 1 } };
+
+    // Act
+    ElemFreeGraphicsSampler(sampler, &options);
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+    ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
+    auto resultSamplerInfo = ElemGetGraphicsSamplerInfo(sampler);
+
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    ASSERT_EQ_MSG(resultSamplerInfo.MaxAnisotropy, 0u, "MaxAnisotropy should be equals to 0.");
+}
+
+UTEST(Resource, FreeGraphicsSampler_WithInvalidDescriptor) 
+{
+    // Arrange
+    ElemGraphicsSampler sampler = -1;
+
+    // Act
+    ElemFreeGraphicsSampler(sampler, nullptr);
+
+    // Assert
+    ASSERT_LOG_MESSAGE("Sampler is invalid.");
+}
+
+UTEST(Resource, GetGraphicsSamplerInfo_WithInvalidDescriptor) 
+{
+    // Arrange
+    ElemGraphicsSampler sampler = -1;
+
+    // Act
+    auto samplerInfo = ElemGetGraphicsSamplerInfo(sampler);
+
+    // Assert
+    ASSERT_LOG_MESSAGE("Sampler is invalid.");
+    ASSERT_EQ_MSG(samplerInfo.MaxAnisotropy, 0u, "MaxAnisotropy should be equals to 0.");
+}

@@ -68,6 +68,9 @@ typedef struct ElementalFunctions
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
     void (*ElemProcessGraphicsResourceDeleteQueue)(ElemGraphicsDevice);
+    ElemGraphicsSampler (*ElemCreateGraphicsSampler)(ElemGraphicsDevice, ElemGraphicsSamplerInfo const *);
+    ElemGraphicsSamplerInfo (*ElemGetGraphicsSamplerInfo)(ElemGraphicsSampler);
+    void (*ElemFreeGraphicsSampler)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
@@ -183,6 +186,9 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
     listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
+    listElementalFunctions.ElemCreateGraphicsSampler = (ElemGraphicsSampler (*)(ElemGraphicsDevice, ElemGraphicsSamplerInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsSampler");
+    listElementalFunctions.ElemGetGraphicsSamplerInfo = (ElemGraphicsSamplerInfo (*)(ElemGraphicsSampler))GetElementalFunctionPointer("ElemGetGraphicsSamplerInfo");
+    listElementalFunctions.ElemFreeGraphicsSampler = (void (*)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsSampler");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
@@ -1379,6 +1385,85 @@ static inline void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice gra
     }
 
     listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
+}
+
+static inline ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, ElemGraphicsSamplerInfo const * samplerInfo)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsSampler result = {};
+        #else
+        ElemGraphicsSampler result = (ElemGraphicsSampler){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateGraphicsSampler) 
+    {
+        assert(listElementalFunctions.ElemCreateGraphicsSampler);
+
+        #ifdef __cplusplus
+        ElemGraphicsSampler result = {};
+        #else
+        ElemGraphicsSampler result = (ElemGraphicsSampler){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateGraphicsSampler(graphicsDevice, samplerInfo);
+}
+
+static inline ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsSamplerInfo result = {};
+        #else
+        ElemGraphicsSamplerInfo result = (ElemGraphicsSamplerInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetGraphicsSamplerInfo) 
+    {
+        assert(listElementalFunctions.ElemGetGraphicsSamplerInfo);
+
+        #ifdef __cplusplus
+        ElemGraphicsSamplerInfo result = {};
+        #else
+        ElemGraphicsSamplerInfo result = (ElemGraphicsSamplerInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetGraphicsSamplerInfo(sampler);
+}
+
+static inline void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, ElemFreeGraphicsSamplerOptions const * options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemFreeGraphicsSampler) 
+    {
+        assert(listElementalFunctions.ElemFreeGraphicsSampler);
+        return;
+    }
+
+    listElementalFunctions.ElemFreeGraphicsSampler(sampler, options);
 }
 
 static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)

@@ -182,6 +182,36 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
     return false;
 }
 
+D3D12_COMPARISON_FUNC ConvertToDirectX12CompareFunction(ElemGraphicsCompareFunction compareFunction)
+{
+    switch (compareFunction)
+    {
+        case ElemGraphicsCompareFunction_Never:
+            return D3D12_COMPARISON_FUNC_NEVER;
+
+        case ElemGraphicsCompareFunction_Less:
+            return D3D12_COMPARISON_FUNC_LESS;
+
+        case ElemGraphicsCompareFunction_Equal:
+            return D3D12_COMPARISON_FUNC_EQUAL;
+
+        case ElemGraphicsCompareFunction_LessEqual:
+            return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+        case ElemGraphicsCompareFunction_Greater:
+            return D3D12_COMPARISON_FUNC_GREATER;
+
+        case ElemGraphicsCompareFunction_NotEqual:
+            return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+
+        case ElemGraphicsCompareFunction_GreaterEqual:
+            return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+
+        case ElemGraphicsCompareFunction_Always:
+            return D3D12_COMPARISON_FUNC_ALWAYS;
+    }
+}
+
 DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> graphicsDevice, MemoryArena memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t length)
 {
     D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = 
@@ -285,7 +315,7 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     rootSignatureDesc.Desc_1_1.pParameters = rootParameters;
     rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
     rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
-    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 
     ComPtr<ID3DBlob> serializedRootSignature;
     AssertIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, serializedRootSignature.GetAddressOf(), nullptr));
@@ -403,6 +433,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     auto memoryArena = SystemAllocateMemoryArena();
 
     auto resourceDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_RESOURCES);
+    auto samplerDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_SAMPLERS);
     auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto dsvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
@@ -414,6 +445,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
         .Device = device,
         .RootSignature = rootSignature,
         .ResourceDescriptorHeap = resourceDescriptorHeap,
+        .SamplerDescriptorHeap = samplerDescriptorHeap,
         .RTVDescriptorHeap = rtvDescriptorHeap,
         .DSVDescriptorHeap = dsvDescriptorHeap,
         .MemoryArena = memoryArena,
@@ -461,6 +493,7 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     }
 
     FreeDirectX12DescriptorHeap(graphicsDeviceData->ResourceDescriptorHeap);
+    FreeDirectX12DescriptorHeap(graphicsDeviceData->SamplerDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->RTVDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->DSVDescriptorHeap);
 

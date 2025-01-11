@@ -742,3 +742,17 @@ void VulkanProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
     ProcessResourceDeleteQueue();
     SystemClearMemoryArena(vulkanReadBackMemoryArena);
 }
+
+ElemGraphicsSampler VulkanCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
+{
+    return {};
+}
+
+ElemGraphicsSamplerInfo VulkanGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    return {};
+}
+
+void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
+{
+}

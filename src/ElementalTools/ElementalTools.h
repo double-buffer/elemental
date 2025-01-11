@@ -264,6 +264,7 @@ typedef enum
 typedef struct
 {
     ElemSceneCoordinateSystem CoordinateSystem;
+    bool FlipVerticalTextureCoordinates;
     float Scaling;
     ElemToolsVector3 Rotation;
     ElemToolsVector3 Translation;

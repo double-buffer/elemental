@@ -1,8 +1,6 @@
 #include "UploadBufferPool.h"
 #include "SystemFunctions.h"
 
-// TODO: Purge upload buffers after a certain amount of generations if they are not used
-
 template<typename T>
 UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation, uint64_t alignment, uint64_t sizeInBytes)
 {

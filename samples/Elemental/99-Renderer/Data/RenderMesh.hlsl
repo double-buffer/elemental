@@ -11,8 +11,10 @@ struct ShaderParameters
     uint32_t MeshletTriangleIndexOffset;
     float Scale;
     float3 Translation;
-    uint32_t MaterialId;
+    uint32_t Reserved;
     float4 Rotation;
+    uint32_t MaterialId;
+    uint32_t TextureSampler;
 };
 
 [[vk::push_constant]]
@@ -49,10 +51,10 @@ struct Vertex
 struct VertexOutput
 {
     float4 Position: SV_Position;
-    float3 WorldNormal: NORMAL0;
-    float2 TextureCoordinates: TEXCOORD0;
-    uint   MeshletIndex : COLOR0;
-    uint   MaterialId : COLOR1;
+    float3 WorldNormal: Attribute0;
+    float2 TextureCoordinates: Attribute1;
+    nointerpolation uint MeshletIndex: Attribute2;
+    nointerpolation uint MaterialId: Attribute3;
 };
 
 #define IDENTITY_MATRIX float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
@@ -66,7 +68,7 @@ float3 RotateQuaternion(float3 v, float4 q)
 [OutputTopology("triangle")]
 [NumThreads(126, 1, 1)]
 void MeshMain(in uint groupId: SV_GroupID, 
-              in uint groupThreadId : SV_GroupThreadID, 
+              in uint groupThreadId: SV_GroupThreadID, 
               out vertices VertexOutput vertices[64], 
               out indices uint3 indices[126])
 {
@@ -128,28 +130,25 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[parameters.MaterialBuffer];
     ShaderMaterial material = materialBuffer.Load<ShaderMaterial>(parameters.MaterialId * sizeof(ShaderMaterial));
 
+    SamplerState textureSampler = SamplerDescriptorHeap[parameters.TextureSampler];
+
     if (frameData.ShowMeshlets == 0)
     {
         if (material.AlbedoTextureId >= 0)
         {
             Texture2D<float4> albedoTexture = ResourceDescriptorHeap[material.AlbedoTextureId];
+            float4 albedo = albedoTexture.Sample(textureSampler, input.TextureCoordinates);
 
-            // TODO: This is a hack because we don't have a sampler for now
-            float width;
-            float height;
-            albedoTexture.GetDimensions(width, height);
+            // TODO: Doing discard on the main pass is really bad for performance.
+            // Doing it disable the early depth test in the shader, so all pixel shader code has to run for
+            // occluded pixels.
+            // TODO: We will need to process transparent objects in another path in another shader
+            if (albedo.a < 0.5)
+            {
+                discard;
+            }
 
-            // Scale UV by texture size
-            float2 scaledUV = input.TextureCoordinates * float2(width, height);
-
-            // Convert to integer.  Use floor (or round) for nearest:
-            int coordX = ( (int)floor(scaledUV.x) % (int)width + (int)width ) % (int)width;
-            int coordY = ( (int)floor(scaledUV.y) % (int)height + (int)height ) % (int)height;
-
-            // If your texture is oriented with y=0 at the top, you might flip here:
-            coordY = ((int)height - 1 - coordY);
-
-            return albedoTexture.Load(int3(coordX, coordY, 0));
+            return albedo;
         }
 
         return float4(0, 0, 1, 1);;

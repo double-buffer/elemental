@@ -16,6 +16,7 @@ thread_local UploadBufferDevicePool<ComPtr<ID3D12Resource>> threadDirectX12Uploa
 
 // TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
+Span<ElemGraphicsSamplerInfo> directX12SamplerInfos;
 MemoryArena directX12ReadBackMemoryArena;
 
 void InitDirectX12ResourceMemory()
@@ -25,9 +26,8 @@ void InitDirectX12ResourceMemory()
         directX12GraphicsHeapPool = SystemCreateDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_GRAPHICSHEAP);
         directX12GraphicsResourcePool = SystemCreateDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
 
-        // TODO: That push array cause a massive memory increase
-        // TODO: We can push the array with reserved memory but we need to be carreful to commit the memory
         directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES, AllocationState_Reserved);
+        directX12SamplerInfos = SystemPushArray<ElemGraphicsSamplerInfo>(DirectX12MemoryArena, DIRECTX12_MAX_SAMPLERS, AllocationState_Reserved);
 
         // TODO: Allow to increase the size as a parameter
         directX12ReadBackMemoryArena = SystemAllocateMemoryArena(DIRECTX12_READBACK_MEMORY_ARENA);
@@ -81,6 +81,39 @@ DXGI_FORMAT ConvertDirectX12FormatWithoutSrgbIfNeeded(DXGI_FORMAT format)
 
         default:
             return format;
+    }
+}
+
+D3D12_FILTER_TYPE ConvertToDirectX12FilerType(ElemGraphicsSamplerFilter filter)
+{
+    switch (filter)
+    {
+        case ElemGraphicsSamplerFilter_Nearest:
+            return D3D12_FILTER_TYPE_POINT;
+
+        case ElemGraphicsSamplerFilter_Linear:
+            return D3D12_FILTER_TYPE_LINEAR;
+    }
+}
+
+D3D12_TEXTURE_ADDRESS_MODE ConvertToDirectX12TextureAddressMode(ElemGraphicsSamplerAddressMode addressMode)
+{
+    switch (addressMode)
+    {
+        case ElemGraphicsSamplerAddressMode_Repeat:
+            return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+
+        case ElemGraphicsSamplerAddressMode_RepeatMirror:
+            return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdge:
+            return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdgeMirror:
+            return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+
+        case ElemGraphicsSamplerAddressMode_ClampToBorderColor:
+            return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
     }
 }
 
@@ -1005,4 +1038,91 @@ void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevi
             }
         }
     }
+}
+
+ElemGraphicsSampler DirectX12CreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
+{
+    InitDirectX12ResourceMemory();
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto descriptorHeap = graphicsDeviceData->SamplerDescriptorHeap;
+    auto descriptorHandle = CreateDirectX12DescriptorHandle(descriptorHeap);
+
+    auto localSamplerInfo = *samplerInfo;
+
+    if (localSamplerInfo.MaxAnisotropy == 0)
+    {
+        localSamplerInfo.MaxAnisotropy = 1;
+    }
+
+    auto minFilter = ConvertToDirectX12FilerType(localSamplerInfo.MinFilter);
+    auto magFilter = ConvertToDirectX12FilerType(localSamplerInfo.MagFilter);
+    auto mipFilter = ConvertToDirectX12FilerType(localSamplerInfo.MipFilter);
+    auto reduction = localSamplerInfo.CompareFunction == ElemGraphicsCompareFunction_Never ? D3D12_FILTER_REDUCTION_TYPE_STANDARD : D3D12_FILTER_REDUCTION_TYPE_COMPARISON;
+    auto borderColor = localSamplerInfo.BorderColor;
+    auto filter = D3D12_ENCODE_BASIC_FILTER(minFilter, magFilter, mipFilter, reduction);
+
+    if (localSamplerInfo.MaxAnisotropy > 1)
+    {
+        filter = (D3D12_FILTER)(D3D12_ANISOTROPIC_FILTERING_BIT | filter);
+    }
+
+    D3D12_SAMPLER_DESC samplerDesc =
+    {
+        .Filter = filter,
+        .AddressU = ConvertToDirectX12TextureAddressMode(localSamplerInfo.AddressU),
+        .AddressV = ConvertToDirectX12TextureAddressMode(localSamplerInfo.AddressV),
+        .AddressW = ConvertToDirectX12TextureAddressMode(localSamplerInfo.AddressW),
+        .MaxAnisotropy = localSamplerInfo.MaxAnisotropy,
+        .ComparisonFunc = ConvertToDirectX12CompareFunction(localSamplerInfo.CompareFunction),
+        .BorderColor = { borderColor.Red, borderColor.Green, borderColor.Blue, borderColor.Alpha },
+        .MinLOD = localSamplerInfo.MinLod,
+        .MaxLOD = localSamplerInfo.MaxLod == 0 ? 1000 : localSamplerInfo.MaxLod
+    };
+
+    graphicsDeviceData->Device->CreateSampler(&samplerDesc, descriptorHandle);
+
+    auto index = ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
+
+    if ((index % 1024) == 0)
+    {
+        SystemCommitMemory(DirectX12MemoryArena, &directX12SamplerInfos[index], 1024 *  sizeof(ElemGraphicsSamplerInfo));
+    }
+
+    directX12SamplerInfos[index] = localSamplerInfo;
+    return index;
+}
+
+ElemGraphicsSamplerInfo DirectX12GetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    InitDirectX12ResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return {};
+    }
+
+    return directX12SamplerInfos[sampler];
+}
+
+void DirectX12FreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
+{
+    InitDirectX12ResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return;
+    }
+    
+    if (options && options->FencesToWait.Length > 0)
+    {
+        EnqueueResourceDeleteEntry(DirectX12MemoryArena, sampler, ResourceDeleteType_Sampler, options->FencesToWait);
+        return;
+    }
+
+    directX12SamplerInfos[sampler] = {};
 }

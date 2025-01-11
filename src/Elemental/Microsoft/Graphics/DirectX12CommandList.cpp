@@ -228,10 +228,11 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
 
     AssertIfFailedReturnNullHandle(commandListPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
             
-    auto descriptorHeaps = SystemPushArray<ID3D12DescriptorHeap*>(stackMemoryArena, 1);
+    auto descriptorHeaps = SystemPushArray<ID3D12DescriptorHeap*>(stackMemoryArena, 2);
     descriptorHeaps[0] = graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorHeap.Get();
+    descriptorHeaps[1] = graphicsDeviceData->SamplerDescriptorHeap.Storage->DescriptorHeap.Get();
 
-    commandListPoolItem->CommandList->SetDescriptorHeaps(1, descriptorHeaps.Pointer);
+    commandListPoolItem->CommandList->SetDescriptorHeaps(2, descriptorHeaps.Pointer);
 
     // TODO: Can we set the root signature for all types all the time?
     commandListPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());

@@ -328,6 +328,11 @@ typedef ElemHandle ElemGraphicsResource;
 typedef int32_t ElemGraphicsResourceDescriptor;
 
 /**
+ * Handle that represents a graphics resource descriptor.
+ */
+typedef int32_t ElemGraphicsSampler;
+
+/**
  * Handle that represents a shader library.
  */
 typedef ElemHandle ElemShaderLibrary;
@@ -414,6 +419,21 @@ typedef enum
     ElemGraphicsResourceDescriptorUsage_Read = 0x00,
     ElemGraphicsResourceDescriptorUsage_Write = 0x01
 } ElemGraphicsResourceDescriptorUsage;
+
+typedef enum
+{
+    ElemGraphicsSamplerFilter_Nearest = 0,
+    ElemGraphicsSamplerFilter_Linear = 1
+} ElemGraphicsSamplerFilter;
+
+typedef enum
+{
+    ElemGraphicsSamplerAddressMode_Repeat = 0,
+    ElemGraphicsSamplerAddressMode_RepeatMirror = 1,
+    ElemGraphicsSamplerAddressMode_ClampToEdge = 2,
+    ElemGraphicsSamplerAddressMode_ClampToEdgeMirror = 3,
+    ElemGraphicsSamplerAddressMode_ClampToBorderColor = 4
+} ElemGraphicsSamplerAddressMode;
 
 typedef enum
 {
@@ -513,6 +533,69 @@ typedef enum
     // Discards the contents after rendering.
     ElemRenderPassStoreAction_Discard = 1
 } ElemRenderPassStoreAction;
+
+/**
+ * Represents RGBA color.
+ */
+typedef struct
+{
+    // Red component.
+    float Red;
+    // Green component.
+    float Green;
+    // Blue component.
+    float Blue;
+    // Alpha component.
+    float Alpha; 
+} ElemColor;
+
+typedef struct
+{
+    // X coordinate of the rectangle's top left corner.
+    float X;
+    // Y coordinate of the rectangle's top left corner.
+    float Y;
+    // Width of the rectangle.
+    float Width;
+    // Height of the rectangle.
+    float Height;
+} ElemRectangle;
+
+/**
+ * Represents a collection of rectangles.
+ */
+typedef struct
+{
+    // Pointer to an array of ElemRectangle.
+    ElemRectangle* Items;
+    // Number of items in the array.
+    uint32_t Length;
+} ElemRectangleSpan;
+
+typedef struct
+{
+    float X, Y, Z;
+} ElemVector3;
+
+typedef union
+{
+    // TODO: Fix compilation warning
+    struct
+    {
+        float X, Y, Z, W;
+    };
+
+    struct
+    {
+        ElemVector3 XYZ;
+    }; 
+} ElemVector4;
+
+typedef struct
+{
+    ElemVector3 MinPoint;
+    ElemVector3 MaxPoint;
+} ElemBoundingBox;
 
 /**
  * Configuration options for graphics initialization.
@@ -739,6 +822,28 @@ typedef struct
 
 typedef struct
 {
+    ElemGraphicsSamplerFilter MinFilter;
+    ElemGraphicsSamplerFilter MagFilter;
+    ElemGraphicsSamplerFilter MipFilter;
+    ElemGraphicsSamplerAddressMode AddressU;
+    ElemGraphicsSamplerAddressMode AddressV;
+    ElemGraphicsSamplerAddressMode AddressW;
+    uint32_t MaxAnisotropy;
+    ElemGraphicsCompareFunction CompareFunction;
+    ElemColor BorderColor;
+    float MinLod;
+    float MaxLod;
+    // TODO: Minimum/Maximum filters?
+} ElemGraphicsSamplerInfo;
+
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsSamplerOptions;
+
+typedef struct
+{
     uint32_t Offset;
     uint32_t SizeInBytes;
 } ElemDownloadGraphicsBufferDataOptions;
@@ -834,44 +939,6 @@ typedef struct
 } ElemGraphicsResourceBarrierOptions;
 
 /**
- * Represents RGBA color.
- */
-typedef struct
-{
-    // Red component.
-    float Red;
-    // Green component.
-    float Green;
-    // Blue component.
-    float Blue;
-    // Alpha component.
-    float Alpha; 
-} ElemColor;
-
-typedef struct
-{
-    // X coordinate of the rectangle's top left corner.
-    float X;
-    // Y coordinate of the rectangle's top left corner.
-    float Y;
-    // Width of the rectangle.
-    float Width;
-    // Height of the rectangle.
-    float Height;
-} ElemRectangle;
-
-/**
- * Represents a collection of rectangles.
- */
-typedef struct
-{
-    // Pointer to an array of ElemRectangle.
-    ElemRectangle* Items;
-    // Number of items in the array.
-    uint32_t Length;
-} ElemRectangleSpan;
-
-/**
  * Defines a viewport for rendering.
  */
 typedef struct
@@ -901,30 +968,6 @@ typedef struct
     uint32_t Length;
 } ElemViewportSpan;
 
-typedef struct
-{
-    float X, Y, Z;
-} ElemVector3;
-
-typedef union
-{
-    // TODO: Fix compilation warning
-    struct
-    {
-        float X, Y, Z, W;
-    };
-
-    struct
-    {
-        ElemVector3 XYZ;
-    }; 
-} ElemVector4;
-
-typedef struct
-{
-    ElemVector3 MinPoint;
-    ElemVector3 MaxPoint;
-} ElemBoundingBox;
 /**
  * Configuration for a render pass target.
  */
@@ -1131,6 +1174,10 @@ ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
 ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
+
+ElemAPI ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
+ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
+ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

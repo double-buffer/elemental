@@ -67,7 +67,7 @@ unsigned long FastObjFileSize(void* file, void* userData)
 }
 
 // TODO: Remove that function and include it in construct vertex buffer
-void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSceneCoordinateSystem coordinateSystem, uint8_t** vertexBufferPointer, ElemToolsBoundingBox* boundingBox)
+void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSceneCoordinateSystem coordinateSystem, bool flipVerticalTextureCoordinates, uint8_t** vertexBufferPointer, ElemToolsBoundingBox* boundingBox)
 {
     // TODO: Check what to include
     auto currentVertexBufferPointer = *vertexBufferPointer;
@@ -109,6 +109,11 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSc
         {
             ((float*)currentVertexBufferPointer)[j] = objMesh->texcoords[2 * objVertex.t + j];
         }
+
+        if (!flipVerticalTextureCoordinates)
+        {
+            ((float*)currentVertexBufferPointer)[1] = 1 - ((float*)currentVertexBufferPointer)[1];
+        }
     }
 
     // TODO: Force the texture coordinates for now
@@ -116,7 +121,7 @@ void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSc
     *vertexBufferPointer = currentVertexBufferPointer;
 }
 
-ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, ElemSceneCoordinateSystem coordinateSystem, const fastObjMesh* objMesh, ObjMeshPrimitiveInfo* meshPrimitiveInfo)
+ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, ElemSceneCoordinateSystem coordinateSystem, bool flipVerticalTextureCoordinates, const fastObjMesh* objMesh, ObjMeshPrimitiveInfo* meshPrimitiveInfo)
 {
     // TODO: Config of the vertex components to load
     auto positionSize = sizeof(float) * 3;
@@ -132,7 +137,7 @@ ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, ElemSceneCoor
 
     for (uint32_t i = meshPrimitiveInfo->IndexOffset; i < meshPrimitiveInfo->IndexOffset + meshPrimitiveInfo->IndexCount; i++)
     {
-        ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
+        ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, flipVerticalTextureCoordinates, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
     }
 
     return 
@@ -248,6 +253,7 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
             if (faceMaterial != currentMaterial)
             {
                 currentMaterial = faceMaterial;
+                printf("Material: %d\n", currentMaterial);
 
                 auto meshPrimitiveIndexOffset = indexOffset + meshPrimitiveInfo->IndexCount;
 
@@ -255,6 +261,7 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
                 *meshPrimitiveInfo = 
                 { 
                     .IndexOffset = meshPrimitiveIndexOffset, 
+                    .MaterialId = (int32_t)currentMaterial,
                     .BoundingBox = 
                     { 
                         .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
@@ -279,7 +286,7 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
             auto meshPrimitive = &meshPrimitives[j];
             auto meshPrimitiveInfo = &meshPrimitiveInfos[j];
 
-            meshPrimitive->VertexBuffer = ConstructObjVertexBuffer(sceneLoaderMemoryArena, options->CoordinateSystem, objFileData, meshPrimitiveInfo);
+            meshPrimitive->VertexBuffer = ConstructObjVertexBuffer(sceneLoaderMemoryArena, options->CoordinateSystem, options->FlipVerticalTextureCoordinates, objFileData, meshPrimitiveInfo);
             meshPrimitive->IndexBuffer = ConstructObjIndexBuffer(sceneLoaderMemoryArena, options->CoordinateSystem, objFileData, meshPrimitiveInfo);
             meshPrimitive->BoundingBox = meshPrimitiveInfo->BoundingBox;
             meshPrimitive->MaterialId = meshPrimitiveInfo->MaterialId;

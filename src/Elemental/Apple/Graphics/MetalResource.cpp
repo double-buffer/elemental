@@ -779,3 +779,16 @@ void MetalProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
     }
 }
 
+ElemGraphicsSampler MetalCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
+{
+    return {};
+}
+
+ElemGraphicsSamplerInfo MetalGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    return {};
+}
+
+void MetalFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
+{
+}

@@ -79,3 +79,7 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
 void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
 void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
+
+ElemGraphicsSampler DirectX12CreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
+ElemGraphicsSamplerInfo DirectX12GetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
+void DirectX12FreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);

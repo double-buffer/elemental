@@ -64,3 +64,7 @@ void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descrip
 void VulkanProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
 void VulkanGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
+
+ElemGraphicsSampler VulkanCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
+ElemGraphicsSamplerInfo VulkanGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
+void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
