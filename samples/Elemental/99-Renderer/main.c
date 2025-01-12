@@ -134,7 +134,7 @@ void InitSample(void* payload)
         .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
-        .CullMode = ElemGraphicsCullMode_None, // TODO: We need to deactivate cull only for transparent objects!
+        //.CullMode = ElemGraphicsCullMode_None, // TODO: We need to deactivate cull only for transparent objects!
         .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = swapChainInfo.Format }}, .Length = 1 },
         .DepthStencil =
         {
@@ -240,6 +240,11 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         if (material->AlbedoTexture.Path && !material->AlbedoTexture.IsLoaded)
         {
             SampleLoadTextureData(loadDataCommandList, &material->AlbedoTexture, &applicationPayload->GpuMemory);
+        }
+
+        if (material->NormalTexture.Path && !material->NormalTexture.IsLoaded)
+        {
+            SampleLoadTextureData(loadDataCommandList, &material->NormalTexture, &applicationPayload->GpuMemory);
         }
     }
 

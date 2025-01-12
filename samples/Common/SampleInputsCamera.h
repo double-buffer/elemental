@@ -38,6 +38,7 @@ typedef struct
 typedef struct
 {
     SampleCamera Camera;
+    // TODO: Instead of having a debug camera, we could "freeze" the camera like in AW2
     SampleCamera DebugCamera;
     SampleMatrix4x4 ProjectionMatrix;
     SampleMatrix4x4 ViewProjMatrix;

@@ -41,10 +41,12 @@ struct ElemMeshlet
     uint32_t TriangleCount;
 };
 
+// Compress Data
 struct Vertex
 {
     float3 Position;
     float3 Normal;
+    float4 Tangent;
     float2 TextureCoordinates;
 };
 
@@ -52,6 +54,7 @@ struct VertexOutput
 {
     float4 Position: SV_Position;
     float3 WorldNormal: Attribute0;
+    float4 Tangent: Attribute5;
     float2 TextureCoordinates: Attribute1;
     nointerpolation uint MeshletIndex: Attribute2;
     nointerpolation uint MaterialId: Attribute3;
@@ -95,6 +98,7 @@ void MeshMain(in uint groupId: SV_GroupID,
         // NOTE: This calculation is faster because v * M is faster than M * M
         vertices[groupThreadId].Position = mul(float4(worldPosition, 1.0), frameData.ViewProjMatrix);
         vertices[groupThreadId].WorldNormal = worldNormal;
+        vertices[groupThreadId].Tangent = vertex.Tangent;
         vertices[groupThreadId].TextureCoordinates = vertex.TextureCoordinates;
         vertices[groupThreadId].MeshletIndex = groupId;
         vertices[groupThreadId].MaterialId = parameters.MaterialId;
@@ -134,9 +138,13 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
 
     if (frameData.ShowMeshlets == 0)
     {
+        float3 worldNormal = normalize(input.WorldNormal);
+
         if (material.AlbedoTextureId >= 0)
         {
-            Texture2D<float4> albedoTexture = ResourceDescriptorHeap[material.AlbedoTextureId];
+            // TODO: Should we use non uniform index here? We know we have the same material for each meshlet.
+            // But we sometimes may group some meshlets together
+            Texture2D<float4> albedoTexture = ResourceDescriptorHeap[NonUniformResourceIndex(material.AlbedoTextureId)];
             float4 albedo = albedoTexture.Sample(textureSampler, input.TextureCoordinates);
 
             // TODO: Doing discard on the main pass is really bad for performance.
@@ -148,11 +156,22 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
                 discard;
             }
 
-            return albedo;
+            //return albedo;
         }
 
-        return float4(0, 0, 1, 1);;
-        return float4(normalize(input.WorldNormal) * 0.5 + 0.5, 1.0);
+        if (material.NormalTextureId >= 0)
+        {
+            Texture2D<float4> normalTexture = ResourceDescriptorHeap[NonUniformResourceIndex(material.NormalTextureId)];
+            float3 normalMap = normalTexture.Sample(textureSampler, input.TextureCoordinates).rgb * 2.0 - 1.0;
+
+            float3 bitangent = cross(worldNormal, input.Tangent.xyz) * input.Tangent.w;
+	        worldNormal = normalize(normalMap.r * input.Tangent.xyz + normalMap.g * bitangent + normalMap.b * worldNormal);
+        }
+
+
+        //return float4(0, 0, 1, 1);;
+        //return float4(input.Tangent * 0.5 + 0.5, 1.0);
+        return float4(worldNormal * 0.5 + 0.5, 1.0);
     }
     else
     {
@@ -160,6 +179,7 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
         uint hashResult = hash(input.MaterialId);
         float3 meshletColor = float3(float(hashResult & 255), float((hashResult >> 8) & 255), float((hashResult >> 16) & 255)) / 255.0;
 
+        return float4(input.WorldNormal * 0.5 + 0.5, 1.0);
         return float4(meshletColor, 1.0);
     }
 }

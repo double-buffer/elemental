@@ -97,6 +97,119 @@ ElemToolsVector3 GetBoundingBoxCenter(const ElemToolsBoundingBox* boundingBox)
     };
 }
 
+ElemToolsVector2 operator +(const ElemToolsVector2& v1, const ElemToolsVector2& v2)
+{
+	ElemToolsVector2 result;
+
+	result.X = v1.X + v2.X;
+	result.Y = v1.Y + v2.Y;
+
+	return result;
+}
+
+ElemToolsVector2 operator -(const ElemToolsVector2& v1, const ElemToolsVector2& v2)
+{
+	ElemToolsVector2 result;
+
+	result.X = v1.X - v2.X;
+	result.Y = v1.Y - v2.Y;
+
+	return result;
+}
+
+ElemToolsVector3 operator +(const ElemToolsVector3& v1, const ElemToolsVector3& v2)
+{
+	ElemToolsVector3 result;
+
+	result.X = v1.X + v2.X;
+	result.Y = v1.Y + v2.Y;
+	result.Z = v1.Z + v2.Z;
+
+	return result;
+}
+
+ElemToolsVector3 operator -(const ElemToolsVector3& v1, const ElemToolsVector3& v2)
+{
+	ElemToolsVector3 result;
+
+	result.X = v1.X - v2.X;
+	result.Y = v1.Y - v2.Y;
+	result.Z = v1.Z - v2.Z;
+
+	return result;
+}
+
+ElemToolsVector3 operator *(const ElemToolsVector3& v1, const ElemToolsVector3& v2)
+{
+    ElemToolsVector3 result;
+
+	result.X = v1.X * v2.X;
+	result.Y = v1.Y * v2.Y;
+	result.Z = v1.Z * v2.Z;
+
+	return result;
+}
+
+ElemToolsVector3 operator *(const ElemToolsVector3& v, float scalar)
+{
+	ElemToolsVector3 result;
+
+	result.X = v.X * scalar;
+	result.Y = v.Y * scalar;
+	result.Z = v.Z * scalar;
+
+	return result;
+}
+
+ElemToolsVector3 ElemToolsMulScalarV3(ElemToolsVector3 v, float scalar)
+{
+	ElemToolsVector3 result;
+
+	result.X = v.X * scalar;
+	result.Y = v.Y * scalar;
+	result.Z = v.Z * scalar;
+
+	return result;
+}
+
+ElemToolsVector3 ElemToolsMulV3(ElemToolsVector3 v1, ElemToolsVector3 v2)
+{
+	ElemToolsVector3 result;
+
+	result.X = v1.X * v2.X;
+	result.Y = v1.Y * v2.Y;
+	result.Z = v1.Z * v2.Z;
+
+	return result;
+}
+
+float ElemToolsDotProductV3(ElemToolsVector3 v1, ElemToolsVector3 v2)
+{
+	return v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
+}
+
+float ElemToolsMagnitudeSquaredV3(ElemToolsVector3 v)
+{
+	return ElemToolsDotProductV3(v, v);
+}
+
+float ElemToolsMagnitudeV3(ElemToolsVector3 v)
+{
+	return sqrtf(ElemToolsMagnitudeSquaredV3(v));
+}
+
+ElemToolsVector3 ElemToolsNormalizeV3(ElemToolsVector3 v)
+{
+	float magnitude = ElemToolsMagnitudeV3(v);
+
+	if (magnitude > 0.0f)
+	{
+		ElemToolsVector3 result = ElemToolsMulScalarV3(v, (1.0f / ElemToolsMagnitudeV3(v)));
+		return result;
+	}
+
+	return v;
+}
 // TODO: CLEANUP
 ElemToolsVector3 ElemToolsCrossProductV3(ElemToolsVector3 v1, ElemToolsVector3 v2) 
 {

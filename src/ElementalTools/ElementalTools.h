@@ -122,6 +122,11 @@ typedef struct
 
 typedef struct
 {
+    float X, Y;
+} ElemToolsVector2;
+
+typedef struct
+{
     float X, Y, Z;
 } ElemToolsVector3;
 

@@ -15,7 +15,14 @@ struct ObjMeshPrimitiveInfo
     uint32_t IndexOffset;
     uint32_t IndexCount; 
     int32_t MaterialId;
-    ElemToolsBoundingBox BoundingBox;
+};
+
+struct ObjVertex
+{
+    ElemToolsVector3 Position;
+    ElemToolsVector3 Normal;
+    ElemToolsVector4 Tangent;
+    ElemToolsVector2 TextureCoordinates;
 };
 
 void* FastObjFileOpen(const char* path, void* userData)
@@ -66,109 +73,215 @@ unsigned long FastObjFileSize(void* file, void* userData)
     return objLoaderFileData->FileData.Length;
 }
 
-// TODO: Remove that function and include it in construct vertex buffer
-void ProcessObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSceneCoordinateSystem coordinateSystem, bool flipVerticalTextureCoordinates, uint8_t** vertexBufferPointer, ElemToolsBoundingBox* boundingBox)
+
+ObjVertex ReadObjVertex(fastObjIndex objVertex, const fastObjMesh* objMesh, ElemSceneCoordinateSystem coordinateSystem, bool flipVerticalTextureCoordinates)
 {
-    // TODO: Check what to include
-    auto currentVertexBufferPointer = *vertexBufferPointer;
+    ObjVertex result = {};
 
     if (objVertex.p)
     {
-        for (uint32_t j = 0; j < 3; j++)
-        {
-            ((float*)currentVertexBufferPointer)[j] = objMesh->positions[3 * objVertex.p + j];
-        }
+        result.Position.X = objMesh->positions[3 * objVertex.p];
+        result.Position.Y = objMesh->positions[3 * objVertex.p + 1];
+        result.Position.Z = objMesh->positions[3 * objVertex.p + 2];
 
         if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
         {
-            ((float*)currentVertexBufferPointer)[2] = -((float*)currentVertexBufferPointer)[2];
+            result.Position.Z = -result.Position.Z;
         }
-
-        AddPointToBoundingBox({ ((float*)currentVertexBufferPointer)[0], ((float*)currentVertexBufferPointer)[1], ((float*)currentVertexBufferPointer)[2]}, boundingBox);
-        currentVertexBufferPointer += 3 * sizeof(float);
     }
 
     if (objVertex.n)
     {
-        for (uint32_t j = 0; j < 3; j++)
-        {
-            ((float*)currentVertexBufferPointer)[j] = objMesh->normals[3 * objVertex.n + j];
-        }
+        result.Normal.X = objMesh->normals[3 * objVertex.n];
+        result.Normal.Y = objMesh->normals[3 * objVertex.n + 1];
+        result.Normal.Z = objMesh->normals[3 * objVertex.n + 2];
 
         if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
         {
-            ((float*)currentVertexBufferPointer)[2] = -((float*)currentVertexBufferPointer)[2];
+            result.Normal.Z = -result.Normal.Z;
         }
-
-        currentVertexBufferPointer += 3 * sizeof(float);
     }
 
     if (objVertex.t)
     {
-        for (uint32_t j = 0; j < 2; j++)
-        {
-            ((float*)currentVertexBufferPointer)[j] = objMesh->texcoords[2 * objVertex.t + j];
-        }
+        result.TextureCoordinates.X = objMesh->texcoords[2 * objVertex.t];
+        result.TextureCoordinates.Y = objMesh->texcoords[2 * objVertex.t + 1];
 
         if (!flipVerticalTextureCoordinates)
         {
-            ((float*)currentVertexBufferPointer)[1] = 1 - ((float*)currentVertexBufferPointer)[1];
+            result.TextureCoordinates.Y = 1 - result.TextureCoordinates.Y;
         }
     }
 
-    // TODO: Force the texture coordinates for now
-    currentVertexBufferPointer += 2 * sizeof(float);
+    return result;
+}
+
+// TODO: Pass vertex format configured by the lib
+void WriteObjVertex(const ObjVertex* vertex, uint8_t** vertexBufferPointer)
+{
+    // TODO: Check what to include
+    auto currentVertexBufferPointer = *vertexBufferPointer;
+
+    // Positions
+    ((float*)currentVertexBufferPointer)[0] = vertex->Position.X;
+    ((float*)currentVertexBufferPointer)[1] = vertex->Position.Y;
+    ((float*)currentVertexBufferPointer)[2] = vertex->Position.Z;
+
+    currentVertexBufferPointer += sizeof(ElemToolsVector3);
+
+    // Normals
+    ((float*)currentVertexBufferPointer)[0] = vertex->Normal.X;
+    ((float*)currentVertexBufferPointer)[1] = vertex->Normal.Y;
+    ((float*)currentVertexBufferPointer)[2] = vertex->Normal.Z;
+
+    currentVertexBufferPointer += sizeof(ElemToolsVector3);
+
+    // Tangents
+    ((float*)currentVertexBufferPointer)[0] = vertex->Tangent.X;
+    ((float*)currentVertexBufferPointer)[1] = vertex->Tangent.Y;
+    ((float*)currentVertexBufferPointer)[2] = vertex->Tangent.Z;
+    ((float*)currentVertexBufferPointer)[3] = vertex->Tangent.W;
+
+    currentVertexBufferPointer += sizeof(ElemToolsVector4);
+
+    // Texture Coordinates
+    ((float*)currentVertexBufferPointer)[0] = vertex->TextureCoordinates.X;
+    ((float*)currentVertexBufferPointer)[1] = vertex->TextureCoordinates.Y;
+
+    currentVertexBufferPointer += sizeof(ElemToolsVector2);
+    
     *vertexBufferPointer = currentVertexBufferPointer;
 }
 
-ElemVertexBuffer ConstructObjVertexBuffer(MemoryArena memoryArena, ElemSceneCoordinateSystem coordinateSystem, bool flipVerticalTextureCoordinates, const fastObjMesh* objMesh, ObjMeshPrimitiveInfo* meshPrimitiveInfo)
+struct ObjTriangle
 {
+    uint32_t Vertices[3];
+    // TODO: More data
+};
+
+// TODO: Generalize this function so that it can be used by other loaders
+ElemToolsVector3 ComputeTriangleTangentVector(const ObjTriangle* triangle, ReadOnlySpan<ObjVertex> vertexList)
+{
+    // TODO: Refactor that
+    ObjVertex triangleVertices[3];
+
+    for (uint32_t j = 0; j < 3; j++)
+    {
+        triangleVertices[j] = vertexList[triangle->Vertices[j]];
+    }
+
+    // TODO: Put that in a function because we may use it of GLTF too if the tangents are missing
+    // Compute tangents
+    auto edge1 = triangleVertices[1].Position - triangleVertices[0].Position; 
+    auto edge2 = triangleVertices[2].Position - triangleVertices[0].Position; 
+
+    auto deltaUV1 = triangleVertices[1].TextureCoordinates - triangleVertices[0].TextureCoordinates; 
+    auto deltaUV2 = triangleVertices[2].TextureCoordinates - triangleVertices[0].TextureCoordinates; 
+
+    float f = 1.0f / (deltaUV1.X * deltaUV2.Y - deltaUV2.X * deltaUV1.Y);
+
+    ElemToolsVector3 tangent = {};
+
+    tangent.X = f * (deltaUV2.Y * edge1.X - deltaUV1.Y * edge2.X);
+    tangent.Y = f * (deltaUV2.Y * edge1.Y - deltaUV1.Y * edge2.Y);
+    tangent.Z = f * (deltaUV2.Y * edge1.Z - deltaUV1.Y * edge2.Z);
+
+    return tangent;
+}
+
+ElemSceneMeshPrimitive ConstructObjMeshPrimitive(MemoryArena memoryArena, const fastObjMesh* objMesh, const ObjMeshPrimitiveInfo* meshPrimitiveInfo, const ElemLoadSceneOptions* options)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    ElemSceneMeshPrimitive result =
+    {
+        .BoundingBox = 
+        { 
+            .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
+            .MaxPoint = { FLT_MIN, FLT_MIN, FLT_MIN } 
+        }
+    };
+
     // TODO: Config of the vertex components to load
     auto positionSize = sizeof(float) * 3;
     auto normalSize = sizeof(float) * 3;
+    auto tangentSize = sizeof(float) * 4;
     auto textureCoordinatesSize = sizeof(float) * 2;
-    auto maxVertexSize = positionSize + normalSize + textureCoordinatesSize;
+    auto maxVertexSize = positionSize + normalSize + tangentSize + textureCoordinatesSize;
 
     // TODO: Temporary
     auto realVertexSize = maxVertexSize;
 
-    auto vertexBuffer = SystemPushArray<uint8_t>(memoryArena, meshPrimitiveInfo->IndexCount * maxVertexSize);
-    auto currentVertexBufferPointer = vertexBuffer.Pointer;
+    auto indexBufferData = SystemPushArray<uint32_t>(memoryArena, meshPrimitiveInfo->IndexCount);
 
-    for (uint32_t i = meshPrimitiveInfo->IndexOffset; i < meshPrimitiveInfo->IndexOffset + meshPrimitiveInfo->IndexCount; i++)
+    auto triangleCount = meshPrimitiveInfo->IndexCount / 3;
+    auto triangleList = SystemPushArray<ObjTriangle>(stackMemoryArena, triangleCount);
+    auto vertexList = SystemPushArray<ObjVertex>(stackMemoryArena, 3 * triangleCount);
+    auto vertexCount = 0u;
+
+    for (uint32_t i = 0; i < triangleCount; i++)
     {
-        ProcessObjVertex(objMesh->indices[i], objMesh, coordinateSystem, flipVerticalTextureCoordinates, &currentVertexBufferPointer, &meshPrimitiveInfo->BoundingBox);
+        auto triangle = &triangleList[i];
+
+        for (uint32_t j = 0; j < 3; j++)
+        {
+            auto vertex = ReadObjVertex(objMesh->indices[meshPrimitiveInfo->IndexOffset + i * 3 + j], objMesh, options->CoordinateSystem, options->FlipVerticalTextureCoordinates);
+
+            // TODO: Check for duplicates
+            auto vertexIndex = vertexCount++;
+            vertexList[vertexIndex] = vertex;
+            AddPointToBoundingBox(vertex.Position, &result.BoundingBox);
+
+            triangle->Vertices[j] = vertexIndex;
+            indexBufferData[i * 3 + j] = vertexIndex;
+        }
+        
+        if (options->CoordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
+        {
+            auto tmp = indexBufferData[i * 3 + 1];
+            indexBufferData[i * 3 + 1] = indexBufferData[i * 3 + 2];
+            indexBufferData[i * 3 + 2] = tmp;
+        }
+
+        auto triangleTangent = ComputeTriangleTangentVector(triangle, vertexList);
+
+        for (uint32_t j = 0; j < 3; j++)
+        {
+            auto vertexIndex = triangle->Vertices[j];
+            vertexList[vertexIndex].Tangent.XYZ = vertexList[vertexIndex].Tangent.XYZ + triangleTangent;
+        }
+    }
+    
+    auto vertexBufferData = SystemPushArray<uint8_t>(memoryArena, meshPrimitiveInfo->IndexCount * maxVertexSize);
+    auto currentVertexBufferPointer = vertexBufferData.Pointer;
+
+    for (uint32_t i = 0; i < vertexCount; i++)
+    {
+        auto normal = vertexList[i].Normal;
+        auto tangent = ElemToolsNormalizeV3(vertexList[i].Tangent.XYZ);
+
+        // TODO: Active that when we have unique vertices
+        //tangent = ElemToolsNormalizeV3(tangent - normal * ElemToolsDotProductV3(normal, tangent));
+
+        // TODO: Process vertex data
+        vertexList[i].Tangent.XYZ = tangent;
+        vertexList[i].Tangent.W = 1.0f;
+        //float handedness = (glm::dot(glm::cross(normal, tangent), B) < 0.0f) ? -1.0f : 1.0f;
+
+        WriteObjVertex(&vertexList[i], &currentVertexBufferPointer);
     }
 
-    return 
+    result.VertexBuffer =
     {
-        .Data = { .Items = vertexBuffer.Pointer, .Length = (uint32_t)vertexBuffer.Length },
+        .Data = { .Items = vertexBufferData.Pointer, .Length = (uint32_t)vertexBufferData.Length },
         .VertexSize = (uint32_t)realVertexSize,
         .VertexCount = meshPrimitiveInfo->IndexCount
     };
-}
 
-ElemUInt32Span ConstructObjIndexBuffer(MemoryArena memoryArena, ElemSceneCoordinateSystem coordinateSystem, const fastObjMesh* objMesh, ObjMeshPrimitiveInfo* meshPrimitiveInfo)
-{
-    auto indexBuffer = SystemPushArray<uint32_t>(memoryArena, meshPrimitiveInfo->IndexCount);
+    result.IndexBuffer = { .Items = indexBufferData.Pointer, .Length = (uint32_t)indexBufferData.Length }; 
+    result.MaterialId = meshPrimitiveInfo->MaterialId;
 
-    for (uint32_t i = 0; i < meshPrimitiveInfo->IndexCount; i += 3)
-    {
-        indexBuffer[i] = i;
-
-        if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
-        {
-            indexBuffer[i + 1] = i + 2;
-            indexBuffer[i + 2] = i + 1;
-        }
-        else
-        {
-            indexBuffer[i + 1] = i + 1;
-            indexBuffer[i + 2] = i + 2;
-        }
-    }
-
-    return { .Items = indexBuffer.Pointer, .Length = (uint32_t)indexBuffer.Length }; 
+    return result;
 }
 
 void ApplyObjMeshPrimitiveInverseTranslation(ElemToolsVector3 translation, ElemVertexBuffer* vertexBuffer)
@@ -228,12 +341,7 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
         *meshPrimitiveInfo = 
         { 
             .IndexOffset = indexOffset, 
-            .MaterialId = (int32_t)currentMaterial,
-            .BoundingBox = 
-            { 
-                .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
-                .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
-            }
+            .MaterialId = (int32_t)currentMaterial
         };
       
         for (uint32_t j = currentFaceStart; j < currentFaceEnd; j++) 
@@ -261,12 +369,7 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
                 *meshPrimitiveInfo = 
                 { 
                     .IndexOffset = meshPrimitiveIndexOffset, 
-                    .MaterialId = (int32_t)currentMaterial,
-                    .BoundingBox = 
-                    { 
-                        .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
-                        .MaxPoint = { FLT_MIN, FLT_MIN, FLT_MIN } 
-                    } 
+                    .MaterialId = (int32_t)currentMaterial
                 };
             }
 
@@ -283,15 +386,8 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
 
         for (uint32_t j = 0; j < meshPrimitiveCount; j++)
         {
-            auto meshPrimitive = &meshPrimitives[j];
-            auto meshPrimitiveInfo = &meshPrimitiveInfos[j];
-
-            meshPrimitive->VertexBuffer = ConstructObjVertexBuffer(sceneLoaderMemoryArena, options->CoordinateSystem, options->FlipVerticalTextureCoordinates, objFileData, meshPrimitiveInfo);
-            meshPrimitive->IndexBuffer = ConstructObjIndexBuffer(sceneLoaderMemoryArena, options->CoordinateSystem, objFileData, meshPrimitiveInfo);
-            meshPrimitive->BoundingBox = meshPrimitiveInfo->BoundingBox;
-            meshPrimitive->MaterialId = meshPrimitiveInfo->MaterialId;
-
-            AddBoundingBoxToBoundingBox(&meshPrimitive->BoundingBox, &mesh->BoundingBox);
+            meshPrimitives[j] = ConstructObjMeshPrimitive(sceneLoaderMemoryArena, objFileData, &meshPrimitiveInfos[j], options);
+            AddBoundingBoxToBoundingBox(&meshPrimitives[j].BoundingBox, &mesh->BoundingBox);
         }
             
         auto boundingBoxCenter = GetBoundingBoxCenter(&mesh->BoundingBox);

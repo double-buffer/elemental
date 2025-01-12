@@ -194,6 +194,7 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
     // TODO: Some materials can use the same texture so we need to load it only once
     if (strlen(materialHeader->AlbedoTexturePath) > 0)
     {
+        // TODO: Refactor that
         char fullTexturePath[MAX_PATH];
         memset(fullTexturePath, 0, MAX_PATH);
         strcpy(fullTexturePath, directoryPath);
@@ -203,14 +204,28 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
         shaderMaterial->AlbedoTextureId = materialData->AlbedoTexture.GpuTexture.ReadDescriptor;
     }
 
-    // TODO: NormalMap
+    if (strlen(materialHeader->NormalTexturePath) > 0)
+    {
+        char fullTexturePath[MAX_PATH];
+        memset(fullTexturePath, 0, MAX_PATH);
+        strcpy(fullTexturePath, directoryPath);
+        strcat(fullTexturePath, materialHeader->NormalTexturePath);
+
+        SampleLoadTexture(fullTexturePath, &materialData->NormalTexture, gpuMemory);
+        shaderMaterial->NormalTextureId = materialData->NormalTexture.GpuTexture.ReadDescriptor;
+    }
 }
 
 void SampleFreeMaterial(SampleMaterialData* materialData)
 {
-    if (materialData->AlbedoTexture.IsLoaded)
+    if (materialData->AlbedoTexture.GpuTexture.Texture)
     {
         SampleFreeTexture(&materialData->AlbedoTexture);
+    }
+
+    if (materialData->NormalTexture.GpuTexture.Texture)
+    {
+        SampleFreeTexture(&materialData->NormalTexture);
     }
 }
 
