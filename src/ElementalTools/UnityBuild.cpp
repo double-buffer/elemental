@@ -7,6 +7,8 @@
 #include "Shaders/MetalShaderConverter.cpp"
 #endif
 
+#include "SceneLoading/TangentSpaceGenerator.cpp"
+
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 #include "fast_obj.c"
@@ -25,6 +27,11 @@
 #include "stb_image.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize2.h"
+#pragma clang diagnostic pop
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#include "mikktspace.c"
 #pragma clang diagnostic pop
 
 #include "bc7enc.cpp"

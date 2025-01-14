@@ -211,6 +211,10 @@ int main(int argc, const char* argv[])
     {
         loadSceneOptions.Scaling = 0.01f;
     }
+    else if (strstr(inputPath, "Sponza.gltf"))
+    {
+        //loadSceneOptions.CoordinateSystem = ElemSceneCoordinateSystem_RightHanded;
+    }
     else if (strstr(inputPath, "bistro"))
     {
         //loadSceneOptions.CoordinateSystem = ElemSceneCoordinateSystem_RightHanded;

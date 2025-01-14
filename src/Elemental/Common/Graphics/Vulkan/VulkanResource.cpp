@@ -65,6 +65,9 @@ VkFormat ConvertToVulkanTextureFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_D32_FLOAT:
             return VK_FORMAT_D32_SFLOAT;
 
+        case ElemGraphicsFormat_BC7:
+            return VK_FORMAT_BC7_UNORM_BLOCK;
+
         case ElemGraphicsFormat_BC7_SRGB:
             return VK_FORMAT_BC7_SRGB_BLOCK;
 

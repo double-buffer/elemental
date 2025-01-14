@@ -1,5 +1,7 @@
 #include "TextureLoader.h"
+#include "SystemFunctions.h"
 #include "TextureLoaderStb.cpp"
+#include "TextureLoaderDds.cpp"
 
 // TODO: Do one for each thread
 static MemoryArena TextureLoaderMemoryArena;
@@ -34,6 +36,18 @@ ElemLoadTextureFileFormat GetLoadTextureFileFormatFromPath(const char* path)
     {
         return ElemLoadTextureFileFormat_Tga;
     }
+    else if (SystemFindSubString(extension, "jpg") != -1)
+    {
+        return ElemLoadTextureFileFormat_Jpg;
+    }
+    else if (SystemFindSubString(extension, "png") != -1)
+    {
+        return ElemLoadTextureFileFormat_Png;
+    }
+    else if (SystemFindSubString(extension, "dds") != -1)
+    {
+        return ElemLoadTextureFileFormat_Dds;
+    }
 
     return ElemLoadTextureFileFormat_Unknown;
 }
@@ -55,7 +69,12 @@ ElemToolsAPI ElemLoadTextureResult ElemLoadTexture(const char* path, const ElemL
     switch (textureFileFormat)
     {
         case ElemLoadTextureFileFormat_Tga:
+        case ElemLoadTextureFileFormat_Jpg:
+        case ElemLoadTextureFileFormat_Png:
             return LoadStbTexture(path, textureFileFormat, &loadTextureOptions);
+
+        case ElemLoadTextureFileFormat_Dds:
+            return LoadDdsTexture(path, textureFileFormat, &loadTextureOptions);
 
         default:
             return

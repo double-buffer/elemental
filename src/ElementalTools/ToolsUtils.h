@@ -4,8 +4,17 @@
 #include "SystemMemory.h"
 #include "SystemSpan.h"
 
+struct ToolsMessageList
+{
+    Span<ElemToolsMessage> Messages;
+    uint32_t MessageCount;
+    bool HasErrors;
+};
+
 ReadOnlySpan<uint8_t> LoadFileData(const char* path);
 void ResetLoadFileDataMemory();
+
+void WriteToMessageList(ElemToolsMessageType type, const char* message, ToolsMessageList* messageList);
 
 ElemToolsMessageSpan ConstructErrorMessageSpan(MemoryArena memoryArena, const char* errorMessage);
 
@@ -19,6 +28,7 @@ float ElemToolsDotProductV3(ElemToolsVector3 v1, ElemToolsVector3 v2);
 float ElemToolsMagnitudeSquaredV3(ElemToolsVector3 v);
 float ElemToolsMagnitudeV3(ElemToolsVector3 v);
 ElemToolsVector3 ElemToolsNormalizeV3(ElemToolsVector3 v);
+ElemToolsVector3 ElemToolsCrossProductV3(ElemToolsVector3 v1, ElemToolsVector3 v2);
 
 ElemToolsVector2 operator +(const ElemToolsVector2& v1, const ElemToolsVector2& v2);
 ElemToolsVector2 operator -(const ElemToolsVector2& v1, const ElemToolsVector2& v2);

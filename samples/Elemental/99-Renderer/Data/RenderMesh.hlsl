@@ -93,12 +93,13 @@ void MeshMain(in uint groupId: SV_GroupID,
 
         float3 worldPosition = RotateQuaternion(vertex.Position, parameters.Rotation) * parameters.Scale + parameters.Translation;
         float3 worldNormal = RotateQuaternion(vertex.Normal, parameters.Rotation);
+        float3 worldTangent = RotateQuaternion(vertex.Tangent.xyz, parameters.Rotation);
 
         //vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), mul(worldMatrix, frameData.ViewProjMatrix));
         // NOTE: This calculation is faster because v * M is faster than M * M
         vertices[groupThreadId].Position = mul(float4(worldPosition, 1.0), frameData.ViewProjMatrix);
         vertices[groupThreadId].WorldNormal = worldNormal;
-        vertices[groupThreadId].Tangent = vertex.Tangent;
+        vertices[groupThreadId].Tangent = float4(worldTangent, vertex.Tangent.w);
         vertices[groupThreadId].TextureCoordinates = vertex.TextureCoordinates;
         vertices[groupThreadId].MeshletIndex = groupId;
         vertices[groupThreadId].MaterialId = parameters.MaterialId;
@@ -136,16 +137,17 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
 
     SamplerState textureSampler = SamplerDescriptorHeap[parameters.TextureSampler];
 
-    if (frameData.ShowMeshlets == 0)
+    if (frameData.ShowMeshlets == 0 && parameters.MaterialId >= 0)
     {
-        float3 worldNormal = normalize(input.WorldNormal);
+        float3 worldNormal = input.WorldNormal;
+        float4 albedo = float4(1, 1, 1, 1);
 
         if (material.AlbedoTextureId >= 0)
         {
             // TODO: Should we use non uniform index here? We know we have the same material for each meshlet.
             // But we sometimes may group some meshlets together
             Texture2D<float4> albedoTexture = ResourceDescriptorHeap[NonUniformResourceIndex(material.AlbedoTextureId)];
-            float4 albedo = albedoTexture.Sample(textureSampler, input.TextureCoordinates);
+            albedo = albedoTexture.Sample(textureSampler, input.TextureCoordinates);
 
             // TODO: Doing discard on the main pass is really bad for performance.
             // Doing it disable the early depth test in the shader, so all pixel shader code has to run for
@@ -156,22 +158,39 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
                 discard;
             }
 
-            //return albedo;
+        //    return albedo;
         }
 
         if (material.NormalTextureId >= 0)
         {
             Texture2D<float4> normalTexture = ResourceDescriptorHeap[NonUniformResourceIndex(material.NormalTextureId)];
             float3 normalMap = normalTexture.Sample(textureSampler, input.TextureCoordinates).rgb * 2.0 - 1.0;
+            //return float4(normalMap, 1);
 
             float3 bitangent = cross(worldNormal, input.Tangent.xyz) * input.Tangent.w;
-	        worldNormal = normalize(normalMap.r * input.Tangent.xyz + normalMap.g * bitangent + normalMap.b * worldNormal);
+	        worldNormal = normalize(normalMap.x * input.Tangent.xyz + normalMap.y * bitangent + normalMap.z * worldNormal);
+
+            //float3 surfaceGradient = float3(TspaceNormalToDerivative(normalMap), 0);
+            //worldNormal = ResolveNormalFromSurfaceGradient(worldNormal, surfaceGradient);
         }
 
+        float nDotL = dot(worldNormal, normalize(float3(-0.5, 1, -0.5)));
+        float ambient = 0.6;
+
+        return albedo * (nDotL + ambient);
+        return float4(worldNormal * 0.5 + 0.5, 1.0);
+
+        if (input.Tangent.w > 0)
+        {
+            return float4(1, 0, 0, 1);
+        }
+        else
+        {
+            return float4(0, 1, 0, 1);
+        }
 
         //return float4(0, 0, 1, 1);;
         //return float4(input.Tangent * 0.5 + 0.5, 1.0);
-        return float4(worldNormal * 0.5 + 0.5, 1.0);
     }
     else
     {

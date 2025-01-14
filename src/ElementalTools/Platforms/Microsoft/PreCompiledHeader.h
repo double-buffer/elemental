@@ -42,6 +42,7 @@ using namespace Microsoft::WRL;
 #include "cgltf.h"
 #include "stb_image.h"
 #include "stb_image_resize2.h"
+#include "mikktspace.h"
 
 #ifdef _WASDEBUG
 #define _DEBUG

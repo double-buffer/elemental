@@ -193,6 +193,9 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_D32_FLOAT:
             return DXGI_FORMAT_D32_FLOAT;
 
+        case ElemGraphicsFormat_BC7:
+            return DXGI_FORMAT_BC7_UNORM;
+
         case ElemGraphicsFormat_BC7_SRGB:
             return DXGI_FORMAT_BC7_UNORM_SRGB;
 
@@ -219,6 +222,9 @@ ElemGraphicsFormat ConvertFromDirectX12TextureFormat(DXGI_FORMAT format)
 
         case DXGI_FORMAT_D32_FLOAT:
             return ElemGraphicsFormat_D32_FLOAT;
+
+        case DXGI_FORMAT_BC7_UNORM:
+            return ElemGraphicsFormat_BC7;
 
         case DXGI_FORMAT_BC7_UNORM_SRGB:
             return ElemGraphicsFormat_BC7_SRGB;

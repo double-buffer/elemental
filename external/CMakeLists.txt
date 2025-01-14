@@ -126,6 +126,14 @@ if(NOT BUILD_FOR_IOS)
 endif()
 
 #=======================================================================
+# MikkTSpace
+#=======================================================================
+if(NOT BUILD_FOR_IOS)
+    add_library(mikktspace INTERFACE)
+    target_include_directories(mikktspace INTERFACE ./MikkTSpace/)
+endif()
+
+#=======================================================================
 # bc7encoder_rdo
 #=======================================================================
 if(NOT BUILD_FOR_IOS)
@@ -142,7 +150,7 @@ endif()
 # Tools External Dependencies
 #=======================================================================
 add_library(tools_external_dependencies INTERFACE)
-target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj cgltf stb bc7enc)
+target_link_libraries(tools_external_dependencies INTERFACE tools_shader_compilers meshoptimizer fast_obj cgltf stb mikktspace bc7enc)
 
 #=======================================================================
 # xxHash

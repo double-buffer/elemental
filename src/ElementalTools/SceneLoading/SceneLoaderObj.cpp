@@ -1,5 +1,6 @@
 #include "SceneLoader.h"
 #include "ToolsUtils.h"
+#include "TangentSpaceGenerator.h"
 #include "ElementalTools.h"
 #include "SystemMemory.h"
 #include "SystemFunctions.h"
@@ -12,8 +13,10 @@ struct ObjLoaderFileData
 
 struct ObjMeshPrimitiveInfo
 {
-    uint32_t IndexOffset;
-    uint32_t IndexCount; 
+    uint32_t VertexOffset;
+    uint32_t VertexCount; 
+    uint32_t FaceOffset;
+    uint32_t FaceCount;
     int32_t MaterialId;
 };
 
@@ -22,11 +25,13 @@ struct ObjVertex
     ElemToolsVector3 Position;
     ElemToolsVector3 Normal;
     ElemToolsVector4 Tangent;
+    ElemToolsVector3 Bitangent;
     ElemToolsVector2 TextureCoordinates;
 };
 
 void* FastObjFileOpen(const char* path, void* userData)
 {
+    // TODO: Add support for streaming
     auto objFileData = LoadFileData(path); 
 
     if (objFileData.Length == 0)
@@ -55,7 +60,6 @@ size_t FastObjFileRead(void* file, void* destination, size_t bytes, void* userDa
 
     auto readLength = SystemMin(sourceSpan.Length - objLoaderFileData->CurrentOffset, bytes);
 
-    // TODO: For the map_Dist that isn't parsed by the lib, maybe we can replace it with bump here?
     if (readLength > 0)
     {
         SystemCopyBuffer(destinationSpan, sourceSpan.Slice(objLoaderFileData->CurrentOffset, readLength));
@@ -153,42 +157,6 @@ void WriteObjVertex(const ObjVertex* vertex, uint8_t** vertexBufferPointer)
     *vertexBufferPointer = currentVertexBufferPointer;
 }
 
-struct ObjTriangle
-{
-    uint32_t Vertices[3];
-    // TODO: More data
-};
-
-// TODO: Generalize this function so that it can be used by other loaders
-ElemToolsVector3 ComputeTriangleTangentVector(const ObjTriangle* triangle, ReadOnlySpan<ObjVertex> vertexList)
-{
-    // TODO: Refactor that
-    ObjVertex triangleVertices[3];
-
-    for (uint32_t j = 0; j < 3; j++)
-    {
-        triangleVertices[j] = vertexList[triangle->Vertices[j]];
-    }
-
-    // TODO: Put that in a function because we may use it of GLTF too if the tangents are missing
-    // Compute tangents
-    auto edge1 = triangleVertices[1].Position - triangleVertices[0].Position; 
-    auto edge2 = triangleVertices[2].Position - triangleVertices[0].Position; 
-
-    auto deltaUV1 = triangleVertices[1].TextureCoordinates - triangleVertices[0].TextureCoordinates; 
-    auto deltaUV2 = triangleVertices[2].TextureCoordinates - triangleVertices[0].TextureCoordinates; 
-
-    float f = 1.0f / (deltaUV1.X * deltaUV2.Y - deltaUV2.X * deltaUV1.Y);
-
-    ElemToolsVector3 tangent = {};
-
-    tangent.X = f * (deltaUV2.Y * edge1.X - deltaUV1.Y * edge2.X);
-    tangent.Y = f * (deltaUV2.Y * edge1.Y - deltaUV1.Y * edge2.Y);
-    tangent.Z = f * (deltaUV2.Y * edge1.Z - deltaUV1.Y * edge2.Z);
-
-    return tangent;
-}
-
 ElemSceneMeshPrimitive ConstructObjMeshPrimitive(MemoryArena memoryArena, const fastObjMesh* objMesh, const ObjMeshPrimitiveInfo* meshPrimitiveInfo, const ElemLoadSceneOptions* options)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -212,62 +180,100 @@ ElemSceneMeshPrimitive ConstructObjMeshPrimitive(MemoryArena memoryArena, const 
     // TODO: Temporary
     auto realVertexSize = maxVertexSize;
 
-    auto indexBufferData = SystemPushArray<uint32_t>(memoryArena, meshPrimitiveInfo->IndexCount);
+    // TODO: We can just have one loop again, it is good that we have separated the read and write
+    auto vertexList = SystemPushArray<ObjVertex>(stackMemoryArena, meshPrimitiveInfo->VertexCount);
 
-    auto triangleCount = meshPrimitiveInfo->IndexCount / 3;
-    auto triangleList = SystemPushArray<ObjTriangle>(stackMemoryArena, triangleCount);
-    auto vertexList = SystemPushArray<ObjVertex>(stackMemoryArena, 3 * triangleCount);
-    auto vertexCount = 0u;
-
-    for (uint32_t i = 0; i < triangleCount; i++)
+    for (uint32_t i = 0; i < meshPrimitiveInfo->VertexCount; i++)
     {
-        auto triangle = &triangleList[i];
+        // TODO: Here, we can directly write the vertex data to the buffer
+        vertexList[i] = ReadObjVertex(objMesh->indices[meshPrimitiveInfo->VertexOffset + i], objMesh, options->CoordinateSystem, options->FlipVerticalTextureCoordinates);
+        AddPointToBoundingBox(vertexList[i].Position, &result.BoundingBox);
+    }
 
-        for (uint32_t j = 0; j < 3; j++)
+    auto indexCount = 0u;
+    
+    for (uint32_t i = 0; i < meshPrimitiveInfo->FaceCount; i++)
+    {
+        if (objMesh->face_vertices[meshPrimitiveInfo->FaceOffset + i] == 3)
         {
-            auto vertex = ReadObjVertex(objMesh->indices[meshPrimitiveInfo->IndexOffset + i * 3 + j], objMesh, options->CoordinateSystem, options->FlipVerticalTextureCoordinates);
-
-            // TODO: Check for duplicates
-            auto vertexIndex = vertexCount++;
-            vertexList[vertexIndex] = vertex;
-            AddPointToBoundingBox(vertex.Position, &result.BoundingBox);
-
-            triangle->Vertices[j] = vertexIndex;
-            indexBufferData[i * 3 + j] = vertexIndex;
+            indexCount += 3;
         }
-        
-        if (options->CoordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
+        else
         {
-            auto tmp = indexBufferData[i * 3 + 1];
-            indexBufferData[i * 3 + 1] = indexBufferData[i * 3 + 2];
-            indexBufferData[i * 3 + 2] = tmp;
-        }
-
-        auto triangleTangent = ComputeTriangleTangentVector(triangle, vertexList);
-
-        for (uint32_t j = 0; j < 3; j++)
-        {
-            auto vertexIndex = triangle->Vertices[j];
-            vertexList[vertexIndex].Tangent.XYZ = vertexList[vertexIndex].Tangent.XYZ + triangleTangent;
+            indexCount += 6;
         }
     }
     
-    auto vertexBufferData = SystemPushArray<uint8_t>(memoryArena, meshPrimitiveInfo->IndexCount * maxVertexSize);
+    printf("IndexCount: %d\n", indexCount);
+    auto indexBufferData = SystemPushArray<uint32_t>(memoryArena, indexCount);
+    auto currentIndex = 0u;
+    auto currentObjIndex = 0u;
+
+    for (uint32_t i = 0; i < meshPrimitiveInfo->FaceCount; i++)
+    {
+        auto faceVertexCount = objMesh->face_vertices[meshPrimitiveInfo->FaceOffset + i];
+
+        if (faceVertexCount == 3)
+        {
+            indexBufferData[currentIndex] = currentObjIndex;
+            indexBufferData[currentIndex + 1] = currentObjIndex + 1;
+            indexBufferData[currentIndex + 2] = currentObjIndex + 2;
+
+            if (options->CoordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
+            {
+                auto tmp = indexBufferData[currentIndex + 1];
+                indexBufferData[currentIndex + 1] = indexBufferData[currentIndex + 2];
+                indexBufferData[currentIndex + 2] = tmp;
+            }
+
+            currentIndex += 3;
+        }
+        else
+        {
+            indexBufferData[currentIndex] = currentObjIndex;
+            indexBufferData[currentIndex + 1] = currentObjIndex + 1;
+            indexBufferData[currentIndex + 2] = currentObjIndex + 2;
+
+            indexBufferData[currentIndex + 3] = currentObjIndex + 0;
+            indexBufferData[currentIndex + 4] = currentObjIndex + 2;
+            indexBufferData[currentIndex + 5] = currentObjIndex + 3;
+
+            if (options->CoordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
+            {
+                auto tmp = indexBufferData[currentIndex + 1];
+                indexBufferData[currentIndex + 1] = indexBufferData[currentIndex + 2];
+                indexBufferData[currentIndex + 2] = tmp;
+
+                tmp = indexBufferData[currentIndex + 4];
+                indexBufferData[currentIndex + 4] = indexBufferData[currentIndex + 5];
+                indexBufferData[currentIndex + 5] = tmp;
+            }
+
+            currentIndex += 6;
+        }
+
+        currentObjIndex += faceVertexCount;
+    }
+
+    // TODO: To replace
+    GenerateTangentVectorsParameters generateTangentParams =
+    {
+        .PositionPointer = &vertexList.Pointer[0].Position,
+        .NormalPointer = &vertexList.Pointer[0].Normal,
+        .TextureCoordinatesPointer = &vertexList.Pointer[0].TextureCoordinates,
+        .TangentPointer = &vertexList.Pointer[0].Tangent,
+        .VertexSize = sizeof(ObjVertex),
+        .IndexData = indexBufferData
+    };
+
+    AssertIfFailed(GenerateTangentVectors(&generateTangentParams));
+
+    auto vertexBufferData = SystemPushArray<uint8_t>(memoryArena, meshPrimitiveInfo->VertexCount * maxVertexSize);
     auto currentVertexBufferPointer = vertexBufferData.Pointer;
 
-    for (uint32_t i = 0; i < vertexCount; i++)
+    // TODO: Remove that loop
+    for (uint32_t i = 0; i < meshPrimitiveInfo->VertexCount; i++)
     {
-        auto normal = vertexList[i].Normal;
-        auto tangent = ElemToolsNormalizeV3(vertexList[i].Tangent.XYZ);
-
-        // TODO: Active that when we have unique vertices
-        //tangent = ElemToolsNormalizeV3(tangent - normal * ElemToolsDotProductV3(normal, tangent));
-
-        // TODO: Process vertex data
-        vertexList[i].Tangent.XYZ = tangent;
-        vertexList[i].Tangent.W = 1.0f;
-        //float handedness = (glm::dot(glm::cross(normal, tangent), B) < 0.0f) ? -1.0f : 1.0f;
-
         WriteObjVertex(&vertexList[i], &currentVertexBufferPointer);
     }
 
@@ -275,7 +281,7 @@ ElemSceneMeshPrimitive ConstructObjMeshPrimitive(MemoryArena memoryArena, const 
     {
         .Data = { .Items = vertexBufferData.Pointer, .Length = (uint32_t)vertexBufferData.Length },
         .VertexSize = (uint32_t)realVertexSize,
-        .VertexCount = meshPrimitiveInfo->IndexCount
+        .VertexCount = meshPrimitiveInfo->VertexCount
     };
 
     result.IndexBuffer = { .Items = indexBufferData.Pointer, .Length = (uint32_t)indexBufferData.Length }; 
@@ -308,52 +314,50 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
 
     auto globalTransformMatrix = CreateSceneLoaderGlobalTransformMatrix(options);
 
-    auto meshes = SystemPushArray<ElemSceneMesh>(sceneLoaderMemoryArena, objFileData->object_count);
-    auto sceneNodes = SystemPushArray<ElemSceneNode>(sceneLoaderMemoryArena, objFileData->object_count);
+    auto meshes = SystemPushArray<ElemSceneMesh>(sceneLoaderMemoryArena, objFileData->group_count);
+    auto sceneNodes = SystemPushArray<ElemSceneNode>(sceneLoaderMemoryArena, objFileData->group_count);
     auto meshPrimitiveInfos = SystemPushArray<ObjMeshPrimitiveInfo>(stackMemoryArena, UINT16_MAX);
 
-    for (uint32_t i = 0; i < objFileData->object_count; i++)
+    for (uint32_t i = 0; i < objFileData->group_count; i++)
     {
         auto mesh = &meshes[i];
         auto sceneNode = &sceneNodes[i];
-        auto objectData = &objFileData->objects[i];
+        auto groupData = &objFileData->groups[i];
 
-        if (objectData->face_count == 0)
+        if (groupData->face_count == 0)
         {
             printf("Invalid object\n");
             continue;
         }
 
-        auto currentFaceStart = objectData->face_offset;
-        auto currentFaceEnd = objectData->face_offset + objectData->face_count; 
+        auto vertexOffset = 0u;
 
-        auto indexOffset = 0u;
-
-        for (uint32_t j = 0; j < currentFaceStart; j++) 
+        for (uint32_t j = 0; j < groupData->face_offset; j++) 
         {
-            indexOffset += objFileData->face_vertices[j];
+            vertexOffset += objFileData->face_vertices[j];
         }
 
-        auto currentMaterial = objFileData->face_materials[currentFaceStart];
+        auto currentMaterial = objFileData->face_materials[groupData->face_offset];
         auto meshPrimitiveCount = 0u;
 
         auto meshPrimitiveInfo = &meshPrimitiveInfos[meshPrimitiveCount++];
         *meshPrimitiveInfo = 
         { 
-            .IndexOffset = indexOffset, 
+            .VertexOffset = vertexOffset, 
+            .FaceOffset = groupData->face_offset,
             .MaterialId = (int32_t)currentMaterial
         };
       
-        for (uint32_t j = currentFaceStart; j < currentFaceEnd; j++) 
+        for (uint32_t j = 0; j < groupData->face_count; j++) 
         {
-            auto faceMaterial = objFileData->face_materials[j];
-            int faceVertexCount = objFileData->face_vertices[j];
+            auto faceMaterial = objFileData->face_materials[groupData->face_offset + j];
+            auto faceVertexCount = objFileData->face_vertices[groupData->face_offset + j];
 
-            if (faceVertexCount != 3)
+            if (faceVertexCount != 3 && faceVertexCount != 4)
             {
                 return
                 {
-                    .Messages = ConstructErrorMessageSpan(sceneLoaderMemoryArena, "Obj mesh loader only support triangles."),
+                    .Messages = ConstructErrorMessageSpan(sceneLoaderMemoryArena, "Obj mesh loader only support triangles or quads."),
                     .HasErrors = true
                 };
             }
@@ -363,17 +367,22 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
                 currentMaterial = faceMaterial;
                 printf("Material: %d\n", currentMaterial);
 
-                auto meshPrimitiveIndexOffset = indexOffset + meshPrimitiveInfo->IndexCount;
+                auto previousVertexOffset = meshPrimitiveInfo->VertexOffset;
+                auto previousVertexCount = meshPrimitiveInfo->VertexCount;
+                auto previousFaceOffset = meshPrimitiveInfo->FaceOffset;
+                auto previousFaceCount = meshPrimitiveInfo->FaceCount;
 
                 meshPrimitiveInfo = &meshPrimitiveInfos[meshPrimitiveCount++];
                 *meshPrimitiveInfo = 
                 { 
-                    .IndexOffset = meshPrimitiveIndexOffset, 
+                    .VertexOffset = previousVertexOffset + previousVertexCount, 
+                    .FaceOffset = previousFaceOffset + previousFaceCount,
                     .MaterialId = (int32_t)currentMaterial
                 };
             }
 
-            meshPrimitiveInfo->IndexCount += faceVertexCount;
+            meshPrimitiveInfo->VertexCount += faceVertexCount;
+            meshPrimitiveInfo->FaceCount++;
         }
 
         mesh->BoundingBox = 
@@ -401,9 +410,9 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
             ApplyObjBoundingBoxInverseTranslation(boundingBoxCenter, &meshPrimitive->BoundingBox);
         }
         
-        if (objectData->name)
+        if (groupData->name)
         {
-            mesh->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objectData->name)).Pointer;
+            mesh->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(groupData->name)).Pointer;
         }
         else
         {
@@ -412,9 +421,9 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
 
         mesh->MeshPrimitives = { .Items = meshPrimitives.Pointer, .Length = (uint32_t)meshPrimitives.Length };
 
-        if (objectData->name)
+        if (groupData->name)
         {
-            sceneNode->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(objectData->name)).Pointer;
+            sceneNode->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(groupData->name)).Pointer;
         }
         else
         {

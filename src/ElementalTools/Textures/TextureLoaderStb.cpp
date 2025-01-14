@@ -2,7 +2,6 @@
 #include "ToolsUtils.h"
 #include "ElementalTools.h"
 #include "SystemMemory.h"
-#include "SystemFunctions.h"
 
 ElemLoadTextureResult LoadStbTexture(const char* path, ElemLoadTextureFileFormat fileFormat, const ElemLoadTextureOptions* options)
 {

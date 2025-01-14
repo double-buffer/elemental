@@ -45,6 +45,12 @@ int main(int argc, const char* argv[])
 
     ElemTextureMipDataSpan mipData = loadTextureResult.MipData;
 
+    if (mipData.Length == 0)
+    {
+        printf("No mip data in the image...");
+        return 1;
+    }
+
     if (mipData.Length == 1)
     {
         double beforeMipGenerationTimer = SampleGetTimerValueInMS();
@@ -66,6 +72,9 @@ int main(int argc, const char* argv[])
     }
     
     printf("Writing texture data to: %s\n", outputPath);
+
+    // TODO: Create the directory if it doesn't exist
+
     FILE* file = fopen(outputPath, "wb");
 
     SampleTextureHeader textureHeader =
@@ -83,31 +92,47 @@ int main(int argc, const char* argv[])
     SampleTextureDataBlockEntry* mipDataOffsets = (SampleTextureDataBlockEntry*)malloc(sizeof(SampleTextureDataBlockEntry) * mipData.Length);
     fwrite(mipDataOffsets, sizeof(SampleTextureDataBlockEntry), mipData.Length, file);
 
-    double beforeEncodeTimer = SampleGetTimerValueInMS();
-    // TODO: Add format in the logging message
-    printf("Compressing data...\n");
-
-    for (uint32_t i = 0; i < mipData.Length; i++)
+    if (loadTextureResult.Format != ElemToolsGraphicsFormat_BC7)
     {
-        ElemTextureMipData* mipLevelData = &mipData.Items[i];
-        printf("Mip level %d Size: %dx%d\n", i, mipLevelData->Width, mipLevelData->Height);
+        double beforeEncodeTimer = SampleGetTimerValueInMS();
+        // TODO: Add format in the logging message
+        printf("Compressing data...\n");
 
-        ElemCompressTextureMipDataResult compressedTextureData = ElemCompressTextureMipData(ElemToolsGraphicsFormat_BC7, mipLevelData, NULL);
-
-        DisplayOutputMessages("CompressTextureMipData", compressedTextureData.Messages);
-
-        if (compressedTextureData.HasErrors)
+        for (uint32_t i = 0; i < mipData.Length; i++)
         {
-            return 1;
+            ElemTextureMipData* mipLevelData = &mipData.Items[i];
+            printf("Mip level %d Size: %dx%d\n", i, mipLevelData->Width, mipLevelData->Height);
+
+            ElemCompressTextureMipDataResult compressedTextureData = ElemCompressTextureMipData(ElemToolsGraphicsFormat_BC7, mipLevelData, NULL);
+
+            DisplayOutputMessages("CompressTextureMipData", compressedTextureData.Messages);
+
+            if (compressedTextureData.HasErrors)
+            {
+                return 1;
+            }
+
+            uint32_t dataOffset = ftell(file);
+            fwrite(compressedTextureData.MipData.Data.Items, sizeof(uint8_t), compressedTextureData.MipData.Data.Length, file);
+
+            mipDataOffsets[i] = (SampleTextureDataBlockEntry) { .Offset = dataOffset, .SizeInBytes = ftell(file) - dataOffset };
         }
-        
-        uint32_t dataOffset = ftell(file);
-        fwrite(compressedTextureData.MipData.Data.Items, sizeof(uint8_t), compressedTextureData.MipData.Data.Length, file);
 
-        mipDataOffsets[i] = (SampleTextureDataBlockEntry) { .Offset = dataOffset, .SizeInBytes = ftell(file) - dataOffset };
+        printf("Compressed data in %.2fs\n", (SampleGetTimerValueInMS() - beforeEncodeTimer) / 1000.0);
     }
+    else
+    {
+        for (uint32_t i = 0; i < mipData.Length; i++)
+        {
+            ElemTextureMipData* mipLevelData = &mipData.Items[i];
+            printf("Mip level %d Size: %dx%d\n", i, mipLevelData->Width, mipLevelData->Height);
 
-    printf("Compressed data in %.2fs\n", (SampleGetTimerValueInMS() - beforeEncodeTimer) / 1000.0);
+            uint32_t dataOffset = ftell(file);
+            fwrite(mipLevelData->Data.Items, sizeof(uint8_t), mipLevelData->Data.Length, file);
+
+            mipDataOffsets[i] = (SampleTextureDataBlockEntry) { .Offset = dataOffset, .SizeInBytes = ftell(file) - dataOffset };
+        }
+    }
 
     fseek(file, sizeof(SampleTextureHeader), SEEK_SET);
     fwrite(mipDataOffsets, sizeof(SampleTextureDataBlockEntry), mipData.Length, file);
