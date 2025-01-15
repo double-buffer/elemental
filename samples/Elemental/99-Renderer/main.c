@@ -108,7 +108,7 @@ void InitSample(void* payload)
 
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     // TODO: Having GPU Upload is still annoying 😞
-    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(256));
+    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(2048));
 
     applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");
     applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;
@@ -233,19 +233,28 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // TODO: Fow now, we load all the material textures in one shot
     // We do it in the main loop now because later it will be a streaming system.
     // Doing it in the main loop force us to decouple the loading
+    uint32_t testCounter = 0;
     for (uint32_t i = 0; i < applicationPayload->TestSceneData.MaterialCount; i++)
     {
         SampleMaterialData* material = &applicationPayload->TestSceneData.Materials[i];
 
-        if (material->AlbedoTexture.Path && !material->AlbedoTexture.IsLoaded)
+        if (material->AlbedoTexture && !material->AlbedoTexture->IsLoaded)
         {
-            SampleLoadTextureData(loadDataCommandList, &material->AlbedoTexture, &applicationPayload->GpuMemory);
+            SampleLoadTextureData(loadDataCommandList, material->AlbedoTexture, &applicationPayload->GpuMemory);
+            testCounter++;
         }
 
-        if (material->NormalTexture.Path && !material->NormalTexture.IsLoaded)
+        if (material->NormalTexture && !material->NormalTexture->IsLoaded)
         {
-            SampleLoadTextureData(loadDataCommandList, &material->NormalTexture, &applicationPayload->GpuMemory);
+            SampleLoadTextureData(loadDataCommandList, material->NormalTexture, &applicationPayload->GpuMemory);
+            testCounter++;
         }
+    }
+
+    // TODO: Measure scene loading time 
+    if (testCounter > 0)
+    {
+        printf("TextureCount: %d\n", testCounter);
     }
 
     for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)

@@ -32,8 +32,9 @@ ElemVertexBuffer ConstructGltfVertexBuffer(MemoryArena memoryArena, const cgltf_
     // TODO: Tangent
     auto positionSize = sizeof(float) * 3;
     auto normalSize = sizeof(float) * 3;
+    auto tangentSize = sizeof(float) * 4;
     auto textureCoordinatesSize = sizeof(float) * 2;
-    auto maxVertexSize = positionSize + normalSize + textureCoordinatesSize;
+    auto maxVertexSize = positionSize + normalSize + tangentSize + textureCoordinatesSize;
 
     // TODO: Temporary
     auto realVertexSize = maxVertexSize;
@@ -42,11 +43,13 @@ ElemVertexBuffer ConstructGltfVertexBuffer(MemoryArena memoryArena, const cgltf_
     // TODO: Combine that with the components selection
     auto positionAccessor = cgltf_find_accessor(gltfPrimitive, cgltf_attribute_type_position, 0);
     auto normalAccessor = cgltf_find_accessor(gltfPrimitive, cgltf_attribute_type_normal, 0);
+    auto tangentAccessor = cgltf_find_accessor(gltfPrimitive, cgltf_attribute_type_tangent, 0);
     auto textureCoordinatesAccessor = cgltf_find_accessor(gltfPrimitive, cgltf_attribute_type_texcoord, 0);
 
     // TODO: Rework this
     auto gltfPositionBuffer = SystemPushArray<float>(stackMemoryArena, vertexCount * 3);
     auto gltfNormalBuffer = SystemPushArray<float>(stackMemoryArena, vertexCount * 3);
+    auto gltfTangentBuffer = SystemPushArray<float>(stackMemoryArena, vertexCount * 4);
     auto gltfTextureCoordinatesBuffer = SystemPushArray<float>(stackMemoryArena, vertexCount * 2);
 
     SystemAssert(positionAccessor);
@@ -55,6 +58,11 @@ ElemVertexBuffer ConstructGltfVertexBuffer(MemoryArena memoryArena, const cgltf_
     if (normalAccessor)
     {
         cgltf_accessor_unpack_floats(normalAccessor, gltfNormalBuffer.Pointer, gltfNormalBuffer.Length);
+    }
+
+    if (tangentAccessor)
+    {
+        cgltf_accessor_unpack_floats(tangentAccessor, gltfTangentBuffer.Pointer, gltfTangentBuffer.Length);
     }
 
     if (textureCoordinatesAccessor)
@@ -71,6 +79,11 @@ ElemVertexBuffer ConstructGltfVertexBuffer(MemoryArena memoryArena, const cgltf_
         for (uint32_t j = 0; j < 3; j++)
         {
             ((float*)currentVertexBufferPointer)[j] = gltfPositionBuffer[i * 3 + j];
+
+            if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
+            {
+                ((float*)currentVertexBufferPointer)[2] = -((float*)currentVertexBufferPointer)[2];
+            }
         }
 
         AddPointToBoundingBox({ ((float*)currentVertexBufferPointer)[0], ((float*)currentVertexBufferPointer)[1], ((float*)currentVertexBufferPointer)[2]}, boundingBox);
@@ -88,6 +101,19 @@ ElemVertexBuffer ConstructGltfVertexBuffer(MemoryArena memoryArena, const cgltf_
         }
 
         currentVertexBufferPointer += 3 * sizeof(float);
+
+        // Tangent
+        for (uint32_t j = 0; j < 4; j++)
+        {
+            ((float*)currentVertexBufferPointer)[j] = gltfTangentBuffer[i * 4 + j];
+
+            if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
+            {
+                ((float*)currentVertexBufferPointer)[2] = -((float*)currentVertexBufferPointer)[2];
+            }
+        }
+
+        currentVertexBufferPointer += 4 * sizeof(float);
         
         // Texture coordinates
         for (uint32_t j = 0; j < 2; j++)
@@ -115,16 +141,195 @@ ElemUInt32Span ConstructGltfIndexBuffer(MemoryArena memoryArena, const cgltf_pri
     {
         for (uint32_t i = 0; i < indexBuffer.Length; i += 3)
         {
-            if (coordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
-            {
-                uint32_t temp = indexBuffer[i + 1];
-                indexBuffer[i + 1] = indexBuffer[i + 2];
-                indexBuffer[i + 2] = temp;
-            }
+            uint32_t temp = indexBuffer[i + 1];
+            indexBuffer[i + 1] = indexBuffer[i + 2];
+            indexBuffer[i + 2] = temp;
         }
     }
 
     return { .Items = indexBuffer.Pointer, .Length = (uint32_t)indexBuffer.Length }; 
+}
+
+ReadOnlySpan<ElemSceneMesh> LoadGltfMeshes(MemoryArena memoryArena, const cgltf_data* data, const ElemLoadSceneOptions* options, ToolsMessageList* messageList)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto meshes = SystemPushArray<ElemSceneMesh>(memoryArena, data->meshes_count);
+
+    for (uint32_t i = 0; i < data->meshes_count; i++)
+    {
+        auto mesh = &meshes[i];
+        auto gltfMesh = &data->meshes[i];
+
+        mesh->BoundingBox = 
+        { 
+            .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
+            .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
+        }; 
+        
+        auto meshPrimitives = SystemPushArray<ElemSceneMeshPrimitive>(memoryArena, gltfMesh->primitives_count);
+
+        for (uint32_t j = 0; j < gltfMesh->primitives_count; j++)
+        {
+            auto meshPrimitive = &meshPrimitives[j];
+            auto gltfPrimitive = &gltfMesh->primitives[j];
+
+            if (gltfPrimitive->type != cgltf_primitive_type_triangles)
+            {
+                WriteToMessageList(ElemToolsMessageType_Warning, "glTF loader only support triangles for now.", messageList);
+                continue;
+            }
+
+            if (!cgltf_find_accessor(gltfPrimitive, cgltf_attribute_type_position, 0))
+            {
+                WriteToMessageList(ElemToolsMessageType_Warning, "The mesh primitive doesn't contains a position attribute.", messageList);
+                continue;
+            }
+
+            meshPrimitive->BoundingBox = 
+            { 
+                .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
+                .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
+            }; 
+
+            meshPrimitive->VertexBuffer = ConstructGltfVertexBuffer(memoryArena, gltfPrimitive, options->CoordinateSystem, &meshPrimitive->BoundingBox);
+            meshPrimitive->IndexBuffer = ConstructGltfIndexBuffer(memoryArena, gltfPrimitive, options->CoordinateSystem);
+
+            meshPrimitive->MaterialId = gltfPrimitive->material ? cgltf_material_index(data, gltfPrimitive->material) : -1;
+
+            AddBoundingBoxToBoundingBox(&meshPrimitive->BoundingBox, &mesh->BoundingBox);
+        }
+
+        if (gltfMesh->name)
+        {
+            mesh->Name = SystemDuplicateBuffer(memoryArena, ReadOnlySpan<char>(gltfMesh->name)).Pointer;
+        }
+        else
+        {
+            mesh->Name = SystemConcatBuffers<char>(memoryArena, "Mesh_", SystemConvertNumberToString(stackMemoryArena, i)).Pointer;
+        }
+
+        mesh->MeshPrimitives = { .Items = meshPrimitives.Pointer, .Length = (uint32_t)meshPrimitives.Length };
+    }
+
+    return meshes;
+}
+
+ReadOnlySpan<ElemSceneMaterial> LoadGltfMaterials(MemoryArena memoryArena, const cgltf_data* data, const ElemLoadSceneOptions* options, ToolsMessageList* messageList)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto materials = SystemPushArray<ElemSceneMaterial>(memoryArena, data->materials_count);
+
+    for (uint32_t i = 0; i < data->materials_count; i++)
+    {
+        auto material = &materials[i];
+        auto gltfMaterial = &data->materials[i];
+
+        if (gltfMaterial->name)
+        {
+            material->Name = SystemDuplicateBuffer(memoryArena, ReadOnlySpan<char>(gltfMaterial->name)).Pointer;
+        }
+        else
+        {
+            material->Name = SystemConcatBuffers<char>(memoryArena, "Material_", SystemConvertNumberToString(stackMemoryArena, i)).Pointer;
+        }
+
+        if (gltfMaterial->has_pbr_metallic_roughness)
+        {
+            auto gltfMaterialData = &gltfMaterial->pbr_metallic_roughness;
+
+            if (gltfMaterialData->base_color_texture.texture)
+            {
+                material->AlbedoTexturePath = SystemDuplicateBuffer<char>(memoryArena, gltfMaterialData->base_color_texture.texture->image->uri).Pointer;
+            }
+
+            material->AlbedoFactor = 
+            { 
+                .X = gltfMaterialData->base_color_factor[0], 
+                .Y = gltfMaterialData->base_color_factor[1], 
+                .Z = gltfMaterialData->base_color_factor[2], 
+                .W = gltfMaterialData->base_color_factor[3] 
+            };
+        }
+        else if (gltfMaterial->has_pbr_specular_glossiness)
+        {
+            auto gltfMaterialData = &gltfMaterial->pbr_specular_glossiness;
+
+            if (gltfMaterialData->diffuse_texture.texture)
+            {
+                material->AlbedoTexturePath = SystemDuplicateBuffer<char>(memoryArena, gltfMaterialData->diffuse_texture.texture->image->uri).Pointer;
+            }
+
+            material->AlbedoFactor = 
+            { 
+                .X = gltfMaterialData->diffuse_factor[0], 
+                .Y = gltfMaterialData->diffuse_factor[1], 
+                .Z = gltfMaterialData->diffuse_factor[2], 
+                .W = gltfMaterialData->diffuse_factor[3] 
+            };
+        }
+        else
+        {
+            WriteToMessageList(ElemToolsMessageType_Warning, "glTF loader only support metallic roughness materials for now.", messageList);
+        }
+
+        if (gltfMaterial->normal_texture.texture)
+        {
+            material->NormalTexturePath = SystemDuplicateBuffer<char>(memoryArena, gltfMaterial->normal_texture.texture->image->uri).Pointer;
+        }
+
+        printf("Material: %s\n", material->Name);
+    }
+
+    return materials;
+}
+
+ReadOnlySpan<ElemSceneNode> LoadGltfSceneNodes(MemoryArena memoryArena, const cgltf_data* data, const ElemLoadSceneOptions* options, ToolsMessageList* messageList)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto sceneNodes = SystemPushArray<ElemSceneNode>(memoryArena, data->nodes_count);
+    auto globalTransformMatrix = CreateSceneLoaderGlobalTransformMatrix(options);
+
+    // TODO: Children?
+    for (uint32_t i = 0; i < data->nodes_count; i++)
+    {
+        auto sceneNode = &sceneNodes[i];
+        auto gltfNode = &data->nodes[i];
+
+        if (gltfNode->name)
+        {
+            sceneNode->Name = SystemDuplicateBuffer(memoryArena, ReadOnlySpan<char>(gltfNode->name)).Pointer;
+        }
+        else
+        {
+            sceneNode->Name = SystemConcatBuffers<char>(memoryArena, "Node_", SystemConvertNumberToString(stackMemoryArena, i)).Pointer;
+        }
+
+        sceneNode->Rotation = {};
+        sceneNode->Translation = {};
+
+        if (gltfNode->mesh)
+        {
+            sceneNode->NodeType = ElemSceneNodeType_Mesh;
+            sceneNode->ReferenceIndex = cgltf_mesh_index(data, gltfNode->mesh);
+        }
+        
+        float matrix[16];
+		cgltf_node_transform_world(gltfNode, matrix);
+        ElemToolsMatrix4x4 nodeTransform = *(ElemToolsMatrix4x4*)matrix;
+    
+        if (options->CoordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
+        {
+            auto flipMatrix = ElemToolsCreateIdentityMatrix();
+            flipMatrix.Rows[2].Z = -1;
+
+            nodeTransform = ElemToolsMulMatrix4x4(flipMatrix, ElemToolsMulMatrix4x4(nodeTransform, flipMatrix));
+        }
+
+        nodeTransform = ElemToolsMulMatrix4x4(nodeTransform, globalTransformMatrix);
+        DecomposeTransform(nodeTransform, &sceneNode->Scale, &sceneNode->Rotation, &sceneNode->Translation);
+    }
+
+    return sceneNodes;
 }
 
 ElemLoadSceneResult LoadGltfScene(const char* path, const ElemLoadSceneOptions* options)
@@ -132,11 +337,10 @@ ElemLoadSceneResult LoadGltfScene(const char* path, const ElemLoadSceneOptions* 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto sceneLoaderMemoryArena = GetSceneLoaderMemoryArena();
 
-    auto globalTransformMatrix = CreateSceneLoaderGlobalTransformMatrix(options);
-
-    auto messages = SystemPushArray<ElemToolsMessage>(sceneLoaderMemoryArena, 1024);
-    auto messageCount = 0u;
-    auto hasErrors = false;
+    ToolsMessageList messageList =
+    {
+        .Messages = SystemPushArray<ElemToolsMessage>(sceneLoaderMemoryArena, 1024)
+    };
 
     cgltf_options cgltfOptions = 
     {
@@ -169,96 +373,9 @@ ElemLoadSceneResult LoadGltfScene(const char* path, const ElemLoadSceneOptions* 
         return { .Messages = ConstructErrorMessageSpan(sceneLoaderMemoryArena, "Error while validating glTF file."), .HasErrors = true };
     }
     
-    auto meshes = SystemPushArray<ElemSceneMesh>(sceneLoaderMemoryArena, data->meshes_count);
-    auto sceneNodes = SystemPushArray<ElemSceneNode>(sceneLoaderMemoryArena, data->nodes_count);
-
-    for (uint32_t i = 0; i < data->meshes_count; i++)
-    {
-        auto mesh = &meshes[i];
-        auto gltfMesh = &data->meshes[i];
-
-        mesh->BoundingBox = 
-        { 
-            .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
-            .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
-        }; 
-        
-        auto meshPrimitives = SystemPushArray<ElemSceneMeshPrimitive>(sceneLoaderMemoryArena, gltfMesh->primitives_count);
-
-        for (uint32_t j = 0; j < gltfMesh->primitives_count; j++)
-        {
-            auto meshPrimitive = &meshPrimitives[j];
-            auto gltfPrimitive = &gltfMesh->primitives[j];
-
-            if (gltfPrimitive->type != cgltf_primitive_type_triangles)
-            {
-                messages[messageCount++] =
-                {
-                    .Type = ElemToolsMessageType_Warning,
-                    .Message = "glTF loader only support triangles for now."
-                };
-
-                continue;
-            }
-
-            if (!cgltf_find_accessor(gltfPrimitive, cgltf_attribute_type_position, 0))
-            {
-                messages[messageCount++] =
-                {
-                    .Type = ElemToolsMessageType_Error,
-                    .Message = "The mesh primitive doesn't contains a position attribute."
-                };
-
-                continue;
-            }
-
-            meshPrimitive->BoundingBox = 
-            { 
-                .MinPoint = { FLT_MAX, FLT_MAX, FLT_MAX }, 
-                .MaxPoint = { -FLT_MAX, -FLT_MAX, -FLT_MAX } 
-            }; 
-
-            meshPrimitive->VertexBuffer = ConstructGltfVertexBuffer(sceneLoaderMemoryArena, gltfPrimitive, options->CoordinateSystem, &meshPrimitive->BoundingBox);
-            meshPrimitive->IndexBuffer = ConstructGltfIndexBuffer(sceneLoaderMemoryArena, gltfPrimitive, options->CoordinateSystem);
-
-            AddBoundingBoxToBoundingBox(&meshPrimitive->BoundingBox, &mesh->BoundingBox);
-        }
-
-        mesh->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(gltfMesh->name)).Pointer;
-        mesh->MeshPrimitives = { .Items = meshPrimitives.Pointer, .Length = (uint32_t)meshPrimitives.Length };
-    }
-
-    // TODO: Children?
-    for (uint32_t i = 0; i < data->nodes_count; i++)
-    {
-        auto sceneNode = &sceneNodes[i];
-        auto gltfNode = &data->nodes[i];
-
-        sceneNode->Name = SystemDuplicateBuffer(sceneLoaderMemoryArena, ReadOnlySpan<char>(gltfNode->name)).Pointer;
-        sceneNode->Rotation = {};
-        sceneNode->Translation = {};
-
-        if (gltfNode->mesh)
-        {
-            sceneNode->NodeType = ElemSceneNodeType_Mesh;
-            sceneNode->ReferenceIndex = cgltf_mesh_index(data, gltfNode->mesh);
-        }
-        
-        float matrix[16];
-		cgltf_node_transform_world(gltfNode, matrix);
-        ElemToolsMatrix4x4 nodeTransform = *(ElemToolsMatrix4x4*)matrix;
-    
-        if (options->CoordinateSystem == ElemSceneCoordinateSystem_LeftHanded)
-        {
-            auto flipMatrix = ElemToolsCreateIdentityMatrix();
-            flipMatrix.Rows[2].Z = -1;
-
-            nodeTransform = ElemToolsMulMatrix4x4(nodeTransform, flipMatrix);
-        }
-
-        nodeTransform = ElemToolsMulMatrix4x4(nodeTransform, globalTransformMatrix);
-        DecomposeTransform(nodeTransform, &sceneNode->Scale, &sceneNode->Rotation, &sceneNode->Translation);
-    }
+    auto meshes = LoadGltfMeshes(sceneLoaderMemoryArena, data, options, &messageList);
+    auto sceneNodes = LoadGltfSceneNodes(sceneLoaderMemoryArena, data, options, &messageList);
+    auto materials = LoadGltfMaterials(sceneLoaderMemoryArena, data, options, &messageList);
     
     cgltf_free(data);
     ResetLoadFileDataMemory();
@@ -267,9 +384,10 @@ ElemLoadSceneResult LoadGltfScene(const char* path, const ElemLoadSceneOptions* 
     {
         .SceneFormat = ElemSceneFormat_Gltf,
         .CoordinateSystem = options->CoordinateSystem,
-        .Meshes = { .Items = meshes.Pointer, .Length = (uint32_t)meshes.Length },
-        .Nodes = { .Items = sceneNodes.Pointer, .Length = (uint32_t)sceneNodes.Length },
-        .Messages = { .Items = messages.Pointer, .Length = messageCount },
-        .HasErrors = hasErrors
+        .Meshes = { .Items = (ElemSceneMesh*)meshes.Pointer, .Length = (uint32_t)meshes.Length },
+        .Materials = { .Items = (ElemSceneMaterial*)materials.Pointer, .Length = (uint32_t)materials.Length },
+        .Nodes = { .Items = (ElemSceneNode*)sceneNodes.Pointer, .Length = (uint32_t)sceneNodes.Length },
+        .Messages = { .Items = messageList.Messages.Pointer, .Length = messageList.MessageCount },
+        .HasErrors = messageList.HasErrors
     };
 }

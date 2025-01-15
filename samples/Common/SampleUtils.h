@@ -190,7 +190,7 @@ void ReplaceFileExtension(const char* path, const char* extension, char* destina
         destination[i] = path[i] == '\\' ? '/' : path[i];
     }
     
-    strncat(destination, extension, prefixLength);
+    strncat(destination, extension, strlen(path));
 }
 
 void GetFileDirectory(const char* path, char* destination, uint32_t destinationSize)
@@ -234,7 +234,7 @@ void GetRelativeResourcePath(const char* mainPath, const char* path, const char*
         startPath = resourcePath + mainDirectoryLength;
     }
 
-    strncpy(destination, startPath, startPath - resourcePath);
+    strncpy(destination, startPath, strlen(resourcePath) - (startPath - resourcePath));
 }
 
 // -----------------------------------------------------------------------------

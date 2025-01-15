@@ -29,7 +29,7 @@ void InitStorageMemoryArena()
 {
     if (FileIOMemoryArena.Storage == nullptr)
     {
-        FileIOMemoryArena = SystemAllocateMemoryArena(512 * 1024 * 1024);
+        FileIOMemoryArena = SystemAllocateMemoryArena(2u * 1024u * 1024u * 1024u);
     }
 }
 
@@ -44,6 +44,20 @@ ReadOnlySpan<uint8_t> LoadFileData(const char* path)
 void ResetLoadFileDataMemory()
 {
     SystemClearMemoryArena(FileIOMemoryArena);
+}
+
+void WriteToMessageList(ElemToolsMessageType type, const char* message, ToolsMessageList* messageList)
+{
+    messageList->Messages[messageList->MessageCount++] =
+    {
+        .Type = type,
+        .Message = message
+    };
+
+    if (type == ElemToolsMessageType_Error)
+    {
+        messageList->HasErrors = true;
+    }
 }
 
 ElemToolsMessageSpan ConstructErrorMessageSpan(MemoryArena memoryArena, const char* errorMessage)

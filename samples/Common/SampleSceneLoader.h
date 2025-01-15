@@ -27,8 +27,8 @@ typedef struct
 typedef struct 
 {
     SampleSceneMaterialHeader MaterialHeader;
-    SampleTextureData AlbedoTexture;
-    SampleTextureData NormalTexture;
+    SampleTextureData* AlbedoTexture;
+    SampleTextureData* NormalTexture;
 } SampleMaterialData;
 
 // TODO: Do otherwise
@@ -49,6 +49,11 @@ typedef struct
     SampleSceneNodeHeader* Nodes;
     SampleGpuBuffer MaterialBuffer;
 } SampleSceneData;
+
+// TODO: Change that. For now we use that simple implementation
+#define MAX_TEXTURE_COUNT 2048
+SampleTextureData TextureCache[MAX_TEXTURE_COUNT];
+uint32_t CurrentTextureCacheIndex = 0u;
 
 void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
 {
@@ -111,19 +116,48 @@ void SampleFreeMesh(SampleMeshData* meshData)
     // TODO: Free mallocs
 }
 
-void SampleLoadTexture(const char* path, SampleTextureData* textureData, SampleGpuMemory* gpuMemory)
+void SampleLoadTexture(const char* path, SampleTextureData** textureDataPointer, SampleGpuMemory* gpuMemory, bool isSrgb)
 {
     // TODO: Here we need to use a global list of texture that are unique based on the path
     // For now the same texture is loaded multiple time which is really bad
 
+    // TODO: Don't do that, we can pre compute the list of unique textures in the compiler
+    // and replace the reference in each materials
+    for (uint32_t i = 0; i < CurrentTextureCacheIndex; i++)
+    {
+        SampleTextureData* cacheTexture = &TextureCache[i];
+
+        if (strstr(cacheTexture->Path, path))
+        {
+            printf("Found texture in cache!\n");
+            *textureDataPointer = cacheTexture;
+            return;
+        }
+    }
+
+
+    if (CurrentTextureCacheIndex + 1 > MAX_TEXTURE_COUNT - 1)
+    {
+        printf("Texture cache at max!!!\n");
+    }
+
+    *textureDataPointer = &TextureCache[CurrentTextureCacheIndex++];
+    SampleTextureData* textureData = *textureDataPointer;
     *textureData = (SampleTextureData){};
 
+    printf("Loading Texture: %s\n", path);
     // TODO: Do better here
     char* tmp = malloc(strlen(path) + 1);
     strcpy(tmp, path);
     textureData->Path = tmp;
 
     FILE* file = SampleOpenFile(path, true);
+
+    if (!file)
+    {
+        printf("NO TEXT: %s\n", path);
+        return;
+    }
     assert(file);
     
     fread(&textureData->TextureHeader, sizeof(SampleTextureHeader), 1, file);
@@ -136,7 +170,10 @@ void SampleLoadTexture(const char* path, SampleTextureData* textureData, SampleG
     // TODO: For now we create the texture here but later, we should do it on the fly and update the material buffer
     // TODO: Get texture name without folder and extension
     // TODO: Get the correct format
-    textureData->GpuTexture = SampleCreateGpuTexture(gpuMemory, textureData->TextureHeader.Width, textureData->TextureHeader.Height, textureData->TextureHeader.MipCount, ElemGraphicsFormat_BC7_SRGB, textureData->Path);
+
+    // TODO: We need to take into account the format of the texture
+    ElemGraphicsFormat format = isSrgb ? ElemGraphicsFormat_BC7_SRGB : ElemGraphicsFormat_BC7;
+    textureData->GpuTexture = SampleCreateGpuTexture(gpuMemory, textureData->TextureHeader.Width, textureData->TextureHeader.Height, textureData->TextureHeader.MipCount, format, textureData->Path);
 }
 
 // TODO: In the future we will need to load individual mips from disk
@@ -190,6 +227,8 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
     shaderMaterial->AlbedoFactor = materialData->MaterialHeader.AlbedoFactor;
     shaderMaterial->AlbedoTextureId = -1;
     shaderMaterial->NormalTextureId = -1;
+    
+    printf("Loading Material: %s\n", materialData->MaterialHeader.Name);
 
     // TODO: Some materials can use the same texture so we need to load it only once
     if (strlen(materialHeader->AlbedoTexturePath) > 0)
@@ -200,8 +239,8 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
         strcpy(fullTexturePath, directoryPath);
         strcat(fullTexturePath, materialHeader->AlbedoTexturePath);
 
-        SampleLoadTexture(fullTexturePath, &materialData->AlbedoTexture, gpuMemory);
-        shaderMaterial->AlbedoTextureId = materialData->AlbedoTexture.GpuTexture.ReadDescriptor;
+        SampleLoadTexture(fullTexturePath, &materialData->AlbedoTexture, gpuMemory, true);
+        shaderMaterial->AlbedoTextureId = materialData->AlbedoTexture->GpuTexture.ReadDescriptor;
     }
 
     if (strlen(materialHeader->NormalTexturePath) > 0)
@@ -211,21 +250,23 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
         strcpy(fullTexturePath, directoryPath);
         strcat(fullTexturePath, materialHeader->NormalTexturePath);
 
-        SampleLoadTexture(fullTexturePath, &materialData->NormalTexture, gpuMemory);
-        shaderMaterial->NormalTextureId = materialData->NormalTexture.GpuTexture.ReadDescriptor;
+        SampleLoadTexture(fullTexturePath, &materialData->NormalTexture, gpuMemory, false);
+        shaderMaterial->NormalTextureId = materialData->NormalTexture->GpuTexture.ReadDescriptor;
     }
 }
 
 void SampleFreeMaterial(SampleMaterialData* materialData)
 {
-    if (materialData->AlbedoTexture.GpuTexture.Texture)
+    if (materialData->AlbedoTexture && materialData->AlbedoTexture->IsLoaded)
     {
-        SampleFreeTexture(&materialData->AlbedoTexture);
+        SampleFreeTexture(materialData->AlbedoTexture);
+        materialData->AlbedoTexture->IsLoaded = false;
     }
 
-    if (materialData->NormalTexture.GpuTexture.Texture)
+    if (materialData->NormalTexture && materialData->NormalTexture->IsLoaded)
     {
-        SampleFreeTexture(&materialData->NormalTexture);
+        SampleFreeTexture(materialData->NormalTexture);
+        materialData->NormalTexture->IsLoaded = false;
     }
 }
 

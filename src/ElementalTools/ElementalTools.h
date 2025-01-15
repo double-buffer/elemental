@@ -404,6 +404,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
 typedef enum
 {
+    ElemToolsGraphicsFormat_Unknown,
     ElemToolsGraphicsFormat_R8G8B8A8,
     ElemToolsGraphicsFormat_BC7
 } ElemToolsGraphicsFormat;
@@ -412,6 +413,9 @@ typedef enum
 {
     ElemLoadTextureFileFormat_Unknown = 0,
     ElemLoadTextureFileFormat_Tga = 1,
+    ElemLoadTextureFileFormat_Jpg = 2,
+    ElemLoadTextureFileFormat_Png = 3,
+    ElemLoadTextureFileFormat_Dds = 4,
 } ElemLoadTextureFileFormat;
 
 typedef struct

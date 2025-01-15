@@ -70,6 +70,9 @@ MTL::PixelFormat ConvertToMetalResourceFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_D32_FLOAT:
             return MTL::PixelFormatDepth32Float;
 
+        case ElemGraphicsFormat_BC7:
+            return MTL::PixelFormatBC7_RGBAUnorm;
+
         case ElemGraphicsFormat_BC7_SRGB:
             return MTL::PixelFormatBC7_RGBAUnorm_sRGB;
 
@@ -96,6 +99,9 @@ ElemGraphicsFormat ConvertFromMetalResourceFormat(MTL::PixelFormat format)
 
         case MTL::PixelFormatDepth32Float:
             return ElemGraphicsFormat_D32_FLOAT;
+
+        case MTL::PixelFormatBC7_RGBAUnorm:
+            return ElemGraphicsFormat_BC7;
 
         case MTL::PixelFormatBC7_RGBAUnorm_sRGB:
             return ElemGraphicsFormat_BC7_SRGB;

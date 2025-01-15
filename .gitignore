@@ -13,6 +13,9 @@
 *.gltf
 *.bin
 *.tga
+*.png
+*.jpg
+*.dds
 *.mtl
 
 xcuserdata/

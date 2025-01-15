@@ -397,6 +397,7 @@ typedef enum
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
     ElemGraphicsFormat_D32_FLOAT, 
+    ElemGraphicsFormat_BC7,
     ElemGraphicsFormat_BC7_SRGB 
 } ElemGraphicsFormat;
 

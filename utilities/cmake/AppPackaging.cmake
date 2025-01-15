@@ -154,6 +154,9 @@ function(configure_resource_compilation target_name resource_list)
         "MESH|SceneCompiler|.obj|.scene|${MESH_COMPILER_DEFAULT_OPTIONS}"
         "MESH|SceneCompiler|.gltf|.scene|${MESH_COMPILER_DEFAULT_OPTIONS}"
         "TEXTURE|TextureCompiler|.tga|.texture|${TEXTURE_COMPILER_DEFAULT_OPTIONS}"
+        "TEXTURE|TextureCompiler|.jpg|.texture|${TEXTURE_COMPILER_DEFAULT_OPTIONS}"
+        "TEXTURE|TextureCompiler|.png|.texture|${TEXTURE_COMPILER_DEFAULT_OPTIONS}"
+        "TEXTURE|TextureCompiler|.dds|.texture|${TEXTURE_COMPILER_DEFAULT_OPTIONS}"
     )
 
     set(all_compiled_resources "")
