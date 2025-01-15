@@ -97,6 +97,8 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInpu
 
         strncpy(materialHeader.Name, material->Name, 50);
 
+        // TODO: Here we need to compute a list of unique textures and add them to a list
+        // so we don't need to compute that unique list at runtime
         if (material->AlbedoTexturePath)
         {
             GetRelativeResourcePath(sceneInputPath, material->AlbedoTexturePath, ".texture", materialHeader.AlbedoTexturePath, 255);

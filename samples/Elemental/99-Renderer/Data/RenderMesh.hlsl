@@ -174,8 +174,8 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
             //worldNormal = ResolveNormalFromSurfaceGradient(worldNormal, surfaceGradient);
         }
 
-        float nDotL = dot(worldNormal, normalize(float3(-0.5, 1, -0.5)));
-        float ambient = 0.6;
+        float nDotL = max(dot(worldNormal, normalize(float3(-1.0, 1.0, 1.0))), 0.0);
+        float ambient = 0.05;
 
         return albedo * (nDotL + ambient);
         return float4(worldNormal * 0.5 + 0.5, 1.0);

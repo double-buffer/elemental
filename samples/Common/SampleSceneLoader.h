@@ -121,6 +121,8 @@ void SampleLoadTexture(const char* path, SampleTextureData** textureDataPointer,
     // TODO: Here we need to use a global list of texture that are unique based on the path
     // For now the same texture is loaded multiple time which is really bad
 
+    // TODO: Don't do that, we can pre compute the list of unique textures in the compiler
+    // and replace the reference in each materials
     for (uint32_t i = 0; i < CurrentTextureCacheIndex; i++)
     {
         SampleTextureData* cacheTexture = &TextureCache[i];
@@ -255,14 +257,16 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
 
 void SampleFreeMaterial(SampleMaterialData* materialData)
 {
-    if (materialData->AlbedoTexture->GpuTexture.Texture)
+    if (materialData->AlbedoTexture && materialData->AlbedoTexture->IsLoaded)
     {
         SampleFreeTexture(materialData->AlbedoTexture);
+        materialData->AlbedoTexture->IsLoaded = false;
     }
 
-    if (materialData->NormalTexture->GpuTexture.Texture)
+    if (materialData->NormalTexture && materialData->NormalTexture->IsLoaded)
     {
         SampleFreeTexture(materialData->NormalTexture);
+        materialData->NormalTexture->IsLoaded = false;
     }
 }
 
