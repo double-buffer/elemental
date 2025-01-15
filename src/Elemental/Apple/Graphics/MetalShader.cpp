@@ -188,36 +188,6 @@ MTL::BlendFactor ConvertToMetalBlendFactor(ElemGraphicsBlendFactor blendFactor)
     }
 }
 
-MTL::CompareFunction ConvertToMetalCompareFunction(ElemGraphicsCompareFunction compareFunction)
-{
-    switch (compareFunction)
-    {
-        case ElemGraphicsCompareFunction_Never:
-            return MTL::CompareFunctionNever;
-
-        case ElemGraphicsCompareFunction_Less:
-            return MTL::CompareFunctionLess;
-
-        case ElemGraphicsCompareFunction_Equal:
-            return MTL::CompareFunctionEqual;
-
-        case ElemGraphicsCompareFunction_LessEqual:
-            return MTL::CompareFunctionLessEqual;
-
-        case ElemGraphicsCompareFunction_Greater:
-            return MTL::CompareFunctionGreater;
-
-        case ElemGraphicsCompareFunction_NotEqual:
-            return MTL::CompareFunctionNotEqual;
-
-        case ElemGraphicsCompareFunction_GreaterEqual:
-            return MTL::CompareFunctionGreaterEqual;
-
-        case ElemGraphicsCompareFunction_Always:
-            return MTL::CompareFunctionAlways;
-    }
-}
-
 ElemShaderLibrary MetalCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitMetalShaderLibraryMemory();
@@ -525,6 +495,7 @@ void MetalBindPipelineState(ElemCommandList commandList, ElemPipelineState pipel
             commandListData->PipelineState = ELEM_HANDLE_NULL;
 
             computeCommandEncoder->setBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+            computeCommandEncoder->setBuffer(graphicsDeviceData->SamplerArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 1);
         }
     
         if (commandListData->PipelineState != pipelineState)
@@ -561,7 +532,9 @@ void MetalPushPipelineStateConstants(ElemCommandList commandList, uint32_t offse
         if (!commandListData->ArgumentBufferBound)
         {
             renderCommandEncoder->setMeshBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+            renderCommandEncoder->setMeshBuffer(graphicsDeviceData->SamplerArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 1);
             renderCommandEncoder->setFragmentBuffer(graphicsDeviceData->ResourceArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 0);
+            renderCommandEncoder->setFragmentBuffer(graphicsDeviceData->SamplerArgumentBuffer.Storage->ArgumentBuffer.get(), 0, 1);
             commandListData->ArgumentBufferBound = true;
         }
 

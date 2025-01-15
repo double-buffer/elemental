@@ -108,6 +108,8 @@ void InitSample(void* payload)
 
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     // TODO: Having GPU Upload is still annoying 😞
+    // TODO: For the moment we implement all textures of the scene in GPU memory. That is why we need 2GB for bistro scene
+    // We will implement virtual texturing/texture streaming in the future
     applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(2048));
 
     applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");

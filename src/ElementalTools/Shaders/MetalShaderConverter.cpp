@@ -125,7 +125,7 @@ ElemShaderCompilationResult MetalShaderConverterCompileShader(MemoryArena memory
         {
             .NumParameters = 1,
             .pParameters = &rootParameter,
-            .Flags = IRRootSignatureFlags(IRRootSignatureFlagCBVSRVUAVHeapDirectlyIndexed)
+            .Flags = IRRootSignatureFlags(IRRootSignatureFlagCBVSRVUAVHeapDirectlyIndexed | IRRootSignatureFlagSamplerHeapDirectlyIndexed)
         }
     };
     IRError* rootSignatureError = nullptr;

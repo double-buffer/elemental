@@ -12,6 +12,7 @@
 SystemDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull> metalGraphicsHeapPool;
 SystemDataPool<MetalResourceData, MetalResourceDataFull> metalResourcePool;
 Span<ElemGraphicsResourceDescriptorInfo> metalResourceDescriptorInfos;
+Span<MetalGraphicsSamplerInfo> metalSamplerInfos;
 MemoryArena metalReadBackMemoryArena;
 
 thread_local UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>> threadDirectX12UploadBufferPools[METAL_MAX_DEVICES];
@@ -25,6 +26,7 @@ void InitMetalResourceMemory()
 
         // TODO: This should be part of the graphics device data
         metalResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(MetalGraphicsMemoryArena, METAL_MAX_RESOURCES, AllocationState_Reserved);
+        metalSamplerInfos = SystemPushArray<MetalGraphicsSamplerInfo>(MetalGraphicsMemoryArena, METAL_MAX_SAMPLERS, AllocationState_Reserved);
 
         // TODO: Allow to increase the size as a parameter
         metalReadBackMemoryArena = SystemAllocateMemoryArena(METAL_READBACK_MEMORY_ARENA);
@@ -612,7 +614,8 @@ void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopy
 
     if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
     {
-        if (resourceData->Format == ElemGraphicsFormat_BC7_SRGB)
+        if (resourceData->Format == ElemGraphicsFormat_BC7 ||
+            resourceData->Format == ElemGraphicsFormat_BC7_SRGB)
         {
             uploadBufferAlignment = 16u;
             uploadBufferSizeInBytes = SystemAlign(uploadBufferSizeInBytes, 16u);
@@ -663,7 +666,8 @@ void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopy
 
         auto sourceBytesPerRow = mipWidth * 4;
 
-        if (resourceData->Format == ElemGraphicsFormat_BC7_SRGB)
+        if (resourceData->Format == ElemGraphicsFormat_BC7 ||
+            resourceData->Format == ElemGraphicsFormat_BC7_SRGB)
         {
             sourceBytesPerRow = ((mipWidth + 3) / 4) * 16;
         }
@@ -786,16 +790,130 @@ void MetalProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
     }
 }
 
+MTL::SamplerMinMagFilter ConvertToMetalMinMagFilter(ElemGraphicsSamplerFilter filter)
+{
+    switch (filter)
+    {
+        case ElemGraphicsSamplerFilter_Nearest:
+            return MTL::SamplerMinMagFilterNearest;
+
+        case ElemGraphicsSamplerFilter_Linear:
+            return MTL::SamplerMinMagFilterLinear;
+    }
+}
+
+MTL::SamplerMipFilter ConvertToMetalMipFilter(ElemGraphicsSamplerFilter filter)
+{
+    switch (filter)
+    {
+        case ElemGraphicsSamplerFilter_Nearest:
+            return MTL::SamplerMipFilterNearest;
+
+        case ElemGraphicsSamplerFilter_Linear:
+            return MTL::SamplerMipFilterLinear;
+    }
+}
+
+MTL::SamplerAddressMode ConvertToMetalSamplerAddressMode(ElemGraphicsSamplerAddressMode addressMode)
+{
+    switch (addressMode)
+    {
+        case ElemGraphicsSamplerAddressMode_Repeat:
+            return MTL::SamplerAddressModeRepeat;
+
+        case ElemGraphicsSamplerAddressMode_RepeatMirror:
+            return MTL::SamplerAddressModeMirrorRepeat;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdge:
+            return MTL::SamplerAddressModeClampToEdge;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdgeMirror:
+            return MTL::SamplerAddressModeMirrorClampToEdge;
+
+        case ElemGraphicsSamplerAddressMode_ClampToBorderColor:
+            return MTL::SamplerAddressModeClampToBorderColor;
+    }
+}
+
 ElemGraphicsSampler MetalCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
 {
-    return {};
+    InitMetalResourceMemory();
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto localSamplerInfo = *samplerInfo;
+
+    if (localSamplerInfo.MaxAnisotropy == 0)
+    {
+        localSamplerInfo.MaxAnisotropy = 1;
+    }
+
+    auto borderColor = MTL::SamplerBorderColorOpaqueBlack;
+
+    if (localSamplerInfo.BorderColor.Red == 1.0f && localSamplerInfo.BorderColor.Green == 1.0f && localSamplerInfo.BorderColor.Blue == 1.0f && localSamplerInfo.BorderColor.Alpha == 1.0f)
+    {
+        borderColor = MTL::SamplerBorderColorOpaqueWhite;
+    }
+
+    auto samplerDescriptor = NS::TransferPtr(MTL::SamplerDescriptor::alloc()->init());
+    samplerDescriptor->setSupportArgumentBuffers(true);
+    samplerDescriptor->setMinFilter(ConvertToMetalMinMagFilter(localSamplerInfo.MinFilter));
+    samplerDescriptor->setMagFilter(ConvertToMetalMinMagFilter(localSamplerInfo.MagFilter));
+    samplerDescriptor->setMipFilter(ConvertToMetalMipFilter(localSamplerInfo.MipFilter));
+    samplerDescriptor->setSAddressMode(ConvertToMetalSamplerAddressMode(localSamplerInfo.AddressU));
+    samplerDescriptor->setTAddressMode(ConvertToMetalSamplerAddressMode(localSamplerInfo.AddressV));
+    samplerDescriptor->setRAddressMode(ConvertToMetalSamplerAddressMode(localSamplerInfo.AddressW));
+    samplerDescriptor->setMaxAnisotropy(localSamplerInfo.MaxAnisotropy);
+    samplerDescriptor->setCompareFunction(ConvertToMetalCompareFunction(localSamplerInfo.CompareFunction));
+    samplerDescriptor->setBorderColor(borderColor);
+    samplerDescriptor->setLodMinClamp(localSamplerInfo.MinLod);
+    samplerDescriptor->setLodMaxClamp(localSamplerInfo.MaxLod == 0 ? 1000 : localSamplerInfo.MaxLod);
+
+    auto sampler = NS::TransferPtr(graphicsDeviceData->Device->newSamplerState(samplerDescriptor.get()));
+
+    auto handle = CreateMetalArgumentBufferHandleForSamplerState(graphicsDeviceData->SamplerArgumentBuffer, sampler.get());
+
+    if ((handle % 1024) == 0)
+    {
+        SystemCommitMemory(MetalGraphicsMemoryArena, &metalSamplerInfos[handle], 1024 *  sizeof(MetalGraphicsSamplerInfo));
+    }
+
+    metalSamplerInfos[handle].MetalSampler = sampler;
+    metalSamplerInfos[handle].SamplerInfo = localSamplerInfo;
+
+    return handle;
 }
 
 ElemGraphicsSamplerInfo MetalGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
 {
-    return {};
+    InitMetalResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return {};
+    }
+
+    return metalSamplerInfos[sampler].SamplerInfo;
 }
 
 void MetalFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
 {
+    InitMetalResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return;
+    }
+    
+    if (options && options->FencesToWait.Length > 0)
+    {
+        EnqueueResourceDeleteEntry(MetalGraphicsMemoryArena, sampler, ResourceDeleteType_Sampler, options->FencesToWait);
+        return;
+    }
+
+    metalSamplerInfos[sampler].MetalSampler.reset();
+    metalSamplerInfos[sampler] = {};
 }

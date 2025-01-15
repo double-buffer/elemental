@@ -8,7 +8,7 @@
 struct MetalArgumentBufferDescriptor
 {
     uint64_t BufferAddress;
-    uint64_t TextureResourceId;
+    uint64_t ResourceId;
     uint64_t Metadata;
 };
 
@@ -139,6 +139,37 @@ ElemGraphicsDeviceInfo MetalConstructGraphicsDeviceInfo(const MTL::Device* devic
     };
 }
 
+MTL::CompareFunction ConvertToMetalCompareFunction(ElemGraphicsCompareFunction compareFunction)
+{
+    switch (compareFunction)
+    {
+        case ElemGraphicsCompareFunction_Never:
+            return MTL::CompareFunctionNever;
+
+        case ElemGraphicsCompareFunction_Less:
+            return MTL::CompareFunctionLess;
+
+        case ElemGraphicsCompareFunction_Equal:
+            return MTL::CompareFunctionEqual;
+
+        case ElemGraphicsCompareFunction_LessEqual:
+            return MTL::CompareFunctionLessEqual;
+
+        case ElemGraphicsCompareFunction_Greater:
+            return MTL::CompareFunctionGreater;
+
+        case ElemGraphicsCompareFunction_NotEqual:
+            return MTL::CompareFunctionNotEqual;
+
+        case ElemGraphicsCompareFunction_GreaterEqual:
+            return MTL::CompareFunctionGreaterEqual;
+
+        case ElemGraphicsCompareFunction_Always:
+            return MTL::CompareFunctionAlways;
+    }
+}
+
+
 bool MetalCheckGraphicsDeviceCompatibility(const MTL::Device* device)
 {
     // TODO: This crash on ios simulator 
@@ -206,7 +237,36 @@ uint32_t CreateMetalArgumentBufferHandleForTexture(MetalArgumentBuffer argumentB
     }
 
     auto argumentBufferData = (MetalArgumentBufferDescriptor*)storage->ArgumentBuffer->contents();
-    argumentBufferData[argumentIndex].TextureResourceId = (uint64_t)texture->gpuResourceID()._impl;
+    argumentBufferData[argumentIndex].ResourceId = (uint64_t)texture->gpuResourceID()._impl;
+
+    return argumentIndex;
+}
+
+uint32_t CreateMetalArgumentBufferHandleForSamplerState(MetalArgumentBuffer argumentBuffer, MTL::SamplerState* sampler)
+{            
+    SystemAssert(argumentBuffer.Storage);
+
+    auto storage = argumentBuffer.Storage;
+    auto argumentIndex = UINT32_MAX;
+
+    do
+    {
+        if (storage->FreeListIndex == UINT32_MAX)
+        {
+            argumentIndex = UINT32_MAX;
+            break;
+        }
+        
+        argumentIndex = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, argumentIndex, storage->Items[storage->FreeListIndex].Next));
+
+    if (argumentIndex == UINT32_MAX)
+    {
+        argumentIndex = SystemAtomicAdd(storage->CurrentIndex, 1);
+    }
+
+    auto argumentBufferData = (MetalArgumentBufferDescriptor*)storage->ArgumentBuffer->contents();
+    argumentBufferData[argumentIndex].BufferAddress = (uint64_t)sampler->gpuResourceID()._impl;
 
     return argumentIndex;
 }
@@ -319,6 +379,7 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     
     auto memoryArena = SystemAllocateMemoryArena();
     auto resourceArgumentBuffer = CreateMetalArgumentBuffer(device, memoryArena, METAL_MAX_RESOURCES);
+    auto samplerArgumentBuffer = CreateMetalArgumentBuffer(device, memoryArena, METAL_MAX_SAMPLERS);
 
     auto residencySetDescriptor = NS::TransferPtr(MTL::ResidencySetDescriptor::alloc()->init());
     residencySetDescriptor->setInitialCapacity(8);
@@ -328,6 +389,7 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     SystemAssert(error == nullptr);
     
     residencySet->addAllocation(resourceArgumentBuffer.Storage->ArgumentBuffer.get());
+    residencySet->addAllocation(samplerArgumentBuffer.Storage->ArgumentBuffer.get());
     residencySet->commit();
     
     // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
@@ -336,6 +398,7 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     auto handle = SystemAddDataPoolItem(metalGraphicsDevicePool, {
         .Device = device,
         .ResourceArgumentBuffer = resourceArgumentBuffer,
+        .SamplerArgumentBuffer = samplerArgumentBuffer,
         .MemoryArena = memoryArena,
         .UploadBufferPools = uploadBuffers
     }); 

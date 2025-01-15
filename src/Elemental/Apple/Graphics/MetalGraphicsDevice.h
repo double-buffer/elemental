@@ -15,6 +15,7 @@ struct MetalGraphicsDeviceData
 {
     NS::SharedPtr<MTL::Device> Device;
     MetalArgumentBuffer ResourceArgumentBuffer;
+    MetalArgumentBuffer SamplerArgumentBuffer;
     MemoryArena MemoryArena;
     uint64_t UploadBufferGeneration;
     Span<UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>>*> UploadBufferPools;
@@ -33,8 +34,11 @@ extern bool MetalDebugBarrierInfoEnabled;
 MetalGraphicsDeviceData* GetMetalGraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 MetalGraphicsDeviceDataFull* GetMetalGraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
 
+MTL::CompareFunction ConvertToMetalCompareFunction(ElemGraphicsCompareFunction compareFunction);
+
 uint32_t CreateMetalArgumentBufferHandleForTexture(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture);
 uint32_t CreateMetalArgumentBufferHandleForBuffer(MetalArgumentBuffer argumentBuffer, MTL::Buffer* buffer, uint32_t length);
+uint32_t CreateMetalArgumentBufferHandleForSamplerState(MetalArgumentBuffer argumentBuffer, MTL::SamplerState* sampler);
 void FreeMetalArgumentBufferHandle(MetalArgumentBuffer argumentBuffer, uint64_t handle);
 
 void MetalSetGraphicsOptions(const ElemGraphicsOptions* options);

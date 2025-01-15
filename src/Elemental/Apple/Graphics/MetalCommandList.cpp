@@ -176,7 +176,7 @@ ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCom
     {
         metalCommandBuffer->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
     }
-    
+
     auto resourceBarrierPool = CreateResourceBarrierPool(MetalGraphicsMemoryArena);
     
     auto handle = SystemAddDataPoolItem(metalCommandListPool, {

@@ -33,6 +33,12 @@ struct MetalResourceDataFull
     ElemGraphicsDevice GraphicsDevice;
 };
 
+struct MetalGraphicsSamplerInfo
+{
+    NS::SharedPtr<MTL::SamplerState> MetalSampler;
+    ElemGraphicsSamplerInfo SamplerInfo;
+};
+
 MetalGraphicsHeapData* GetMetalGraphicsHeapData(ElemGraphicsHeap graphicsHeap);
 MetalGraphicsHeapDataFull* GetMetalGraphicsHeapDataFull(ElemGraphicsHeap graphicsHeap);
 
