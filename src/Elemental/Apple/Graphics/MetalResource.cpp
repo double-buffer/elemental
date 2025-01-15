@@ -550,6 +550,7 @@ UploadBufferMemory<NS::SharedPtr<MTL::Buffer>> GetMetalUploadBuffer(ElemGraphics
 
         if (uploadBuffer.PoolItem->Fence.FenceValue > 0)
         {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Fence: %d", uploadBuffer.PoolItem->Fence.FenceValue);
             MetalWaitForFenceOnCpu(uploadBuffer.PoolItem->Fence);
         }
         
@@ -608,7 +609,7 @@ void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopy
         if (resourceData->Format == ElemGraphicsFormat_BC7_SRGB)
         {
             uploadBufferAlignment = 16u;
-            uploadBufferSizeInBytes = SystemAlignToPowerOf2(uploadBufferSizeInBytes, 16u);
+            uploadBufferSizeInBytes = SystemAlign(uploadBufferSizeInBytes, 16u);
         }
     }
 

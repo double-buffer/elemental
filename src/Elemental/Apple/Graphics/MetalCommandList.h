@@ -46,6 +46,8 @@ struct MetalCommandListData
     bool IsCommitted;
     ResourceBarrierPool ResourceBarrierPool;
     bool ArgumentBufferBound;
+    UploadBufferPoolItem<NS::SharedPtr<MTL::Buffer>>* UploadBufferPoolItems[MAX_UPLOAD_BUFFERS];
+    uint32_t UploadBufferCount;
 };
 
 struct MetalCommandListDataFull

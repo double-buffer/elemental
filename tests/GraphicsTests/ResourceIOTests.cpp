@@ -403,6 +403,8 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopiesAndCommandList
         ElemCopyDataToGraphicsResource(commandList, &parameters);
         ElemCommitCommandList(commandList);
         fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+        ElemWaitForFenceOnCpu(fence);
     }
 
     // Assert

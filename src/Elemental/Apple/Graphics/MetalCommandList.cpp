@@ -233,6 +233,11 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
         {
             fence = CreateMetalCommandQueueFence(commandQueue, commandListData->DeviceObject.get());
         }
+        
+        for (uint32_t j = 0; j < commandListData->UploadBufferCount; j++)
+        {
+            UpdateUploadBufferPoolItemFence(commandListData->UploadBufferPoolItems[j], fence);
+        }
 
         commandListData->DeviceObject->commit();
         commandListData->DeviceObject.reset();
@@ -265,7 +270,8 @@ void MetalWaitForFenceOnCpu(ElemFence fence)
 
     if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
+        // TODO: Log this with a special option?
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
     
         auto dispatchGroup = dispatch_group_create();
         dispatch_group_enter(dispatchGroup);
