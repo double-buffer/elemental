@@ -212,6 +212,29 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
     
     auto commandQueueData = GetMetalCommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
+    
+    if (options && options->FencesToWait.Length > 0)
+    {
+        for (uint32_t i = 0; i < options->FencesToWait.Length; i++)
+        {
+            auto fenceToWait = options->FencesToWait.Items[i];
+
+            auto commandQueueToWaitData = GetMetalCommandQueueData(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitData);
+
+            auto commandQueueToWaitDataFull = GetMetalCommandQueueDataFull(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitDataFull);
+
+            auto commandBuffer = NS::TransferPtr(commandQueueToWaitData->DeviceObject->commandBufferWithUnretainedReferences());
+            commandBuffer->encodeWait(commandQueueToWaitData->QueueEvent.get(), fenceToWait.FenceValue);
+            commandBuffer->commit();
+
+            if (MetalDebugBarrierInfoEnabled)
+            {
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%d, Value=%d)", fenceToWait.CommandQueue, fenceToWait.FenceValue);
+            }
+        }
+    }
 
     ElemFence fence = {};
 
