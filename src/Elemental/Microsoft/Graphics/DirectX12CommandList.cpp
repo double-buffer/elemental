@@ -262,6 +262,8 @@ void DirectX12CommitCommandList(ElemCommandList commandList)
     auto commandListData = GetDirectX12CommandListData(commandList);
     AssertIfFailed(commandListData->DeviceObject->Close());
     
+    FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
+
     commandListData->IsCommitted = true;
     threadDirectX12CommandBufferCommitted = true;
 }
@@ -334,7 +336,6 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
         }
 
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
-        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);
     }
@@ -360,7 +361,8 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
 
     if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
+        // TODO: Activate that message with a debug flag
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
         commandQueueToWaitDataFull->Fence->SetEventOnCompletion(fence.FenceValue, directX12GlobalFenceEvent);
 
         // TODO: It is a little bit extreme to block at infinity. We should set a timeout and break the program.

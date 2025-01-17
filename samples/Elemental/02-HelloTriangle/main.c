@@ -90,7 +90,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemCommitCommandList(commandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, NULL);
-
     ElemPresentSwapChain(applicationPayload->SwapChain);
 
     // NOTE: This is the update part of the loop. If render fast this will create a gap and add latency because we need to wait for the next available

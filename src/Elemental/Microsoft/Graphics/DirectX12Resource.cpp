@@ -84,7 +84,7 @@ DXGI_FORMAT ConvertDirectX12FormatWithoutSrgbIfNeeded(DXGI_FORMAT format)
     }
 }
 
-D3D12_FILTER_TYPE ConvertToDirectX12FilerType(ElemGraphicsSamplerFilter filter)
+D3D12_FILTER_TYPE ConvertToDirectX12FilterType(ElemGraphicsSamplerFilter filter)
 {
     switch (filter)
     {
@@ -973,9 +973,9 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
     auto index = ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
 
-    if ((index % 1000) == 0)
+    if ((index % 1024) == 0)
     {
-        SystemCommitMemory(DirectX12MemoryArena, &directX12ResourceDescriptorInfos[index], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+        SystemCommitMemory(DirectX12MemoryArena, &directX12ResourceDescriptorInfos[index], 1024 *  sizeof(ElemGraphicsResourceDescriptorInfo));
     }
 
     directX12ResourceDescriptorInfos[index].Resource = resource;
@@ -1063,9 +1063,9 @@ ElemGraphicsSampler DirectX12CreateGraphicsSampler(ElemGraphicsDevice graphicsDe
         localSamplerInfo.MaxAnisotropy = 1;
     }
 
-    auto minFilter = ConvertToDirectX12FilerType(localSamplerInfo.MinFilter);
-    auto magFilter = ConvertToDirectX12FilerType(localSamplerInfo.MagFilter);
-    auto mipFilter = ConvertToDirectX12FilerType(localSamplerInfo.MipFilter);
+    auto minFilter = ConvertToDirectX12FilterType(localSamplerInfo.MinFilter);
+    auto magFilter = ConvertToDirectX12FilterType(localSamplerInfo.MagFilter);
+    auto mipFilter = ConvertToDirectX12FilterType(localSamplerInfo.MipFilter);
     auto reduction = localSamplerInfo.CompareFunction == ElemGraphicsCompareFunction_Never ? D3D12_FILTER_REDUCTION_TYPE_STANDARD : D3D12_FILTER_REDUCTION_TYPE_COMPARISON;
     auto borderColor = localSamplerInfo.BorderColor;
     auto filter = D3D12_ENCODE_BASIC_FILTER(minFilter, magFilter, mipFilter, reduction);

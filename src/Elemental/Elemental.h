@@ -489,7 +489,7 @@ typedef enum
 {
     ElemGraphicsResourceBarrierSyncType_None,
     ElemGraphicsResourceBarrierSyncType_Compute,
-    ElemGraphicsResourceBarrierSyncType_RenderTarget
+    ElemGraphicsResourceBarrierSyncType_RenderTarget,
 } ElemGraphicsResourceBarrierSyncType;
 
 typedef enum
@@ -498,7 +498,7 @@ typedef enum
     ElemGraphicsResourceBarrierAccessType_Read,
     ElemGraphicsResourceBarrierAccessType_Write,
     ElemGraphicsResourceBarrierAccessType_RenderTarget,
-    ElemGraphicsResourceBarrierAccessType_DepthStencilWrite
+    ElemGraphicsResourceBarrierAccessType_DepthStencilWrite,
 } ElemGraphicsResourceBarrierAccessType;
 
 typedef enum 
@@ -831,7 +831,8 @@ typedef struct
     ElemGraphicsSamplerAddressMode AddressW;
     uint32_t MaxAnisotropy;
     ElemGraphicsCompareFunction CompareFunction;
-    ElemColor BorderColor;
+    // TODO: Remove this one and do an enum instead
+    ElemColor BorderColor; 
     float MinLod;
     float MaxLod;
     // TODO: Minimum/Maximum filters?

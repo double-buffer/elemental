@@ -10,9 +10,7 @@ void InitDirectXShaderCompiler()
 {
     if (!directXShaderCompilerLibrary.Handle)
     {
-        // BUG: For the moment we need to get rid of DXIL.dll in the windows SDK folder to load the correct
-        // dll on windows
-        directXShaderCompilerLibrary = SystemLoadLibrary("dxcompiler");
+        directXShaderCompilerLibrary = SystemLoadLibrary("./dxcompiler");
 
         if (directXShaderCompilerLibrary.Handle != nullptr)
         {
@@ -41,7 +39,7 @@ bool ProcessDirectXShaderCompilerLogOutput(MemoryArena memoryArena, ComPtr<IDxcR
             {
                 currentLogType = ElemToolsMessageType_Warning;
             }
-            else if (SystemFindSubString(line, "error:") != -1)
+            else if (SystemFindSubString(line, "error:") != -1 || SystemFindSubString(line, "Unknown argument:") != -1)
             {
                 currentLogType = ElemToolsMessageType_Error;
                 hasErrors = true;
@@ -132,6 +130,14 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
         // TODO: Add an options for this
         // TODO: To review
         parameters[parameterIndex++] = L"-fspv-use-legacy-buffer-matrix-order";
+
+        parameters[parameterIndex++] = L"-fvk-bind-resource-heap";
+        parameters[parameterIndex++] = L"0";
+        parameters[parameterIndex++] = L"0";
+
+        parameters[parameterIndex++] = L"-fvk-bind-sampler-heap";
+        parameters[parameterIndex++] = L"0";
+        parameters[parameterIndex++] = L"1";
     }
 
     parameters[parameterIndex++] = L"-HV";

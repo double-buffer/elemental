@@ -4,7 +4,7 @@ add_library(dxc INTERFACE)
 
 if(WIN32)
     get_github_release("double-buffer/shader-compilers-bin" ${DXC_VERSION_CUSTOM} "windows_dxc_*_x64.zip" "${CMAKE_CURRENT_BINARY_DIR}/dxc/")
-    target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/include/dxc/)
+    target_include_directories(dxc INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/dxc/include/dxc/)
 
     function(copy_dxc_to_target target)
         file(GLOB DXC_DLLS 

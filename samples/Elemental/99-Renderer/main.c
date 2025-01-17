@@ -174,13 +174,13 @@ void FreeSample(void* payload)
     ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
 
     SampleFreeScene(&applicationPayload->TestSceneData);
-
     SampleFreeGpuBuffer(&applicationPayload->FrameDataBuffer);
 
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
  
+    ElemFreeGraphicsSampler(applicationPayload->ShaderParameters.TextureSampler, NULL);
     ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
     ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
 
@@ -230,56 +230,88 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     // TODO: We need to have a kind of queue system. The problem here is that if we don't have any
     // data to load we will create empty lists
-    ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
+
+    ElemFence loadDataFence = {};
 
     // TODO: Fow now, we load all the material textures in one shot
     // We do it in the main loop now because later it will be a streaming system.
     // Doing it in the main loop force us to decouple the loading
-    uint32_t testCounter = 0;
+    uint32_t loadResourceCounter = 0;
+
     for (uint32_t i = 0; i < applicationPayload->TestSceneData.MaterialCount; i++)
     {
         SampleMaterialData* material = &applicationPayload->TestSceneData.Materials[i];
 
         if (material->AlbedoTexture && !material->AlbedoTexture->IsLoaded)
         {
-            SampleLoadTextureData(loadDataCommandList, material->AlbedoTexture, &applicationPayload->GpuMemory);
-            testCounter++;
+            loadResourceCounter++;
         }
 
         if (material->NormalTexture && !material->NormalTexture->IsLoaded)
         {
-            SampleLoadTextureData(loadDataCommandList, material->NormalTexture, &applicationPayload->GpuMemory);
-            testCounter++;
+            loadResourceCounter++;
         }
     }
 
-    // TODO: Measure scene loading time 
-    if (testCounter > 0)
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.MeshCount; i++)
     {
-        printf("TextureCount: %d\n", testCounter);
+        SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[i];
+
+        if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
+        { 
+            loadResourceCounter++;
+        }
     }
 
-    for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
+    if (loadResourceCounter > 0)
     {
-        SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
+        // TODO: We should have a queue system instead and load only what is needed otherwise
+        // each frames we will have empty lists
+        // This system will allow to split by batches the loading
+        ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
 
-        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
+        for (uint32_t i = 0; i < applicationPayload->TestSceneData.MaterialCount; i++)
         {
-            SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
+            SampleMaterialData* material = &applicationPayload->TestSceneData.Materials[i];
 
-            if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
-            { 
-                // TODO: This is an attempt to dissociate the loading of the mesh metadata and the buffer data
-                // Later, this will be done via streaming in parrallel. The gpu shader that will handle the mesh will need to check
-                // if the data was loaded.
-                // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
-                SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemory);
+            if (material->AlbedoTexture && !material->AlbedoTexture->IsLoaded)
+            {
+                SampleLoadTextureData(loadDataCommandList, material->AlbedoTexture, &applicationPayload->GpuMemory);
+                loadResourceCounter++;
+            }
+
+            if (material->NormalTexture && !material->NormalTexture->IsLoaded)
+            {
+                SampleLoadTextureData(loadDataCommandList, material->NormalTexture, &applicationPayload->GpuMemory);
+                loadResourceCounter++;
             }
         }
-    }
 
-    ElemCommitCommandList(loadDataCommandList);
-    ElemFence loadDataFence = ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
+        for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
+        {
+            SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
+
+            if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
+            {
+                SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
+
+                if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
+                { 
+                    // TODO: This is an attempt to dissociate the loading of the mesh metadata and the buffer data
+                    // Later, this will be done via streaming in parrallel. The gpu shader that will handle the mesh will need to check
+                    // if the data was loaded.
+                    // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
+                    SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemory);
+                    loadResourceCounter++;
+                }
+            }
+        }
+
+        ElemCommitCommandList(loadDataCommandList);    // TODO: Measure scene loading time 
+
+        printf("ResourceLoadCount: %d\n", loadResourceCounter);
+        loadDataFence = ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
+    }
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -339,7 +371,14 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemCommitCommandList(commandList);
 
-    applicationPayload->LastExecutionFence = ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, &(ElemExecuteCommandListOptions) { .FencesToWait = { .Items = &loadDataFence, .Length = 1 }});
+    ElemExecuteCommandListOptions executeOptions = {};
+
+    if (loadResourceCounter > 0)
+    {
+        executeOptions.FencesToWait = (ElemFenceSpan){ .Items = &loadDataFence, .Length = 1 };
+    }
+
+    applicationPayload->LastExecutionFence = ElemExecuteCommandList(applicationPayload->CommandQueue, commandList, &executeOptions);
 
     ElemPresentSwapChain(applicationPayload->SwapChain);
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();

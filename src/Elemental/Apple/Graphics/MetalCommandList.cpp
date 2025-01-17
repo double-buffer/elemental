@@ -202,6 +202,9 @@ void MetalCommitCommandList(ElemCommandList commandList)
 
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
+        
+    FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
+
     commandListData->IsCommitted = true;
     metalThreadCommandBufferCommitted = true;
 }
@@ -265,7 +268,6 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
         commandListData->DeviceObject->commit();
         commandListData->DeviceObject.reset();
         
-        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
         SystemRemoveDataPoolItem(metalCommandListPool, commandLists.Items[i]);
     }
 

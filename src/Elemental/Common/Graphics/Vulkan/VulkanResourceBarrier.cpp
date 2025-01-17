@@ -19,7 +19,6 @@ VkPipelineStageFlags2 ConvertToVulkanBarrierSync(ElemGraphicsResourceBarrierSync
             if (!isDepthStencil)
             {
                 return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT | 
-                       VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT | 
                        VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT | 
                        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
             }

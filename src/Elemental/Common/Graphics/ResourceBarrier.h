@@ -18,6 +18,7 @@ struct ResourceBarrierItem
     ElemGraphicsResourceBarrierAccessType AfterAccess;
     ElemGraphicsResourceBarrierLayoutType BeforeLayout;
     ElemGraphicsResourceBarrierLayoutType AfterLayout;
+    // TODO: Add offset and size for buffer
 };
 
 struct ResourceBarriers

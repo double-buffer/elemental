@@ -6,6 +6,7 @@
 struct VulkanGraphicsHeapData
 {
     VkDeviceMemory DeviceObject;
+    ElemGraphicsHeapType HeapType;
     uint64_t SizeInBytes;
     ElemGraphicsDevice GraphicsDevice;
 };
@@ -25,7 +26,6 @@ struct VulkanGraphicsResourceData
     uint32_t Height;
     uint32_t MipLevels;
     ElemGraphicsResourceUsage Usage;
-    void* CpuDataPointer;
 };
 
 struct VulkanGraphicsResourceDataFull
@@ -33,6 +33,19 @@ struct VulkanGraphicsResourceDataFull
     ElemGraphicsDevice GraphicsDevice;
     ElemGraphicsHeap GraphicsHeap;
     uint64_t GraphicsHeapOffset;
+};
+
+struct VulkanUploadBuffer
+{
+    VkBuffer Buffer;
+    VkDeviceMemory DeviceMemory;
+};
+
+struct VulkanGraphicsSamplerInfo
+{
+    ElemGraphicsDevice GraphicsDevice;
+    VkSampler VulkanSampler;
+    ElemGraphicsSamplerInfo SamplerInfo;
 };
 
 VulkanGraphicsHeapData* GetVulkanGraphicsHeapData(ElemGraphicsHeap graphicsHeap);

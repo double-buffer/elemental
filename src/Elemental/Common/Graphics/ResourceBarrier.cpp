@@ -5,7 +5,9 @@
 #include "SystemLogging.h"
 
 #define GRAPHICS_MAX_RESOURCEBARRIERPOOL 64
-#define GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES 128
+
+// TODO: Check that it takes a lot of memory
+#define GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES 64
 
 struct ResourceBarrierResourceStatus
 {
@@ -15,6 +17,8 @@ struct ResourceBarrierResourceStatus
     ElemGraphicsResourceBarrierLayoutType LastLayoutType;
 };
 
+// TODO: To save huge amount of memory allocation, we should allocate thoses in a separate arena
+// and use reserved memory
 struct ResourceBarrierPoolData
 {
     uint32_t BarrierCount;
@@ -150,7 +154,7 @@ void EnqueueBarrier(ResourceBarrierPool barrierPool, ElemGraphicsResourceDescrip
 void EnqueueBarrier(ResourceBarrierPool barrierPool, const ResourceBarrierItem* resourceBarrier)
 {
     SystemAssert(barrierPool != ELEM_HANDLE_NULL);
-
+    
     auto barrierPoolData = SystemGetDataPoolItem(resourceBarrierDataPool, barrierPool);
     SystemAssert(barrierPoolData);
   
@@ -231,6 +235,11 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
 
         if (!resourceStatus)
         {
+            if (barrierPoolData->ResourceStatusCount + 1 >= GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES)
+            {
+                SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Command list barrier pool resources count exceeded.");
+            }
+
             resourceStatus = &barrierPoolData->ResourceStatus[barrierPoolData->ResourceStatusCount++];
 
             *resourceStatus = 

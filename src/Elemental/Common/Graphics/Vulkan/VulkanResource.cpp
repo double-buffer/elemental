@@ -1,18 +1,26 @@
 #include "VulkanResource.h"
 #include "VulkanGraphicsDevice.h"
+#include "VulkanCommandList.h"
+#include "VulkanResourceBarrier.h"
 #include "Graphics/Resource.h"
+#include "Graphics/ResourceBarrier.h"
 #include "Graphics/ResourceDeleteQueue.h"
+#include "Graphics/UploadBufferPool.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
 #define VULKAN_MAX_GRAPHICSHEAP 32
+#define VULKAN_MAX_SAMPLERS 2048
 
 SystemDataPool<VulkanGraphicsHeapData, SystemDataPoolDefaultFull> vulkanGraphicsHeapPool;
 SystemDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull> vulkanGraphicsResourcePool;
 
+thread_local UploadBufferDevicePool<VulkanUploadBuffer> threadVulkanUploadBufferPools[VULKAN_MAX_DEVICES];
+
 // TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> vulkanResourceDescriptorInfos;
+Span<VulkanGraphicsSamplerInfo> vulkanSamplerInfos;
 // TODO: To refactor 
 Span<VkImageView> vulkanResourceDescriptorImageViews;
 MemoryArena vulkanReadBackMemoryArena;
@@ -26,6 +34,7 @@ void InitVulkanResourceMemory()
 
         vulkanResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES, AllocationState_Reserved);
         vulkanResourceDescriptorImageViews = SystemPushArray<VkImageView>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES, AllocationState_Reserved);
+        vulkanSamplerInfos = SystemPushArray<VulkanGraphicsSamplerInfo>(VulkanGraphicsMemoryArena, VULKAN_MAX_SAMPLERS, AllocationState_Reserved);
 
         vulkanReadBackMemoryArena = SystemAllocateMemoryArena(32 * 1024 * 1024);
     }
@@ -96,6 +105,51 @@ VkImageUsageFlags ConvertToVulkanImageUsageFlags(ElemGraphicsResourceUsage usage
     }
     
     return result;
+}
+
+VkFilter ConvertToVulkanFilter(ElemGraphicsSamplerFilter filter)
+{
+    switch (filter)
+    {
+        case ElemGraphicsSamplerFilter_Nearest:
+            return VK_FILTER_NEAREST;
+
+        case ElemGraphicsSamplerFilter_Linear:
+            return VK_FILTER_LINEAR;
+    }
+}
+
+VkSamplerMipmapMode ConvertToVulkanSamplerMipMapMode(ElemGraphicsSamplerFilter filter)
+{
+    switch (filter)
+    {
+        case ElemGraphicsSamplerFilter_Nearest:
+            return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+
+        case ElemGraphicsSamplerFilter_Linear:
+            return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    }
+}
+
+VkSamplerAddressMode ConvertToVulkanSamplerAddressMode(ElemGraphicsSamplerAddressMode addressMode)
+{
+    switch (addressMode)
+    {
+        case ElemGraphicsSamplerAddressMode_Repeat:
+            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+        case ElemGraphicsSamplerAddressMode_RepeatMirror:
+            return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdge:
+            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdgeMirror:
+            return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+
+        case ElemGraphicsSamplerAddressMode_ClampToBorderColor:
+            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    }
 }
 
 ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, const ElemGraphicsResourceInfo* resourceInfo, bool isPresentTexture)
@@ -243,8 +297,12 @@ ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uin
     allocateInfo.allocationSize = sizeInBytes;
     allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuMemoryTypeIndex;
 
+    auto heapType = ElemGraphicsHeapType_Gpu;
+
     if (options)
     {
+        heapType = options->HeapType;
+
         if (options->HeapType == ElemGraphicsHeapType_GpuUpload)
         {
             allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuUploadMemoryTypeIndex;
@@ -270,6 +328,7 @@ ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uin
 
     auto handle = SystemAddDataPoolItem(vulkanGraphicsHeapPool, {
         .DeviceObject = deviceMemory,
+        .HeapType = heapType,
         .SizeInBytes = sizeInBytes,
         .GraphicsDevice = graphicsDevice,
     }); 
@@ -527,24 +586,28 @@ void VulkanUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offs
         SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers.");
         return;
     }
+
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
+    SystemAssert(resourceDataFull);
+
+    auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
+    SystemAssert(graphicsHeapData);
+
+    if (graphicsHeapData->HeapType != ElemGraphicsHeapType_GpuUpload)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers allocated in a GpuUpload heap.");
+        return;
+    }
 	
-    if (resourceData->CpuDataPointer == nullptr)
-	{
-        auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
-        SystemAssert(resourceDataFull);
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
 
-        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
-        SystemAssert(graphicsDeviceData);
+    uint8_t* cpuPointer = nullptr;
+    AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject, resourceDataFull->GraphicsHeapOffset + offset, data.Length, 0, (void**)&cpuPointer));
 
-        auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
-        SystemAssert(graphicsHeapData);
+    memcpy(cpuPointer, data.Items, data.Length);
 
-        // TODO: use vkMapMemory2 just for consistency
-        AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject, resourceDataFull->GraphicsHeapOffset, resourceData->Width, 0, &resourceData->CpuDataPointer));
-	}
-    
-    auto destinationPointer = (uint8_t*)resourceData->CpuDataPointer + offset;
-    memcpy(destinationPointer, data.Items, data.Length);
+    vkUnmapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject);
 }
 
 ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
@@ -556,24 +619,29 @@ ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, con
 
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "DownloadGraphicsBufferData only works with graphics buffers.");
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers.");
         return {};
     }
 
-	if (resourceData->CpuDataPointer == nullptr)
-	{
-        auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
-        SystemAssert(resourceDataFull);
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
+    SystemAssert(resourceDataFull);
 
-        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
-        SystemAssert(graphicsDeviceData);
+    auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
+    SystemAssert(graphicsHeapData);
 
-        auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
-        SystemAssert(graphicsHeapData);
+    if (graphicsHeapData->HeapType != ElemGraphicsHeapType_GpuUpload && graphicsHeapData->HeapType != ElemGraphicsHeapType_Readback)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers allocated in a Readback heap or GpuUpload heap. (%d)", graphicsHeapData->HeapType);
+        return {};
+    }
 
-        // TODO: use vkMapMemory2 just for consistency
-        AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject, resourceDataFull->GraphicsHeapOffset, resourceData->Width, 0, &resourceData->CpuDataPointer));
-	}
+    if (graphicsHeapData->HeapType != ElemGraphicsHeapType_Readback)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData works faster with graphics buffers allocated in a Readback heap.");
+    }
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
 
     auto offset = 0u;
     auto sizeInBytes = resourceData->Width;
@@ -590,13 +658,237 @@ ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, con
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto downloadedData = SystemPushArray<uint8_t>(vulkanReadBackMemoryArena, sizeInBytes);
-    memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
+
+    uint8_t* cpuPointer = nullptr;
+    AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject, resourceDataFull->GraphicsHeapOffset + offset, sizeInBytes, 0, (void**)&cpuPointer));
+
+    memcpy(downloadedData.Pointer, cpuPointer, sizeInBytes);
+
+    vkUnmapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject);
 
 	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
 }
 
+VulkanUploadBuffer CreateVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes)
+{
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create Vulkan UploadBuffer with : %d\n", sizeInBytes);
+    SystemAssert(graphicsDevice);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
+
+    VkBufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    createInfo.size = sizeInBytes;
+    createInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+    VkBuffer buffer;
+    AssertIfFailed(vkCreateBuffer(graphicsDeviceData->Device, &createInfo, nullptr, &buffer));
+
+    if (VulkanDebugLayerEnabled)
+    {
+        VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        nameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
+        nameInfo.objectHandle = (uint64_t)buffer;
+        nameInfo.pObjectName = "ElementalUploadBuffer";
+
+        AssertIfFailed(vkSetDebugUtilsObjectNameEXT(graphicsDeviceData->Device, &nameInfo)); 
+    }
+
+    VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocateInfo.allocationSize = sizeInBytes;
+    allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->UploadMemoryTypeIndex;
+
+    VkDeviceMemory deviceMemory;
+    AssertIfFailed(vkAllocateMemory(graphicsDeviceData->Device, &allocateInfo, nullptr, &deviceMemory));
+    AssertIfFailed(vkBindBufferMemory(graphicsDeviceData->Device, buffer, deviceMemory, 0));
+
+    return
+    {
+        .Buffer = buffer,
+        .DeviceMemory = deviceMemory
+    };
+}
+
+UploadBufferMemory<VulkanUploadBuffer> GetVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
+{
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(graphicsDevice);
+    auto uploadBufferPool = &threadVulkanUploadBufferPools[graphicsIdUnpacked.Index];
+
+    if (!uploadBufferPool->IsInited)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init pool");
+
+        auto poolIndex = SystemAtomicAdd(graphicsDeviceData->CurrentUploadBufferPoolIndex, 1);
+        graphicsDeviceData->UploadBufferPools[poolIndex] = uploadBufferPool;
+        uploadBufferPool->IsInited = true;
+    }
+
+    auto uploadBuffer = GetUploadBufferPoolItem(uploadBufferPool, graphicsDeviceData->UploadBufferGeneration, alignment, sizeInBytes);
+
+    if (uploadBuffer.PoolItem->IsResetNeeded)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to create upload buffer with size: %d...", uploadBuffer.PoolItem->SizeInBytes);
+
+        if (uploadBuffer.PoolItem->Fence.FenceValue > 0)
+        {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Fence: %d", uploadBuffer.PoolItem->Fence.FenceValue);
+            VulkanWaitForFenceOnCpu(uploadBuffer.PoolItem->Fence);
+        }
+        
+        if (uploadBuffer.PoolItem->Buffer.Buffer != nullptr)
+        {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to delete buffer");
+
+            vkDestroyBuffer(graphicsDeviceData->Device, uploadBuffer.PoolItem->Buffer.Buffer, nullptr);
+            vkFreeMemory(graphicsDeviceData->Device, uploadBuffer.PoolItem->Buffer.DeviceMemory, nullptr);
+
+            uploadBuffer.PoolItem->Buffer = {};
+        }
+
+        uploadBuffer.PoolItem->Buffer = CreateVulkanUploadBuffer(graphicsDevice, uploadBuffer.PoolItem->SizeInBytes);
+        uploadBuffer.PoolItem->IsResetNeeded = false;
+    }
+
+    return uploadBuffer;
+}
+
+void CreateVulkanCopyTextureBarrier(VkCommandBuffer commandBuffer, VkImage image, uint32_t mipLevel, bool beforeCopy)
+{
+    VkImageMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = mipLevel;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    if (beforeCopy)
+    {
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_NONE;
+        barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    }
+    else
+    {
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT | 
+                               VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | 
+                               VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    
+    VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    dependencyInfo.imageMemoryBarrierCount = 1;
+    dependencyInfo.pImageMemoryBarriers = &barrier;
+
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+}
+
 void VulkanCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
 {
+    // TODO: Implement optimizations on the copy queue. On windows, use DirectStorage
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    SystemAssert(parameters);
+    SystemAssert(parameters->Resource != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto resourceData = GetVulkanGraphicsResourceData(parameters->Resource);
+    SystemAssert(resourceData);
+
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(parameters->Resource);
+    SystemAssert(resourceDataFull);
+
+    ReadOnlySpan<uint8_t> sourceData;
+
+    // TODO: Implement file source
+    if (parameters->SourceType == ElemCopyDataSourceType_Memory)
+    {
+        sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
+    }
+    
+    auto uploadBufferAlignment = 4u;
+    auto uploadBufferSizeInBytes = sourceData.Length;
+
+    auto uploadBuffer = GetVulkanUploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
+    SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
+
+    // TODO: Can we do better here?
+    auto uploadBufferAlreadyInCommandList = false;
+
+    for (uint32_t i = 0; i < MAX_UPLOAD_BUFFERS; i++)
+    {
+        if (commandListData->UploadBufferPoolItems[i] == uploadBuffer.PoolItem)
+        {
+            uploadBufferAlreadyInCommandList = true;
+            break;
+        }
+    }
+        
+    if (!uploadBufferAlreadyInCommandList)
+    {
+        commandListData->UploadBufferPoolItems[commandListData->UploadBufferCount++] = uploadBuffer.PoolItem;
+    }
+    
+    uint8_t* cpuPointer = nullptr;
+    AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, uploadBuffer.PoolItem->Buffer.DeviceMemory, uploadBuffer.Offset, sourceData.Length, 0, (void**)&cpuPointer));
+
+    memcpy(cpuPointer, sourceData.Pointer, sourceData.Length);
+
+    if (resourceData->Type == ElemGraphicsResourceType_Buffer)
+    {
+        VkBufferCopy copyRegion
+        {
+            .srcOffset = uploadBuffer.Offset,
+            .dstOffset = parameters->BufferOffset,
+            .size = sourceData.Length
+        };
+     
+        vkCmdCopyBuffer(commandListData->DeviceObject, uploadBuffer.PoolItem->Buffer.Buffer, resourceData->BufferDeviceObject, 1, &copyRegion);
+    }
+    else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        auto mipLevel = parameters->TextureMipLevel;
+        auto mipWidth  = SystemMax(1u, resourceData->Width  >> mipLevel);
+        auto mipHeight = SystemMax(1u, resourceData->Height >> mipLevel);
+
+        CreateVulkanCopyTextureBarrier(commandListData->DeviceObject, resourceData->TextureDeviceObject, mipLevel, true);
+
+        VkBufferImageCopy region = 
+        {
+			.bufferOffset = uploadBuffer.Offset,
+			.bufferRowLength = 0,
+			.bufferImageHeight = 0,
+			.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, mipLevel, 0, 1 },
+			.imageOffset = { 0, 0, 0 },
+			.imageExtent = { mipWidth, mipHeight, 1 },
+		};
+        
+		vkCmdCopyBufferToImage(commandListData->DeviceObject, uploadBuffer.PoolItem->Buffer.Buffer, resourceData->TextureDeviceObject, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+        CreateVulkanCopyTextureBarrier(commandListData->DeviceObject, resourceData->TextureDeviceObject, mipLevel, false);
+    }
+
+    vkUnmapMemory(graphicsDeviceData->Device, uploadBuffer.PoolItem->Buffer.DeviceMemory);
 }
 
 ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
@@ -648,7 +940,7 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
     }
 
     VkWriteDescriptorSet descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-    descriptor.dstSet = descriptorHeap.Storage->DescriptorSet;
+    descriptor.dstSet = descriptorHeap.Storage->DescriptorSet->DescriptorSet;
     descriptor.dstBinding = 0;
     descriptor.dstArrayElement = descriptorHandle;
     descriptor.descriptorCount = 1;
@@ -687,6 +979,11 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
     }
 
     vkUpdateDescriptorSets(graphicsDeviceData->Device, 1, &descriptor, 0, nullptr);
+
+    if ((descriptorHandle % 1024) == 0)
+    {
+        SystemCommitMemory(VulkanGraphicsMemoryArena, &vulkanResourceDescriptorInfos[descriptorHandle], 1024 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+    }
 
     vulkanResourceDescriptorInfos[descriptorHandle].Resource = resource;
     vulkanResourceDescriptorInfos[descriptorHandle].Usage = usage;
@@ -742,20 +1039,140 @@ void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descrip
 
 void VulkanProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     ProcessResourceDeleteQueue();
     SystemClearMemoryArena(vulkanReadBackMemoryArena);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    graphicsDeviceData->UploadBufferGeneration++;
+    
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            auto uploadBuffersToDelete = GetUploadBufferPoolItemsToDelete(stackMemoryArena, bufferPool, graphicsDeviceData->UploadBufferGeneration);    
+
+            for (uint32_t j = 0; j < uploadBuffersToDelete.Length; j++)
+            {
+                auto uploadBufferToDelete = uploadBuffersToDelete[j];
+
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to purge upload buffer: Size=%d", uploadBufferToDelete->SizeInBytes);
+
+                vkDestroyBuffer(graphicsDeviceData->Device, uploadBufferToDelete->Buffer.Buffer, nullptr);
+                vkFreeMemory(graphicsDeviceData->Device, uploadBufferToDelete->Buffer.DeviceMemory, nullptr);
+
+                uploadBufferToDelete->Buffer = {};
+
+                uploadBufferToDelete->CurrentOffset = 0;
+                uploadBufferToDelete->SizeInBytes = 0;
+            }
+        }
+    }
 }
 
 ElemGraphicsSampler VulkanCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
 {
-    return {};
+    InitVulkanResourceMemory();
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto descriptorHeap = graphicsDeviceData->SamplerDescriptorHeap;
+    auto descriptorHandle = CreateVulkanDescriptorHandle(descriptorHeap);
+
+    auto localSamplerInfo = *samplerInfo;
+
+    if (localSamplerInfo.MaxAnisotropy == 0)
+    {
+        localSamplerInfo.MaxAnisotropy = 1;
+    }
+
+    auto borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+
+    if (localSamplerInfo.BorderColor.Red == 1.0f && localSamplerInfo.BorderColor.Green == 1.0f && localSamplerInfo.BorderColor.Blue == 1.0f && localSamplerInfo.BorderColor.Alpha == 1.0f)
+    {
+        borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    }
+
+    VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    samplerCreateInfo.minFilter = ConvertToVulkanFilter(localSamplerInfo.MinFilter);
+    samplerCreateInfo.magFilter = ConvertToVulkanFilter(localSamplerInfo.MagFilter);
+    samplerCreateInfo.mipmapMode = ConvertToVulkanSamplerMipMapMode(localSamplerInfo.MipFilter);
+    samplerCreateInfo.addressModeU = ConvertToVulkanSamplerAddressMode(localSamplerInfo.AddressU);
+    samplerCreateInfo.addressModeV = ConvertToVulkanSamplerAddressMode(localSamplerInfo.AddressV);
+    samplerCreateInfo.addressModeW = ConvertToVulkanSamplerAddressMode(localSamplerInfo.AddressW);
+    samplerCreateInfo.anisotropyEnable = localSamplerInfo.MaxAnisotropy > 1;
+    samplerCreateInfo.maxAnisotropy = localSamplerInfo.MaxAnisotropy;
+    samplerCreateInfo.compareEnable = localSamplerInfo.CompareFunction != ElemGraphicsCompareFunction_Never;
+    samplerCreateInfo.compareOp = ConvertToVulkanCompareFunction(localSamplerInfo.CompareFunction);
+    samplerCreateInfo.minLod = localSamplerInfo.MinLod;
+    samplerCreateInfo.maxLod = localSamplerInfo.MaxLod == 0 ? 1000 : localSamplerInfo.MaxLod;
+    samplerCreateInfo.borderColor = borderColor;
+
+    VkSampler sampler;
+	AssertIfFailed(vkCreateSampler(graphicsDeviceData->Device, &samplerCreateInfo, 0, &sampler));
+
+    VkDescriptorImageInfo imageInfo = {};
+    imageInfo.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+    descriptor.dstSet = descriptorHeap.Storage->DescriptorSet->DescriptorSet;
+    descriptor.dstBinding = 0;
+    descriptor.dstArrayElement = descriptorHandle;
+    descriptor.descriptorCount = 1;
+    descriptor.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    descriptor.pImageInfo = &imageInfo;
+
+    vkUpdateDescriptorSets(graphicsDeviceData->Device, 1, &descriptor, 0, nullptr);
+
+    if ((descriptorHandle % 1024) == 0)
+    {
+        SystemCommitMemory(VulkanGraphicsMemoryArena, &vulkanSamplerInfos[descriptorHandle], 1024 *  sizeof(ElemGraphicsSamplerInfo));
+    }
+
+    vulkanSamplerInfos[descriptorHandle].GraphicsDevice = graphicsDevice;
+    vulkanSamplerInfos[descriptorHandle].VulkanSampler = sampler;
+    vulkanSamplerInfos[descriptorHandle].SamplerInfo = localSamplerInfo;
+    return descriptorHandle;
 }
 
 ElemGraphicsSamplerInfo VulkanGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
 {
-    return {};
+    InitVulkanResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return {};
+    }
+
+    return vulkanSamplerInfos[sampler].SamplerInfo;
 }
 
 void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
 {
+    InitVulkanResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return;
+    }
+    
+    if (options && options->FencesToWait.Length > 0)
+    {
+        EnqueueResourceDeleteEntry(VulkanGraphicsMemoryArena, sampler, ResourceDeleteType_Sampler, options->FencesToWait);
+        return;
+    }
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(vulkanSamplerInfos[sampler].GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    vkDestroySampler(graphicsDeviceData->Device, vulkanSamplerInfos[sampler].VulkanSampler, nullptr);
+    vulkanSamplerInfos[sampler] = {};
 }

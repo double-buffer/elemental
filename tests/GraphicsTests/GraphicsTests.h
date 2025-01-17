@@ -4,12 +4,18 @@
 #include <stdlib.h>
 #include <initializer_list> 
 
-#define TESTLOG_LENGTH 4096
+#define TESTLOG_LENGTH 4 * 1024 * 1024
 
 #ifndef _WIN32
 #define MAX_PATH 255
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
 #endif
+
+extern ElemGraphicsOptions startOptions;
+
+void InitLogBuffers();
+void EnableBarriersLog();
+void DisableBarriersLog();
 
 #define Max(a,b) ((a) > (b) ? (a) : (b))
 #define Min(a,b) ((a) < (b) ? (a) : (b))
@@ -169,7 +175,7 @@ struct TestBarrierCheck
 extern bool testPrintLogs;
 extern bool testForceVulkanApi;
 extern bool testHasLogErrors;
-extern char testErrorLogs[TESTLOG_LENGTH];
+extern char* testErrorLogs;
 extern uint32_t currentTestErrorLogsIndex;
 
 uint64_t TestMegaBytesToBytes(uint64_t value);

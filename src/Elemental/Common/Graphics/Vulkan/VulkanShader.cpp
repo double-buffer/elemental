@@ -169,36 +169,6 @@ VkBlendFactor ConvertToVulkanBlendFactor(ElemGraphicsBlendFactor blendFactor)
     }
 }
 
-VkCompareOp ConvertToVulkanCompareFunction(ElemGraphicsCompareFunction compareFunction)
-{
-    switch (compareFunction)
-    {
-        case ElemGraphicsCompareFunction_Never:
-            return VK_COMPARE_OP_NEVER;
-
-        case ElemGraphicsCompareFunction_Less:
-            return VK_COMPARE_OP_LESS;
-
-        case ElemGraphicsCompareFunction_Equal:
-            return VK_COMPARE_OP_EQUAL;
-
-        case ElemGraphicsCompareFunction_LessEqual:
-            return VK_COMPARE_OP_LESS_OR_EQUAL;
-
-        case ElemGraphicsCompareFunction_Greater:
-            return VK_COMPARE_OP_GREATER;
-
-        case ElemGraphicsCompareFunction_NotEqual:
-            return VK_COMPARE_OP_NOT_EQUAL;
-
-        case ElemGraphicsCompareFunction_GreaterEqual:
-            return VK_COMPARE_OP_GREATER_OR_EQUAL;
-
-        case ElemGraphicsCompareFunction_Always:
-            return VK_COMPARE_OP_ALWAYS;
-    }
-}
-
 VkPipelineShaderStageCreateInfo GetVulkanShaderFunctionStageCreateInfo(MemoryArena memoryArena, VulkanShaderLibraryData* shaderLibraryData, ShaderType shaderType, const char* function)
 {
     SystemAssert(function);
@@ -482,8 +452,13 @@ void VulkanBindPipelineState(ElemCommandList commandList, ElemPipelineState pipe
 
     auto bindPoint = (pipelineStateData->PipelineStateType == VulkanPipelineStateType_Graphics) ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
 
-    VkDescriptorSet descriptorSets = { graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorSet };
-    vkCmdBindDescriptorSets(commandListData->DeviceObject, bindPoint, graphicsDeviceData->PipelineLayout, 0, 1, &descriptorSets, 0, nullptr);
+    VkDescriptorSet descriptorSets[] = 
+    { 
+        graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorSet->DescriptorSet, 
+        graphicsDeviceData->SamplerDescriptorHeap.Storage->DescriptorSet->DescriptorSet 
+    };
+
+    vkCmdBindDescriptorSets(commandListData->DeviceObject, bindPoint, graphicsDeviceData->PipelineLayout, 0, ARRAYSIZE(descriptorSets), descriptorSets, 0, nullptr);
     vkCmdBindPipeline(commandListData->DeviceObject, bindPoint, pipelineStateData->PipelineState);
 }
 

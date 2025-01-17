@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Elemental.h"
+#include "VulkanResource.h"
 #include "Graphics/CommandAllocatorPool.h"
 #include "Graphics/ResourceBarrier.h"
+#include "Graphics/UploadBufferPool.h"
 #include "SystemSpan.h"
 #include "volk.h"
 
@@ -44,6 +46,8 @@ struct VulkanCommandListData
     CommandListPoolItem<VkCommandBuffer>* CommandListPoolItem;
     VulkanPipelineStateType PipelineStateType;
     ResourceBarrierPool ResourceBarrierPool;
+    UploadBufferPoolItem<VulkanUploadBuffer>* UploadBufferPoolItems[MAX_UPLOAD_BUFFERS];
+    uint32_t UploadBufferCount;
 };
 
 struct VulkanCommandListDataFull

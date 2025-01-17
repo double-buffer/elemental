@@ -6,27 +6,49 @@ bool testPrintLogs = true;
 bool testForceVulkanApi = false;
 
 bool workingTestHasLogErrors = false;
-char workingTestErrorLogs[TESTLOG_LENGTH];
+char* workingTestErrorLogs;
 uint32_t currentTestErrorLogsIndex;
 
-char testDebugLogs[TESTLOG_LENGTH];
+char* testDebugLogs;
 uint32_t currentTestDebugLogsIndex = 0;
 
 bool testHasLogErrors = false;
-char testErrorLogs[TESTLOG_LENGTH];
+char* testErrorLogs;
+
+ElemGraphicsOptions startOptions;
+
+void InitLogBuffers()
+{
+    workingTestErrorLogs = (char*)malloc(TESTLOG_LENGTH);
+    testDebugLogs = (char*)malloc(TESTLOG_LENGTH);
+    testErrorLogs = (char*)malloc(TESTLOG_LENGTH);
+}
+
+void EnableBarriersLog()
+{
+    ElemGraphicsOptions options = startOptions;
+    options.EnableDebugBarrierInfo = true;
+
+    ElemSetGraphicsOptions(&options);
+}
+
+void DisableBarriersLog()
+{
+    ElemGraphicsOptions options = startOptions;
+    options.EnableDebugBarrierInfo = false;
+
+    ElemSetGraphicsOptions(&options);
+}
 
 uint64_t TestMegaBytesToBytes(uint64_t value)
 {
     return value * 1024 * 1024;
 }
 
+// TODO: Remove this function
 void CopyString(char* destination, uint32_t destinationLength, const char* source, uint32_t sourceLength)
 {
-    #ifdef _WIN32 
-    strncpy_s(destination, destinationLength, source, sourceLength);
-    #else
     strncpy(destination, source, sourceLength);
-    #endif
 }
 
 void GetFullPath(char* destination, const char* path)
@@ -237,13 +259,16 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
     }
     else if (messageType == ElemLogMessageType_Debug)
     {
-        char tmpMessage[TESTLOG_LENGTH];
+        char* tmpMessage = (char*)malloc(TESTLOG_LENGTH + 1);
         snprintf(tmpMessage, TESTLOG_LENGTH, "%s\n", message);
         auto tmpMessageLength = strlen(tmpMessage);
         
         char* logCopyDestination = testDebugLogs + currentTestDebugLogsIndex;
+        //strncpy(logCopyDestination, tmpMessage, tmpMessageLength + 1);
         CopyString(logCopyDestination, TESTLOG_LENGTH - currentTestDebugLogsIndex, tmpMessage, tmpMessageLength + 1);
         currentTestDebugLogsIndex += tmpMessageLength;
+
+        free(tmpMessage);
     }
 }
 
@@ -326,9 +351,9 @@ TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t si
         .HeapType = heapType
     };
 
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &heapOptions);
-
     auto gpuBufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Write, nullptr);
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, gpuBufferInfo.SizeInBytes, &heapOptions);
     auto gpuBuffer = ElemCreateGraphicsResource(graphicsHeap, 0, &gpuBufferInfo);
     auto gpuBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
     auto gpuBufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);

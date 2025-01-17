@@ -30,8 +30,11 @@ void ApplicationTestInitFunction(void* payload)
     options.EnableGpuValidation = false;
     options.EnableDebugBarrierInfo = true;
 
+    startOptions = options;
+
     ElemConfigureLogHandler(TestLogHandler);
     ElemSetGraphicsOptions(&options);
+    InitLogBuffers();
 
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
 

@@ -57,7 +57,6 @@ UTEST(ResourceIO, UploadGraphicsBufferData_WithNoGpuUploadHeap)
     auto resource = ElemCreateGraphicsResource(graphicsHeap, 0, &resourceInfo);
     uint8_t data[] = { 1, 2, 3, 4 };
 
-
     // Act
     ElemUploadGraphicsBufferData(resource, 0, { .Items = data, .Length = ARRAYSIZE(data) });
 
@@ -296,6 +295,7 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithBuffer)
 UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopies) 
 {
     // Arrange
+    DisableBarriersLog();
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
 
     ElemGraphicsHeapOptions options =
@@ -328,7 +328,7 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopies)
             .Resource = resource,
             .BufferOffset = (uint32_t)(i * sizeof(uint32_t)),
             .SourceType = ElemCopyDataSourceType_Memory,
-            .SourceMemoryData = { .Items = (uint8_t*)data, .Length = (uint32_t)(resourceSize - i * sizeof(uint32_t)) } 
+            .SourceMemoryData = { .Items = (uint8_t*)data, .Length = sizeof(uint32_t) } 
         };
 
         ElemCopyDataToGraphicsResource(commandList, &parameters);
@@ -357,11 +357,13 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopies)
     }
     
     free(data);
+    EnableBarriersLog();
 }
 
 UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopiesAndCommandLists) 
 {
     // Arrange
+    DisableBarriersLog();
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
 
     ElemGraphicsHeapOptions options =
@@ -397,7 +399,7 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopiesAndCommandList
             .Resource = resource,
             .BufferOffset = (uint32_t)(i * sizeof(uint32_t)),
             .SourceType = ElemCopyDataSourceType_Memory,
-            .SourceMemoryData = { .Items = (uint8_t*)data, .Length = (uint32_t)(resourceSize - i * sizeof(uint32_t)) } 
+            .SourceMemoryData = { .Items = (uint8_t*)data, .Length = sizeof(uint32_t) } 
         };
 
         ElemCopyDataToGraphicsResource(commandList, &parameters);
@@ -427,6 +429,7 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithBufferMultiCopiesAndCommandList
     }
     
     free(data);
+    EnableBarriersLog();
 }
 
 UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture) 
@@ -516,7 +519,7 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
 
         for (uint32_t j = 0; j < outputMipDataItem.Length; j++)
         {
-            ASSERT_EQ_MSG(outputMipDataItem.Items[j], mipData[i][j], "Test");
+            ASSERT_EQ_MSG(outputMipDataItem.Items[j], mipData[i][j], "TestMipData");
         }
 
         free(mipData[i]);

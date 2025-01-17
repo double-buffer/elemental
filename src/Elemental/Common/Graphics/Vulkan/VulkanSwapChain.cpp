@@ -76,6 +76,8 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
 
 VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, VkSurfaceKHR windowSurface, VkSwapchainCreateInfoKHR* swapChainCreateInfo, VkSwapchainKHR oldSwapChain)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
@@ -84,6 +86,14 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
     AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &surfaceCapabilities));
+
+    uint32_t presentModeCount = 0;
+    AssertIfFailed(vkGetPhysicalDeviceSurfacePresentModesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &presentModeCount, nullptr));
+
+    auto presentModes = SystemPushArray<VkPresentModeKHR>(stackMemoryArena, presentModeCount);
+    AssertIfFailed(vkGetPhysicalDeviceSurfacePresentModesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &presentModeCount, presentModes.Pointer));
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Present Mode count: %d", presentModeCount);
 
     VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
@@ -143,7 +153,7 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     auto fence = CreateVulkanCommandQueueFence(swapChainData->CommandQueue);
     VulkanWaitForFenceOnCpu(fence);
 
-    swapChainData->PresentId = 0;
+    swapChainData->PresentId = 1;
     auto oldSwapChain = swapChainData->DeviceObject;
 
     auto swapChainCreateInfo = &swapChainDataFull->CreateInfo;
@@ -192,9 +202,15 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
         #ifdef _WIN32
         auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
 
-        if (vkWaitForPresentKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, presentId, 0) != VK_SUCCESS)
+        //if (presentId < 10)
+            //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "PresentID: %d", presentId);
+
+        //if (vkWaitForPresentKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, presentId, 0) != VK_SUCCESS)
         {
-            return;
+            // BUG: There is still an error here, we need to investigate
+            // Sometimes when we resize it is good
+            //SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Cannot update the swapchain because there was an error waiting for the present ID %d.", presentId);
+         //   return;
         }
         #endif
     }
@@ -412,6 +428,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .AspectRatio = (float)width / height,
         .UIScale = windowRenderSize.UIScale,
         .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
+        .PresentId = 1,
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
     });
@@ -503,9 +520,11 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     auto commandQueueData = GetVulkanCommandQueueData(swapChainData->CommandQueue);
     SystemAssert(commandQueueData);
 
+    auto presentId = swapChainData->PresentId++;
+
     VkPresentIdKHR presentIdInfo = { VK_STRUCTURE_TYPE_PRESENT_ID_KHR };
     presentIdInfo.swapchainCount = 1;
-    presentIdInfo.pPresentIds = &swapChainData->PresentId;
+    presentIdInfo.pPresentIds = &presentId;
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.waitSemaphoreCount = 1;
@@ -519,6 +538,5 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     
     VulkanResetCommandAllocation(swapChainData->GraphicsDevice);
     VulkanProcessGraphicsResourceDeleteQueue(swapChainData->GraphicsDevice);
-    swapChainData->PresentId++;
 }
 

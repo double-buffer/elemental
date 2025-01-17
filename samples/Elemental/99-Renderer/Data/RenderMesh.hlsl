@@ -147,7 +147,7 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
             // TODO: Should we use non uniform index here? We know we have the same material for each meshlet.
             // But we sometimes may group some meshlets together
             Texture2D<float4> albedoTexture = ResourceDescriptorHeap[NonUniformResourceIndex(material.AlbedoTextureId)];
-            albedo = albedoTexture.Sample(textureSampler, input.TextureCoordinates);
+            albedo = albedoTexture.Sample(textureSampler, input.TextureCoordinates) * material.AlbedoFactor;
 
             // TODO: Doing discard on the main pass is really bad for performance.
             // Doing it disable the early depth test in the shader, so all pixel shader code has to run for
