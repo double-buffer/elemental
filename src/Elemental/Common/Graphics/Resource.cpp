@@ -1,5 +1,15 @@
-#include "Elemental.h"
+#include "Resource.h"
 #include "GraphicsCommon.h"
+
+bool CheckDepthStencilFormat(ElemGraphicsFormat format)
+{
+    if (format == ElemGraphicsFormat_D32_FLOAT)
+    {
+        return true;
+    }
+
+    return false;
+}
 
 ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options)
 {
@@ -36,9 +46,19 @@ ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResourc
     DispatchReturnGraphicsFunction(GetGraphicsResourceInfo, resource);
 }
 
-ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
 {
-    DispatchReturnGraphicsFunction(GetGraphicsResourceDataSpan, resource);
+    DispatchGraphicsFunction(UploadGraphicsBufferData, resource, offset, data);
+}
+
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+{
+    DispatchReturnGraphicsFunction(DownloadGraphicsBufferData, resource, options);
+}
+
+ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
+{
+    DispatchGraphicsFunction(CopyDataToGraphicsResource, commandList, parameters);
 }
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
@@ -61,7 +81,22 @@ ElemAPI void ElemGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphi
     DispatchGraphicsFunction(GraphicsResourceBarrier, commandList, descriptor, options);
 }
 
-ElemAPI void ElemProcessGraphicsResourceDeleteQueue()
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
-    DispatchGraphicsFunction(ProcessGraphicsResourceDeleteQueue);
+    DispatchGraphicsFunction(ProcessGraphicsResourceDeleteQueue, graphicsDevice);
+}
+
+ElemAPI ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
+{
+    DispatchReturnGraphicsFunction(CreateGraphicsSampler, graphicsDevice, samplerInfo);
+}
+
+ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    DispatchReturnGraphicsFunction(GetGraphicsSamplerInfo, sampler);
+}
+
+ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
+{
+    DispatchGraphicsFunction(FreeGraphicsSampler, sampler, options);
 }

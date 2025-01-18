@@ -1,17 +1,23 @@
 #include "DirectX12Resource.h"
+#include "DirectX12Config.h"
 #include "DirectX12GraphicsDevice.h"
+#include "DirectX12CommandList.h"
+#include "Graphics/Resource.h"
 #include "Graphics/ResourceDeleteQueue.h"
+#include "Graphics/UploadBufferPool.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-#define DIRECTX12_MAX_GRAPHICSHEAP 32
-
 SystemDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull> directX12GraphicsHeapPool;
 SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull> directX12GraphicsResourcePool;
 
+thread_local UploadBufferDevicePool<ComPtr<ID3D12Resource>> threadDirectX12UploadBufferPools[DIRECTX12_MAX_DEVICES];
+
 // TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
+Span<ElemGraphicsSamplerInfo> directX12SamplerInfos;
+MemoryArena directX12ReadBackMemoryArena;
 
 void InitDirectX12ResourceMemory()
 {
@@ -19,7 +25,12 @@ void InitDirectX12ResourceMemory()
     {
         directX12GraphicsHeapPool = SystemCreateDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_GRAPHICSHEAP);
         directX12GraphicsResourcePool = SystemCreateDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
-        directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES);
+
+        directX12ResourceDescriptorInfos = SystemPushArray<ElemGraphicsResourceDescriptorInfo>(DirectX12MemoryArena, DIRECTX12_MAX_RESOURCES, AllocationState_Reserved);
+        directX12SamplerInfos = SystemPushArray<ElemGraphicsSamplerInfo>(DirectX12MemoryArena, DIRECTX12_MAX_SAMPLERS, AllocationState_Reserved);
+
+        // TODO: Allow to increase the size as a parameter
+        directX12ReadBackMemoryArena = SystemAllocateMemoryArena(DIRECTX12_READBACK_MEMORY_ARENA);
     }
 }
 
@@ -73,7 +84,40 @@ DXGI_FORMAT ConvertDirectX12FormatWithoutSrgbIfNeeded(DXGI_FORMAT format)
     }
 }
 
-ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture)
+D3D12_FILTER_TYPE ConvertToDirectX12FilterType(ElemGraphicsSamplerFilter filter)
+{
+    switch (filter)
+    {
+        case ElemGraphicsSamplerFilter_Nearest:
+            return D3D12_FILTER_TYPE_POINT;
+
+        case ElemGraphicsSamplerFilter_Linear:
+            return D3D12_FILTER_TYPE_LINEAR;
+    }
+}
+
+D3D12_TEXTURE_ADDRESS_MODE ConvertToDirectX12TextureAddressMode(ElemGraphicsSamplerAddressMode addressMode)
+{
+    switch (addressMode)
+    {
+        case ElemGraphicsSamplerAddressMode_Repeat:
+            return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+
+        case ElemGraphicsSamplerAddressMode_RepeatMirror:
+            return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdge:
+            return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+
+        case ElemGraphicsSamplerAddressMode_ClampToEdgeMirror:
+            return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+
+        case ElemGraphicsSamplerAddressMode_ClampToBorderColor:
+            return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    }
+}
+
+ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture)
 {
     InitDirectX12ResourceMemory();
 
@@ -82,6 +126,7 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
 
     auto resourceDesc = resource->GetDesc();
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = {};
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = {};
 
     if (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
@@ -95,21 +140,35 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
  
         graphicsDeviceData->Device->CreateRenderTargetView(resource.Get(), &renderTargetViewDesc, rtvHandle);
     }
+    else if (resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+    {
+        dsvHandle = CreateDirectX12DescriptorHandle(graphicsDeviceData->DSVDescriptorHeap);
+        
+        D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = 
+        {
+            .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceDesc.Format),
+            .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
+        };
+ 
+        graphicsDeviceData->Device->CreateDepthStencilView(resource.Get(), &depthStencilViewDesc, dsvHandle);
+    }
   
     auto handle = SystemAddDataPoolItem(directX12GraphicsResourcePool, {
         .DeviceObject = resource,
         .RtvHandle = rtvHandle,
+        .DsvHandle = dsvHandle,
         .Type = type,
         .DirectX12Format = resourceDesc.Format,
         .DirectX12Flags = resourceDesc.Flags,
+        .GraphicsHeap = heap,
         .Width = (uint32_t)resourceDesc.Width,
         .Height = type != ElemGraphicsResourceType_Buffer ? (uint32_t)resourceDesc.Height : 0,
         .MipLevels = resourceDesc.MipLevels,
-        .IsPresentTexture = isPresentTexture
+        .IsPresentTexture = isPresentTexture,
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsResourcePool, handle, {
-        .GraphicsDevice = graphicsDevice
+        .GraphicsDevice = graphicsDevice,
     });
 
     return handle;
@@ -122,7 +181,7 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
         case ElemGraphicsFormat_B8G8R8A8_SRGB:
             return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 
-        case ElemGraphicsFormat_B8G8R8A8_UNORM:
+        case ElemGraphicsFormat_B8G8R8A8:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
         case ElemGraphicsFormat_R16G16B16A16_FLOAT:
@@ -130,6 +189,15 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
 
         case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
+
+        case ElemGraphicsFormat_D32_FLOAT:
+            return DXGI_FORMAT_D32_FLOAT;
+
+        case ElemGraphicsFormat_BC7:
+            return DXGI_FORMAT_BC7_UNORM;
+
+        case ElemGraphicsFormat_BC7_SRGB:
+            return DXGI_FORMAT_BC7_UNORM_SRGB;
 
         case ElemGraphicsFormat_Raw:
             return DXGI_FORMAT_UNKNOWN;
@@ -144,13 +212,22 @@ ElemGraphicsFormat ConvertFromDirectX12TextureFormat(DXGI_FORMAT format)
             return ElemGraphicsFormat_B8G8R8A8_SRGB;
 
         case DXGI_FORMAT_B8G8R8A8_UNORM:
-            return ElemGraphicsFormat_B8G8R8A8_UNORM;
+            return ElemGraphicsFormat_B8G8R8A8;
 
         case DXGI_FORMAT_R16G16B16A16_FLOAT:
             return ElemGraphicsFormat_R16G16B16A16_FLOAT;
 
         case DXGI_FORMAT_R32G32B32A32_FLOAT:
             return ElemGraphicsFormat_R32G32B32A32_FLOAT;
+
+        case DXGI_FORMAT_D32_FLOAT:
+            return ElemGraphicsFormat_D32_FLOAT;
+
+        case DXGI_FORMAT_BC7_UNORM:
+            return ElemGraphicsFormat_BC7;
+
+        case DXGI_FORMAT_BC7_UNORM_SRGB:
+            return ElemGraphicsFormat_BC7_SRGB;
 
         default:
             return ElemGraphicsFormat_Raw;
@@ -171,6 +248,11 @@ D3D12_RESOURCE_FLAGS ConvertToDirectX12ResourceFlags(ElemGraphicsResourceUsage u
         result |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
     
+    if (usage & ElemGraphicsResourceUsage_DepthStencil)
+    {
+        result |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    }
+    
     return result;
 }
 
@@ -186,6 +268,11 @@ ElemGraphicsResourceUsage ConvertFromDirectX12ResourceFlags(D3D12_RESOURCE_FLAGS
     if (flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
         result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_RenderTarget);
+    }
+    
+    if (flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+    {
+        result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_DepthStencil);
     }
 
     return result;
@@ -283,11 +370,9 @@ ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, 
         .DeviceObject = graphicsHeap,
         .SizeInBytes = sizeInBytes,
         .GraphicsDevice = graphicsDevice,
+        .HeapDescription = heapDesc,
+        .HeapType = heapProperties.Type
     }); 
-
-    SystemAddDataPoolItemFull(directX12GraphicsHeapPool, handle, {
-        .HeapDescription = heapDesc 
-    });
 
     return handle;
 }
@@ -376,6 +461,8 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
     SystemAssert(graphicsDeviceData);
     
     D3D12_BARRIER_LAYOUT initialState = D3D12_BARRIER_LAYOUT_COMMON;
+
+    // TODO: Handle clear value
     D3D12_CLEAR_VALUE* clearValue = nullptr;
 
     D3D12_RESOURCE_DESC1 resourceDescription = {}; 
@@ -400,6 +487,18 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
             return ELEM_HANDLE_NULL;
         }
 
+        if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget) && (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage RenderTarget and DepthStencil should not be used together.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil && !CheckDepthStencilFormat(resourceInfo->Format))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Texture2D with usage DepthStencil should use a compatible format.");
+            return ELEM_HANDLE_NULL;
+        }
+
         resourceDescription = CreateDirectX12TextureDescription(resourceInfo);
     }
     else
@@ -410,9 +509,15 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
             return ELEM_HANDLE_NULL;
         }
         
-        if ((resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget))
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to RenderTarget.");
+            return ELEM_HANDLE_NULL;
+        }
+        
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to DepthStencil.");
             return ELEM_HANDLE_NULL;
         }
 
@@ -435,7 +540,7 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
         resource->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, resourceInfo->DebugName).Pointer);
     }
 
-    return CreateDirectX12GraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, resource, false);
+    return CreateDirectX12GraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, graphicsHeap, resource, false);
 }
 
 void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
@@ -491,17 +596,63 @@ ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource r
     };
 }
 
-ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
 {
     SystemAssert(resource != ELEM_HANDLE_NULL);
 
     auto resourceData = GetDirectX12GraphicsResourceData(resource);
     SystemAssert(resourceData);
 
+    auto heapData = GetDirectX12GraphicsHeapData(resourceData->GraphicsHeap);
+    SystemAssert(heapData);
+
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GetGraphicsResourceDataSpan only works with graphics buffers.");
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers.");
+        return;
+    }
+
+    if (heapData->HeapType != D3D12_HEAP_TYPE_GPU_UPLOAD)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemUploadGraphicsBufferData only works with graphics buffers allocated in a GpuUpload heap.");
+        return;
+    }
+
+	if (resourceData->CpuDataPointer == nullptr)
+	{
+	    D3D12_RANGE readRange = { 0, 0 };
+	    resourceData->DeviceObject->Map(0, &readRange, &resourceData->CpuDataPointer);
+	}
+    
+    auto destinationPointer = (uint8_t*)resourceData->CpuDataPointer + offset;
+    memcpy(destinationPointer, data.Items, data.Length);
+}
+
+ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+{
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto resourceData = GetDirectX12GraphicsResourceData(resource);
+    SystemAssert(resourceData);
+
+    auto heapData = GetDirectX12GraphicsHeapData(resourceData->GraphicsHeap);
+    SystemAssert(heapData);
+
+    if (resourceData->Type != ElemGraphicsResourceType_Buffer)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers.");
         return {};
+    }
+
+    if (heapData->HeapType != D3D12_HEAP_TYPE_CUSTOM && heapData->HeapType != D3D12_HEAP_TYPE_GPU_UPLOAD)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData only works with graphics buffers allocated in a Readback heap or GpuUpload heap. (%d)", heapData->HeapType);
+        return {};
+    }
+
+    if (heapData->HeapType != D3D12_HEAP_TYPE_CUSTOM)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "ElemDownloadGraphicsBufferData works faster with graphics buffers allocated in a Readback heap.");
     }
 
 	if (resourceData->CpuDataPointer == nullptr)
@@ -510,7 +661,212 @@ ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource)
 	    resourceData->DeviceObject->Map(0, &readRange, &resourceData->CpuDataPointer);
 	}
 
-	return { .Items = (uint8_t*)resourceData->CpuDataPointer, .Length = resourceData->Width };
+    auto offset = 0u;
+    auto sizeInBytes = resourceData->Width;
+
+    if (options)
+    {
+        offset = options->Offset;
+
+        if (options->SizeInBytes != 0)
+        {
+            sizeInBytes = options->SizeInBytes;
+        }
+    }
+
+    auto downloadedData = SystemPushArray<uint8_t>(directX12ReadBackMemoryArena, sizeInBytes);
+    memcpy(downloadedData.Pointer, (uint8_t*)resourceData->CpuDataPointer + offset, sizeInBytes);
+
+	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
+}
+
+ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphicsDevice, uint64_t sizeInBytes)
+{
+    D3D12_RESOURCE_DESC bufferDescription =
+    {
+        .Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+        .Alignment = 0,
+        .Width = sizeInBytes,
+        .Height = 1,
+        .DepthOrArraySize = 1,
+        .MipLevels = 1,
+        .Format = DXGI_FORMAT_UNKNOWN,
+        .SampleDesc =
+        {
+            .Count = 1,
+            .Quality = 0
+        },
+        .Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+        .Flags = D3D12_RESOURCE_FLAG_NONE
+    };
+    
+    D3D12_HEAP_PROPERTIES heapProperties = { .Type = D3D12_HEAP_TYPE_UPLOAD };
+    
+    ComPtr<ID3D12Resource> resource;
+    AssertIfFailed(graphicsDevice->CreateCommittedResource1(&heapProperties, 
+                                                            D3D12_HEAP_FLAG_NONE, 
+                                                            &bufferDescription, 
+                                                            D3D12_RESOURCE_STATE_COMMON, 
+                                                            nullptr, 
+                                                            nullptr, 
+                                                            IID_PPV_ARGS(resource.GetAddressOf())));
+
+    resource->SetName(L"ElementalUploadBuffer");
+
+    return resource;
+}
+
+UploadBufferMemory<ComPtr<ID3D12Resource>> GetDirectX12UploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
+{
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(graphicsDevice);
+    auto uploadBufferPool = &threadDirectX12UploadBufferPools[graphicsIdUnpacked.Index];
+
+    if (!uploadBufferPool->IsInited)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Init pool");
+
+        auto poolIndex = SystemAtomicAdd(graphicsDeviceData->CurrentUploadBufferPoolIndex, 1);
+        graphicsDeviceData->UploadBufferPools[poolIndex] = uploadBufferPool;
+        uploadBufferPool->IsInited = true;
+    }
+
+    auto uploadBuffer = GetUploadBufferPoolItem(uploadBufferPool, graphicsDeviceData->UploadBufferGeneration, alignment, sizeInBytes);
+
+    if (uploadBuffer.PoolItem->IsResetNeeded)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to create upload buffer with size: %d...", uploadBuffer.PoolItem->SizeInBytes);
+
+        if (uploadBuffer.PoolItem->Fence.FenceValue > 0)
+        {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Fence: %d", uploadBuffer.PoolItem->Fence.FenceValue);
+            DirectX12WaitForFenceOnCpu(uploadBuffer.PoolItem->Fence);
+        }
+        
+        if (uploadBuffer.PoolItem->Buffer != nullptr)
+        {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to delete buffer");
+            uploadBuffer.PoolItem->Buffer.Reset();
+        }
+
+        uploadBuffer.PoolItem->Buffer = CreateDirectX12UploadBuffer(graphicsDeviceData->Device, uploadBuffer.PoolItem->SizeInBytes);
+
+	    D3D12_RANGE readRange = { 0, 0 };
+	    uploadBuffer.PoolItem->Buffer->Map(0, &readRange, (void**)&uploadBuffer.PoolItem->CpuPointer);
+
+        uploadBuffer.PoolItem->IsResetNeeded = false;
+    }
+
+    return uploadBuffer;
+}
+
+void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
+{
+    // TODO: Implement optimizations on the copy queue. On windows, use DirectStorage
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    SystemAssert(parameters);
+    SystemAssert(parameters->Resource != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto resourceData = GetDirectX12GraphicsResourceData(parameters->Resource);
+    SystemAssert(resourceData);
+
+    auto resourceDataFull = GetDirectX12GraphicsResourceDataFull(parameters->Resource);
+    SystemAssert(resourceDataFull);
+
+    ReadOnlySpan<uint8_t> sourceData;
+
+    // TODO: Implement file source
+    if (parameters->SourceType == ElemCopyDataSourceType_Memory)
+    {
+        sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
+    }
+    
+    auto uploadBufferAlignment = 4u;
+    auto uploadBufferSizeInBytes = sourceData.Length;
+    DirectX12GraphicsTextureMipCopyInfo textureMipCopyInfo = {};
+
+    if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        uploadBufferAlignment = D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
+        auto resourceDesc = resourceData->DeviceObject->GetDesc();
+
+        graphicsDeviceData->Device->GetCopyableFootprints(&resourceDesc, 
+                                                          parameters->TextureMipLevel, 1, 0, 
+                                                          &textureMipCopyInfo.PlacedFootprint, 
+                                                          &textureMipCopyInfo.RowCount, 
+                                                          &textureMipCopyInfo.SourceRowSizeInBytes, 
+                                                          &uploadBufferSizeInBytes);
+    }
+
+    auto uploadBuffer = GetDirectX12UploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
+    SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
+
+    // TODO: Can we do better here?
+    auto uploadBufferAlreadyInCommandList = false;
+
+    for (uint32_t i = 0; i < MAX_UPLOAD_BUFFERS; i++)
+    {
+        if (commandListData->UploadBufferPoolItems[i] == uploadBuffer.PoolItem)
+        {
+            uploadBufferAlreadyInCommandList = true;
+            break;
+        }
+    }
+        
+    if (!uploadBufferAlreadyInCommandList)
+    {
+        commandListData->UploadBufferPoolItems[commandListData->UploadBufferCount++] = uploadBuffer.PoolItem;
+    }
+
+    if (resourceData->Type == ElemGraphicsResourceType_Buffer)
+    {
+        memcpy(uploadBuffer.PoolItem->CpuPointer + uploadBuffer.Offset, sourceData.Pointer, sourceData.Length);
+        commandListData->DeviceObject->CopyBufferRegion(resourceData->DeviceObject.Get(), parameters->BufferOffset, uploadBuffer.PoolItem->Buffer.Get(), uploadBuffer.Offset, sourceData.Length);
+    }
+    else if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        auto placedFootprint = textureMipCopyInfo.PlacedFootprint;
+        auto sourceRowSizeInBytes = textureMipCopyInfo.SourceRowSizeInBytes;
+
+        auto destData = uploadBuffer.PoolItem->CpuPointer + uploadBuffer.Offset;
+
+        for (uint32_t i = 0; i < textureMipCopyInfo.RowCount; i++)
+        {
+            auto uploadBufferRowData = destData + i * placedFootprint.Footprint.RowPitch;
+            auto sourceRowData = sourceData.Pointer + i * sourceRowSizeInBytes;
+
+            memcpy(uploadBufferRowData, sourceRowData, sourceRowSizeInBytes);
+        }
+
+        placedFootprint.Offset = uploadBuffer.Offset;
+
+        D3D12_TEXTURE_COPY_LOCATION sourceLocation = 
+        {
+            .pResource = uploadBuffer.PoolItem->Buffer.Get(),
+            .Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+            .PlacedFootprint = placedFootprint
+        };
+
+        D3D12_TEXTURE_COPY_LOCATION destinationLocation = 
+        {
+            .pResource = resourceData->DeviceObject.Get(),
+            .Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+            .SubresourceIndex = parameters->TextureMipLevel
+        };
+
+        commandListData->DeviceObject->CopyTextureRegion(&destinationLocation, 0, 0, 0, &sourceLocation, nullptr);
+    }
 }
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
@@ -559,7 +915,8 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
     {
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = 
         {
-            .Format = resourceData->DirectX12Format,
+            // TODO: Make a function to handle depth stencil formats checks
+            .Format = resourceData->DirectX12Format == DXGI_FORMAT_D32_FLOAT ? DXGI_FORMAT_R32_FLOAT : resourceData->DirectX12Format,
             .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
         };
 
@@ -616,6 +973,11 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
 
     auto index = ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
 
+    if ((index % 1024) == 0)
+    {
+        SystemCommitMemory(DirectX12MemoryArena, &directX12ResourceDescriptorInfos[index], 1024 *  sizeof(ElemGraphicsResourceDescriptorInfo));
+    }
+
     directX12ResourceDescriptorInfos[index].Resource = resource;
     directX12ResourceDescriptorInfos[index].Usage = usage;
 
@@ -650,7 +1012,123 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
     directX12ResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 
-void DirectX12ProcessGraphicsResourceDeleteQueue()
+void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     ProcessResourceDeleteQueue();
+    SystemClearMemoryArena(directX12ReadBackMemoryArena);
+    
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    graphicsDeviceData->UploadBufferGeneration++;
+    
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            auto uploadBuffersToDelete = GetUploadBufferPoolItemsToDelete(stackMemoryArena, bufferPool, graphicsDeviceData->UploadBufferGeneration);    
+
+            for (uint32_t j = 0; j < uploadBuffersToDelete.Length; j++)
+            {
+                auto uploadBufferToDelete = uploadBuffersToDelete[j];
+
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Need to purge upload buffer: Size=%d", uploadBufferToDelete->SizeInBytes);
+
+                uploadBufferToDelete->Buffer.Reset();
+                uploadBufferToDelete->CurrentOffset = 0;
+                uploadBufferToDelete->SizeInBytes = 0;
+            }
+        }
+    }
+}
+
+ElemGraphicsSampler DirectX12CreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo)
+{
+    InitDirectX12ResourceMemory();
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto descriptorHeap = graphicsDeviceData->SamplerDescriptorHeap;
+    auto descriptorHandle = CreateDirectX12DescriptorHandle(descriptorHeap);
+
+    auto localSamplerInfo = *samplerInfo;
+
+    if (localSamplerInfo.MaxAnisotropy == 0)
+    {
+        localSamplerInfo.MaxAnisotropy = 1;
+    }
+
+    auto minFilter = ConvertToDirectX12FilterType(localSamplerInfo.MinFilter);
+    auto magFilter = ConvertToDirectX12FilterType(localSamplerInfo.MagFilter);
+    auto mipFilter = ConvertToDirectX12FilterType(localSamplerInfo.MipFilter);
+    auto reduction = localSamplerInfo.CompareFunction == ElemGraphicsCompareFunction_Never ? D3D12_FILTER_REDUCTION_TYPE_STANDARD : D3D12_FILTER_REDUCTION_TYPE_COMPARISON;
+    auto borderColor = localSamplerInfo.BorderColor;
+    auto filter = D3D12_ENCODE_BASIC_FILTER(minFilter, magFilter, mipFilter, reduction);
+
+    if (localSamplerInfo.MaxAnisotropy > 1)
+    {
+        filter = (D3D12_FILTER)(D3D12_ANISOTROPIC_FILTERING_BIT | filter);
+    }
+
+    D3D12_SAMPLER_DESC samplerDesc =
+    {
+        .Filter = filter,
+        .AddressU = ConvertToDirectX12TextureAddressMode(localSamplerInfo.AddressU),
+        .AddressV = ConvertToDirectX12TextureAddressMode(localSamplerInfo.AddressV),
+        .AddressW = ConvertToDirectX12TextureAddressMode(localSamplerInfo.AddressW),
+        .MaxAnisotropy = localSamplerInfo.MaxAnisotropy,
+        .ComparisonFunc = ConvertToDirectX12CompareFunction(localSamplerInfo.CompareFunction),
+        .BorderColor = { borderColor.Red, borderColor.Green, borderColor.Blue, borderColor.Alpha },
+        .MinLOD = localSamplerInfo.MinLod,
+        .MaxLOD = localSamplerInfo.MaxLod == 0 ? 1000 : localSamplerInfo.MaxLod
+    };
+
+    graphicsDeviceData->Device->CreateSampler(&samplerDesc, descriptorHandle);
+
+    auto index = ConvertDirectX12DescriptorHandleToIndex(descriptorHeap, descriptorHandle);
+
+    if ((index % 1024) == 0)
+    {
+        SystemCommitMemory(DirectX12MemoryArena, &directX12SamplerInfos[index], 1024 *  sizeof(ElemGraphicsSamplerInfo));
+    }
+
+    directX12SamplerInfos[index] = localSamplerInfo;
+    return index;
+}
+
+ElemGraphicsSamplerInfo DirectX12GetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    InitDirectX12ResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return {};
+    }
+
+    return directX12SamplerInfos[sampler];
+}
+
+void DirectX12FreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
+{
+    InitDirectX12ResourceMemory();
+
+    if (sampler == -1)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Sampler is invalid.");
+        return;
+    }
+    
+    if (options && options->FencesToWait.Length > 0)
+    {
+        EnqueueResourceDeleteEntry(DirectX12MemoryArena, sampler, ResourceDeleteType_Sampler, options->FencesToWait);
+        return;
+    }
+
+    directX12SamplerInfos[sampler] = {};
 }

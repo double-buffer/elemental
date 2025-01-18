@@ -1,15 +1,14 @@
 #include "MetalGraphicsDevice.h"
+#include "MetalConfig.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-#define METAL_MAXDEVICES 10u
-
 struct MetalArgumentBufferDescriptor
 {
     uint64_t BufferAddress;
-    uint64_t TextureResourceId;
+    uint64_t ResourceId;
     uint64_t Metadata;
 };
 
@@ -44,15 +43,23 @@ void* MetalDebugReportCallback(void* arg)
     while ((bytesRead = read(fd, buffer, sizeof(buffer))) > 0) 
     {
         buffer[bytesRead - 1] = '\0';
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, buffer);
 
         auto splittedStrings = SystemSplitString(stackMemoryArena, ReadOnlySpan<char>(buffer), ']');
         if (splittedStrings.Length == 2)
         {
             auto message = ((ReadOnlySpan<char>)splittedStrings[1]).Slice(1);
 
+            // TODO: Refactor
             if (SystemFindSubString(message, "Metal API Validation Enabled") == -1)
             {
-                SystemLogErrorMessage(ElemLogMessageCategory_Graphics, message);
+                if (SystemFindSubString(message, "unused binding in encoder") == -1)
+                {
+                    if (SystemFindSubString(message, "redundant setting") == -1)
+                    { 
+                        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, message);
+                    }
+                }
             }
         }
     }
@@ -65,6 +72,7 @@ void InitMetal()
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     // TODO: There is nothing in code to enable that 😢
+    return;
 
     if (MetalDebugLayerEnabled)
     {
@@ -106,8 +114,9 @@ void InitMetalGraphicsDeviceMemory()
 {
     if (!MetalGraphicsMemoryArena.Storage)
     {
-        MetalGraphicsMemoryArena = SystemAllocateMemoryArena();
-        metalGraphicsDevicePool = SystemCreateDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull>(MetalGraphicsMemoryArena, METAL_MAXDEVICES);
+        // TODO: To Review
+        MetalGraphicsMemoryArena = SystemAllocateMemoryArena(METAL_MEMORY_ARENA);
+        metalGraphicsDevicePool = SystemCreateDataPool<MetalGraphicsDeviceData, MetalGraphicsDeviceDataFull>(MetalGraphicsMemoryArena, METAL_MAX_DEVICES);
 
         InitMetal();
     }
@@ -129,6 +138,37 @@ ElemGraphicsDeviceInfo MetalConstructGraphicsDeviceInfo(const MTL::Device* devic
         .AvailableMemory = device->recommendedMaxWorkingSetSize()
     };
 }
+
+MTL::CompareFunction ConvertToMetalCompareFunction(ElemGraphicsCompareFunction compareFunction)
+{
+    switch (compareFunction)
+    {
+        case ElemGraphicsCompareFunction_Never:
+            return MTL::CompareFunctionNever;
+
+        case ElemGraphicsCompareFunction_Less:
+            return MTL::CompareFunctionLess;
+
+        case ElemGraphicsCompareFunction_Equal:
+            return MTL::CompareFunctionEqual;
+
+        case ElemGraphicsCompareFunction_LessEqual:
+            return MTL::CompareFunctionLessEqual;
+
+        case ElemGraphicsCompareFunction_Greater:
+            return MTL::CompareFunctionGreater;
+
+        case ElemGraphicsCompareFunction_NotEqual:
+            return MTL::CompareFunctionNotEqual;
+
+        case ElemGraphicsCompareFunction_GreaterEqual:
+            return MTL::CompareFunctionGreaterEqual;
+
+        case ElemGraphicsCompareFunction_Always:
+            return MTL::CompareFunctionAlways;
+    }
+}
+
 
 bool MetalCheckGraphicsDeviceCompatibility(const MTL::Device* device)
 {
@@ -197,7 +237,36 @@ uint32_t CreateMetalArgumentBufferHandleForTexture(MetalArgumentBuffer argumentB
     }
 
     auto argumentBufferData = (MetalArgumentBufferDescriptor*)storage->ArgumentBuffer->contents();
-    argumentBufferData[argumentIndex].TextureResourceId = (uint64_t)texture->gpuResourceID()._impl;
+    argumentBufferData[argumentIndex].ResourceId = (uint64_t)texture->gpuResourceID()._impl;
+
+    return argumentIndex;
+}
+
+uint32_t CreateMetalArgumentBufferHandleForSamplerState(MetalArgumentBuffer argumentBuffer, MTL::SamplerState* sampler)
+{            
+    SystemAssert(argumentBuffer.Storage);
+
+    auto storage = argumentBuffer.Storage;
+    auto argumentIndex = UINT32_MAX;
+
+    do
+    {
+        if (storage->FreeListIndex == UINT32_MAX)
+        {
+            argumentIndex = UINT32_MAX;
+            break;
+        }
+        
+        argumentIndex = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, argumentIndex, storage->Items[storage->FreeListIndex].Next));
+
+    if (argumentIndex == UINT32_MAX)
+    {
+        argumentIndex = SystemAtomicAdd(storage->CurrentIndex, 1);
+    }
+
+    auto argumentBufferData = (MetalArgumentBufferDescriptor*)storage->ArgumentBuffer->contents();
+    argumentBufferData[argumentIndex].BufferAddress = (uint64_t)sampler->gpuResourceID()._impl;
 
     return argumentIndex;
 }
@@ -277,7 +346,7 @@ ElemGraphicsDeviceInfoSpan MetalGetAvailableGraphicsDevices()
     InitMetalGraphicsDeviceMemory();
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, METAL_MAXDEVICES);
+    auto deviceInfos = SystemPushArray<ElemGraphicsDeviceInfo>(stackMemoryArena, METAL_MAX_DEVICES);
     auto currentDeviceInfoIndex = 0u;
 
     auto device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
@@ -310,6 +379,7 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     
     auto memoryArena = SystemAllocateMemoryArena();
     auto resourceArgumentBuffer = CreateMetalArgumentBuffer(device, memoryArena, METAL_MAX_RESOURCES);
+    auto samplerArgumentBuffer = CreateMetalArgumentBuffer(device, memoryArena, METAL_MAX_SAMPLERS);
 
     auto residencySetDescriptor = NS::TransferPtr(MTL::ResidencySetDescriptor::alloc()->init());
     residencySetDescriptor->setInitialCapacity(8);
@@ -319,12 +389,18 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     SystemAssert(error == nullptr);
     
     residencySet->addAllocation(resourceArgumentBuffer.Storage->ArgumentBuffer.get());
+    residencySet->addAllocation(samplerArgumentBuffer.Storage->ArgumentBuffer.get());
     residencySet->commit();
+    
+    // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
+    auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>>*>(MetalGraphicsMemoryArena, MAX_UPLOAD_BUFFERS);
 
     auto handle = SystemAddDataPoolItem(metalGraphicsDevicePool, {
         .Device = device,
         .ResourceArgumentBuffer = resourceArgumentBuffer,
-        .MemoryArena = memoryArena
+        .SamplerArgumentBuffer = samplerArgumentBuffer,
+        .MemoryArena = memoryArena,
+        .UploadBufferPools = uploadBuffers
     }); 
 
     SystemAddDataPoolItemFull(metalGraphicsDevicePool, handle, {
@@ -340,6 +416,27 @@ void MetalFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
+    
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            for (uint32_t j = 0; j < MAX_UPLOAD_BUFFERS; j++)
+            {
+                auto uploadBuffer = &bufferPool->UploadBuffers[j];
+
+                if (uploadBuffer && uploadBuffer->Buffer)
+                {
+                    uploadBuffer->Buffer.reset();
+                    *uploadBuffer = {};
+                }
+            }
+
+            *bufferPool = {};
+        }
+    }
     
     FreeMetalArgumentBuffer(graphicsDeviceData->ResourceArgumentBuffer);
     

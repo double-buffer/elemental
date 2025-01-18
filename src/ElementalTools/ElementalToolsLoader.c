@@ -23,8 +23,14 @@ static int functionPointersLoadedElementalTools = 0;
 
 typedef struct ElementalToolsFunctions 
 {
+    void (*ElemToolsConfigureFileIO)(ElemToolsLoadFileHandlerPtr);
     bool (*ElemCanCompileShader)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform);
-    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, const ElemShaderSourceData*, const ElemCompileShaderOptions*);
+    ElemShaderCompilationResult (*ElemCompileShaderLibrary)(ElemToolsGraphicsApi, ElemToolsPlatform, char const *, ElemCompileShaderOptions const *);
+    ElemLoadSceneResult (*ElemLoadScene)(char const *, ElemLoadSceneOptions const *);
+    ElemBuildMeshletResult (*ElemBuildMeshlets)(ElemVertexBuffer, ElemUInt32Span, ElemBuildMeshletsOptions const *);
+    ElemLoadTextureResult (*ElemLoadTexture)(char const *, ElemLoadTextureOptions const *);
+    ElemGenerateTextureMipDataResult (*ElemGenerateTextureMipData)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemGenerateTextureMipDataOptions const *);
+    ElemCompressTextureMipDataResult (*ElemCompressTextureMipData)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemCompressTextureMipDataOptions const *);
     
 } ElementalToolsFunctions;
 
@@ -77,12 +83,35 @@ static bool LoadElementalToolsFunctionPointers(void)
         return functionPointersLoadedElementalTools;
     }
 
+    listElementalToolsFunctions.ElemToolsConfigureFileIO = (void (*)(ElemToolsLoadFileHandlerPtr))GetElementalToolsFunctionPointer("ElemToolsConfigureFileIO");
     listElementalToolsFunctions.ElemCanCompileShader = (bool (*)(ElemShaderLanguage, ElemToolsGraphicsApi, ElemToolsPlatform))GetElementalToolsFunctionPointer("ElemCanCompileShader");
-    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, const ElemShaderSourceData*, const ElemCompileShaderOptions*))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
+    listElementalToolsFunctions.ElemCompileShaderLibrary = (ElemShaderCompilationResult (*)(ElemToolsGraphicsApi, ElemToolsPlatform, char const *, ElemCompileShaderOptions const *))GetElementalToolsFunctionPointer("ElemCompileShaderLibrary");
+    listElementalToolsFunctions.ElemLoadScene = (ElemLoadSceneResult (*)(char const *, ElemLoadSceneOptions const *))GetElementalToolsFunctionPointer("ElemLoadScene");
+    listElementalToolsFunctions.ElemBuildMeshlets = (ElemBuildMeshletResult (*)(ElemVertexBuffer, ElemUInt32Span, ElemBuildMeshletsOptions const *))GetElementalToolsFunctionPointer("ElemBuildMeshlets");
+    listElementalToolsFunctions.ElemLoadTexture = (ElemLoadTextureResult (*)(char const *, ElemLoadTextureOptions const *))GetElementalToolsFunctionPointer("ElemLoadTexture");
+    listElementalToolsFunctions.ElemGenerateTextureMipData = (ElemGenerateTextureMipDataResult (*)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemGenerateTextureMipDataOptions const *))GetElementalToolsFunctionPointer("ElemGenerateTextureMipData");
+    listElementalToolsFunctions.ElemCompressTextureMipData = (ElemCompressTextureMipDataResult (*)(ElemToolsGraphicsFormat, ElemTextureMipData const *, ElemCompressTextureMipDataOptions const *))GetElementalToolsFunctionPointer("ElemCompressTextureMipData");
     
 
     functionPointersLoadedElementalTools = 1;
     return true;
+}
+
+static inline void ElemToolsConfigureFileIO(ElemToolsLoadFileHandlerPtr loadFileHandler)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+        return;
+    }
+
+    if (!listElementalToolsFunctions.ElemToolsConfigureFileIO) 
+    {
+        assert(listElementalToolsFunctions.ElemToolsConfigureFileIO);
+        return;
+    }
+
+    listElementalToolsFunctions.ElemToolsConfigureFileIO(loadFileHandler);
 }
 
 static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform)
@@ -116,7 +145,7 @@ static inline bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemT
     return listElementalToolsFunctions.ElemCanCompileShader(shaderLanguage, graphicsApi, platform);
 }
 
-static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options)
+static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, char const * path, ElemCompileShaderOptions const * options)
 {
     if (!LoadElementalToolsFunctionPointers()) 
     {
@@ -144,5 +173,160 @@ static inline ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGrap
         return result;
     }
 
-    return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, platform, sourceData, options);
+    return listElementalToolsFunctions.ElemCompileShaderLibrary(graphicsApi, platform, path, options);
+}
+
+static inline ElemLoadSceneResult ElemLoadScene(char const * path, ElemLoadSceneOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemLoadSceneResult result = {};
+        #else
+        ElemLoadSceneResult result = (ElemLoadSceneResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemLoadScene) 
+    {
+        assert(listElementalToolsFunctions.ElemLoadScene);
+
+        #ifdef __cplusplus
+        ElemLoadSceneResult result = {};
+        #else
+        ElemLoadSceneResult result = (ElemLoadSceneResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemLoadScene(path, options);
+}
+
+static inline ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemUInt32Span indexBuffer, ElemBuildMeshletsOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemBuildMeshletResult result = {};
+        #else
+        ElemBuildMeshletResult result = (ElemBuildMeshletResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemBuildMeshlets) 
+    {
+        assert(listElementalToolsFunctions.ElemBuildMeshlets);
+
+        #ifdef __cplusplus
+        ElemBuildMeshletResult result = {};
+        #else
+        ElemBuildMeshletResult result = (ElemBuildMeshletResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemBuildMeshlets(vertexBuffer, indexBuffer, options);
+}
+
+static inline ElemLoadTextureResult ElemLoadTexture(char const * path, ElemLoadTextureOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemLoadTextureResult result = {};
+        #else
+        ElemLoadTextureResult result = (ElemLoadTextureResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemLoadTexture) 
+    {
+        assert(listElementalToolsFunctions.ElemLoadTexture);
+
+        #ifdef __cplusplus
+        ElemLoadTextureResult result = {};
+        #else
+        ElemLoadTextureResult result = (ElemLoadTextureResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemLoadTexture(path, options);
+}
+
+static inline ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemToolsGraphicsFormat format, ElemTextureMipData const * baseMip, ElemGenerateTextureMipDataOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemGenerateTextureMipDataResult result = {};
+        #else
+        ElemGenerateTextureMipDataResult result = (ElemGenerateTextureMipDataResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemGenerateTextureMipData) 
+    {
+        assert(listElementalToolsFunctions.ElemGenerateTextureMipData);
+
+        #ifdef __cplusplus
+        ElemGenerateTextureMipDataResult result = {};
+        #else
+        ElemGenerateTextureMipDataResult result = (ElemGenerateTextureMipDataResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemGenerateTextureMipData(format, baseMip, options);
+}
+
+static inline ElemCompressTextureMipDataResult ElemCompressTextureMipData(ElemToolsGraphicsFormat format, ElemTextureMipData const * mipData, ElemCompressTextureMipDataOptions const * options)
+{
+    if (!LoadElementalToolsFunctionPointers()) 
+    {
+        assert(libraryElementalTools);
+
+        #ifdef __cplusplus
+        ElemCompressTextureMipDataResult result = {};
+        #else
+        ElemCompressTextureMipDataResult result = (ElemCompressTextureMipDataResult){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalToolsFunctions.ElemCompressTextureMipData) 
+    {
+        assert(listElementalToolsFunctions.ElemCompressTextureMipData);
+
+        #ifdef __cplusplus
+        ElemCompressTextureMipDataResult result = {};
+        #else
+        ElemCompressTextureMipDataResult result = (ElemCompressTextureMipDataResult){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalToolsFunctions.ElemCompressTextureMipData(format, mipData, options);
 }

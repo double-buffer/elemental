@@ -2,13 +2,12 @@
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12Resource.h"
 #include "DirectX12CommandList.h"
+#include "Graphics/Resource.h"
 #include "Graphics/ShaderReader.h"
+#include "Graphics/Shader.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define DIRECTX12_MAX_LIBRARIES UINT16_MAX
-#define DIRECTX12_MAX_PIPELINESTATES UINT16_MAX
 
 SystemDataPool<DirectX12ShaderLibraryData, SystemDataPoolDefaultFull> directX12ShaderLibraryPool;
 SystemDataPool<DirectX12PipelineStateData, DirectX12PipelineStateDataFull> directX12PipelineStatePool;
@@ -94,6 +93,93 @@ D3D12_SHADER_BYTECODE GetDirectX12ShaderFunctionByteCode(DirectX12ShaderLibraryD
     return result;
 }
 
+D3D12_FILL_MODE ConvertToDirectX12FillMode(ElemGraphicsFillMode fillMode)
+{
+    switch (fillMode) 
+    {
+        case ElemGraphicsFillMode_Solid:
+            return D3D12_FILL_MODE_SOLID;
+
+        case ElemGraphicsFillMode_Wireframe:
+            return D3D12_FILL_MODE_WIREFRAME;
+    }
+}
+
+D3D12_CULL_MODE ConvertToDirectX12CullMode(ElemGraphicsCullMode cullMode)
+{
+    switch (cullMode) 
+    {
+        case ElemGraphicsCullMode_BackFace:
+            return D3D12_CULL_MODE_BACK;
+
+        case ElemGraphicsCullMode_FrontFace:
+            return D3D12_CULL_MODE_FRONT;
+
+        case ElemGraphicsCullMode_None:
+            return D3D12_CULL_MODE_NONE;
+    }
+}
+
+D3D12_BLEND_OP ConvertToDirectX12BlendOperation(ElemGraphicsBlendOperation blendOperation)
+{
+    switch (blendOperation)
+    {
+        case ElemGraphicsBlendOperation_Add:
+            return D3D12_BLEND_OP_ADD;
+
+        case ElemGraphicsBlendOperation_Subtract:
+            return D3D12_BLEND_OP_SUBTRACT;
+
+        case ElemGraphicsBlendOperation_ReverseSubtract:
+            return D3D12_BLEND_OP_REV_SUBTRACT;
+
+        case ElemGraphicsBlendOperation_Min:
+            return D3D12_BLEND_OP_MIN;
+
+        case ElemGraphicsBlendOperation_Max:
+            return D3D12_BLEND_OP_MAX;
+    }
+}
+
+D3D12_BLEND ConvertToDirectX12Blend(ElemGraphicsBlendFactor blendFactor)
+{
+    switch (blendFactor)
+    {
+        case ElemGraphicsBlendFactor_Zero:
+            return D3D12_BLEND_ZERO;
+
+        case ElemGraphicsBlendFactor_One:
+            return D3D12_BLEND_ONE;
+
+        case ElemGraphicsBlendFactor_SourceColor:
+            return D3D12_BLEND_SRC_COLOR;
+
+        case ElemGraphicsBlendFactor_InverseSourceColor:
+            return D3D12_BLEND_INV_SRC_COLOR;
+
+        case ElemGraphicsBlendFactor_SourceAlpha:
+            return D3D12_BLEND_SRC_ALPHA;
+
+        case ElemGraphicsBlendFactor_InverseSourceAlpha:
+            return D3D12_BLEND_INV_SRC_ALPHA;
+
+        case ElemGraphicsBlendFactor_DestinationColor:
+            return D3D12_BLEND_DEST_COLOR;
+
+        case ElemGraphicsBlendFactor_InverseDestinationColor:
+            return D3D12_BLEND_INV_DEST_COLOR;
+
+        case ElemGraphicsBlendFactor_DestinationAlpha:
+            return D3D12_BLEND_DEST_ALPHA;
+
+        case ElemGraphicsBlendFactor_InverseDestinationAlpha:
+            return D3D12_BLEND_INV_DEST_ALPHA;
+
+        case ElemGraphicsBlendFactor_SourceAlphaSaturated:
+            return D3D12_BLEND_SRC_ALPHA_SAT;
+    }
+}
+
 ElemShaderLibrary DirectX12CreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {
     InitDirectX12ShaderMemory();
@@ -142,94 +228,73 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     auto shaderLibraryData= GetDirectX12ShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
 
-    ComPtr<ID3D12PipelineState> pipelineState;
+    // TODO: Extract methods (this will be easier to switch to new PipelineState later)
 
-    D3D12_RT_FORMAT_ARRAY renderTargets = {};
-
-    renderTargets.NumRenderTargets = 1;
-    renderTargets.RTFormats[0] = ConvertToDirectX12TextureFormat(parameters->TextureFormats.Items[0]); // TODO: Fill Correct Back Buffer Format
-   
-    DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
-
-    /*if (renderPassDescriptor.DepthTexturePointer.HasValue)
+    // TODO: Render targets
+    D3D12_RT_FORMAT_ARRAY renderTargets = 
     {
-        // TODO: Change that
-        depthFormat = DXGI_FORMAT_D32_FLOAT;
-    }*/
+        .NumRenderTargets = parameters->RenderTargets.Length
+    };
+
+    D3D12_BLEND_DESC blendState = 
+    {
+        .IndependentBlendEnable = false, // TODO: I think that one is needed
+    };
+
+    for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
+    {
+        auto renderTargetParameters = parameters->RenderTargets.Items[i];
+    
+        renderTargets.RTFormats[i] = ConvertToDirectX12TextureFormat(renderTargetParameters.Format);
+
+        blendState.RenderTarget[i] =
+        {
+            .BlendEnable = IsBlendEnabled(renderTargetParameters),
+            .SrcBlend = ConvertToDirectX12Blend(renderTargetParameters.SourceBlendFactor),
+            .DestBlend = ConvertToDirectX12Blend(renderTargetParameters.DestinationBlendFactor),
+            .BlendOp = ConvertToDirectX12BlendOperation(renderTargetParameters.BlendOperation),
+            .SrcBlendAlpha = ConvertToDirectX12Blend(renderTargetParameters.SourceBlendFactorAlpha),
+            .DestBlendAlpha = ConvertToDirectX12Blend(renderTargetParameters.DestinationBlendFactorAlpha),
+            .BlendOpAlpha = ConvertToDirectX12BlendOperation(renderTargetParameters.BlendOperationAlpha),
+            .RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL
+        };
+    }
+
+    DXGI_FORMAT depthFormat = DXGI_FORMAT_UNKNOWN;
+    D3D12_DEPTH_STENCIL_DESC2 depthStencilState = {};
+
+    if (CheckDepthStencilFormat(parameters->DepthStencil.Format))
+    {
+        depthFormat = ConvertToDirectX12TextureFormat(parameters->DepthStencil.Format);
+        depthStencilState.DepthEnable = true;
+
+        if (!parameters->DepthStencil.DepthDisableWrite)
+        {
+            depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        }
+
+        depthStencilState.DepthFunc = ConvertToDirectX12CompareFunction(parameters->DepthStencil.DepthCompareFunction);
+    }
 
     DXGI_SAMPLE_DESC sampleDesc = {};
     sampleDesc.Count = 1;
     sampleDesc.Quality = 0;
 
-    D3D12_RASTERIZER_DESC rasterizerState = {};
-    rasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-    rasterizerState.CullMode = D3D12_CULL_MODE_NONE; // D3D12_CULL_MODE_BACK;
+    D3D12_RASTERIZER_DESC2 rasterizerState = {};
+    rasterizerState.FillMode = ConvertToDirectX12FillMode(parameters->FillMode);
+    rasterizerState.CullMode = ConvertToDirectX12CullMode(parameters->CullMode);
     rasterizerState.FrontCounterClockwise = false;
     rasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
     rasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
     rasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
     rasterizerState.DepthClipEnable = true;
-    rasterizerState.MultisampleEnable = false;
-    rasterizerState.AntialiasedLineEnable = false;
+    rasterizerState.LineRasterizationMode = D3D12_LINE_RASTERIZATION_MODE_ALIASED;
 
     // TODO: Check those 2
     rasterizerState.ForcedSampleCount = 0;
     rasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
-   /* 
-    D3D12_DEPTH_STENCIL_DESC depthStencilState = {};
-    
-    if (renderPassDescriptor.DepthBufferOperation != GraphicsDepthBufferOperation::DepthNone)
-    {
-        depthStencilState.DepthEnable = true;
-        depthStencilState.StencilEnable = false;
-
-        if (renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::ClearWrite ||
-            renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::Write)
-        {
-            depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-        }
-
-        if (renderPassDescriptor.DepthBufferOperation == GraphicsDepthBufferOperation::CompareEqual)
-        {
-            depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
-        }
-
-        else
-        {
-            depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
-        }
-    }
-*/
-    D3D12_BLEND_DESC blendState = {};
-    blendState.AlphaToCoverageEnable = false;
-    blendState.IndependentBlendEnable = false;
-/*
-    if (renderPassDescriptor.RenderTarget1BlendOperation.HasValue)
-    {
-        auto blendOperation = renderPassDescriptor.RenderTarget1BlendOperation.Value;
-        blendState.RenderTarget[0] = InitBlendState(blendOperation);
-    }
-
-    else
-    {*/
-    blendState.RenderTarget[0] = {
-        false,
-        false,
-        D3D12_BLEND_ONE,
-        D3D12_BLEND_ZERO,
-        D3D12_BLEND_OP_ADD,
-        D3D12_BLEND_ONE,
-        D3D12_BLEND_ZERO,
-        D3D12_BLEND_OP_ADD,
-        D3D12_LOGIC_OP_NOOP,
-        D3D12_COLOR_WRITE_ENABLE_ALL,
-    }; // InitBlendState(GraphicsBlendOperation::None);
-    //}
-
-    D3D12_PIPELINE_STATE_STREAM_DESC psoStream = {};
     GraphicsPso psoDesc = {};
-    
     psoDesc.RootSignature = graphicsDeviceData->RootSignature.Get();
 
     if (parameters->MeshShaderFunction)
@@ -257,15 +322,17 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     }
 
     psoDesc.RenderTargets = renderTargets;
-    psoDesc.SampleDesc = sampleDesc;
-    psoDesc.RasterizerState = rasterizerState;
     psoDesc.DepthStencilFormat = depthFormat;
-    //psoDesc.DepthStencilState = depthStencilState;
+    psoDesc.DepthStencilState = depthStencilState;
+    psoDesc.RasterizerState = rasterizerState;
     psoDesc.BlendState = blendState;
+    psoDesc.SampleDesc = sampleDesc;
 
+    D3D12_PIPELINE_STATE_STREAM_DESC psoStream = {};
     psoStream.SizeInBytes = sizeof(GraphicsPso);
     psoStream.pPipelineStateSubobjectStream = &psoDesc;
 
+    ComPtr<ID3D12PipelineState> pipelineState;
     AssertIfFailed(graphicsDeviceData->Device->CreatePipelineState(&psoStream, IID_PPV_ARGS(pipelineState.GetAddressOf())));
 
     return pipelineState;
@@ -288,8 +355,8 @@ ElemPipelineState DirectX12CompileGraphicsPipelineState(ElemGraphicsDevice graph
     // TODO: Test for now without stack
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    auto stateSubObjects = SystemPushArray<D3D12_STATE_SUBOBJECT>(stackMemoryArena, 32);
-    auto stateSubObjectsIndex = 0u;
+    //auto stateSubObjects = SystemPushArray<D3D12_STATE_SUBOBJECT>(stackMemoryArena, 32);
+    //auto stateSubObjectsIndex = 0u;
 
     auto dxilLibraries = SystemPushArray<D3D12_DXIL_LIBRARY_DESC>(stackMemoryArena, 8);
     auto dxilLibrariesIndex = 0u;
@@ -494,6 +561,7 @@ void DirectX12BindPipelineState(ElemCommandList commandList, ElemPipelineState p
     auto pipelineStateData = GetDirectX12PipelineStateData(pipelineState);
     SystemAssert(pipelineStateData);
 
+    /*
     D3D12_SET_PROGRAM_DESC programDesc =
     {
         .Type = D3D12_PROGRAM_TYPE_GENERIC_PIPELINE,
@@ -501,7 +569,7 @@ void DirectX12BindPipelineState(ElemCommandList commandList, ElemPipelineState p
         {
             .ProgramIdentifier = pipelineStateData->ProgramIdentifier
         }
-    };
+    };*/
 
     commandListData->PipelineStateType = pipelineStateData->PipelineStateType;
 

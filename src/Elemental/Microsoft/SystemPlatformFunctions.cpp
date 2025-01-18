@@ -4,7 +4,9 @@
 #ifdef ElemAPI
 #include "SystemLogging.h"
 #else
+#ifndef SystemLogErrorMessage
 #define SystemLogErrorMessage(category, format, ...)
+#endif
 #endif 
 
 SystemPlatformAllocationInfos systemPlatformAllocationInfos;
@@ -122,11 +124,11 @@ size_t SystemPlatformFileGetSizeInBytes(ReadOnlySpan<char> path)
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
 
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr);
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, (int32_t)GetLastError());
         return 0;
     }
     
@@ -141,18 +143,18 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
     
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for writing. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for writing. (Error code: %d)", path.Pointer, (int32_t)GetLastError());
         return;
     }
 
     DWORD bytesWritten;
     if (!WriteFile(fileHandle, data.Pointer, data.Length, &bytesWritten, nullptr) || bytesWritten != data.Length) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error writing to file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error writing to file %s. (Error code: %d)", path.Pointer, (int32_t)GetLastError());
     }
 
     CloseHandle(fileHandle);
@@ -163,18 +165,18 @@ void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
 
-    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    auto fileHandle = CreateFile(pathWide.Pointer, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr);
 
     if (fileHandle == INVALID_HANDLE_VALUE) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, (int32_t)GetLastError());
         return;
     }
     
     DWORD bytesRead;
     if (!ReadFile(fileHandle, data.Pointer, data.Length, &bytesRead, nullptr) || bytesRead != data.Length) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error reading file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error reading file %s. (Error code: %d)", path.Pointer, (int32_t)GetLastError());
     }
     
     CloseHandle(fileHandle);
@@ -187,7 +189,7 @@ void SystemPlatformFileDelete(ReadOnlySpan<char> path)
 
     if (!DeleteFile(pathWide.Pointer))
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot delete file %s. (Error code: %d)", path.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot delete file %s. (Error code: %d)", path.Pointer, (int32_t)GetLastError());
     }
 }
 
@@ -204,7 +206,7 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
     HANDLE readPipe, writePipe;
     if (!CreatePipe(&readPipe, &writePipe, &pipeAttributes, 0)) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open read/write pipe for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open read/write pipe for launching command: %s (Error code: %d)", command.Pointer, (int32_t)GetLastError());
         return ReadOnlySpan<char>();
     }
 
@@ -217,7 +219,7 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
     PROCESS_INFORMATION processInfo {};
     if (!CreateProcess(nullptr, (LPWSTR)commandWide.Pointer, nullptr, nullptr, true, 0, nullptr, nullptr, &startupInfo, &processInfo)) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot create process for launching command: %s (Error code: %d)", command.Pointer, GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot create process for launching command: %s (Error code: %d)", command.Pointer, (int32_t)GetLastError());
         return ReadOnlySpan<char>();
     }
 
@@ -266,7 +268,7 @@ void* SystemPlatformCreateThread(void* threadFunction, void* parameters)
 
     if (threadHandle == nullptr)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot create thread (Error code: %d)", GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot create thread (Error code: %d)", (int32_t)GetLastError());
         return nullptr;
     }
 
@@ -285,7 +287,7 @@ void SystemPlatformWaitThread(void* thread)
 
     if (waitResult != WAIT_OBJECT_0)
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Failed to wait on thread (Error code: %d)", GetLastError());
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Failed to wait on thread (Error code: %d)", (int32_t)GetLastError());
     }
 }
 

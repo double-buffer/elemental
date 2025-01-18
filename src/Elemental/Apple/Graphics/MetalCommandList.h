@@ -7,7 +7,8 @@ enum MetalCommandEncoderType
 {
     MetalCommandEncoderType_None = 0,
     MetalCommandEncoderType_Render = 1,
-    MetalCommandEncoderType_Compute = 2
+    MetalCommandEncoderType_Compute = 2,
+    MetalCommandEncoderType_Copy = 3
 };
 
 enum MetalResourceBarrierType
@@ -44,6 +45,9 @@ struct MetalCommandListData
     ElemPipelineState PipelineState;
     bool IsCommitted;
     ResourceBarrierPool ResourceBarrierPool;
+    bool ArgumentBufferBound;
+    UploadBufferPoolItem<NS::SharedPtr<MTL::Buffer>>* UploadBufferPoolItems[MAX_UPLOAD_BUFFERS];
+    uint32_t UploadBufferCount;
 };
 
 struct MetalCommandListDataFull

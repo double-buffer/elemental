@@ -5,7 +5,7 @@
 #include "SystemMemory.h"
 #include "SystemPlatformFunctions.h"
 
-MemoryArena inputsMemoryArena;
+MemoryArena InputsMemoryArena;
 Span<ElemInputEvent> inputEvents;
 uint32_t currentInputEventsIndex;
 uint32_t currentInputEventsWriteIndex;
@@ -22,14 +22,14 @@ SystemDataPool<InputDeviceData, InputDeviceDataFull> inputDevicePool;
 
 void InitInputsMemory()
 {
-    if (inputsMemoryArena.Storage == nullptr)
+    if (InputsMemoryArena.Storage == nullptr)
     {
-        inputsMemoryArena = SystemAllocateMemoryArena();
-        inputEvents = SystemPushArray<ElemInputEvent>(inputsMemoryArena, MAX_INPUT_EVENTS * 2);
-        deltaInputsToReset = SystemPushArrayZero<ElemInputEvent>(inputsMemoryArena, MAX_INPUT_EVENTS * 2);
+        InputsMemoryArena = SystemAllocateMemoryArena();
+        inputEvents = SystemPushArray<ElemInputEvent>(InputsMemoryArena, MAX_INPUT_EVENTS * 2);
+        deltaInputsToReset = SystemPushArrayZero<ElemInputEvent>(InputsMemoryArena, MAX_INPUT_EVENTS * 2);
 
-        inputDevices = SystemPushArrayZero<ElemInputDevice>(inputsMemoryArena, MAX_INPUT_DEVICES);
-        inputDevicePool = SystemCreateDataPool<InputDeviceData, InputDeviceDataFull>(inputsMemoryArena, MAX_INPUT_DEVICES);
+        inputDevices = SystemPushArrayZero<ElemInputDevice>(InputsMemoryArena, MAX_INPUT_DEVICES);
+        inputDevicePool = SystemCreateDataPool<InputDeviceData, InputDeviceDataFull>(InputsMemoryArena, MAX_INPUT_DEVICES);
 
         currentInputEventsIndex = 0;
         currentInputEventsWriteIndex = 0;
@@ -107,21 +107,6 @@ void AddInputEvent(ElemInputEvent inputEvent, bool needReset)
     inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
 }
 
-ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)
-{
-    auto inputDeviceData = GetInputDeviceData(inputDevice);
-    SystemAssert(inputDeviceData);
-
-    auto inputDeviceDataFull = GetInputDeviceDataFull(inputDevice);
-    SystemAssert(inputDeviceDataFull);
-
-    return
-    {
-        .Handle = inputDevice,
-        .DeviceType = inputDeviceData->InputDeviceType,
-    };
-}
-
 void ResetInputsFrame()
 {
     InitInputsMemory();
@@ -139,6 +124,7 @@ void ResetInputsFrame()
 
     for (uint32_t i = 0; i < previousDeltaInputsToResetWriteIndex; i++)
     {
+        // TODO: Investigate if we process multiple time the same event??
         if (previousDeltaToReset[i].InputId != ElemInputId_Unknown)
         {
             auto inputEvent = previousDeltaToReset[i];
@@ -146,6 +132,21 @@ void ResetInputsFrame()
             inputEvents[currentInputEventsIndex * MAX_INPUT_EVENTS + currentInputEventsWriteIndex++] = inputEvent;
         }
     }
+}
+
+ElemAPI ElemInputDeviceInfo ElemGetInputDeviceInfo(ElemInputDevice inputDevice)
+{
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    auto inputDeviceDataFull = GetInputDeviceDataFull(inputDevice);
+    SystemAssert(inputDeviceDataFull);
+
+    return
+    {
+        .Handle = inputDevice,
+        .DeviceType = inputDeviceData->InputDeviceType,
+    };
 }
 
 ElemAPI ElemInputStream ElemGetInputStream()

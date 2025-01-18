@@ -1,8 +1,16 @@
 #pragma once
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "Elemental.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifdef ElemToolsAPI
+typedef ElemToolsDataSpan ElemDataSpan;
+#else
+#include "../Elemental/Elemental.h"
+#endif 
 
 #ifndef _WIN32
 #define MAX_PATH 255
@@ -21,82 +29,81 @@ uint64_t SampleMegaBytesToBytes(uint64_t value)
     return value * 1024 * 1024;
 }
 
-uint64_t SampleGygaBytesToBytes(uint64_t value)
+uint64_t SampleGigaBytesToBytes(uint64_t value)
 {
     return SampleMegaBytesToBytes(value) * 1024;
+}
+
+uint32_t SampleAlignValue(uint32_t value, uint32_t alignment)
+{
+    return (value + alignment - 1) & ~(alignment - 1);
 }
 
 // -----------------------------------------------------------------------------
 // I/O Functions
 // -----------------------------------------------------------------------------
-void CopyString(char* destination, uint32_t destinationLength, const char* source, uint32_t sourceLength)
+void SampleGetFullPath(char* destination, const char* path, bool prefixData)
 {
-    #ifdef _WIN32 
-    strncpy_s(destination, destinationLength, source, sourceLength);
-    #else
-    strncpy(destination, source, sourceLength);
-    #endif
-}
-
-void SampleGetFullPath(char* destination, const char* path)
-{
+    // TODO: Pass destination length
     memset(destination, 0, MAX_PATH);
 
-    char* pointer = NULL;
+    char* pointer = destination;
+
+    #ifndef ElemToolsAPI
     ElemSystemInfo systemInfo = ElemGetSystemInfo();
 
-    CopyString(destination, MAX_PATH, systemInfo.ApplicationPath, strlen(systemInfo.ApplicationPath));
+    strncpy(destination, systemInfo.ApplicationPath, strlen(systemInfo.ApplicationPath));
     pointer = destination + strlen(systemInfo.ApplicationPath);
 
-    const char* folderPrefix = "Data/";
+    const char* folderPrefix = "./";
 
-    if (systemInfo.Platform == ElemPlatform_MacOS)
+    if (prefixData)
     {
-        folderPrefix = "../Resources/";
-    }
-    else if (systemInfo.Platform == ElemPlatform_iOS)
+        if (systemInfo.Platform == ElemPlatform_MacOS)
+        {
+            folderPrefix = "../Resources/";
+        }
+        else if (systemInfo.Platform == ElemPlatform_iOS)
+        {
+            folderPrefix = "./";
+        }
+        else
     {
-        folderPrefix = "./";
+            folderPrefix = "Data/";
+        }
     }
 
-    CopyString(pointer, pointer - destination, folderPrefix, strlen(folderPrefix));
+    strncpy(pointer, folderPrefix, strlen(folderPrefix));
     pointer = pointer + strlen(folderPrefix);
-
-    CopyString(pointer, pointer - destination, path, strlen(path));
-}
-
-ElemDataSpan SampleReadFile(const char* filename) 
-{
-    char absolutePath[MAX_PATH];
-    SampleGetFullPath(absolutePath, filename);
-
-    printf("Read path: %s\n", absolutePath);
-
-    #ifdef _WIN32
-    FILE* file;
-    fopen_s(&file, absolutePath, "rb");
-    #else
-    FILE* file = fopen(absolutePath, "rb");
     #endif
 
+    strncpy(pointer, path, strlen(path));
+}
+
+FILE* SampleOpenFile(const char* filename, bool prefixData)
+{
+    char absolutePath[MAX_PATH];
+    SampleGetFullPath(absolutePath, filename, prefixData);
+
+    //printf("Read path: '%s'\n", absolutePath);
+
+    return fopen(absolutePath, "rb");
+}
+
+// TODO: To remove?
+ElemDataSpan SampleReadFile(const char* filename, bool prefixData) 
+{
+    FILE* file = SampleOpenFile(filename, prefixData);
+ 
     if (file == NULL) 
     {
-        return (ElemDataSpan) 
-        {
-            .Items = NULL,
-            .Length = 0
-        };
+        return (ElemDataSpan) {};
     }
 
     if (fseek(file, 0, SEEK_END) != 0) 
     {
         fclose(file);
-
-        return (ElemDataSpan) 
-        {
-            .Items = NULL,
-            .Length = 0
-        };
+        return (ElemDataSpan) {};
     }
 
     long fileSize = ftell(file);
@@ -104,27 +111,18 @@ ElemDataSpan SampleReadFile(const char* filename)
     if (fileSize == -1) 
     {
         fclose(file);
-
-        return (ElemDataSpan) 
-        {
-            .Items = NULL,
-            .Length = 0
-        };
+        return (ElemDataSpan) {};
     }
 
     rewind(file);
 
     uint8_t* buffer = (uint8_t*)malloc(fileSize + 1);
+    memset(buffer, 0, fileSize + 1);
 
     if (buffer == NULL)
     {
         fclose(file);
-
-        return (ElemDataSpan) 
-        {
-            .Items = NULL,
-            .Length = 0
-        };
+        return (ElemDataSpan) {};
     }
     
     size_t bytesRead = fread(buffer, 1, fileSize, file);
@@ -133,12 +131,7 @@ ElemDataSpan SampleReadFile(const char* filename)
     {
         free(buffer);
         fclose(file);
-
-        return (ElemDataSpan) 
-        {
-            .Items = NULL,
-            .Length = 0
-        };
+        return (ElemDataSpan) {};
     }
 
     fclose(file);
@@ -150,10 +143,105 @@ ElemDataSpan SampleReadFile(const char* filename)
     };
 }
 
+// TODO: Remove those?
+int SampleWriteDataToFile(const char* filename, ElemDataSpan data, bool append) 
+{
+    const char* fileMode = append ? "ab" : "wb"; 
+
+    FILE* file = fopen(filename, fileMode);
+
+    if (file == NULL) 
+    {
+        printf("ERROR 2\n");
+        return -1;
+    }
+
+    size_t bytesWritten = fwrite(data.Items, 1, data.Length, file);
+    fclose(file);
+
+    if (bytesWritten < data.Length) 
+    {
+        printf("ERROR 3: %zu\n", bytesWritten);
+        return -1; // Return -1 if not all bytes were written
+    }
+
+    return 0; // Success
+}
+
+int SampleWriteDataToApplicationFile(const char* filename, ElemDataSpan data, bool append) 
+{
+    char absolutePath[MAX_PATH];
+    SampleGetFullPath(absolutePath, filename, false);
+
+    return SampleWriteDataToFile(absolutePath, data, append);
+}
+
+// TODO: Add Sample prefix
+void ReplaceFileExtension(const char* path, const char* extension, char* destination, uint32_t destinationSize)
+{
+    assert(destinationSize >= strlen(path));
+    memset(destination, 0, destinationSize);
+
+    const char* extensionSeparator = strrchr(path, '.');
+    uint32_t prefixLength = extensionSeparator ? (extensionSeparator - path) : strlen(path);
+
+    for (uint32_t i = 0; i < prefixLength; i++)
+    {
+        destination[i] = path[i] == '\\' ? '/' : path[i];
+    }
+    
+    strncat(destination, extension, strlen(path));
+}
+
+void GetFileDirectory(const char* path, char* destination, uint32_t destinationSize)
+{
+    assert(destinationSize >= strlen(path));
+    memset(destination, 0, destinationSize);
+    
+    for (uint32_t i = 0; i < strlen(path); i++)
+    {
+        destination[i] = path[i] == '\\' ? '/' : path[i];
+    }
+
+    char* lastSeparator = strrchr(destination, '/');
+
+    if (lastSeparator) 
+    {
+        *(lastSeparator + 1) = '\0';
+    }
+    else 
+    {
+        destination[0] = '\0';
+    }
+}
+
+void GetRelativeResourcePath(const char* mainPath, const char* path, const char* extension, char* destination, uint32_t destinationSize)
+{
+    assert(destinationSize >= strlen(path));
+    memset(destination, 0, destinationSize);
+
+    char mainDirectory[destinationSize];
+    GetFileDirectory(mainPath, mainDirectory, destinationSize);
+
+    char resourcePath[MAX_PATH];
+    ReplaceFileExtension(path, extension, resourcePath, sizeof(resourcePath));
+
+    size_t mainDirectoryLength = strlen(mainDirectory);
+    const char* startPath = resourcePath;
+
+    if (strncmp(resourcePath, mainDirectory, mainDirectoryLength) == 0) 
+    {
+        startPath = resourcePath + mainDirectoryLength;
+    }
+
+    strncpy(destination, startPath, strlen(resourcePath) - (startPath - resourcePath));
+}
+
 // -----------------------------------------------------------------------------
 // UI Functions
 // -----------------------------------------------------------------------------
 
+#ifdef ElemAPI
 const char* SampleGetPlatformLabel(ElemPlatform platform)
 {
     switch (platform)
@@ -231,6 +319,7 @@ void SampleSetWindowTitle(ElemWindow window, const char* applicationName, ElemGr
                         memoryFormatted);
     ElemSetWindowTitle(window, titleFormatted);
 }
+#endif
 
 // -----------------------------------------------------------------------------
 // Timing Functions
@@ -313,3 +402,70 @@ SampleFrameMeasurement SampleEndFrameMeasurement(void)
         .HasNewData = newData
     };
 }
+
+
+// -----------------------------------------------------------------------------
+// Settings Functions
+// -----------------------------------------------------------------------------
+
+typedef struct
+{
+    bool PreferVulkan;
+    bool PreferFullScreen;
+    bool DisableDiagnostics;
+} SampleAppSettings;
+
+SampleAppSettings SampleParseAppSettings(int argc, const char* argv[])
+{
+    SampleAppSettings appSettings = {};
+
+    for (int32_t i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--vulkan") == 0)
+        {
+            appSettings.PreferVulkan = true;
+        }
+
+        if (strcmp(argv[i], "--fullscreen") == 0)
+        {
+            appSettings.PreferFullScreen = true;
+        }
+
+        if (strcmp(argv[i], "--disable-diagnostics") == 0)
+        {
+            appSettings.DisableDiagnostics = true;
+        }
+    }
+    
+    return appSettings;
+}
+
+#ifdef ElemToolsAPI
+void DisplayOutputMessages(const char* prefix, ElemToolsMessageSpan messages)
+{
+    for (uint32_t i = 0; i < messages.Length; i++)
+    {
+        ElemToolsMessage* message = &messages.Items[i];
+
+        printf("[");
+        printf("\033[36m%s\033[0m]", prefix);
+
+        switch (message->Type)
+        {
+            case ElemToolsMessageType_Error:
+                printf("\033[31m Error:");
+                break;
+
+            case ElemToolsMessageType_Warning:
+                printf("\033[33m Warning:");
+                break;
+
+            default:
+                printf("\033[0m");
+        }
+
+        printf(" %s\033[0m\n", message->Message);
+        fflush(stdout);
+    }
+}
+#endif

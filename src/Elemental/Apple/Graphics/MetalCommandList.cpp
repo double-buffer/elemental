@@ -1,11 +1,9 @@
 #include "MetalCommandList.h"
+#include "MetalConfig.h"
 #include "MetalGraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define METAL_MAX_COMMANDQUEUES 10u
-#define METAL_MAX_COMMANDLISTS 64u
 
 SystemDataPool<MetalCommandQueueData, MetalCommandQueueDataFull> metalCommandQueuePool;
 SystemDataPool<MetalCommandListData, MetalCommandListDataFull> metalCommandListPool;
@@ -75,6 +73,7 @@ void ResetMetalCommandEncoder(ElemCommandList commandList)
         commandListData->CommandEncoder->endEncoding();
         commandListData->CommandEncoder.reset();
         commandListData->CommandEncoderType = MetalCommandEncoderType_None;
+        commandListData->ArgumentBufferBound = false;
     }
 }
 
@@ -177,7 +176,7 @@ ElemCommandList MetalGetCommandList(ElemCommandQueue commandQueue, const ElemCom
     {
         metalCommandBuffer->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
     }
-    
+
     auto resourceBarrierPool = CreateResourceBarrierPool(MetalGraphicsMemoryArena);
     
     auto handle = SystemAddDataPoolItem(metalCommandListPool, {
@@ -203,6 +202,9 @@ void MetalCommitCommandList(ElemCommandList commandList)
 
     auto commandListData = GetMetalCommandListData(commandList);
     SystemAssert(commandListData);
+        
+    FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
+
     commandListData->IsCommitted = true;
     metalThreadCommandBufferCommitted = true;
 }
@@ -213,6 +215,29 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
     
     auto commandQueueData = GetMetalCommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
+    
+    if (options && options->FencesToWait.Length > 0)
+    {
+        for (uint32_t i = 0; i < options->FencesToWait.Length; i++)
+        {
+            auto fenceToWait = options->FencesToWait.Items[i];
+
+            auto commandQueueToWaitData = GetMetalCommandQueueData(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitData);
+
+            auto commandQueueToWaitDataFull = GetMetalCommandQueueDataFull(fenceToWait.CommandQueue);
+            SystemAssert(commandQueueToWaitDataFull);
+
+            auto commandBuffer = NS::TransferPtr(commandQueueToWaitData->DeviceObject->commandBufferWithUnretainedReferences());
+            commandBuffer->encodeWait(commandQueueToWaitData->QueueEvent.get(), fenceToWait.FenceValue);
+            commandBuffer->commit();
+
+            if (MetalDebugBarrierInfoEnabled)
+            {
+                SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%d, Value=%d)", fenceToWait.CommandQueue, fenceToWait.FenceValue);
+            }
+        }
+    }
 
     ElemFence fence = {};
 
@@ -234,11 +259,15 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
         {
             fence = CreateMetalCommandQueueFence(commandQueue, commandListData->DeviceObject.get());
         }
+        
+        for (uint32_t j = 0; j < commandListData->UploadBufferCount; j++)
+        {
+            UpdateUploadBufferPoolItemFence(commandListData->UploadBufferPoolItems[j], fence);
+        }
 
         commandListData->DeviceObject->commit();
         commandListData->DeviceObject.reset();
         
-        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
         SystemRemoveDataPoolItem(metalCommandListPool, commandLists.Items[i]);
     }
 
@@ -266,7 +295,8 @@ void MetalWaitForFenceOnCpu(ElemFence fence)
 
     if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
+        // TODO: Log this with a special option?
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
     
         auto dispatchGroup = dispatch_group_create();
         dispatch_group_enter(dispatchGroup);

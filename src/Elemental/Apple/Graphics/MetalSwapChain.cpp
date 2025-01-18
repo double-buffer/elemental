@@ -1,4 +1,5 @@
 #include "MetalSwapChain.h"
+#include "MetalConfig.h"
 #include "MetalCommandList.h"
 #include "MetalGraphicsDevice.h"
 #include "MetalResource.h"
@@ -27,8 +28,6 @@ struct Test
 #include "../UIKitWindow.h"
 #endif
 
-#define METAL_MAX_SWAPCHAINS 10u
-
 SystemDataPool<MetalSwapChainData, MetalSwapChainDataFull> metalSwapChainPool;
 
 void InitMetalSwapChainMemory()
@@ -49,7 +48,7 @@ MetalSwapChainDataFull* GetMetalSwapChainDataFull(ElemSwapChain swapChain)
     return SystemGetDataPoolItemFull(metalSwapChainPool, swapChain);
 }
 
-void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height, float uiScale)
 {    
     if (width == 0 || height == 0)
     {
@@ -64,6 +63,7 @@ void ResizeMetalSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t heig
     swapChainData->Width = width;
     swapChainData->Height = height;
     swapChainData->AspectRatio = (float)width / height;
+    swapChainData->UIScale = uiScale;
     swapChainData->DeviceObject->setDrawableSize(CGSizeMake(width, height));
 }
 
@@ -151,6 +151,7 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
+        .UIScale = windowRenderSize.UIScale,
         .Format = ElemGraphicsFormat_B8G8R8A8_SRGB // TODO: Temporary
     }); 
 
@@ -185,9 +186,11 @@ ElemSwapChainInfo MetalGetSwapChainInfo(ElemSwapChain swapChain)
 
     return 
     {
+        .Window = swapChainData->Window,
         .Width = swapChainData->Width,
         .Height = swapChainData->Height,
         .AspectRatio = swapChainData->AspectRatio,
+        .UIScale = swapChainData->UIScale,
         .Format = swapChainData->Format
     };
 }
@@ -261,12 +264,13 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
 
         auto nextPresentTimestampInSeconds = update->targetPresentationTimestamp() - swapChainData->CreationTimestamp;
 
-        auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
         auto sizeChanged = false;
+
+        auto windowSize = ElemGetWindowRenderSize(swapChainData->Window);
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
-            ResizeMetalSwapChain(_swapChain, windowSize.Width, windowSize.Height);
+            ResizeMetalSwapChain(_swapChain, windowSize.Width, windowSize.Height, windowSize.UIScale);
             sizeChanged = true;
         }
 
@@ -279,8 +283,15 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
             return;
         }
 
+        // BUG: On iOS, the drawable will have his size change on next update
+        if (swapChainData->BackBufferDrawable->texture()->width() != swapChainData->Width || swapChainData->BackBufferDrawable->texture()->height() != swapChainData->Height)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Error size swapchain");
+            return;
+        }
+
         // TODO: Can we do something better than juste creating/destroying each time? 
-        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ElemGraphicsResourceUsage_RenderTarget, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
+        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ELEM_HANDLE_NULL, ElemGraphicsResourceUsage_RenderTarget, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
         ElemSwapChainUpdateParameters updateParameters = 
         {
@@ -302,6 +313,6 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         
         MetalFreeGraphicsResource(backBufferTexture, nullptr);
 
-        MetalProcessGraphicsResourceDeleteQueue();
+        MetalProcessGraphicsResourceDeleteQueue(swapChainData->GraphicsDevice);
     }
 }

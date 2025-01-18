@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: ${{ 
-      (inputs.platform == 'osx' && 'macos-14') ||
+      (inputs.platform == 'osx' && 'macos-latest') ||
       (inputs.platform == 'linux' && 'ubuntu-latest') ||
       (inputs.platform == 'win' && 'windows-latest')
       }}
@@ -27,14 +27,11 @@ jobs:
       with:
         arch: ${{ inputs.architecture }}
 
-    # TODO: For the moment Github actions doesn't have the latest version of ubuntu
-    # we will re enable the linux build after
-    # TODO: libwayland-dev wayland-protocols libdecor-devel
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
       run: |
         sudo apt-get update 
-        sudo apt-get install -y -V libgtk-4-dev
+        sudo apt-get install libwayland-dev wayland-protocols libudev-dev libdecor-0-dev
 
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master

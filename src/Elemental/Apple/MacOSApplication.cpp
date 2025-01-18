@@ -195,6 +195,13 @@ bool MacOSApplicationDelegate::applicationShouldTerminateAfterLastWindowClosed(N
 
 NS::TerminateReply MacOSApplicationDelegate::applicationShouldTerminate(NS::Application* pSender) 
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto allocationInfos = SystemGetAllocationInfos();
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Allocated lib memory before releasing: %s/%s", 
+                            SystemFormatMemorySize(stackMemoryArena, allocationInfos.CommittedBytes).Pointer, 
+                            SystemFormatMemorySize(stackMemoryArena, allocationInfos.ReservedBytes).Pointer);
+
     ApplicationExited = true;
 
     if (_runParameters && _runParameters->FreeHandler)

@@ -39,6 +39,7 @@ ElemInputDevice AddWin32RawInputDevice(HANDLE device, DWORD type)
     }
     else if (type == RIM_TYPEHID)
     {
+        // BUG: Crash when steam input is activated
         if (!IsHidDeviceSupported(rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId))
         {
             SystemLogWarningMessage(ElemLogMessageCategory_Inputs, "HID Input device is not supported. (Vendor: %d, Product: %d)", rawInputDeviceInfo->hid.dwVendorId, rawInputDeviceInfo->hid.dwProductId);
@@ -515,4 +516,92 @@ void ProcessWin32RawInput(ElemWindow window, LPARAM lParam)
     {
         ProcessHidDeviceData(window, inputDevice, ReadOnlySpan<uint8_t>(rawInputData->data.hid.bRawData, rawInputData->data.hid.dwSizeHid), elapsedSeconds);
     }
+}
+
+void CreateWin32HidHandleIfNeeded(ElemInputDevice inputDevice)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+    
+    if (!inputDeviceData->PlatformData)
+    {
+        uint32_t inputDevicePathSize;
+        AssertIfFailed(GetRawInputDeviceInfo(inputDeviceData->PlatformHandle, RIDI_DEVICENAME, nullptr, &inputDevicePathSize));
+
+        auto rawInputDeviceInfo = SystemPushArray<wchar_t>(stackMemoryArena, inputDevicePathSize).Pointer;
+
+        AssertIfFailed(GetRawInputDeviceInfo(inputDeviceData->PlatformHandle, RIDI_DEVICENAME, rawInputDeviceInfo, &inputDevicePathSize)); 
+
+        auto inputDeviceHandle = CreateFile(rawInputDeviceInfo,
+                                            GENERIC_WRITE | GENERIC_READ,
+                                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                            nullptr,
+                                            OPEN_EXISTING,
+                                            0,
+                                            nullptr);
+
+        if (inputDeviceHandle == INVALID_HANDLE_VALUE) 
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Cannot get hid device.");
+            return;
+        }
+
+        inputDeviceData->PlatformData = inputDeviceHandle;
+    }
+}
+
+bool PlatformHidSendOutputReport(ElemInputDevice inputDevice, ReadOnlySpan<uint8_t> data)
+{
+    CreateWin32HidHandleIfNeeded(inputDevice);
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    auto success = WriteFile(inputDeviceData->PlatformData, data.Pointer, data.Length, nullptr, nullptr);
+
+    if (!success) 
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Error Code: %d", GetLastError());
+        return false;
+    }
+
+    return true;
+}
+
+bool PlatformHidSendFeatureReport(ElemInputDevice inputDevice, ReadOnlySpan<uint8_t> data)
+{
+    CreateWin32HidHandleIfNeeded(inputDevice);
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    auto success = HidD_SetFeature(inputDeviceData->PlatformData, (void*)data.Pointer, data.Length);
+
+    if (!success) 
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Error Code: %d", GetLastError());
+        return false;
+    }
+
+    return true;
+}
+
+bool PlatformHidGetFeatureReport(ElemInputDevice inputDevice, ReadOnlySpan<uint8_t> data)
+{
+    CreateWin32HidHandleIfNeeded(inputDevice);
+
+    auto inputDeviceData = GetInputDeviceData(inputDevice);
+    SystemAssert(inputDeviceData);
+
+    auto success = HidD_GetFeature(inputDeviceData->PlatformData, (void*)data.Pointer, data.Length);
+
+    if (!success) 
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Inputs, "Error Code: %d", GetLastError());
+        return false;
+    }
+
+    return true;
 }

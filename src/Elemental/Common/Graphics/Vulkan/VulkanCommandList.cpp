@@ -1,11 +1,9 @@
 #include "VulkanCommandList.h"
+#include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define VULKAN_MAX_COMMANDQUEUES 10u
-#define VULKAN_MAX_COMMANDLISTS 64u
 
 SystemDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull> vulkanCommandQueuePool;
 SystemDataPool<VulkanCommandListData, VulkanCommandListDataFull> vulkanCommandListPool;
@@ -237,6 +235,7 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
 
             VkCommandPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
             createInfo.queueFamilyIndex = commandQueueData->QueueFamilyIndex;
+            createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
             VkCommandPool commandPool;
             AssertIfFailed(vkCreateCommandPool(graphicsDeviceData->Device, &createInfo, 0, &commandPool));
@@ -290,7 +289,8 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
         .CommandQueue = commandQueue,
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
         .CommandListPoolItem = commandListPoolItem,
-        .ResourceBarrierPool = resourceBarrierPool
+        .ResourceBarrierPool = resourceBarrierPool,
+        .UploadBufferCount = 0
     }); 
 
     SystemAddDataPoolItemFull(vulkanCommandListPool, handle, {
@@ -307,6 +307,8 @@ void VulkanCommitCommandList(ElemCommandList commandList)
 
     auto commandListData = GetVulkanCommandListData(commandList);
     SystemAssert(commandListData);
+    
+    FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
     AssertIfFailed(vkEndCommandBuffer(commandListData->DeviceObject));
     
@@ -340,7 +342,7 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
             auto commandQueueToWaitData = GetVulkanCommandQueueData(fenceToWait.CommandQueue);
             SystemAssert(commandQueueToWaitData);
 
-            submitStageMasks[i] = VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT | VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            submitStageMasks[i] = VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             waitSemaphores[i] = commandQueueToWaitData->Fence;
             waitSemaphoreValues[i] = fenceToWait.FenceValue;
     
@@ -417,8 +419,13 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         }
 
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
+        
+        for (uint32_t j = 0; j < commandListData->UploadBufferCount; j++)
+        {
+            UpdateUploadBufferPoolItemFence(commandListData->UploadBufferPoolItems[j], fence);
+        }
+
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
-        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
         SystemRemoveDataPoolItem(vulkanCommandListPool, commandLists.Items[i]);
     }
@@ -446,7 +453,8 @@ void VulkanWaitForFenceOnCpu(ElemFence fence)
 
     if (fence.FenceValue > commandQueueToWaitData->LastCompletedFenceValue)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for fence on CPU...");
+        // TODO: Activate it in a special debug mode
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for fence on CPU...");
 
         VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
         waitInfo.semaphoreCount = 1;
@@ -462,7 +470,6 @@ bool VulkanIsFenceCompleted(ElemFence fence)
     SystemAssert(fence.CommandQueue != ELEM_HANDLE_NULL);
 
     auto commandQueueToWaitData = GetVulkanCommandQueueData(fence.CommandQueue);
-    auto commandQueueToWaitDataFull = GetVulkanCommandQueueDataFull(fence.CommandQueue);
 
     if (!commandQueueToWaitData)
     {

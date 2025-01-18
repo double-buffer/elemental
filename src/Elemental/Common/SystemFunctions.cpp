@@ -17,7 +17,7 @@ size_t SystemRoundUpToPowerOf2(size_t value)
     return result;
 }
 
-size_t SystemAlignToPowerOf2(size_t offset, size_t alignment) 
+size_t SystemAlign(size_t offset, size_t alignment) 
 {
     return (offset + alignment - 1) & ~(alignment - 1);
 }
@@ -432,6 +432,25 @@ ReadOnlySpan<char> SystemConvertWideCharToUtf8(MemoryArena memoryArena, ReadOnly
     return destination;
 }
 
+ReadOnlySpan<char> SystemFormatMemorySize(MemoryArena memoryArena, uint64_t bytes) 
+{
+    const char* suffixes[] = { "B", "KB", "MB", "GB", "TB" }; // Extend if more are needed
+    double size = bytes;
+    size_t i = 0;
+
+    while (size >= 1024 && i < sizeof(suffixes)/sizeof(suffixes[0]) - 1) 
+    {
+        size /= 1024.0;
+        i++;
+    }
+
+    auto result = SystemPushArray<char>(memoryArena, 50);
+    // TODO: Get rid of this
+    snprintf(result.Pointer, result.Length, "%.2f %s", size, suffixes[i]);
+
+    return result;
+}
+
 
 //---------------------------------------------------------------------------------------------------------------
 // IO functions
@@ -482,7 +501,7 @@ Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, ReadOnlySpan<char> pa
     auto fileData = SystemPushArray<uint8_t>(memoryArena, fileSizeInBytes);
 
     SystemPlatformFileReadBytes(path, fileData);
-
+    
     return fileData;
 }
 

@@ -1,18 +1,79 @@
 #pragma once
 
 #include "Elemental.h"
+#include <stdlib.h>
 #include <initializer_list> 
 
-#define TESTLOG_LENGTH 4096
+#define TESTLOG_LENGTH 4 * 1024 * 1024
 
 #ifndef _WIN32
 #define MAX_PATH 255
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
 #endif
 
+extern ElemGraphicsOptions startOptions;
+
+void InitLogBuffers();
+void EnableBarriersLog();
+void DisableBarriersLog();
+
+#define Max(a,b) ((a) > (b) ? (a) : (b))
+#define Min(a,b) ((a) < (b) ? (a) : (b))
+
+#define PRINT_COLOR_BUFFER(buffer, totalWidth) \
+    { \
+        auto floatData = (float*)buffer.Items; \
+    \
+        for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \
+        { \
+            auto pixelX = (i / 4) % totalWidth;\
+            auto pixelY = (i / 4) / totalWidth;\
+            printf("Pixel %d [%d, %d]: %f %f %f %f\n", i / 4, pixelX, pixelY, floatData[i], floatData[i + 1], floatData[i + 2], floatData[i + 3]); \
+        } \
+    }
+
 #define ASSERT_LOG_NOERROR() { TestInitLog(); ASSERT_FALSE_MSG(testHasLogErrors, testErrorLogs); }
 #define ASSERT_LOG_MESSAGE(message) { TestInitLog(); ASSERT_TRUE_MSG(strstr(testErrorLogs, message) != NULL, message); }
 #define ASSERT_LOG_MESSAGE_DEBUG(message) { TestInitLog(); ASSERT_TRUE_MSG(strstr(testDebugLogs, message) != NULL, message); }
+
+#define ASSERT_COLOR_BUFFER(buffer, red, green, blue, alpha) \
+    { \
+        auto floatData = (float*)buffer.Items; \
+    \
+        for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \
+        { \
+            ASSERT_EQ_MSG(floatData[i], red, "Red channel data is invalid."); \
+            ASSERT_EQ_MSG(floatData[i + 1], green, "Green channel data is invalid."); \
+            ASSERT_EQ_MSG(floatData[i + 2], blue, "Blue channel data is invalid."); \
+            ASSERT_EQ_MSG(floatData[i + 3], alpha, "Alpha channel data is invalid."); \
+        } \
+    }
+
+#define ASSERT_COLOR_BUFFER_RECTANGLE(buffer, totalWidth, x, y, width, height, red, green, blue, alpha, backgroundRed, backgroundGreen, backgroundBlue, backgroundAlpha) \
+    { \
+        auto floatData = (float*)buffer.Items;\
+    \
+        for (uint32_t i = 0; i < bufferData.Length / sizeof(float); i += 4) \
+        { \
+            auto pixelX = (i / 4) % totalWidth;\
+            auto pixelY = (i / 4) / totalWidth;\
+    \
+            if (pixelX >= x && pixelX < (x + width) && pixelY >= y && pixelY < (y + height)) \
+            { \
+                ASSERT_EQ_MSG(floatData[i], red, "Red channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 1], green, "Green channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 2], blue, "Blue channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 3], alpha, "Alpha channel data is invalid."); \
+            } \
+            else \
+            { \
+                ASSERT_EQ_MSG(floatData[i], backgroundRed, "Background Red channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 1], backgroundGreen, "Background Green channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 2], backgroundBlue, "Background Blue channel data is invalid."); \
+                ASSERT_EQ_MSG(floatData[i + 3], backgroundAlpha, "Background Alpha channel data is invalid."); \
+            } \
+        } \
+    }
 
 #define BUFFER_BARRIER(resource, syncBefore, syncAfter, accessBefore, accessAfter) \
     { \
@@ -114,7 +175,7 @@ struct TestBarrierCheck
 extern bool testPrintLogs;
 extern bool testForceVulkanApi;
 extern bool testHasLogErrors;
-extern char testErrorLogs[TESTLOG_LENGTH];
+extern char* testErrorLogs;
 extern uint32_t currentTestErrorLogsIndex;
 
 uint64_t TestMegaBytesToBytes(uint64_t value);
@@ -128,21 +189,20 @@ void TestInitLog();
 
 ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* shader);
 ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* function);
-ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, ElemGraphicsFormat renderTargetFormat);
+ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters);
 
-TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_Gpu);
+TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_GpuUpload);
 void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer);
 
-TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format);
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage);
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage);
 void TestFreeGpuTexture(TestGpuTexture texture);
 
 template<typename T>
 void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipelineState, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, std::initializer_list<T> parameters);
 
 template<typename T>
-void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);
-
-void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor);
+void TestDispatchComputeForShader(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters);
 
 void TestBarrierCheckSyncTypeToString(char* destination, ElemGraphicsResourceBarrierSyncType syncType);
 void TestBarrierCheckAccessTypeToString(char* destination, ElemGraphicsResourceBarrierAccessType accessType);

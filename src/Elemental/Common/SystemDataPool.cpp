@@ -2,8 +2,6 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
-// TODO: Implement commit memory for big data pools
-
 #define SYSTEM_DATAPOOL_INDEX_EMPTY UINT32_MAX
 
 template<typename T>
@@ -50,6 +48,7 @@ SystemDataPool<T, TFull> SystemCreateDataPool(MemoryArena memoryArena, size_t ma
 {
     auto storage = SystemPushStructZero<SystemDataPoolStorage<T, TFull>>(memoryArena);
     storage->MemoryArena = memoryArena;
+    
     storage->Data = SystemPushArray<SystemDataPoolStorageItem<T>>(memoryArena, maxItems, AllocationState_Reserved);
     
     if (!IsTypeEmpty<TFull>())
@@ -93,11 +92,12 @@ ElemHandle SystemAddDataPoolItem(SystemDataPool<T, TFull> dataPool, T data)
         }
 
         index = SystemAtomicAdd(storage->CurrentIndex, 1);
-        SystemCommitMemory<SystemDataPoolStorageItem<T>>(storage->MemoryArena, storage->Data.Slice(index), true);
+
+        SystemCommitMemory<SystemDataPoolStorageItem<T>>(storage->MemoryArena, storage->Data.Slice(index, 1000), true);
         
         if (!IsTypeEmpty<TFull>())
         {
-            SystemCommitMemory<TFull>(storage->MemoryArena, storage->DataFull.Slice(index), true);
+            SystemCommitMemory<TFull>(storage->MemoryArena, storage->DataFull.Slice(index, 1000), true);
         }
     }
 

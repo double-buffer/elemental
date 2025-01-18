@@ -8,6 +8,7 @@
 
 namespace GC
 {
+    // BUG: The list is wrong!
 	_NS_ENUM(NS::UInteger, KeyCode)
 	{
 		KeyA = 4,
@@ -85,15 +86,15 @@ namespace GC
 		F19,
 		F20,
 		PrintScreen,
-		ScrollLock,
+		/*ScrollLock,
 		Pause,
 		Insert,
 		Home,
 		PageUp,
 		DeleteForward,
 		End,
-		PageDown,
-		RightArrow,
+		PageDown,*/
+		RightArrow = 79,
 		LeftArrow,
 		DownArrow,
 		UpArrow,
@@ -144,6 +145,14 @@ namespace GC
 		RightShift,
 		RightAlt,
 		RightGui,
+		ScrollLock,
+		Pause,
+		Insert,
+		Home,
+		PageUp,
+		DeleteForward,
+		End,
+		PageDown,
 	};
 
     class KeyboardInput;

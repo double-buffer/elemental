@@ -6,27 +6,49 @@ bool testPrintLogs = true;
 bool testForceVulkanApi = false;
 
 bool workingTestHasLogErrors = false;
-char workingTestErrorLogs[TESTLOG_LENGTH];
+char* workingTestErrorLogs;
 uint32_t currentTestErrorLogsIndex;
 
-char testDebugLogs[TESTLOG_LENGTH];
+char* testDebugLogs;
 uint32_t currentTestDebugLogsIndex = 0;
 
 bool testHasLogErrors = false;
-char testErrorLogs[TESTLOG_LENGTH];
+char* testErrorLogs;
+
+ElemGraphicsOptions startOptions;
+
+void InitLogBuffers()
+{
+    workingTestErrorLogs = (char*)malloc(TESTLOG_LENGTH);
+    testDebugLogs = (char*)malloc(TESTLOG_LENGTH);
+    testErrorLogs = (char*)malloc(TESTLOG_LENGTH);
+}
+
+void EnableBarriersLog()
+{
+    ElemGraphicsOptions options = startOptions;
+    options.EnableDebugBarrierInfo = true;
+
+    ElemSetGraphicsOptions(&options);
+}
+
+void DisableBarriersLog()
+{
+    ElemGraphicsOptions options = startOptions;
+    options.EnableDebugBarrierInfo = false;
+
+    ElemSetGraphicsOptions(&options);
+}
 
 uint64_t TestMegaBytesToBytes(uint64_t value)
 {
     return value * 1024 * 1024;
 }
 
+// TODO: Remove this function
 void CopyString(char* destination, uint32_t destinationLength, const char* source, uint32_t sourceLength)
 {
-    #ifdef _WIN32 
-    strncpy_s(destination, destinationLength, source, sourceLength);
-    #else
     strncpy(destination, source, sourceLength);
-    #endif
 }
 
 void GetFullPath(char* destination, const char* path)
@@ -52,7 +74,6 @@ void GetFullPath(char* destination, const char* path)
 
     CopyString(pointer, pointer - destination, folderPrefix, strlen(folderPrefix));
     pointer = pointer + strlen(folderPrefix);
-
     CopyString(pointer, pointer - destination, path, strlen(path));
 }
 
@@ -163,7 +184,7 @@ const char* ReplaceShaderFilenameForVulkan(const char* original)
     }
 
     // Copy the base part
-    strncpy(newString, original, baseLength);
+    CopyString(newString, newLength, original, baseLength);
     newString[baseLength] = '\0'; // Null-terminate the base part
 
     // Append the "_vulkan" string
@@ -238,13 +259,16 @@ void TestLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory categ
     }
     else if (messageType == ElemLogMessageType_Debug)
     {
-        char tmpMessage[TESTLOG_LENGTH];
+        char* tmpMessage = (char*)malloc(TESTLOG_LENGTH + 1);
         snprintf(tmpMessage, TESTLOG_LENGTH, "%s\n", message);
         auto tmpMessageLength = strlen(tmpMessage);
         
         char* logCopyDestination = testDebugLogs + currentTestDebugLogsIndex;
+        //strncpy(logCopyDestination, tmpMessage, tmpMessageLength + 1);
         CopyString(logCopyDestination, TESTLOG_LENGTH - currentTestDebugLogsIndex, tmpMessage, tmpMessageLength + 1);
         currentTestDebugLogsIndex += tmpMessageLength;
+
+        free(tmpMessage);
     }
 }
 
@@ -299,17 +323,15 @@ ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const
     return pipelineState;
 }
 
-ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, ElemGraphicsFormat renderTargetFormat)
+ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters)
 {
     auto shaderLibrary = TestOpenShader(graphicsDevice, shader);
 
-    ElemGraphicsPipelineStateParameters pipelineStateParameters =
-    {
-        .ShaderLibrary = shaderLibrary,
-        .MeshShaderFunction = meshShaderFunction,
-        .PixelShaderFunction = pixelShaderFunction,
-        .TextureFormats = { .Items = &renderTargetFormat, .Length = 1 }
-    };
+    ElemGraphicsPipelineStateParameters pipelineStateParameters = *baseParameters;
+
+    pipelineStateParameters.ShaderLibrary = shaderLibrary;
+    pipelineStateParameters.MeshShaderFunction = meshShaderFunction;
+    pipelineStateParameters.PixelShaderFunction = pixelShaderFunction;
 
     auto pipelineState = ElemCompileGraphicsPipelineState(graphicsDevice, &pipelineStateParameters);
 
@@ -329,9 +351,9 @@ TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t si
         .HeapType = heapType
     };
 
-    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &heapOptions);
-
     auto gpuBufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Write, nullptr);
+
+    auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, gpuBufferInfo.SizeInBytes, &heapOptions);
     auto gpuBuffer = ElemCreateGraphicsResource(graphicsHeap, 0, &gpuBufferInfo);
     auto gpuBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
     auto gpuBufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
@@ -353,13 +375,24 @@ void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer)
     ElemFreeGraphicsHeap(gpuBuffer.GraphicsHeap);
 }
 
-TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format)
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage)
 {
-    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, 1, format, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_Write | ElemGraphicsResourceUsage_RenderTarget), nullptr);
+    return TestCreateGpuTexture(graphicsDevice, width, height, 1, format, usage);
+}
+
+TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage)
+{
+    auto textureInfo = ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevels, format, usage, nullptr);
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, textureInfo.SizeInBytes, nullptr);
     auto texture = ElemCreateGraphicsResource(graphicsHeap, 0, &textureInfo);
     auto textureReadDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
-    auto textureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
+
+    auto textureWriteDescriptor = -1;
+
+    if (usage & ElemGraphicsResourceUsage_Write)
+    {
+        textureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
+    }
 
     return
     {
@@ -374,7 +407,12 @@ TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t 
 void TestFreeGpuTexture(TestGpuTexture texture)
 {
     ElemFreeGraphicsResourceDescriptor(texture.ReadDescriptor, nullptr);
-    ElemFreeGraphicsResourceDescriptor(texture.WriteDescriptor, nullptr);
+
+    if (texture.WriteDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(texture.WriteDescriptor, nullptr);
+    }
+
     ElemFreeGraphicsResource(texture.Texture, nullptr);
     ElemFreeGraphicsHeap(texture.GraphicsHeap);
 }
@@ -389,7 +427,7 @@ void TestDispatchCompute(ElemCommandList commandList, ElemPipelineState pipeline
 }
 
 template<typename T>
-void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
+void TestDispatchComputeForShader(ElemGraphicsDevice graphicsDevice, ElemCommandQueue commandQueue, const char* shaderName, const char* function, uint32_t threadGroupSizeX, uint32_t threadGroupSizeY, uint32_t threadGroupSizeZ, const T* parameters)
 {
     auto pipelineState = TestOpenComputeShader(graphicsDevice, shaderName, function);
 
@@ -405,28 +443,6 @@ void TestDispatchComputeForReadbackBuffer(ElemGraphicsDevice graphicsDevice, Ele
     ElemWaitForFenceOnCpu(fence);
 
     ElemFreePipelineState(pipelineState);
-}
-
-void TestBeginClearRenderPass(ElemCommandList commandList, ElemGraphicsResource renderTarget, ElemColor clearColor)
-{
-    ElemRenderPassRenderTarget renderPassRenderTarget = 
-    {
-        .RenderTarget = renderTarget,
-        .ClearColor = clearColor,
-        .LoadAction = ElemRenderPassLoadAction_Clear
-    };
-
-    ElemBeginRenderPassParameters parameters =
-    {
-        .RenderTargets =
-        { 
-            .Items = &renderPassRenderTarget,
-            .Length = 1
-        }
-    };
-
-    // Act
-    ElemBeginRenderPass(commandList, &parameters);
 }
 
 void TestBarrierCheckSyncTypeToString(char* destination, ElemGraphicsResourceBarrierSyncType syncType)

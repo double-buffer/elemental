@@ -1,14 +1,14 @@
 #include "VulkanShader.h"
+#include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
 #include "VulkanResource.h"
 #include "VulkanResourceBarrier.h"
+#include "Graphics/Resource.h"
+#include "Graphics/Shader.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define VULKAN_MAX_LIBRARIES UINT16_MAX
-#define VULKAN_MAX_PIPELINESTATES UINT16_MAX
 
 SystemDataPool<VulkanShaderLibraryData, VulkanShaderLibraryDataFull> vulkanShaderLibraryPool;
 SystemDataPool<VulkanPipelineStateData, VulkanPipelineStateDataFull> vulkanPipelineStatePool;
@@ -65,9 +65,6 @@ VkShaderStageFlagBits ConvertShaderTypeToVulkan(ShaderType shaderType)
 {
     switch (shaderType) 
     {
-        case ShaderType_Amplification:
-            return VK_SHADER_STAGE_TASK_BIT_EXT;
-
         case ShaderType_Mesh:
             return VK_SHADER_STAGE_MESH_BIT_EXT;
 
@@ -80,6 +77,93 @@ VkShaderStageFlagBits ConvertShaderTypeToVulkan(ShaderType shaderType)
         case ShaderType_Library:
         case ShaderType_Unknown:
             return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    }
+}
+
+VkPolygonMode ConvertToVulkanPolygonMode(ElemGraphicsFillMode fillMode)
+{
+    switch (fillMode) 
+    {
+        case ElemGraphicsFillMode_Solid:
+            return VK_POLYGON_MODE_FILL;
+
+        case ElemGraphicsFillMode_Wireframe:
+            return VK_POLYGON_MODE_LINE;
+    }
+}
+
+VkCullModeFlags ConvertToVulkanCullMode(ElemGraphicsCullMode cullMode)
+{
+    switch (cullMode) 
+    {
+        case ElemGraphicsCullMode_BackFace:
+            return VK_CULL_MODE_BACK_BIT;
+
+        case ElemGraphicsCullMode_FrontFace:
+            return VK_CULL_MODE_FRONT_BIT;
+
+        case ElemGraphicsCullMode_None:
+            return VK_CULL_MODE_NONE;
+    }
+}
+
+VkBlendOp ConvertToVulkanBlendOperation(ElemGraphicsBlendOperation blendOperation)
+{
+    switch (blendOperation)
+    {
+        case ElemGraphicsBlendOperation_Add:
+            return VK_BLEND_OP_ADD;
+
+        case ElemGraphicsBlendOperation_Subtract:
+            return VK_BLEND_OP_SUBTRACT;
+
+        case ElemGraphicsBlendOperation_ReverseSubtract:
+            return VK_BLEND_OP_REVERSE_SUBTRACT;
+
+        case ElemGraphicsBlendOperation_Min:
+            return VK_BLEND_OP_MIN;
+
+        case ElemGraphicsBlendOperation_Max:
+            return VK_BLEND_OP_MAX;
+    }
+}
+
+VkBlendFactor ConvertToVulkanBlendFactor(ElemGraphicsBlendFactor blendFactor)
+{
+    switch (blendFactor)
+    {
+        case ElemGraphicsBlendFactor_Zero:
+            return VK_BLEND_FACTOR_ZERO;
+
+        case ElemGraphicsBlendFactor_One:
+            return VK_BLEND_FACTOR_ONE;
+
+        case ElemGraphicsBlendFactor_SourceColor:
+            return VK_BLEND_FACTOR_SRC_COLOR;
+
+        case ElemGraphicsBlendFactor_InverseSourceColor:
+            return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+
+        case ElemGraphicsBlendFactor_SourceAlpha:
+            return VK_BLEND_FACTOR_SRC_ALPHA;
+
+        case ElemGraphicsBlendFactor_InverseSourceAlpha:
+            return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+        case ElemGraphicsBlendFactor_DestinationColor:
+            return VK_BLEND_FACTOR_DST_COLOR;
+
+        case ElemGraphicsBlendFactor_InverseDestinationColor:
+            return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+
+        case ElemGraphicsBlendFactor_DestinationAlpha:
+            return VK_BLEND_FACTOR_DST_ALPHA;
+
+        case ElemGraphicsBlendFactor_InverseDestinationAlpha:
+            return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+
+        case ElemGraphicsBlendFactor_SourceAlphaSaturated:
+            return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
     }
 }
 
@@ -165,13 +249,76 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
 
     auto shaderLibraryData= GetVulkanShaderLibraryData(parameters->ShaderLibrary);
     SystemAssert(shaderLibraryData);
+    
+    // TODO: Extract functions
+    auto renderTargetFormats = SystemPushArray<VkFormat>(stackMemoryArena, parameters->RenderTargets.Length);
+    auto renderTargetBlendStates = SystemPushArray<VkPipelineColorBlendAttachmentState>(stackMemoryArena, parameters->RenderTargets.Length);
 
-    VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    for (uint32_t i = 0; i < parameters->RenderTargets.Length; i++)
+    {
+        auto renderTargetParameters = parameters->RenderTargets.Items[i];
+    
+        renderTargetFormats[i] = ConvertToVulkanTextureFormat(renderTargetParameters.Format);
+
+        renderTargetBlendStates[i] =
+        {
+            .blendEnable = IsBlendEnabled(renderTargetParameters),
+            .srcColorBlendFactor = ConvertToVulkanBlendFactor(renderTargetParameters.SourceBlendFactor),
+            .dstColorBlendFactor = ConvertToVulkanBlendFactor(renderTargetParameters.DestinationBlendFactor),
+            .colorBlendOp = ConvertToVulkanBlendOperation(renderTargetParameters.BlendOperation),
+            .srcAlphaBlendFactor = ConvertToVulkanBlendFactor(renderTargetParameters.SourceBlendFactorAlpha),
+            .dstAlphaBlendFactor = ConvertToVulkanBlendFactor(renderTargetParameters.DestinationBlendFactorAlpha),
+            .alphaBlendOp = ConvertToVulkanBlendOperation(renderTargetParameters.BlendOperationAlpha),
+            .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+        };
+    }
+
+    VkFormat depthFormat = VK_FORMAT_UNDEFINED;
+    VkPipelineDepthStencilStateCreateInfo depthStencilState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+
+    if (CheckDepthStencilFormat(parameters->DepthStencil.Format))
+    {
+        depthFormat = ConvertToVulkanTextureFormat(parameters->DepthStencil.Format);
+        depthStencilState.depthTestEnable = true;
+
+        if (!parameters->DepthStencil.DepthDisableWrite)
+        {
+            depthStencilState.depthWriteEnable = true;
+        }
+
+        depthStencilState.depthCompareOp = ConvertToVulkanCompareFunction(parameters->DepthStencil.DepthCompareFunction);
+    }
+    
+    VkPipelineRenderingCreateInfo renderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+    renderingCreateInfo.colorAttachmentCount = renderTargetFormats.Length;
+    renderingCreateInfo.pColorAttachmentFormats = renderTargetFormats.Pointer;
+    renderingCreateInfo.depthAttachmentFormat = depthFormat;
+
+    VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    colorBlendState.attachmentCount = renderTargetBlendStates.Length;
+    colorBlendState.pAttachments = renderTargetBlendStates.Pointer;
+
+    VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineRasterizationStateCreateInfo rasterizationState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    rasterizationState.polygonMode = ConvertToVulkanPolygonMode(parameters->FillMode);
+    rasterizationState.cullMode = ConvertToVulkanCullMode(parameters->CullMode);
+    rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizationState.lineWidth = 1;
+
+    VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
+
+    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+    VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    dynamicState.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
+    dynamicState.pDynamicStates = dynamicStates;
 
     VkPipelineShaderStageCreateInfo stages[3] = {};
     uint32_t stageCount = 0;
-
-    // TODO: Amplification shader 
 
     if (parameters->MeshShaderFunction)
     {
@@ -196,54 +343,17 @@ ElemPipelineState VulkanCompileGraphicsPipelineState(ElemGraphicsDevice graphics
 
         stages[stageCount++] = shaderStage;
     }
-    
+
+    VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    createInfo.pColorBlendState = &colorBlendState;
+    createInfo.pDepthStencilState = &depthStencilState;
+    createInfo.pNext = &renderingCreateInfo;
     createInfo.stageCount = stageCount;
     createInfo.pStages = stages;
-
-    VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount = 1;
     createInfo.pViewportState = &viewportState;
-
-    VkPipelineRasterizationStateCreateInfo rasterizationState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-    rasterizationState.lineWidth = 1.0f;
-    rasterizationState.cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_BACK_BIT;
-    rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
     createInfo.pRasterizationState = &rasterizationState;
-
-    VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-    multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     createInfo.pMultisampleState = &multisampleState;
-
-    VkPipelineDepthStencilStateCreateInfo depthStencilState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-    createInfo.pDepthStencilState = &depthStencilState;
-
-    // TODO: To Refactor!    
-    VkPipelineColorBlendAttachmentState renderTargetBlendState = {
-				false,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD,
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-			};
-
-    VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-    colorBlendState.attachmentCount = 1;
-    colorBlendState.pAttachments = &renderTargetBlendState;
-    createInfo.pColorBlendState = &colorBlendState;
-
-    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-
-    VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-    dynamicState.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
-    dynamicState.pDynamicStates = dynamicStates;
     createInfo.pDynamicState = &dynamicState;
-
-    VkFormat formats[] = { ConvertToVulkanTextureFormat(parameters->TextureFormats.Items[0]) }; // TODO: Fill Correct Back Buffer Format 
-
-    VkPipelineRenderingCreateInfo renderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
-    renderingCreateInfo.colorAttachmentCount = 1; // TODO: Change that
-    renderingCreateInfo.pColorAttachmentFormats = formats;
-    createInfo.pNext = &renderingCreateInfo;
     createInfo.layout = graphicsDeviceData->PipelineLayout;
 
     VkPipeline pipelineState;
@@ -340,8 +450,13 @@ void VulkanBindPipelineState(ElemCommandList commandList, ElemPipelineState pipe
 
     auto bindPoint = (pipelineStateData->PipelineStateType == VulkanPipelineStateType_Graphics) ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
 
-    VkDescriptorSet descriptorSets = { graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorSet };
-    vkCmdBindDescriptorSets(commandListData->DeviceObject, bindPoint, graphicsDeviceData->PipelineLayout, 0, 1, &descriptorSets, 0, nullptr);
+    VkDescriptorSet descriptorSets[] = 
+    { 
+        graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorSet->DescriptorSet, 
+        graphicsDeviceData->SamplerDescriptorHeap.Storage->DescriptorSet->DescriptorSet 
+    };
+
+    vkCmdBindDescriptorSets(commandListData->DeviceObject, bindPoint, graphicsDeviceData->PipelineLayout, 0, ARRAYSIZE(descriptorSets), descriptorSets, 0, nullptr);
     vkCmdBindPipeline(commandListData->DeviceObject, bindPoint, pipelineStateData->PipelineState);
 }
 

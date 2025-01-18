@@ -1,12 +1,9 @@
 #include "DirectX12GraphicsDevice.h"
+#include "DirectX12Config.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
-
-#define D3D12SDK_VERSION 614
-#define D3D12SDK_PATH ".\\"
-#define DIRECTX12_MAX_RTVS 1024u
 
 struct DirectX12DescriptorHeapFreeListItem
 {
@@ -35,6 +32,8 @@ bool directX12DebugInitialized = false;
 ComPtr<IDXGIDebug1> dxgiDebugInterface;
 ComPtr<ID3D12Debug6> directX12DebugInterface;
 ComPtr<ID3D12DeviceFactory> directX12DeviceFactory;
+
+// TODO: For time queries, use https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12commandqueue-getclockcalibration
 
 void InitDirectX12()
 {
@@ -105,7 +104,8 @@ void InitDirectX12GraphicsDeviceMemory()
 {
     if (!DirectX12MemoryArena.Storage)
     {
-        DirectX12MemoryArena = SystemAllocateMemoryArena();
+        // TODO: To review
+        DirectX12MemoryArena = SystemAllocateMemoryArena(DIRECTX12_MEMORY_ARENA);
         directX12GraphicsDevicePool = SystemCreateDataPool<DirectX12GraphicsDeviceData, DirectX12GraphicsDeviceDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_DEVICES);
 
         InitDirectX12();
@@ -180,6 +180,36 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
     }
 
     return false;
+}
+
+D3D12_COMPARISON_FUNC ConvertToDirectX12CompareFunction(ElemGraphicsCompareFunction compareFunction)
+{
+    switch (compareFunction)
+    {
+        case ElemGraphicsCompareFunction_Never:
+            return D3D12_COMPARISON_FUNC_NEVER;
+
+        case ElemGraphicsCompareFunction_Less:
+            return D3D12_COMPARISON_FUNC_LESS;
+
+        case ElemGraphicsCompareFunction_Equal:
+            return D3D12_COMPARISON_FUNC_EQUAL;
+
+        case ElemGraphicsCompareFunction_LessEqual:
+            return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+        case ElemGraphicsCompareFunction_Greater:
+            return D3D12_COMPARISON_FUNC_GREATER;
+
+        case ElemGraphicsCompareFunction_NotEqual:
+            return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+
+        case ElemGraphicsCompareFunction_GreaterEqual:
+            return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+
+        case ElemGraphicsCompareFunction_Always:
+            return D3D12_COMPARISON_FUNC_ALWAYS;
+    }
 }
 
 DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> graphicsDevice, MemoryArena memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32_t length)
@@ -285,7 +315,7 @@ ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> 
     rootSignatureDesc.Desc_1_1.pParameters = rootParameters;
     rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
     rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
-    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+    rootSignatureDesc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 
     ComPtr<ID3DBlob> serializedRootSignature;
     AssertIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, serializedRootSignature.GetAddressOf(), nullptr));
@@ -403,15 +433,23 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     auto memoryArena = SystemAllocateMemoryArena();
 
     auto resourceDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_RESOURCES);
+    auto samplerDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, DIRECTX12_MAX_SAMPLERS);
     auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
+    auto dsvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
+
+    // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
+    auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<ComPtr<ID3D12Resource>>*>(DirectX12MemoryArena, MAX_UPLOAD_BUFFERS);
 
     auto handle = SystemAddDataPoolItem(directX12GraphicsDevicePool, {
         .Device = device,
         .RootSignature = rootSignature,
         .ResourceDescriptorHeap = resourceDescriptorHeap,
+        .SamplerDescriptorHeap = samplerDescriptorHeap,
         .RTVDescriptorHeap = rtvDescriptorHeap,
-        .MemoryArena = memoryArena
+        .DSVDescriptorHeap = dsvDescriptorHeap,
+        .MemoryArena = memoryArena,
+        .UploadBufferPools = uploadBuffers
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
@@ -433,8 +471,32 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     auto graphicsDeviceDataFull = GetDirectX12GraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
+    for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
+    {
+        auto bufferPool = graphicsDeviceData->UploadBufferPools[i];
+
+        if (bufferPool)
+        {
+            for (uint32_t j = 0; j < MAX_UPLOAD_BUFFERS; j++)
+            {
+                auto uploadBuffer = &bufferPool->UploadBuffers[j];
+
+                if (uploadBuffer && uploadBuffer->Buffer)
+                {
+                    uploadBuffer->Buffer.Reset();
+                    *uploadBuffer = {};
+                }
+            }
+
+            *bufferPool = {};
+        }
+    }
+
     FreeDirectX12DescriptorHeap(graphicsDeviceData->ResourceDescriptorHeap);
+    FreeDirectX12DescriptorHeap(graphicsDeviceData->SamplerDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->RTVDescriptorHeap);
+    FreeDirectX12DescriptorHeap(graphicsDeviceData->DSVDescriptorHeap);
+
     graphicsDeviceData->Device.Reset();
     graphicsDeviceData->RootSignature.Reset();
 

@@ -233,7 +233,9 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                 
                 if (structType != null)
                 {
-                    if (NeedCustomMarshaller(compilation, structType))
+                    var structGenerationInfo = ComputeStructGenerationInfo(compilation, structType);
+
+                    if (structGenerationInfo.NeedsCustomMarshaller)
                     {
                         customMarshallerTypes.Add(parameter.Name, structType);
                         continue;
@@ -249,11 +251,16 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             }
         }
 
+        // TODO: Refactor utf 8 marshalling with         result.ApplicationPath = MemoryMarshal.CreateReadOnlySpanFromNullTerminated(resultUnsafe.ApplicationPath);
+
+
         var returnNeedsMarshalling = false;
         CppType? returnTypeMarshalling = null;
 
         if (function.ReturnType.GetDisplayName() != "void")
         {
+            var structGenerationInfo = ComputeStructGenerationInfo(compilation, function.ReturnType);
+
             if (function.ReturnType.GetDisplayName().Contains("Span"))
             {
                 var returnName = function.ReturnType.GetDisplayName().Replace("Elem", string.Empty);
@@ -268,7 +275,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
                 returnNeedsMarshalling = true;
             }
-            else if (NeedCustomMarshaller(compilation, function.ReturnType))
+            else if (structGenerationInfo.NeedsCustomMarshaller)
             {
                 returnNeedsMarshalling = true;
                 returnTypeMarshalling = function.ReturnType;
@@ -553,10 +560,10 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             Indent(stringBuilder);
             stringBuilder.AppendLine("[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]");
 
-            var returnNeedsMarshalling = NeedCustomMarshaller(compilation, function.ReturnType);
+            var returnStructGenerationInfo = ComputeStructGenerationInfo(compilation, function.ReturnType);
 
             Indent(stringBuilder);
-            stringBuilder.Append($"internal static partial {MapType(compilation, function.ReturnType, forInterop: true, isReturnValue: true)}{(returnNeedsMarshalling ? "Unsafe" : "")} {functionName}(");
+            stringBuilder.Append($"internal static partial {MapType(compilation, function.ReturnType, forInterop: true, isReturnValue: true)}{(returnStructGenerationInfo.NeedsCustomMarshaller ? "Unsafe" : "")} {functionName}(");
           
             var firstParameter = true;
 
@@ -584,7 +591,9 @@ public partial class DotnetCodeGenerator : ICodeGenerator
                     
                     if (structType != null)
                     {
-                        if (NeedCustomMarshaller(compilation, structType))
+                        var structGenerationInfo = ComputeStructGenerationInfo(compilation, structType);
+
+                        if (structGenerationInfo.NeedsCustomMarshaller)
                         {
                             stringBuilder.Append($"{MapType(compilation, parameter.Type)}Unsafe {parameter.Name}");
                             continue;
@@ -649,29 +658,20 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         Console.WriteLine($"Generate Delegate: {canonicalType.GetDisplayName()}");
 
-        var needMarshaller = false;
         var result = FunctionPointerRegex().Match(canonicalType.GetDisplayName());
 
         if (result.Success)
         {
-            stringBuilder.Append("##MARSHALLER##");
-            stringBuilder.AppendLine("[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
             stringBuilder.Append($"public delegate {result.Groups[1].Value.Trim()} {typeName}(");
 
             var parameterResults = FunctionPointerParameterRegex().Matches(result.Groups[2].Value);
             var firstParameter = true;
-            var parametersDeclaration = new StringBuilder();
-            var parametersValue = new StringBuilder();
-            var customBeforeCode = new StringBuilder();
-            var parameterChecks = new StringBuilder();
 
             foreach (Match parameterResult in parameterResults)
             {
                 if (!firstParameter)
                 {
                     stringBuilder.Append(", ");
-                    parametersDeclaration.Append(", ");
-                    parametersValue.Append(", ");
                 }
                 else
                 {
@@ -691,47 +691,10 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
                 var parameterName = parameterResult.Groups[2].Value.Trim();
 
-                if (parameterType.Contains("Span"))
-                {
-                    needMarshaller = true;
-
-                    customBeforeCode.AppendLine();
-                    customBeforeCode.AppendLine($$"""
-                                    var {{parameterName}}Counter = 0;
-                                    var {{parameterName}}Pointer = (byte*){{parameterName}};
-
-                                    while ({{parameterName}}Pointer[{{parameterName}}Counter] != 0)
-                                    {
-                                        {{parameterName}}Counter++;
-                                    }
-
-                                    {{parameterName}}Counter++;
-                            """);
-                }
-
                 stringBuilder.Append($"{parameterType} {parameterName}");
-                parametersDeclaration.Append($"{MapTypeToUnmanaged(parameterType)} {parameterName}");
-                parametersValue.Append($"{MapValueToUnmanaged(parameterType, parameterName)}");
-                parameterChecks.Append($" || {parameterName} == null");
             }
 
             stringBuilder.AppendLine(");");
-
-            if (!needMarshaller)
-            {
-                stringBuilder.Replace("##MARSHALLER##", string.Empty);
-            }
-            else
-            {
-                stringBuilder.Replace("##MARSHALLER##", $"[NativeMarshalling(typeof({typeName}Marshaller))]\n");
-                stringBuilder.AppendLine();
-                stringBuilder.AppendLine(HandlerMarshallerTemplate);
-                stringBuilder.Replace("##TYPENAME##", typeName);
-                stringBuilder.Replace("##PARAMETERS_DECLARATION##", parametersDeclaration.ToString());
-                stringBuilder.Replace("##PARAMETERS_VALUE##", parametersValue.ToString());
-                stringBuilder.Replace("##CUSTOM_BEFORE_CODE##", customBeforeCode.ToString());
-                stringBuilder.Replace("##PARAMETER_CHECKS##", parameterChecks.ToString());
-            }
         }
     }
     
@@ -838,8 +801,17 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         stringBuilder.AppendLine("}");
     }
 
-    private bool NeedCustomMarshaller(CppCompilation compilation, CppType type)
+    public readonly record struct StructGenerationInfo
     {
+        public bool NeedsCustomMarshaller { get; init; }
+        public bool UseGenerics { get; init; }
+    }
+
+    private StructGenerationInfo ComputeStructGenerationInfo(CppCompilation compilation, CppType type)
+    {
+        bool needsCutomMarshaller = false;
+        bool useGenerics = false;
+
         CppClass? structType = null; 
             
         if (type is CppClass classType)
@@ -852,7 +824,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
             if (qualifiedType == null)
             {
-                return false;
+                return new StructGenerationInfo {};
             }
 
             var classTypeTemp = qualifiedType.ElementType as CppClass;
@@ -865,18 +837,26 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         if (structType == null)
         {
-            return false;
+            return new StructGenerationInfo {};
         }
 
         foreach (var field in structType.Fields)
         {
             if (FieldNeedCustomMarshaller(compilation, field.Type))
             {
-                return true;
+                needsCutomMarshaller = true;
+            }
+            else if(FieldIsGeneric(compilation, field.Type))
+            {
+                useGenerics = true;
             }
         }
 
-        return false;
+        return new StructGenerationInfo 
+        { 
+            NeedsCustomMarshaller = needsCutomMarshaller,
+            UseGenerics = useGenerics
+        };
     }
 
     private bool FieldNeedCustomMarshaller(CppCompilation compilation, CppType type)
@@ -884,6 +864,18 @@ public partial class DotnetCodeGenerator : ICodeGenerator
         var mappedType = MapType(compilation, type);
 
         if (mappedType.Contains("ReadOnlySpan"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool FieldIsGeneric(CppCompilation compilation, CppType type)
+    {
+        var mappedType = MapType(compilation, type);
+
+        if (mappedType.Contains("T"))
         {
             return true;
         }
@@ -905,11 +897,11 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             GenerateComment(stringBuilder, structType.Comment, 0);
         }
 
-        var needsCustomMarshaller = NeedCustomMarshaller(compilation, structType);
+        var structGenerationInfo = ComputeStructGenerationInfo(compilation, structType);
 
-        if (typeName.Contains("Options") || typeName.Contains("Parameters"))
+        if (structGenerationInfo.UseGenerics)
         {
-            stringBuilder.AppendLine($"public ref struct {typeName}");
+            stringBuilder.AppendLine($"public ref struct {typeName}<T> where T : unmanaged");
         }
         else
         {
@@ -942,7 +934,7 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         stringBuilder.AppendLine("}");
 
-        if (needsCustomMarshaller)
+        if (structGenerationInfo.NeedsCustomMarshaller)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine($"internal unsafe struct {typeName}Unsafe");
@@ -1112,7 +1104,8 @@ public partial class DotnetCodeGenerator : ICodeGenerator
 
         if (cppType != null)
         {
-            needsCustomMarshalling = NeedCustomMarshaller(compilation, cppType);
+            var structGenerationInfo = ComputeStructGenerationInfo(compilation, cppType);
+            needsCustomMarshalling = structGenerationInfo.NeedsCustomMarshaller;
         }
 
         return $"SpanUnsafe<{value}{(needsCustomMarshalling ? "Unsafe" : "")}>";
@@ -1135,6 +1128,8 @@ public partial class DotnetCodeGenerator : ICodeGenerator
             string value when value.Contains("Span") && forInterop => GetSpanUnsafe(compilation, value.Substring(0, value.IndexOf("Span"))),
             string value when value.Contains("Span") && isReturnValue => $"ReadOnlySpan<{value.Substring(0, value.IndexOf("Span"))}>",
             string value when value.Contains("Span") => $"ReadOnlySpan<{value.Substring(0, value.IndexOf("Span"))}>",
+            string value when value == "void *" && isUnsafe => "nint",
+            string value when value == "void *" => "T",
             string value when ConstStructPointerRegex().IsMatch(value) => "in " + ConstStructPointerRegex().Match(value).Groups[1].Value,
             string value when value.Contains("HandlerPtr") => typeName.Replace("Ptr", string.Empty),
             _ => typeName

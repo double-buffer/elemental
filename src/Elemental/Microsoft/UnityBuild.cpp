@@ -33,6 +33,7 @@
 #include "Graphics/Resource.cpp"
 #include "Graphics/Shader.cpp"
 #include "Graphics/Rendering.cpp"
+#include "Graphics/UploadBufferPool.cpp"
 
 #include "Inputs/Inputs.cpp"
 #include "Inputs/HidDevices.cpp"

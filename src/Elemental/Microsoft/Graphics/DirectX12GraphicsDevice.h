@@ -1,11 +1,8 @@
 #pragma once
 
 #include "Elemental.h"
+#include "Graphics/UploadBufferPool.h"
 #include "SystemMemory.h"
-
-#define DIRECTX12_MAX_DEVICES 10u
-//#define DIRECTX12_MAX_RESOURCES 1000000
-#define DIRECTX12_MAX_RESOURCES 500000 
 
 struct DirectX12DescriptorHeapStorage;
 
@@ -19,9 +16,14 @@ struct DirectX12GraphicsDeviceData
     ComPtr<ID3D12Device10> Device;
     ComPtr<ID3D12RootSignature> RootSignature;
     uint64_t CommandAllocationGeneration;
+    uint64_t UploadBufferGeneration;
     DirectX12DescriptorHeap ResourceDescriptorHeap;
+    DirectX12DescriptorHeap SamplerDescriptorHeap;
     DirectX12DescriptorHeap RTVDescriptorHeap;
+    DirectX12DescriptorHeap DSVDescriptorHeap;
     MemoryArena MemoryArena;
+    Span<UploadBufferDevicePool<ComPtr<ID3D12Resource>>*> UploadBufferPools;
+    uint32_t CurrentUploadBufferPoolIndex;
 };
 
 struct DirectX12GraphicsDeviceDataFull
@@ -39,6 +41,8 @@ extern ComPtr<IDXGIInfoQueue> DxgiInfoQueue;
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice);
 DirectX12GraphicsDeviceDataFull* GetDirectX12GraphicsDeviceDataFull(ElemGraphicsDevice graphicsDevice);
+
+D3D12_COMPARISON_FUNC ConvertToDirectX12CompareFunction(ElemGraphicsCompareFunction compareFunction);
 
 D3D12_CPU_DESCRIPTOR_HANDLE CreateDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap);
 void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle);

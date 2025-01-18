@@ -22,10 +22,12 @@ jobs:
       with:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./
-    
+
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
-      run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
+      run: |
+        sudo apt-get update 
+        sudo apt-get install libwayland-dev wayland-protocols libudev-dev libdecor-0-dev
 
     - name: Extract Tests Archive (Windows)
       if: inputs.platform == 'win'
@@ -59,8 +61,7 @@ jobs:
       if: inputs.platform == 'osx'
       run: ./tests/ToolsTests.app/Contents/MacOS/ToolsTests
 
-      #- name: Run Graphics Tests
-      #if: inputs.platform == 'win'
-        #run: |
-#$ErrorView = 'NormalView'
-#        ./Tests/GraphicsTests
+      #- name: Run Graphics Tests (MacOS)
+        #if: inputs.platform == 'osx'
+        #run: ./tests/GraphicsTests.app/Contents/MacOS/GraphicsTests
+

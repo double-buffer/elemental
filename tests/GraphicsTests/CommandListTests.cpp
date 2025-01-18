@@ -122,7 +122,7 @@ UTEST(CommandList, ExecuteCommandListWaitForFence)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);

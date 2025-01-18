@@ -6,6 +6,7 @@
 struct VulkanGraphicsHeapData
 {
     VkDeviceMemory DeviceObject;
+    ElemGraphicsHeapType HeapType;
     uint64_t SizeInBytes;
     ElemGraphicsDevice GraphicsDevice;
 };
@@ -17,6 +18,7 @@ struct VulkanGraphicsResourceData
     VkImage TextureDeviceObject;
     ElemGraphicsResourceType Type;
     VkImageView RenderTargetImageView;
+    VkImageView DepthStencilImageView;
     VkFormat Format;
     ElemGraphicsFormat InternalFormat;
     bool IsPresentTexture;
@@ -24,7 +26,6 @@ struct VulkanGraphicsResourceData
     uint32_t Height;
     uint32_t MipLevels;
     ElemGraphicsResourceUsage Usage;
-    void* CpuDataPointer;
 };
 
 struct VulkanGraphicsResourceDataFull
@@ -32,6 +33,19 @@ struct VulkanGraphicsResourceDataFull
     ElemGraphicsDevice GraphicsDevice;
     ElemGraphicsHeap GraphicsHeap;
     uint64_t GraphicsHeapOffset;
+};
+
+struct VulkanUploadBuffer
+{
+    VkBuffer Buffer;
+    VkDeviceMemory DeviceMemory;
+};
+
+struct VulkanGraphicsSamplerInfo
+{
+    ElemGraphicsDevice GraphicsDevice;
+    VkSampler VulkanSampler;
+    ElemGraphicsSamplerInfo SamplerInfo;
 };
 
 VulkanGraphicsHeapData* GetVulkanGraphicsHeapData(ElemGraphicsHeap graphicsHeap);
@@ -51,12 +65,19 @@ ElemGraphicsResourceInfo VulkanCreateTexture2DResourceInfo(ElemGraphicsDevice gr
 ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemGraphicsResourceInfo VulkanGetGraphicsResourceInfo(ElemGraphicsResource resource);
-ElemDataSpan VulkanGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
+
+void VulkanUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
+ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+void VulkanCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemGraphicsResourceDescriptorInfo VulkanGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
-void VulkanProcessGraphicsResourceDeleteQueue(void);
+void VulkanProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
 void VulkanGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
+
+ElemGraphicsSampler VulkanCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
+ElemGraphicsSamplerInfo VulkanGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
+void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);

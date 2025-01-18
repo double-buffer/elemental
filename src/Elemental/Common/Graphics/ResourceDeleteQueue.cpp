@@ -57,7 +57,8 @@ void ProcessResourceDeleteQueue()
         auto entry = &GraphicsResourceDeleteQueue[i];
 
         if ((entry->Type == ResourceDeleteType_Resource && entry->Resource != ELEM_HANDLE_NULL) ||
-            (entry->Type == ResourceDeleteType_Descriptor && (int)entry->Resource != -1))
+            (entry->Type == ResourceDeleteType_Descriptor && (int)entry->Resource != -1) ||
+            (entry->Type == ResourceDeleteType_Sampler && (int)entry->Resource != -1))
         {
             auto fencesCompleted = true;
 
@@ -79,6 +80,10 @@ void ProcessResourceDeleteQueue()
                 else if (entry->Type == ResourceDeleteType_Descriptor)
                 {
                     ElemFreeGraphicsResourceDescriptor(entry->Resource, nullptr);
+                }
+                else if (entry->Type == ResourceDeleteType_Sampler)
+                {
+                    ElemFreeGraphicsSampler(entry->Resource, nullptr);
                 }
 
                 entry->Resource = ELEM_HANDLE_NULL;

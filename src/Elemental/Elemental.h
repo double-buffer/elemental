@@ -42,7 +42,7 @@ typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
 
 //--------------------------------------------------------------------------------
-// ##Module_Application##
+// Module: Elemental
 //--------------------------------------------------------------------------------
 
 /**
@@ -184,6 +184,8 @@ typedef struct
     float UIScale;
     // Current state of the window.
     ElemWindowState WindowState;
+    // TODO: Return refresh rate
+    // TODO: Return an ElemMonitor so that we can get the info about the monitor
 } ElemWindowSize;
 
 // TODO: Comments
@@ -273,6 +275,11 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
  */
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
 
+// TODO: Function to get monitor infos
+
+// TODO: We need to be able to detect if the window is in focus mode. When a game loose focus, 
+// it should be able to disable mouse tracking (for camera etc.)
+
 // TODO: Comments
 // TODO: Make sure the coordinates are consistent accross all platforms
 ElemAPI void ElemShowWindowCursor(ElemWindow window);
@@ -298,6 +305,8 @@ typedef ElemHandle ElemCommandQueue;
  */
 typedef ElemHandle ElemCommandList;
 
+typedef ElemHandle ElemIOCommandQueue;
+
 /**
  * Handle that represents a swap chain.
  */
@@ -317,6 +326,11 @@ typedef ElemHandle ElemGraphicsResource;
  * Handle that represents a graphics resource descriptor.
  */
 typedef int32_t ElemGraphicsResourceDescriptor;
+
+/**
+ * Handle that represents a graphics resource descriptor.
+ */
+typedef int32_t ElemGraphicsSampler;
 
 /**
  * Handle that represents a shader library.
@@ -349,7 +363,9 @@ typedef enum
     // Command queue for graphics operations.
     ElemCommandQueueType_Graphics = 0,
     // Command queue for compute operations.
-    ElemCommandQueueType_Compute = 1
+    ElemCommandQueueType_Compute = 1,
+    // TODO: Create a dedicated IO queue
+    //ElemCommandQueueType_IO = 2
 } ElemCommandQueueType;
 
 /**
@@ -366,7 +382,9 @@ typedef enum
 typedef enum
 {
     ElemGraphicsHeapType_Gpu = 0,
-    ElemGraphicsHeapType_GpuUpload = 1,
+    // TODO: Still not convinced about that one. should we let GPU be gpu upload by default?
+    // TODO: This may cause a bug in vulkan with textures (flickering)
+    ElemGraphicsHeapType_GpuUpload = 1, 
     ElemGraphicsHeapType_Readback = 2
 } ElemGraphicsHeapType;
 
@@ -377,22 +395,26 @@ typedef enum
 {
     ElemGraphicsFormat_Raw,
     ElemGraphicsFormat_B8G8R8A8_SRGB,
-    ElemGraphicsFormat_B8G8R8A8_UNORM,
+    ElemGraphicsFormat_B8G8R8A8,
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
+    ElemGraphicsFormat_D32_FLOAT, 
+    ElemGraphicsFormat_BC7,
+    ElemGraphicsFormat_BC7_SRGB 
 } ElemGraphicsFormat;
 
 typedef enum
 {
     ElemGraphicsResourceType_Buffer,
-    ElemGraphicsResourceType_Texture2D
+    ElemGraphicsResourceType_Texture2D // TODO: Do we keep the distinction for 2D? Maybe just Texture is enough
 } ElemGraphicsResourceType;
 
 typedef enum
 {
     ElemGraphicsResourceUsage_Read = 0x00,
     ElemGraphicsResourceUsage_Write = 0x01,
-    ElemGraphicsResourceUsage_RenderTarget = 0x02
+    ElemGraphicsResourceUsage_RenderTarget = 0x02,
+    ElemGraphicsResourceUsage_DepthStencil = 0x04
 } ElemGraphicsResourceUsage;
 
 typedef enum
@@ -403,9 +425,73 @@ typedef enum
 
 typedef enum
 {
+    ElemGraphicsSamplerFilter_Nearest = 0,
+    ElemGraphicsSamplerFilter_Linear = 1
+} ElemGraphicsSamplerFilter;
+
+typedef enum
+{
+    ElemGraphicsSamplerAddressMode_Repeat = 0,
+    ElemGraphicsSamplerAddressMode_RepeatMirror = 1,
+    ElemGraphicsSamplerAddressMode_ClampToEdge = 2,
+    ElemGraphicsSamplerAddressMode_ClampToEdgeMirror = 3,
+    ElemGraphicsSamplerAddressMode_ClampToBorderColor = 4
+} ElemGraphicsSamplerAddressMode;
+
+typedef enum
+{
+    ElemGraphicsFillMode_Solid = 0,
+    ElemGraphicsFillMode_Wireframe = 1
+} ElemGraphicsFillMode;
+
+typedef enum
+{
+    ElemGraphicsCullMode_BackFace = 0,
+    ElemGraphicsCullMode_FrontFace = 1,
+    ElemGraphicsCullMode_None = 2
+} ElemGraphicsCullMode;
+
+typedef enum
+{
+    ElemGraphicsBlendOperation_Add = 0,
+    ElemGraphicsBlendOperation_Subtract = 1,
+    ElemGraphicsBlendOperation_ReverseSubtract = 2,
+    ElemGraphicsBlendOperation_Min = 3,
+    ElemGraphicsBlendOperation_Max = 4,
+} ElemGraphicsBlendOperation;
+
+typedef enum
+{
+    ElemGraphicsBlendFactor_Zero = 0,
+    ElemGraphicsBlendFactor_One = 1,
+    ElemGraphicsBlendFactor_SourceColor = 2,
+    ElemGraphicsBlendFactor_InverseSourceColor = 3,
+    ElemGraphicsBlendFactor_SourceAlpha = 4,
+    ElemGraphicsBlendFactor_InverseSourceAlpha = 5,
+    ElemGraphicsBlendFactor_DestinationColor = 6,
+    ElemGraphicsBlendFactor_InverseDestinationColor = 7,
+    ElemGraphicsBlendFactor_DestinationAlpha = 8,
+    ElemGraphicsBlendFactor_InverseDestinationAlpha = 9,
+    ElemGraphicsBlendFactor_SourceAlphaSaturated = 10,
+} ElemGraphicsBlendFactor;
+
+typedef enum
+{
+    ElemGraphicsCompareFunction_Never = 0,
+    ElemGraphicsCompareFunction_Less = 1,
+    ElemGraphicsCompareFunction_Equal = 2,
+    ElemGraphicsCompareFunction_LessEqual = 3,
+    ElemGraphicsCompareFunction_Greater = 4,
+    ElemGraphicsCompareFunction_NotEqual = 5,
+    ElemGraphicsCompareFunction_GreaterEqual = 6,
+    ElemGraphicsCompareFunction_Always = 7
+} ElemGraphicsCompareFunction;
+
+typedef enum
+{
     ElemGraphicsResourceBarrierSyncType_None,
     ElemGraphicsResourceBarrierSyncType_Compute,
-    ElemGraphicsResourceBarrierSyncType_RenderTarget
+    ElemGraphicsResourceBarrierSyncType_RenderTarget,
 } ElemGraphicsResourceBarrierSyncType;
 
 typedef enum
@@ -413,7 +499,8 @@ typedef enum
     ElemGraphicsResourceBarrierAccessType_NoAccess,
     ElemGraphicsResourceBarrierAccessType_Read,
     ElemGraphicsResourceBarrierAccessType_Write,
-    ElemGraphicsResourceBarrierAccessType_RenderTarget
+    ElemGraphicsResourceBarrierAccessType_RenderTarget,
+    ElemGraphicsResourceBarrierAccessType_DepthStencilWrite,
 } ElemGraphicsResourceBarrierAccessType;
 
 typedef enum 
@@ -422,6 +509,7 @@ typedef enum
     ElemGraphicsResourceBarrierLayoutType_Read,
     ElemGraphicsResourceBarrierLayoutType_Write,
     ElemGraphicsResourceBarrierLayoutType_RenderTarget,
+    ElemGraphicsResourceBarrierLayoutType_DepthStencilWrite,
     ElemGraphicsResourceBarrierLayoutType_Present
 } ElemGraphicsResourceBarrierLayoutType;
 
@@ -430,12 +518,12 @@ typedef enum
  */
 typedef enum
 {
-    // Discards the previous contents.
-    ElemRenderPassLoadAction_Discard = 0,
-    // Loads the existing contents.
-    ElemRenderPassLoadAction_Load = 1,
     // Clears to a predefined value.
-    ElemRenderPassLoadAction_Clear = 2
+    ElemRenderPassLoadAction_Clear = 0,
+    // Discards the previous contents.
+    ElemRenderPassLoadAction_Discard = 1,
+    // Loads the existing contents.
+    ElemRenderPassLoadAction_Load = 2,
 } ElemRenderPassLoadAction;
 
 /**
@@ -448,6 +536,69 @@ typedef enum
     // Discards the contents after rendering.
     ElemRenderPassStoreAction_Discard = 1
 } ElemRenderPassStoreAction;
+
+/**
+ * Represents RGBA color.
+ */
+typedef struct
+{
+    // Red component.
+    float Red;
+    // Green component.
+    float Green;
+    // Blue component.
+    float Blue;
+    // Alpha component.
+    float Alpha; 
+} ElemColor;
+
+typedef struct
+{
+    // X coordinate of the rectangle's top left corner.
+    float X;
+    // Y coordinate of the rectangle's top left corner.
+    float Y;
+    // Width of the rectangle.
+    float Width;
+    // Height of the rectangle.
+    float Height;
+} ElemRectangle;
+
+/**
+ * Represents a collection of rectangles.
+ */
+typedef struct
+{
+    // Pointer to an array of ElemRectangle.
+    ElemRectangle* Items;
+    // Number of items in the array.
+    uint32_t Length;
+} ElemRectangleSpan;
+
+typedef struct
+{
+    float X, Y, Z;
+} ElemVector3;
+
+typedef union
+{
+    // TODO: Fix compilation warning
+    struct
+    {
+        float X, Y, Z, W;
+    };
+
+    struct
+    {
+        ElemVector3 XYZ;
+    }; 
+} ElemVector4;
+
+typedef struct
+{
+    ElemVector3 MinPoint;
+    ElemVector3 MaxPoint;
+} ElemBoundingBox;
 
 /**
  * Configuration options for graphics initialization.
@@ -519,6 +670,12 @@ typedef struct
     const char* DebugName;
 } ElemCommandListOptions;
 
+typedef struct
+{
+    // Optional debug name for the command queue.
+    const char* DebugName;
+} ElemIOCommandQueueOptions;
+
 /**
  * Represents a fence for command list synchronization.
  */
@@ -581,12 +738,14 @@ typedef struct
  */
 typedef struct
 {
+    ElemWindow Window;
     // Width of the swap chain in pixels.
     uint32_t Width;
     // Height of the swap chain in pixels.
     uint32_t Height;
     // Aspect ratio of the swap chain.
     float AspectRatio;
+    float UIScale;
     // Format of the textures used in the swap chain.
     ElemGraphicsFormat Format;
 } ElemSwapChainInfo;
@@ -625,6 +784,7 @@ typedef struct
 } ElemGraphicsResourceInfoOptions;
 
 // TODO: Mip Levels
+// TODO: Clear values
 typedef struct
 {
     ElemGraphicsResourceType Type;
@@ -644,6 +804,7 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemFreeGraphicsResourceOptions;
 
+// TODO: Here, we could add options to support StructuredBuffer (we need a different stride for that)
 typedef struct
 {
     uint32_t TextureMipIndex;
@@ -662,16 +823,82 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemFreeGraphicsResourceDescriptorOptions;
 
+typedef struct
+{
+    ElemGraphicsSamplerFilter MinFilter;
+    ElemGraphicsSamplerFilter MagFilter;
+    ElemGraphicsSamplerFilter MipFilter;
+    ElemGraphicsSamplerAddressMode AddressU;
+    ElemGraphicsSamplerAddressMode AddressV;
+    ElemGraphicsSamplerAddressMode AddressW;
+    uint32_t MaxAnisotropy;
+    ElemGraphicsCompareFunction CompareFunction;
+    // TODO: Remove this one and do an enum instead
+    ElemColor BorderColor; 
+    float MinLod;
+    float MaxLod;
+    // TODO: Minimum/Maximum filters?
+} ElemGraphicsSamplerInfo;
+
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsSamplerOptions;
+
+typedef struct
+{
+    uint32_t Offset;
+    uint32_t SizeInBytes;
+} ElemDownloadGraphicsBufferDataOptions;
+
+typedef enum
+{
+    ElemCopyDataSourceType_Memory = 0,
+    ElemCopyDataSourceType_File = 1,
+} ElemCopyDataSourceType;
+
+typedef struct
+{
+    ElemGraphicsResource Resource;
+    uint32_t BufferOffset;
+    uint32_t TextureMipLevel;
+    ElemCopyDataSourceType SourceType;
+    uint32_t SourceFilePath;
+    uint32_t SourceFileOffset;
+    uint32_t SourceFileSizeInBytes;
+    ElemDataSpan SourceMemoryData;
+    // TODO: Allow specifying texture rowSizeInBytes?
+} ElemCopyDataToGraphicsResourceParameters;
+
+typedef struct
+{
+    ElemGraphicsFormat Format;
+    ElemGraphicsBlendOperation BlendOperation;
+    ElemGraphicsBlendFactor SourceBlendFactor;
+    ElemGraphicsBlendFactor DestinationBlendFactor;
+    ElemGraphicsBlendOperation BlendOperationAlpha;
+    ElemGraphicsBlendFactor SourceBlendFactorAlpha;
+    ElemGraphicsBlendFactor DestinationBlendFactorAlpha;
+} ElemGraphicsPipelineStateRenderTarget;
+
+typedef struct
+{
+    ElemGraphicsFormat Format;
+    bool DepthDisableWrite;
+    ElemGraphicsCompareFunction DepthCompareFunction;
+} ElemGraphicsPipelineStateDepthStencil;
+
 /**
  * Represents a collection of texture formats.
  */
 typedef struct
 {
-    // Pointer to an array of ElemGraphicsFormat.
-    ElemGraphicsFormat* Items;
+    // Pointer to an array of ElemGraphicsPipelineStateRenderTarget.
+    ElemGraphicsPipelineStateRenderTarget* Items;
     // Number of items in the array.
     uint32_t Length;
-} ElemGraphicsFormatSpan;
+} ElemGraphicsPipelineStateRenderTargetSpan;
 
 /**
  * Parameters for creating a graphics pipeline state.
@@ -684,8 +911,10 @@ typedef struct
     const char* MeshShaderFunction;
     // Function name of the pixel shader in the shader library.
     const char* PixelShaderFunction;
-    // Supported texture formats for the pipeline state.
-    ElemGraphicsFormatSpan TextureFormats;
+    ElemGraphicsPipelineStateRenderTargetSpan RenderTargets;
+    ElemGraphicsPipelineStateDepthStencil DepthStencil;
+    ElemGraphicsFillMode FillMode;
+    ElemGraphicsCullMode CullMode;
     // Optional debug name for the pipeline state.
     const char* DebugName;
 } ElemGraphicsPipelineStateParameters;
@@ -712,21 +941,6 @@ typedef struct
     ElemGraphicsResourceBarrierLayoutType BeforeLayout;
     ElemGraphicsResourceBarrierLayoutType AfterLayout;
 } ElemGraphicsResourceBarrierOptions;
-
-/**
- * Represents RGBA color.
- */
-typedef struct
-{
-    // Red component.
-    float Red;
-    // Green component.
-    float Green;
-    // Blue component.
-    float Blue;
-    // Alpha component.
-    float Alpha; 
-} ElemColor;
 
 /**
  * Defines a viewport for rendering.
@@ -764,7 +978,6 @@ typedef struct
 typedef struct
 {
     ElemGraphicsResource RenderTarget;
-
     // Color to clear the render target with if the load action is clear.
     ElemColor ClearColor;
     // Action to take when loading data into the render target at the beginning of a render pass.
@@ -772,6 +985,15 @@ typedef struct
     // Action to take when storing data from the render target at the end of a render pass.
     ElemRenderPassStoreAction StoreAction;
 } ElemRenderPassRenderTarget;
+
+typedef struct
+{
+    ElemGraphicsResource DepthStencil;
+    // TODO: Specify read or write mode ? (write by default)
+    float DepthClearValue;
+    ElemRenderPassLoadAction DepthLoadAction;
+    ElemRenderPassStoreAction DepthStoreAction;
+} ElemRenderPassDepthBufferStencil;
 
 /**
  * Represents a collection of render pass targets.
@@ -791,8 +1013,11 @@ typedef struct
 {
     // Render targets to be used in the render pass.
     ElemRenderPassRenderTargetSpan RenderTargets;
+    ElemRenderPassDepthBufferStencil DepthStencil;
     // Viewports to be used in the render pass.
     ElemViewportSpan Viewports;
+
+    ElemRectangleSpan ScissorRectangles;
 } ElemBeginRenderPassParameters;
 
 /**
@@ -886,6 +1111,8 @@ ElemAPI ElemFence ElemExecuteCommandList(ElemCommandQueue commandQueue, ElemComm
  */
 ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 
+// TODO: Add a create fence function for a given commandqueue?
+
 /**
  * Waits for a fence to reach its signaled state on the CPU, effectively synchronizing CPU and GPU operations.
  * @param fence The fence to wait on.
@@ -933,19 +1160,28 @@ ElemAPI void ElemPresentSwapChain(ElemSwapChain swapChain);
 ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
+// TODO: uint64_t for sizeInBytes?
 ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
-ElemAPI ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource);
+
+// TODO: uint64_t for offset?
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
-ElemAPI void ElemProcessGraphicsResourceDeleteQueue(void);
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
+
+ElemAPI ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
+ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
+ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.
@@ -1030,6 +1266,10 @@ ElemAPI void ElemSetViewport(ElemCommandList commandList, const ElemViewport* vi
  * @param viewports A span of viewports to be applied.
  */
 ElemAPI void ElemSetViewports(ElemCommandList commandList, ElemViewportSpan viewports);
+
+ElemAPI void ElemSetScissorRectangle(ElemCommandList commandList, const ElemRectangle* rectangle);
+
+ElemAPI void ElemSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles);
 
 /**
  * Dispatches a mesh shader operation on a command list, specifying the number of thread groups in each dimension.
@@ -1183,17 +1423,17 @@ typedef enum
     ElemInputId_MouseWheelPositive = 115,
     ElemInputId_MouseHorizontalWheelNegative = 116,
     ElemInputId_MouseHorizontalWheelPositive = 117,
-    ElemInputID_GamepadButtonA = 118,
-    ElemInputID_GamepadButtonB = 119,
-    ElemInputID_GamepadButtonX = 120,
-    ElemInputID_GamepadButtonY = 121,
-    ElemInputID_GamepadButtonMenu = 122,
-    ElemInputID_GamepadButtonOptions = 123,
-    ElemInputID_GamepadButtonHome = 124,
-    ElemInputID_GamepadLeftShoulder = 125,
-    ElemInputID_GamepadRightShoulder = 126,
-    ElemInputID_GamepadLeftTrigger = 127,
-    ElemInputID_GamepadRightTrigger = 128,
+    ElemInputId_GamepadButtonA = 118,
+    ElemInputId_GamepadButtonB = 119,
+    ElemInputId_GamepadButtonX = 120,
+    ElemInputId_GamepadButtonY = 121,
+    ElemInputId_GamepadButtonShare = 122,
+    ElemInputId_GamepadButtonOptions = 123,
+    ElemInputId_GamepadButtonHome = 124,
+    ElemInputId_GamepadLeftShoulder = 125,
+    ElemInputId_GamepadRightShoulder = 126,
+    ElemInputId_GamepadLeftTrigger = 127,
+    ElemInputId_GamepadRightTrigger = 128,
     ElemInputId_GamepadLeftStickXNegative = 129,
     ElemInputId_GamepadLeftStickXPositive = 130,
     ElemInputId_GamepadLeftStickYNegative = 131,
@@ -1208,26 +1448,35 @@ typedef enum
     ElemInputId_GamepadDpadRight = 140,
     ElemInputId_GamepadDpadDown = 141,
     ElemInputId_GamepadDpadLeft = 142,
-    ElemInputId_Touch = 143,
-    ElemInputId_TouchXNegative = 144,
-    ElemInputId_TouchXPositive = 145,
-    ElemInputId_TouchYNegative = 146,
-    ElemInputId_TouchYPositive = 147,
-    ElemInputId_TouchXAbsolutePosition = 148,
-    ElemInputId_TouchYAbsolutePosition = 149
+    ElemInputId_GamepadTouchButton = 143,
+    ElemInputId_AngularVelocityXNegative = 144,
+    ElemInputId_AngularVelocityXPositive = 145,
+    ElemInputId_AngularVelocityYNegative = 146,
+    ElemInputId_AngularVelocityYPositive = 147,
+    ElemInputId_AngularVelocityZNegative = 148,
+    ElemInputId_AngularVelocityZPositive = 149,
+    ElemInputId_AccelerometerXNegative = 150,
+    ElemInputId_AccelerometerXPositive = 151,
+    ElemInputId_AccelerometerYNegative = 152,
+    ElemInputId_AccelerometerYPositive = 153,
+    ElemInputId_AccelerometerZNegative = 154,
+    ElemInputId_AccelerometerZPositive = 155,
+    ElemInputId_Touch = 156,
+    ElemInputId_TouchXNegative = 157,
+    ElemInputId_TouchXPositive = 158,
+    ElemInputId_TouchYNegative = 159,
+    ElemInputId_TouchYPositive = 160,
+    ElemInputId_TouchXAbsolutePosition = 161,
+    ElemInputId_TouchYAbsolutePosition = 162
 } ElemInputId;
 
 typedef struct
 {
     ElemInputDevice Handle;
     ElemInputDeviceType DeviceType;
+    // TODO: Add device name
+    // TODO: Add device capabilities for gamepad: Gyros, Touchpad, etc.
 } ElemInputDeviceInfo;
-
-typedef struct
-{
-    ElemInputDeviceInfo* Items;
-    uint32_t Length;
-} ElemInputDeviceInfoSpan;
 
 typedef struct
 {

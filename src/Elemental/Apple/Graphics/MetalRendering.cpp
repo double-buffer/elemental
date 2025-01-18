@@ -6,6 +6,46 @@
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 
+MTL::LoadAction ConvertToMetalLoadAction(ElemRenderPassLoadAction loadAction)
+{
+    MTL::LoadAction metalLoadAction;
+
+    switch (loadAction)
+    {
+        case ElemRenderPassLoadAction_Load:
+            metalLoadAction = MTL::LoadActionLoad;
+            break;
+
+        case ElemRenderPassLoadAction_Clear:
+            metalLoadAction = MTL::LoadActionClear;
+            break;
+
+        default:
+            metalLoadAction = MTL::LoadActionDontCare;
+            break;
+    }
+
+    return metalLoadAction;
+}
+
+MTL::StoreAction ConvertToMetalStoreAction(ElemRenderPassStoreAction storeAction)
+{
+    MTL::StoreAction metalStoreAction;
+
+    switch (storeAction)
+    {
+        case ElemRenderPassStoreAction_Store:
+            metalStoreAction = MTL::StoreActionStore;
+            break;
+
+        default:
+            metalStoreAction = MTL::StoreActionDontCare;
+            break;
+    }
+
+    return metalStoreAction;
+
+}
 void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
     // TODO: Check command list type != COMPUTE
@@ -34,35 +74,8 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
 
         auto renderTargetDescriptor = renderPassDescriptor->colorAttachments()->object(i);
         
-        MTL::LoadAction loadAction;
-
-        switch (renderTargetParameters.LoadAction)
-        {
-            case ElemRenderPassLoadAction_Load:
-                loadAction = MTL::LoadActionLoad;
-                break;
-
-            case ElemRenderPassLoadAction_Clear:
-                loadAction = MTL::LoadActionClear;
-                break;
-
-            default:
-                loadAction = MTL::LoadActionDontCare;
-                break;
-        }
-        
-        MTL::StoreAction storeAction;
-
-        switch (renderTargetParameters.StoreAction)
-        {
-            case ElemRenderPassStoreAction_Store:
-                storeAction = MTL::StoreActionStore;
-                break;
-
-            default:
-                storeAction = MTL::StoreActionDontCare;
-                break;
-        }
+        auto loadAction = ConvertToMetalLoadAction(renderTargetParameters.LoadAction);
+        auto storeAction = ConvertToMetalStoreAction(renderTargetParameters.StoreAction);
 
         if (textureData->DeviceObject.get() == nullptr)
         {
@@ -79,6 +92,24 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
             renderTargetDescriptor->setClearColor(MTL::ClearColor(clearColor.Red, clearColor.Green, clearColor.Blue, clearColor.Alpha));
         }
     } 
+    
+    if (parameters->DepthStencil.DepthStencil != ELEM_HANDLE_NULL)
+    {
+        auto depthStencilParameters = parameters->DepthStencil;
+
+        auto textureData = GetMetalResourceData(depthStencilParameters.DepthStencil);
+        SystemAssert(textureData);
+
+        auto depthDescriptor = renderPassDescriptor->depthAttachment();
+        // TODO: Validate usage
+        auto depthLoadAction = ConvertToMetalLoadAction(depthStencilParameters.DepthLoadAction);
+        auto depthStoreAction = ConvertToMetalStoreAction(depthStencilParameters.DepthStoreAction);
+
+        depthDescriptor->setTexture((MTL::Texture*)textureData->DeviceObject.get());
+        depthDescriptor->setLoadAction(depthLoadAction);
+        depthDescriptor->setStoreAction(depthStoreAction);
+        depthDescriptor->setClearDepth(depthStencilParameters.DepthClearValue);
+    }
     
     auto renderCommandEncoder = NS::RetainPtr(commandListData->DeviceObject->renderCommandEncoder(renderPassDescriptor.get()));
 
@@ -106,17 +137,39 @@ void MetalBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPass
         auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
 
-        ElemViewport viewport = 
+        ElemViewport viewport =
         {
-            .X = 0,
-            .Y = 0,
+            .X = 0, 
+            .Y = 0, 
             .Width = (float)textureData->Width, 
             .Height = (float)textureData->Height, 
-            .MinDepth = 0.0f,
+            .MinDepth = 0.0f, 
             .MaxDepth = 1.0f
         };
 
-        ElemSetViewport(commandList, &viewport);
+        ElemSetViewport(commandList, &viewport); 
+    }
+
+    if (parameters->ScissorRectangles.Length > 0)
+    {
+        ElemSetScissorRectangles(commandList, parameters->ScissorRectangles);
+    }
+    else if (parameters->RenderTargets.Length > 0)
+    {       
+        auto renderTargetParameters = parameters->RenderTargets.Items[0];
+
+        auto textureData = GetMetalResourceData(renderTargetParameters.RenderTarget); 
+        SystemAssert(textureData);
+
+        ElemRectangle rectangle =
+        {
+            .X = 0, 
+            .Y = 0, 
+            .Width = (float)textureData->Width, 
+            .Height = (float)textureData->Height 
+        };
+
+        ElemSetScissorRectangle(commandList, &rectangle); 
     }
 }
 
@@ -143,7 +196,6 @@ void MetalSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto metalViewports = SystemPushArray<MTL::Viewport>(stackMemoryArena, viewports.Length);
-    auto metalScissorRects = SystemPushArray<MTL::ScissorRect>(stackMemoryArena, viewports.Length);
 
     for (uint32_t i = 0; i < viewports.Length; i++)
     {
@@ -156,18 +208,40 @@ void MetalSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
             .znear = viewports.Items[i].MinDepth,
             .zfar = viewports.Items[i].MaxDepth
         };
-
-        metalScissorRects[i] =
-        {
-            .x = (uint32_t)viewports.Items[i].X,
-            .y = (uint32_t)viewports.Items[i].Y,
-            .width = (uint32_t)viewports.Items[i].Width,
-            .height = (uint32_t)viewports.Items[i].Height,
-        };
     } 
 
     renderCommandEncoder->setViewports(metalViewports.Pointer, viewports.Length);
-    renderCommandEncoder->setScissorRects(metalScissorRects.Pointer, viewports.Length);
+}
+
+void MetalSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles)
+{
+    // TODO: Check command list type != COMPUTE
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    SystemAssert(commandListData->CommandEncoderType == MetalCommandEncoderType_Render);
+    SystemAssert(commandListData->CommandEncoder);
+
+    auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto metalScissorRects = SystemPushArray<MTL::ScissorRect>(stackMemoryArena, rectangles.Length);
+
+    for (uint32_t i = 0; i < rectangles.Length; i++)
+    {
+        metalScissorRects[i] =
+        {
+            .x = (uint32_t)rectangles.Items[i].X,
+            .y = (uint32_t)rectangles.Items[i].Y,
+            .width = (uint32_t)rectangles.Items[i].Width,
+            .height = (uint32_t)rectangles.Items[i].Height,
+        };
+    } 
+
+    renderCommandEncoder->setScissorRects(metalScissorRects.Pointer, rectangles.Length);
 }
 
 void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
@@ -186,9 +260,8 @@ void MetalDispatchMesh(ElemCommandList commandList, uint32_t threadGroupCountX, 
     auto pipelineStateData = GetMetalPipelineStateData(commandListData->PipelineState);
     SystemAssert(pipelineStateData);
 
-    // TODO: Get the correct threads config for amplification shader
     auto renderCommandEncoder = (MTL::RenderCommandEncoder*)commandListData->CommandEncoder.get();
     renderCommandEncoder->drawMeshThreadgroups(MTL::Size(threadGroupCountX, threadGroupCountY, threadGroupCountZ), 
-                                               MTL::Size(32, 1, 1), 
+                                               MTL::Size(1, 1, 1), 
                                                MTL::Size(pipelineStateData->MeshShaderMetaData.ThreadSizeX, pipelineStateData->MeshShaderMetaData.ThreadSizeY, pipelineStateData->MeshShaderMetaData.ThreadSizeZ));
 }

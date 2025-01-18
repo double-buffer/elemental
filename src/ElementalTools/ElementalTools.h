@@ -37,29 +37,8 @@
 #endif
 
 //------------------------------------------------------------------------
-// ##Module_Application##
+// Module: Elemental Tools
 //------------------------------------------------------------------------
-
-/**
- * Enumerates supported shader languages.
- */
-typedef enum
-{
-    // Unknown shader language.
-    ElemShaderLanguage_Unknown = 0,
-    // High Level Shading Language used by DirectX.
-    ElemShaderLanguage_Hlsl = 1,
-    // OpenGL Shading Language.
-    ElemShaderLanguage_Glsl = 2,
-    // Metal Shading Language for Apple devices.
-    ElemShaderLanguage_Msl = 3,
-    // DirectX Intermediate Language.
-    ElemShaderLanguage_Dxil = 4,
-    // Standard Portable Intermediate Representation.
-    ElemShaderLanguage_Spirv = 5,
-    // Intermediate representation for Metal.
-    ElemShaderLanguage_MetalIR = 6
-} ElemShaderLanguage;
 
 /**
  * Enumerates supported graphics APIs.
@@ -113,6 +92,12 @@ typedef struct
     uint32_t Length;
 } ElemToolsDataSpan;
 
+typedef struct
+{
+    uint32_t* Items;
+    uint32_t Length;
+} ElemUInt32Span;
+
 /**
  * Represents a message produced by the tools, including a type and text.
  */
@@ -135,16 +120,79 @@ typedef struct
     uint32_t Length;
 } ElemToolsMessageSpan;
 
-/**
- * Represents shader source data, including language and the actual code.
- */
 typedef struct
 {
-    // Language of the shader source code.
-    ElemShaderLanguage ShaderLanguage;
-    // Raw shader source code data.
+    float X, Y;
+} ElemToolsVector2;
+
+typedef struct
+{
+    float X, Y, Z;
+} ElemToolsVector3;
+
+typedef union
+{
+    struct
+    {
+        float X, Y, Z, W;
+    };
+
+    struct
+    {
+        ElemToolsVector3 XYZ;
+    }; 
+} ElemToolsVector4;
+
+typedef union
+{
+    float m[4][4];
+    ElemToolsVector4 Rows[4];
+} ElemToolsMatrix4x4;
+
+typedef struct
+{
+    ElemToolsVector3 MinPoint;
+    ElemToolsVector3 MaxPoint;
+} ElemToolsBoundingBox;
+
+typedef struct
+{
     ElemToolsDataSpan Data;
-} ElemShaderSourceData;
+    uint32_t VertexSize;
+    uint32_t VertexCount;
+    // TODO: Add vertex description structure
+} ElemVertexBuffer;
+
+typedef ElemToolsDataSpan (*ElemToolsLoadFileHandlerPtr)(const char* path);
+
+ElemToolsAPI void ElemToolsConfigureFileIO(ElemToolsLoadFileHandlerPtr loadFileHandler);
+
+
+//------------------------------------------------------------------------
+// Module: Shaders
+//------------------------------------------------------------------------
+
+// TODO: Change the list
+/**
+ * Enumerates supported shader languages.
+ */
+typedef enum
+{
+    // Unknown shader language.
+    ElemShaderLanguage_Unknown = 0,
+    // High Level Shading Language used by DirectX.
+    ElemShaderLanguage_Hlsl = 1,
+    // Slang Shading Language.
+    ElemShaderLanguage_Slang = 2,
+    // Metal Shading Language for Apple devices.
+    ElemShaderLanguage_Msl = 3,
+    // DirectX Intermediate Language.
+    ElemShaderLanguage_Dxil = 4,
+    // Standard Portable Intermediate Representation.
+    ElemShaderLanguage_Spirv = 5,
+    // Intermediate representation for Metal.
+    ElemShaderLanguage_MetalIR = 6
+} ElemShaderLanguage;
 
 /**
  * Configuration options for compiling shaders.
@@ -153,6 +201,9 @@ typedef struct
 {
     // If true, compile shaders in debug mode to provide more information.
     bool DebugMode;
+
+    // TODO: Add the ability to add an override for shader language
+    // TODO: Add the ability to choose Matrix packing options (default to row major for now?)
 } ElemCompileShaderOptions;
 
 /**
@@ -160,6 +211,7 @@ typedef struct
  */
 typedef struct
 {
+    // TODO: Add source language
     // Compiled shader binary data.
     ElemToolsDataSpan Data;
     // Messages generated during the compilation.
@@ -185,9 +237,245 @@ ElemToolsAPI bool ElemCanCompileShader(ElemShaderLanguage shaderLanguage, ElemTo
  * @param options Compilation options such as debug mode.
  * @return The result of the compilation, including any binaries and messages.
  */
-ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const ElemShaderSourceData* sourceData, const ElemCompileShaderOptions* options);
+// TODO: Put graphics api and platform into options (default to current one)
+ElemToolsAPI ElemShaderCompilationResult ElemCompileShaderLibrary(ElemToolsGraphicsApi graphicsApi, ElemToolsPlatform platform, const char* path, const ElemCompileShaderOptions* options);
 
 // TODO: Can we compile multiple source files into one library?
+
+
+//------------------------------------------------------------------------
+// Module: SceneLoading
+//------------------------------------------------------------------------
+
+typedef enum
+{
+    ElemSceneFormat_Unknown = 0,
+    ElemSceneFormat_Obj = 1,
+    ElemSceneFormat_Gltf = 2
+} ElemSceneFormat;
+
+typedef enum
+{
+    ElemSceneCoordinateSystem_LeftHanded = 0,
+    ElemSceneCoordinateSystem_RightHanded = 1
+} ElemSceneCoordinateSystem;
+
+typedef enum
+{
+    ElemSceneNodeType_Unknown = 0,
+    ElemSceneNodeType_Mesh = 1
+} ElemSceneNodeType;
+
+typedef struct
+{
+    ElemSceneCoordinateSystem CoordinateSystem;
+    bool FlipVerticalTextureCoordinates;
+    float Scaling;
+    ElemToolsVector3 Rotation;
+    ElemToolsVector3 Translation;
+    // TODO: Don't add options for the format here but in the builder instead
+    // we still want the same format mechanism but hardcoded 
+
+    // TODO: Add options to specify the vertex format wanted
+} ElemLoadSceneOptions;
+
+typedef struct
+{
+    ElemVertexBuffer VertexBuffer;
+    ElemUInt32Span IndexBuffer;
+    ElemToolsBoundingBox BoundingBox;
+    // TODO: SphereVolume?
+    int32_t MaterialId;
+} ElemSceneMeshPrimitive;
+
+typedef struct
+{
+    ElemSceneMeshPrimitive* Items;
+    uint32_t Length;
+} ElemSceneMeshPrimitiveSpan;
+
+typedef struct
+{
+    const char* Name;
+    ElemSceneMeshPrimitiveSpan MeshPrimitives;
+    ElemToolsBoundingBox BoundingBox;
+    // TODO: SphereVolume?
+} ElemSceneMesh;
+
+typedef struct
+{
+    ElemSceneMesh* Items;
+    uint32_t Length;
+} ElemSceneMeshSpan;
+
+typedef struct
+{
+    const char* Name;
+    const char* AlbedoTexturePath;
+    const char* NormalTexturePath;
+    ElemToolsVector4 AlbedoFactor;
+} ElemSceneMaterial;
+
+typedef struct
+{
+    ElemSceneMaterial* Items;
+    uint32_t Length;
+} ElemSceneMaterialSpan;
+
+typedef struct
+{
+    const char* Name;
+    ElemSceneNodeType NodeType;
+    int32_t ReferenceIndex;
+    ElemToolsVector4 Rotation;
+    float Scale;
+    ElemToolsVector3 Translation;
+    // TODO: Children
+} ElemSceneNode;
+
+typedef struct
+{
+    ElemSceneNode* Items;
+    uint32_t Length;
+} ElemSceneNodeSpan;
+
+typedef struct
+{
+    ElemSceneFormat SceneFormat;
+    ElemSceneCoordinateSystem CoordinateSystem;
+
+    ElemSceneMeshSpan Meshes;
+    ElemSceneMaterialSpan Materials;
+    ElemSceneNodeSpan Nodes;
+
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemLoadSceneResult;
+
+ElemToolsAPI ElemLoadSceneResult ElemLoadScene(const char* path, const ElemLoadSceneOptions* options);
+
+
+//------------------------------------------------------------------------
+// Module: Meshes
+//------------------------------------------------------------------------
+
+// TODO: Allow to specify the offset of the vertex position? (For now we assume vertex position is at offset 0)
+typedef struct
+{
+    // TODO: Allow bypass mesh format
+    // TODO: Allow customize index packing
+    uint32_t Reserved;
+} ElemBuildMeshletsOptions;
+
+typedef struct
+{
+    // TODO: Add base vertex
+    uint32_t VertexIndexOffset;
+    uint32_t VertexIndexCount;
+    uint32_t TriangleOffset;
+    uint32_t TriangleCount;
+} ElemMeshlet;
+
+typedef struct
+{
+    ElemMeshlet* Items;
+    uint32_t Length;
+} ElemMeshletSpan;
+
+typedef struct
+{
+    uint8_t MeshletMaxVertexCount;
+    uint8_t MeshletMaxTriangleCount;
+    ElemVertexBuffer VertexBuffer;
+    ElemMeshletSpan Meshlets;
+    ElemUInt32Span MeshletVertexIndexBuffer;
+    ElemUInt32Span MeshletTriangleIndexBuffer;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemBuildMeshletResult;
+
+ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemUInt32Span indexBuffer, const ElemBuildMeshletsOptions* options);
+
+// TODO: Do an optimize mesh function that can be used to optimize a normal mesh (for Raytracing for example)
+
+//------------------------------------------------------------------------
+// Module: Textures
+//------------------------------------------------------------------------
+
+typedef enum
+{
+    ElemToolsGraphicsFormat_Unknown,
+    ElemToolsGraphicsFormat_R8G8B8A8,
+    ElemToolsGraphicsFormat_BC7
+} ElemToolsGraphicsFormat;
+
+typedef enum
+{
+    ElemLoadTextureFileFormat_Unknown = 0,
+    ElemLoadTextureFileFormat_Tga = 1,
+    ElemLoadTextureFileFormat_Jpg = 2,
+    ElemLoadTextureFileFormat_Png = 3,
+    ElemLoadTextureFileFormat_Dds = 4,
+} ElemLoadTextureFileFormat;
+
+typedef struct
+{
+    uint32_t Width;
+    uint32_t Height;
+    ElemToolsDataSpan Data;
+} ElemTextureMipData;
+
+typedef struct
+{
+    ElemTextureMipData* Items;
+    uint32_t Length;
+} ElemTextureMipDataSpan;
+
+typedef struct
+{
+    uint32_t Reserved;
+} ElemLoadTextureOptions;
+
+typedef struct
+{
+    ElemLoadTextureFileFormat FileFormat;
+    ElemToolsGraphicsFormat Format;
+    uint32_t Width;
+    uint32_t Height;
+    ElemTextureMipDataSpan MipData;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemLoadTextureResult;
+
+typedef struct
+{
+    // TODO: Alpha options
+    uint32_t Reserved;
+} ElemGenerateTextureMipDataOptions;
+
+typedef struct
+{
+    ElemTextureMipDataSpan MipData;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemGenerateTextureMipDataResult;
+
+typedef struct
+{
+    uint32_t Reserved;
+} ElemCompressTextureMipDataOptions;
+
+typedef struct
+{
+    ElemToolsGraphicsFormat Format;
+    ElemTextureMipData MipData;
+    ElemToolsMessageSpan Messages;
+    bool HasErrors;
+} ElemCompressTextureMipDataResult;
+
+ElemToolsAPI ElemLoadTextureResult ElemLoadTexture(const char* path, const ElemLoadTextureOptions* options);
+ElemToolsAPI ElemGenerateTextureMipDataResult ElemGenerateTextureMipData(ElemToolsGraphicsFormat format, const ElemTextureMipData* baseMip, const ElemGenerateTextureMipDataOptions* options);
+ElemToolsAPI ElemCompressTextureMipDataResult ElemCompressTextureMipData(ElemToolsGraphicsFormat format, const ElemTextureMipData* mipData, const ElemCompressTextureMipDataOptions* options);
 
 #ifdef UseToolsLoader
 #ifndef ElementalToolsLoader

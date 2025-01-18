@@ -274,9 +274,16 @@ public class CLoaderCodeGenerator : ICodeGenerator
                         parameterValuesBuilder.Append(", ");
                     }
 
-                    builder.Append($"{parameter.Type.GetDisplayName()} {parameter.Name}");
-                    functionsStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
-                    functionsDeclarationStringBuilder.Append($"{parameter.Type.GetDisplayName()}");
+                    var parameterType = parameter.Type.GetDisplayName();
+
+                    if (parameterType == "unsigned long long")
+                    {
+                        parameterType = "uint64_t";
+                    }
+
+                    builder.Append($"{parameterType} {parameter.Name}");
+                    functionsStringBuilder.Append($"{parameterType}");
+                    functionsDeclarationStringBuilder.Append($"{parameterType}");
                     parameterValuesBuilder.Append($"{parameter.Name}");
                 }
             }

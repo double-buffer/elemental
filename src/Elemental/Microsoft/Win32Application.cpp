@@ -94,6 +94,7 @@ ElemAPI ElemSystemInfo ElemGetSystemInfo()
 
 ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameters)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     InitWin32ApplicationMemory();
     
     if (parameters->InitHandler)
@@ -117,6 +118,12 @@ ElemAPI int32_t ElemRunApplication(const ElemRunApplicationParameters* parameter
             }
         }
     }
+
+    auto allocationInfos = SystemGetAllocationInfos();
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Application, "Allocated lib memory before releasing: %s/%s", 
+                            SystemFormatMemorySize(stackMemoryArena, allocationInfos.CommittedBytes).Pointer, 
+                            SystemFormatMemorySize(stackMemoryArena, allocationInfos.ReservedBytes).Pointer);
 
     if (parameters->FreeHandler)
     {

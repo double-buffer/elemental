@@ -7,21 +7,35 @@ struct DirectX12GraphicsHeapData
     ComPtr<ID3D12Heap> DeviceObject;
     uint64_t SizeInBytes;
     ElemGraphicsDevice GraphicsDevice;
+    D3D12_HEAP_DESC HeapDescription;
+    D3D12_HEAP_TYPE HeapType;
 };
 
 // TODO: To review we don't use it!!!
 struct DirectX12GraphicsHeapDataFull
 {
-    D3D12_HEAP_DESC HeapDescription;
+    uint32_t reserved;
 };
 
+struct DirectX12GraphicsTextureMipCopyInfo
+{
+    uint32_t RowCount;
+    uint64_t SourceRowSizeInBytes;
+    uint32_t UploadBufferSizeInBytes;
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT PlacedFootprint;
+};
+
+// TODO: Optimize this structure because it is the most used
 struct DirectX12GraphicsResourceData
 {
     ComPtr<ID3D12Resource> DeviceObject;
+    // TODO: We can maybe merge the two?
     D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle;
+    D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle;
     ElemGraphicsResourceType Type;
     DXGI_FORMAT DirectX12Format;
     D3D12_RESOURCE_FLAGS DirectX12Flags;
+    ElemGraphicsHeap GraphicsHeap;
     uint32_t Width;
     uint32_t Height;
     uint32_t MipLevels;
@@ -40,8 +54,9 @@ DirectX12GraphicsHeapDataFull* GetDirectX12GraphicsHeapDataFull(ElemGraphicsHeap
 DirectX12GraphicsResourceData* GetDirectX12GraphicsResourceData(ElemGraphicsResource resource);
 DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGraphicsResource resource);
 
-ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
+ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
 DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format);
+bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format);
 
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
@@ -52,12 +67,19 @@ ElemGraphicsResourceInfo DirectX12CreateTexture2DResourceInfo(ElemGraphicsDevice
 ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource resource);
-ElemDataSpan DirectX12GetGraphicsResourceDataSpan(ElemGraphicsResource resource);
+
+void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
+ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemGraphicsResourceDescriptorInfo DirectX12GetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
-void DirectX12ProcessGraphicsResourceDeleteQueue(void);
+void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
 void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
+
+ElemGraphicsSampler DirectX12CreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
+ElemGraphicsSamplerInfo DirectX12GetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
+void DirectX12FreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);

@@ -28,6 +28,7 @@ struct MetalSwapChainData
     uint32_t Width;
     uint32_t Height;
     float AspectRatio;
+    float UIScale;
     ElemGraphicsFormat Format;
 };
 

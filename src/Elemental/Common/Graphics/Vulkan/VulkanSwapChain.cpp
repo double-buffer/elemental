@@ -1,4 +1,5 @@
 #include "VulkanSwapChain.h"
+#include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
 #include "VulkanResource.h"
@@ -14,8 +15,6 @@
 #include "../Elemental/Linux/WaylandApplication.h"
 #include "../Elemental/Linux/WaylandWindow.h"
 #endif
-
-#define VULKAN_MAX_SWAPCHAINS 10u
 
 SystemDataPool<VulkanSwapChainData, VulkanSwapChainDataFull> vulkanSwapChainPool;
 
@@ -76,6 +75,8 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
 
 VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, VkSurfaceKHR windowSurface, VkSwapchainCreateInfoKHR* swapChainCreateInfo, VkSwapchainKHR oldSwapChain)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
@@ -84,6 +85,14 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
     AssertIfFailed(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &surfaceCapabilities));
+
+    uint32_t presentModeCount = 0;
+    AssertIfFailed(vkGetPhysicalDeviceSurfacePresentModesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &presentModeCount, nullptr));
+
+    auto presentModes = SystemPushArray<VkPresentModeKHR>(stackMemoryArena, presentModeCount);
+    AssertIfFailed(vkGetPhysicalDeviceSurfacePresentModesKHR(graphicsDeviceDataFull->PhysicalDevice, windowSurface, &presentModeCount, presentModes.Pointer));
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Present Mode count: %d", presentModeCount);
 
     VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
@@ -113,7 +122,7 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
     return swapChain;
 }
 
-void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height, float uiScale)
 {
     if (width == 0 || height == 0)
     {
@@ -138,17 +147,19 @@ void ResizeVulkanSwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t hei
     swapChainData->Width = width;
     swapChainData->Height = height;
     swapChainData->AspectRatio = (float)width / height;
+    swapChainData->UIScale = uiScale;
 
     auto fence = CreateVulkanCommandQueueFence(swapChainData->CommandQueue);
     VulkanWaitForFenceOnCpu(fence);
 
-    swapChainData->PresentId = 0;
+    swapChainData->PresentId = 1;
     auto oldSwapChain = swapChainData->DeviceObject;
 
     auto swapChainCreateInfo = &swapChainDataFull->CreateInfo;
     swapChainCreateInfo->imageExtent.width = width;
     swapChainCreateInfo->imageExtent.height = height;
     
+    // BUG: The resizing works well but not fullscreen! (Windows / Linux?)
     swapChainData->DeviceObject = CreateVulkanSwapChainObject(swapChainData->CommandQueue, swapChainData->WindowSurface, swapChainCreateInfo, oldSwapChain);
 
     for (uint32_t i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
@@ -188,11 +199,17 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
         // Looks like a windowed issue where we miss the vsync
         // The issue seems to be resolved for now... to monitor!
         #ifdef _WIN32
-        auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
+        //auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
 
-        if (vkWaitForPresentKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, presentId, 0) != VK_SUCCESS)
+        //if (presentId < 10)
+            //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "PresentID: %d", presentId);
+
+        //if (vkWaitForPresentKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, presentId, 0) != VK_SUCCESS)
         {
-            return;
+            // BUG: There is still an error here, we need to investigate
+            // Sometimes when we resize it is good
+            //SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Cannot update the swapchain because there was an error waiting for the present ID %d.", presentId);
+         //   return;
         }
         #endif
     }
@@ -207,7 +224,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
 
     if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
     {
-        ResizeVulkanSwapChain(handle, windowSize.Width, windowSize.Height);
+        ResizeVulkanSwapChain(handle, windowSize.Width, windowSize.Height, windowSize.UIScale);
         sizeChanged = true;
     }
 
@@ -390,7 +407,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     AssertIfFailed(vkCreateFence(graphicsDeviceData->Device, &fenceCreateInfo, 0, &acquireFence ));
 
-    uint64_t creationTimestamp;
+    uint64_t creationTimestamp = 0;
     // TODO: Put that in a system function
     //QueryPerformanceCounter(&creationTimestamp);
 
@@ -408,7 +425,9 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
+        .UIScale = windowRenderSize.UIScale,
         .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
+        .PresentId = 1,
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
     });
@@ -474,9 +493,11 @@ ElemSwapChainInfo VulkanGetSwapChainInfo(ElemSwapChain swapChain)
 
     return 
     {
+        .Window = swapChainData->Window,
         .Width = swapChainData->Width,
         .Height = swapChainData->Height,
         .AspectRatio = swapChainData->AspectRatio,
+        .UIScale = swapChainData->UIScale,
         .Format = swapChainData->Format
     };
 }
@@ -498,9 +519,11 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     auto commandQueueData = GetVulkanCommandQueueData(swapChainData->CommandQueue);
     SystemAssert(commandQueueData);
 
+    auto presentId = swapChainData->PresentId++;
+
     VkPresentIdKHR presentIdInfo = { VK_STRUCTURE_TYPE_PRESENT_ID_KHR };
     presentIdInfo.swapchainCount = 1;
-    presentIdInfo.pPresentIds = &swapChainData->PresentId;
+    presentIdInfo.pPresentIds = &presentId;
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.waitSemaphoreCount = 1;
@@ -513,7 +536,6 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     AssertIfFailed(vkQueuePresentKHR(commandQueueData->DeviceObject, &presentInfo));
     
     VulkanResetCommandAllocation(swapChainData->GraphicsDevice);
-    VulkanProcessGraphicsResourceDeleteQueue();
-    swapChainData->PresentId++;
+    VulkanProcessGraphicsResourceDeleteQueue(swapChainData->GraphicsDevice);
 }
 

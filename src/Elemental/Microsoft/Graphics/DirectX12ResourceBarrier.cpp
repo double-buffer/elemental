@@ -4,7 +4,7 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-D3D12_BARRIER_SYNC ConvertToDirectX12BarrierSync(ElemGraphicsResourceBarrierSyncType syncType)
+D3D12_BARRIER_SYNC ConvertToDirectX12BarrierSync(ElemGraphicsResourceBarrierSyncType syncType, bool isDepthStencil)
 {
     switch (syncType) 
     {
@@ -15,7 +15,7 @@ D3D12_BARRIER_SYNC ConvertToDirectX12BarrierSync(ElemGraphicsResourceBarrierSync
             return D3D12_BARRIER_SYNC_COMPUTE_SHADING;
 
         case ElemGraphicsResourceBarrierSyncType_RenderTarget:
-            return D3D12_BARRIER_SYNC_RENDER_TARGET;
+            return !isDepthStencil ? D3D12_BARRIER_SYNC_RENDER_TARGET : D3D12_BARRIER_SYNC_DEPTH_STENCIL;
     }
 }
 
@@ -34,6 +34,9 @@ D3D12_BARRIER_ACCESS ConvertToDirectX12BarrierAccess(ElemGraphicsResourceBarrier
 
         case ElemGraphicsResourceBarrierAccessType_RenderTarget:
             return D3D12_BARRIER_ACCESS_RENDER_TARGET;
+
+        case ElemGraphicsResourceBarrierAccessType_DepthStencilWrite:
+            return D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE;
 
         case ElemGraphicsResourceBarrierAccessType_Write:
             return D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
@@ -59,6 +62,9 @@ D3D12_BARRIER_LAYOUT ConvertToDirectX12BarrierLayout(ElemGraphicsResourceBarrier
 
         case ElemGraphicsResourceBarrierLayoutType_RenderTarget:
             return D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+
+        case ElemGraphicsResourceBarrierLayoutType_DepthStencilWrite:
+            return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;
 
         case ElemGraphicsResourceBarrierLayoutType_Present:
             return D3D12_BARRIER_LAYOUT_PRESENT;
@@ -107,8 +113,8 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
 
             directX12BufferBarrier->pResource = graphicsResourceData->DeviceObject.Get();
             directX12BufferBarrier->Size = graphicsResourceData->Width;
-            directX12BufferBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync);
-            directX12BufferBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync);
+            directX12BufferBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync, false);
+            directX12BufferBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync, false);
             directX12BufferBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess);
             directX12BufferBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess);
         }
@@ -119,11 +125,11 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
         auto directX12TextureBarriers = SystemPushArray<D3D12_TEXTURE_BARRIER>(stackMemoryArena, barriersInfo.TextureBarriers.Length);
 
         D3D12_BARRIER_GROUP directX12TextureBarriersGroup =
-            {
-                .Type = D3D12_BARRIER_TYPE_TEXTURE,
-                .NumBarriers = (uint32_t)barriersInfo.TextureBarriers.Length,
-                .pTextureBarriers = directX12TextureBarriers.Pointer
-            };
+        {
+            .Type = D3D12_BARRIER_TYPE_TEXTURE,
+            .NumBarriers = (uint32_t)barriersInfo.TextureBarriers.Length,
+            .pTextureBarriers = directX12TextureBarriers.Pointer
+        };
 
         barrierGroups[barrierGroupCount++] = directX12TextureBarriersGroup;
 
@@ -136,8 +142,8 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
             SystemAssert(graphicsResourceData);
 
             directX12TextureBarrier->pResource = graphicsResourceData->DeviceObject.Get();
-            directX12TextureBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync);
-            directX12TextureBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync);
+            directX12TextureBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync, barrier.IsDepthStencil);
+            directX12TextureBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync, barrier.IsDepthStencil);
             directX12TextureBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess);
             directX12TextureBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess);
             directX12TextureBarrier->LayoutBefore = ConvertToDirectX12BarrierLayout(barrier.BeforeLayout);

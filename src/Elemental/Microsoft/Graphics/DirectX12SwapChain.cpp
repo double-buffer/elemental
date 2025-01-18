@@ -9,7 +9,6 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-#define DIRECTX12_MAX_SWAPCHAINS 10u
 
 // TODO: Without FPS limit we can maybe debug UAV Barrier
 #define ENABLE_TEARING 0
@@ -52,16 +51,18 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
         ComPtr<ID3D12Resource> backBuffer;
         AssertIfFailed(swapChainData->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
 
-        swapChainData->BackBufferTextures[i] = CreateDirectX12GraphicsResourceFromResource(swapChainDataFull->GraphicsDevice, ElemGraphicsResourceType_Texture2D, backBuffer, true);
+        swapChainData->BackBufferTextures[i] = CreateDirectX12GraphicsResourceFromResource(swapChainDataFull->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ELEM_HANDLE_NULL, backBuffer, true);
     }
 }
 
-void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height)
+void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t height, float uiScale)
 {
     if (width == 0 || height == 0)
     {
         return;
     }
+
+    // BUG: When switching to a screen with a different refresh rate!
     
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Resize Swapchain to %dx%d.", width, height);
     SystemAssert(swapChain != ELEM_HANDLE_NULL);
@@ -72,6 +73,7 @@ void ResizeDirectX12SwapChain(ElemSwapChain swapChain, uint32_t width, uint32_t 
     swapChainData->Width = width;
     swapChainData->Height = height;
     swapChainData->AspectRatio = (float)width / height;
+    swapChainData->UIScale = uiScale;
  
     auto fence = CreateDirectX12CommandQueueFence(swapChainData->CommandQueue);
     ElemWaitForFenceOnCpu(fence);
@@ -193,6 +195,12 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
 
         // TODO: If delta time is above a thresold, take the delta time based on target FPS
         auto deltaTime = vSyncDelta * refreshInterval;//(nextVSyncQPCTime.QuadPart - swapChainData->PreviousTargetPresentationTimestamp.QuadPart) / ticksPerSecond;
+
+        if (deltaTime <= 0.0f)
+        {
+            deltaTime = 1.0f / 60.0f;
+        }
+
         swapChainData->PreviousTargetPresentationTimestamp = nextVSyncQPCTime;
 
         if (vSyncDelta > 1)
@@ -207,7 +215,7 @@ void CheckDirectX12AvailableSwapChain(ElemHandle handle)
 
         if (windowSize.Width > 0 && windowSize.Height > 0 && (windowSize.Width != swapChainData->Width || windowSize.Height != swapChainData->Height))
         {
-            ResizeDirectX12SwapChain(handle, windowSize.Width, windowSize.Height);
+            ResizeDirectX12SwapChain(handle, windowSize.Width, windowSize.Height, windowSize.UIScale);
             sizeChanged = true;
         }
         
@@ -327,6 +335,8 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT        
         #endif
     };
+    
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create swapchain with size: %dx%d@%f. (%dHz)", windowRenderSize.Width, windowRenderSize.Height, windowRenderSize.UIScale, targetFPS);
 
     ComPtr<IDXGISwapChain4> swapChain;
     AssertIfFailedReturnNullHandle(DxgiFactory->CreateSwapChainForHwnd(commandQueueData->DeviceObject.Get(), windowData->WindowHandle, &swapChainDesc, nullptr, nullptr, (IDXGISwapChain1**)swapChain.GetAddressOf()));  
@@ -360,6 +370,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
         .Width = width,
         .Height = height,
         .AspectRatio = (float)width / height,
+        .UIScale = windowRenderSize.UIScale,
         .Format = ElemGraphicsFormat_B8G8R8A8_SRGB, // TODO: change that
         .FrameLatency = frameLatency,
         .TargetFPS = targetFPS
@@ -410,9 +421,11 @@ ElemSwapChainInfo DirectX12GetSwapChainInfo(ElemSwapChain swapChain)
 
     return 
     {
+        .Window = swapChainData->Window,
         .Width = swapChainData->Width,
         .Height = swapChainData->Height,
         .AspectRatio = swapChainData->AspectRatio,
+        .UIScale = swapChainData->UIScale,
         .Format = swapChainData->Format
     };
 }
@@ -453,7 +466,7 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     // TODO: Compute vsync interval based on target fps (rework that, it only works for multiples for now!)
     // TODO: We need to take into account the current present time with the nextPresentTime computed from update function
     // For example, if we present and we missed a vsync, the calculation should take that into account
-    auto vsyncInteval = windowData->MonitorRefreshRate / swapChainData->TargetFPS;
+    //auto vsyncInteval = windowData->MonitorRefreshRate / swapChainData->TargetFPS;
 
     // TODO: Control the next vsync for frame pacing (eg: running at 30fps on a 120hz screen)
     //AssertIfFailed(swapChainData->DeviceObject->Present(vsyncInteval, 0));
@@ -464,5 +477,5 @@ void DirectX12PresentSwapChain(ElemSwapChain swapChain)
     #endif
     
     DirectX12ResetCommandAllocation(swapChainDataFull->GraphicsDevice);
-    DirectX12ProcessGraphicsResourceDeleteQueue();
+    DirectX12ProcessGraphicsResourceDeleteQueue(swapChainDataFull->GraphicsDevice);
 }

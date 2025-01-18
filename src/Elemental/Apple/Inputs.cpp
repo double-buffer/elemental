@@ -49,6 +49,12 @@ void RemoveAppleInputDevice(void* device)
 
 ElemInputId GetAppleInputIdFromKeyCode(GC::KeyCode keyCode)
 {
+        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test: %d", keyCode);
+    if (keyCode == GC::KeyCode::UpArrow)
+    {
+        SystemLogDebugMessage(ElemLogMessageCategory_Inputs, "Test");
+    }
+
     switch (keyCode)
     {
         case GC::KeyCode::GraveAccentAndTilde: return ElemInputId_KeyTilde;
@@ -645,6 +651,7 @@ void InitInputs(ElemWindow window)
 
     NS::NotificationCenter::defaultCenter()->addObserver(MTLSTR("GCControllerDidConnectNotification"), nullptr, nullptr, ^(NS::Notification* notification)
     {
+        // TODO: Use HID code like the rest of the platforms for gamepad?
         auto controller = (GC::Controller*)notification->object();
         auto extendedGamepad = controller->extendedGamepad();
 
@@ -656,57 +663,58 @@ void InitInputs(ElemWindow window)
 
         extendedGamepad->buttonA()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadButtonA, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadButtonA, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->buttonB()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadButtonB, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadButtonB, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->buttonX()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadButtonX, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadButtonX, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->buttonY()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadButtonY, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadButtonY, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
+        // TODO: Check that button ID
         extendedGamepad->buttonMenu()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadButtonMenu, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadButtonShare, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->buttonOptions()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadButtonOptions, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadButtonOptions, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->buttonHome()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadButtonHome, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadButtonHome, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->leftShoulder()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadLeftShoulder, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadLeftShoulder, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->rightShoulder()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadRightShoulder, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadRightShoulder, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->leftTrigger()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadLeftTrigger, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadLeftTrigger, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->rightTrigger()->setValueChangedHandler(^(GC::ControllerButtonInput* controllerButtonInput, float value, bool isPressed)
         {
-            ButtonHandler(window, ElemInputID_GamepadRightTrigger, extendedGamepad->device(), controllerButtonInput, value, isPressed);
+            ButtonHandler(window, ElemInputId_GamepadRightTrigger, extendedGamepad->device(), controllerButtonInput, value, isPressed);
         });
 
         extendedGamepad->leftThumbstick()->setValueChangedHandler(^(GC::ControllerDirectionPad* directionPad, float xValue, float yValue)

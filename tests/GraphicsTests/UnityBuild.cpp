@@ -4,6 +4,7 @@
 #include "ShaderTests.cpp"
 #include "SwapChainTests.cpp"
 #include "ResourceTests.cpp"
+#include "ResourceIOTests.cpp"
 #include "ResourceBarrierTests.cpp"
 #include "RenderingTests.cpp"
 #include "utest.h"
@@ -29,8 +30,11 @@ void ApplicationTestInitFunction(void* payload)
     options.EnableGpuValidation = false;
     options.EnableDebugBarrierInfo = true;
 
+    startOptions = options;
+
     ElemConfigureLogHandler(TestLogHandler);
     ElemSetGraphicsOptions(&options);
+    InitLogBuffers();
 
     auto result = utest_main(applicationTestPayload->argc, applicationTestPayload->argv);
 

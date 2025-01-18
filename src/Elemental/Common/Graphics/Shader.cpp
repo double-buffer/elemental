@@ -1,5 +1,15 @@
-#include "Elemental.h"
+#include "Shader.h"
 #include "GraphicsCommon.h"
+
+bool IsBlendEnabled(ElemGraphicsPipelineStateRenderTarget renderTargetParameters)
+{
+    return !(renderTargetParameters.BlendOperation == ElemGraphicsBlendOperation_Add &&
+             renderTargetParameters.SourceBlendFactor == ElemGraphicsBlendFactor_Zero &&
+             renderTargetParameters.DestinationBlendFactor == ElemGraphicsBlendFactor_Zero &&
+             renderTargetParameters.BlendOperationAlpha == ElemGraphicsBlendOperation_Add &&
+             renderTargetParameters.SourceBlendFactorAlpha == ElemGraphicsBlendFactor_Zero &&
+             renderTargetParameters.DestinationBlendFactorAlpha == ElemGraphicsBlendFactor_Zero);
+}
 
 ElemAPI ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
 {

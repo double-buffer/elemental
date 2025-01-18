@@ -54,18 +54,23 @@ typedef struct ElementalFunctions
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
     void (*ElemSetSwapChainTiming)(ElemSwapChain, unsigned int, unsigned int);
     void (*ElemPresentSwapChain)(ElemSwapChain);
-    ElemGraphicsHeap (*ElemCreateGraphicsHeap)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *);
+    ElemGraphicsHeap (*ElemCreateGraphicsHeap)(ElemGraphicsDevice, uint64_t, ElemGraphicsHeapOptions const *);
     void (*ElemFreeGraphicsHeap)(ElemGraphicsHeap);
     ElemGraphicsResourceInfo (*ElemCreateGraphicsBufferResourceInfo)(ElemGraphicsDevice, unsigned int, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *);
     ElemGraphicsResourceInfo (*ElemCreateTexture2DResourceInfo)(ElemGraphicsDevice, unsigned int, unsigned int, unsigned int, ElemGraphicsFormat, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *);
-    ElemGraphicsResource (*ElemCreateGraphicsResource)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *);
+    ElemGraphicsResource (*ElemCreateGraphicsResource)(ElemGraphicsHeap, uint64_t, ElemGraphicsResourceInfo const *);
     void (*ElemFreeGraphicsResource)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *);
     ElemGraphicsResourceInfo (*ElemGetGraphicsResourceInfo)(ElemGraphicsResource);
-    ElemDataSpan (*ElemGetGraphicsResourceDataSpan)(ElemGraphicsResource);
+    void (*ElemUploadGraphicsBufferData)(ElemGraphicsResource, unsigned int, ElemDataSpan);
+    ElemDataSpan (*ElemDownloadGraphicsBufferData)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *);
+    void (*ElemCopyDataToGraphicsResource)(ElemCommandList, ElemCopyDataToGraphicsResourceParameters const *);
     ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *);
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
-    void (*ElemProcessGraphicsResourceDeleteQueue)(void);
+    void (*ElemProcessGraphicsResourceDeleteQueue)(ElemGraphicsDevice);
+    ElemGraphicsSampler (*ElemCreateGraphicsSampler)(ElemGraphicsDevice, ElemGraphicsSamplerInfo const *);
+    ElemGraphicsSamplerInfo (*ElemGetGraphicsSamplerInfo)(ElemGraphicsSampler);
+    void (*ElemFreeGraphicsSampler)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
@@ -79,6 +84,8 @@ typedef struct ElementalFunctions
     void (*ElemEndRenderPass)(ElemCommandList);
     void (*ElemSetViewport)(ElemCommandList, ElemViewport const *);
     void (*ElemSetViewports)(ElemCommandList, ElemViewportSpan);
+    void (*ElemSetScissorRectangle)(ElemCommandList, ElemRectangle const *);
+    void (*ElemSetScissorRectangles)(ElemCommandList, ElemRectangleSpan);
     void (*ElemDispatchMesh)(ElemCommandList, unsigned int, unsigned int, unsigned int);
     ElemInputDeviceInfo (*ElemGetInputDeviceInfo)(ElemInputDevice);
     ElemInputStream (*ElemGetInputStream)(void);
@@ -165,18 +172,23 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
     listElementalFunctions.ElemSetSwapChainTiming = (void (*)(ElemSwapChain, unsigned int, unsigned int))GetElementalFunctionPointer("ElemSetSwapChainTiming");
     listElementalFunctions.ElemPresentSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemPresentSwapChain");
-    listElementalFunctions.ElemCreateGraphicsHeap = (ElemGraphicsHeap (*)(ElemGraphicsDevice, unsigned long long, ElemGraphicsHeapOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsHeap");
+    listElementalFunctions.ElemCreateGraphicsHeap = (ElemGraphicsHeap (*)(ElemGraphicsDevice, uint64_t, ElemGraphicsHeapOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsHeap");
     listElementalFunctions.ElemFreeGraphicsHeap = (void (*)(ElemGraphicsHeap))GetElementalFunctionPointer("ElemFreeGraphicsHeap");
     listElementalFunctions.ElemCreateGraphicsBufferResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsDevice, unsigned int, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsBufferResourceInfo");
     listElementalFunctions.ElemCreateTexture2DResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsDevice, unsigned int, unsigned int, unsigned int, ElemGraphicsFormat, ElemGraphicsResourceUsage, ElemGraphicsResourceInfoOptions const *))GetElementalFunctionPointer("ElemCreateTexture2DResourceInfo");
-    listElementalFunctions.ElemCreateGraphicsResource = (ElemGraphicsResource (*)(ElemGraphicsHeap, unsigned long long, ElemGraphicsResourceInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResource");
+    listElementalFunctions.ElemCreateGraphicsResource = (ElemGraphicsResource (*)(ElemGraphicsHeap, uint64_t, ElemGraphicsResourceInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResource");
     listElementalFunctions.ElemFreeGraphicsResource = (void (*)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResource");
     listElementalFunctions.ElemGetGraphicsResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceInfo");
-    listElementalFunctions.ElemGetGraphicsResourceDataSpan = (ElemDataSpan (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceDataSpan");
+    listElementalFunctions.ElemUploadGraphicsBufferData = (void (*)(ElemGraphicsResource, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemUploadGraphicsBufferData");
+    listElementalFunctions.ElemDownloadGraphicsBufferData = (ElemDataSpan (*)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *))GetElementalFunctionPointer("ElemDownloadGraphicsBufferData");
+    listElementalFunctions.ElemCopyDataToGraphicsResource = (void (*)(ElemCommandList, ElemCopyDataToGraphicsResourceParameters const *))GetElementalFunctionPointer("ElemCopyDataToGraphicsResource");
     listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
-    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(void))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
+    listElementalFunctions.ElemCreateGraphicsSampler = (ElemGraphicsSampler (*)(ElemGraphicsDevice, ElemGraphicsSamplerInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsSampler");
+    listElementalFunctions.ElemGetGraphicsSamplerInfo = (ElemGraphicsSamplerInfo (*)(ElemGraphicsSampler))GetElementalFunctionPointer("ElemGetGraphicsSamplerInfo");
+    listElementalFunctions.ElemFreeGraphicsSampler = (void (*)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsSampler");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
@@ -190,6 +202,8 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemEndRenderPass = (void (*)(ElemCommandList))GetElementalFunctionPointer("ElemEndRenderPass");
     listElementalFunctions.ElemSetViewport = (void (*)(ElemCommandList, ElemViewport const *))GetElementalFunctionPointer("ElemSetViewport");
     listElementalFunctions.ElemSetViewports = (void (*)(ElemCommandList, ElemViewportSpan))GetElementalFunctionPointer("ElemSetViewports");
+    listElementalFunctions.ElemSetScissorRectangle = (void (*)(ElemCommandList, ElemRectangle const *))GetElementalFunctionPointer("ElemSetScissorRectangle");
+    listElementalFunctions.ElemSetScissorRectangles = (void (*)(ElemCommandList, ElemRectangleSpan))GetElementalFunctionPointer("ElemSetScissorRectangles");
     listElementalFunctions.ElemDispatchMesh = (void (*)(ElemCommandList, unsigned int, unsigned int, unsigned int))GetElementalFunctionPointer("ElemDispatchMesh");
     listElementalFunctions.ElemGetInputDeviceInfo = (ElemInputDeviceInfo (*)(ElemInputDevice))GetElementalFunctionPointer("ElemGetInputDeviceInfo");
     listElementalFunctions.ElemGetInputStream = (ElemInputStream (*)(void))GetElementalFunctionPointer("ElemGetInputStream");
@@ -1023,7 +1037,7 @@ static inline void ElemPresentSwapChain(ElemSwapChain swapChain)
     listElementalFunctions.ElemPresentSwapChain(swapChain);
 }
 
-static inline ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, unsigned long long sizeInBytes, ElemGraphicsHeapOptions const * options)
+static inline ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, ElemGraphicsHeapOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1133,7 +1147,7 @@ static inline ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraph
     return listElementalFunctions.ElemCreateTexture2DResourceInfo(graphicsDevice, width, height, mipLevels, format, usage, options);
 }
 
-static inline ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, unsigned long long graphicsHeapOffset, ElemGraphicsResourceInfo const * resourceInfo)
+static inline ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, ElemGraphicsResourceInfo const * resourceInfo)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1212,7 +1226,24 @@ static inline ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsR
     return listElementalFunctions.ElemGetGraphicsResourceInfo(resource);
 }
 
-static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource resource)
+static inline void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, unsigned int offset, ElemDataSpan data)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemUploadGraphicsBufferData) 
+    {
+        assert(listElementalFunctions.ElemUploadGraphicsBufferData);
+        return;
+    }
+
+    listElementalFunctions.ElemUploadGraphicsBufferData(resource, offset, data);
+}
+
+static inline ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, ElemDownloadGraphicsBufferDataOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1227,9 +1258,9 @@ static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource 
         return result;
     }
 
-    if (!listElementalFunctions.ElemGetGraphicsResourceDataSpan) 
+    if (!listElementalFunctions.ElemDownloadGraphicsBufferData) 
     {
-        assert(listElementalFunctions.ElemGetGraphicsResourceDataSpan);
+        assert(listElementalFunctions.ElemDownloadGraphicsBufferData);
 
         #ifdef __cplusplus
         ElemDataSpan result = {};
@@ -1240,7 +1271,24 @@ static inline ElemDataSpan ElemGetGraphicsResourceDataSpan(ElemGraphicsResource 
         return result;
     }
 
-    return listElementalFunctions.ElemGetGraphicsResourceDataSpan(resource);
+    return listElementalFunctions.ElemDownloadGraphicsBufferData(resource, options);
+}
+
+static inline void ElemCopyDataToGraphicsResource(ElemCommandList commandList, ElemCopyDataToGraphicsResourceParameters const * parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemCopyDataToGraphicsResource) 
+    {
+        assert(listElementalFunctions.ElemCopyDataToGraphicsResource);
+        return;
+    }
+
+    listElementalFunctions.ElemCopyDataToGraphicsResource(commandList, parameters);
 }
 
 static inline ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, ElemGraphicsResourceDescriptorOptions const * options)
@@ -1322,7 +1370,7 @@ static inline void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescri
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor(descriptor, options);
 }
 
-static inline void ElemProcessGraphicsResourceDeleteQueue(void)
+static inline void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1336,7 +1384,86 @@ static inline void ElemProcessGraphicsResourceDeleteQueue(void)
         return;
     }
 
-    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue();
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
+}
+
+static inline ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, ElemGraphicsSamplerInfo const * samplerInfo)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsSampler result = {};
+        #else
+        ElemGraphicsSampler result = (ElemGraphicsSampler){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateGraphicsSampler) 
+    {
+        assert(listElementalFunctions.ElemCreateGraphicsSampler);
+
+        #ifdef __cplusplus
+        ElemGraphicsSampler result = {};
+        #else
+        ElemGraphicsSampler result = (ElemGraphicsSampler){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateGraphicsSampler(graphicsDevice, samplerInfo);
+}
+
+static inline ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsSamplerInfo result = {};
+        #else
+        ElemGraphicsSamplerInfo result = (ElemGraphicsSamplerInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetGraphicsSamplerInfo) 
+    {
+        assert(listElementalFunctions.ElemGetGraphicsSamplerInfo);
+
+        #ifdef __cplusplus
+        ElemGraphicsSamplerInfo result = {};
+        #else
+        ElemGraphicsSamplerInfo result = (ElemGraphicsSamplerInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetGraphicsSamplerInfo(sampler);
+}
+
+static inline void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, ElemFreeGraphicsSamplerOptions const * options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemFreeGraphicsSampler) 
+    {
+        assert(listElementalFunctions.ElemFreeGraphicsSampler);
+        return;
+    }
+
+    listElementalFunctions.ElemFreeGraphicsSampler(sampler, options);
 }
 
 static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)
@@ -1600,6 +1727,40 @@ static inline void ElemSetViewports(ElemCommandList commandList, ElemViewportSpa
     }
 
     listElementalFunctions.ElemSetViewports(commandList, viewports);
+}
+
+static inline void ElemSetScissorRectangle(ElemCommandList commandList, ElemRectangle const * rectangle)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemSetScissorRectangle) 
+    {
+        assert(listElementalFunctions.ElemSetScissorRectangle);
+        return;
+    }
+
+    listElementalFunctions.ElemSetScissorRectangle(commandList, rectangle);
+}
+
+static inline void ElemSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemSetScissorRectangles) 
+    {
+        assert(listElementalFunctions.ElemSetScissorRectangles);
+        return;
+    }
+
+    listElementalFunctions.ElemSetScissorRectangles(commandList, rectangles);
 }
 
 static inline void ElemDispatchMesh(ElemCommandList commandList, unsigned int threadGroupCountX, unsigned int threadGroupCountY, unsigned int threadGroupCountZ)

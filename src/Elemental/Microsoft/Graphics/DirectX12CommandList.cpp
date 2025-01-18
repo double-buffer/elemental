@@ -1,11 +1,9 @@
 #include "DirectX12CommandList.h"
+#include "DirectX12Config.h"
 #include "DirectX12GraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define DIRECTX12_MAX_COMMANDQUEUES 10u
-#define DIRECTX12_MAX_COMMANDLISTS 64u
 
 SystemDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull> directX12CommandQueuePool;
 SystemDataPool<DirectX12CommandListData, DirectX12CommandListDataFull> directX12CommandListPool;
@@ -98,6 +96,7 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
         commandQueue->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
     }
 
+    // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     auto commandAllocators = SystemPushArray<ComPtr<ID3D12CommandAllocator>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
     auto commandLists = SystemPushArray<ComPtr<ID3D12GraphicsCommandList10>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS * DIRECTX12_MAX_COMMANDLISTS);
 
@@ -229,10 +228,11 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
 
     AssertIfFailedReturnNullHandle(commandListPoolItem->CommandList->Reset(commandAllocatorPoolItem->CommandAllocator, nullptr));
             
-    auto descriptorHeaps = SystemPushArray<ID3D12DescriptorHeap*>(stackMemoryArena, 1);
+    auto descriptorHeaps = SystemPushArray<ID3D12DescriptorHeap*>(stackMemoryArena, 2);
     descriptorHeaps[0] = graphicsDeviceData->ResourceDescriptorHeap.Storage->DescriptorHeap.Get();
+    descriptorHeaps[1] = graphicsDeviceData->SamplerDescriptorHeap.Storage->DescriptorHeap.Get();
 
-    commandListPoolItem->CommandList->SetDescriptorHeaps(1, descriptorHeaps.Pointer);
+    commandListPoolItem->CommandList->SetDescriptorHeaps(2, descriptorHeaps.Pointer);
 
     // TODO: Can we set the root signature for all types all the time?
     commandListPoolItem->CommandList->SetGraphicsRootSignature(graphicsDeviceData->RootSignature.Get());
@@ -245,7 +245,8 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
         .CommandListPoolItem = commandListPoolItem,
         .GraphicsDevice = commandQueueData->GraphicsDevice,
-        .ResourceBarrierPool = resourceBarrierPool
+        .ResourceBarrierPool = resourceBarrierPool,
+        .UploadBufferCount = 0
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
@@ -261,6 +262,8 @@ void DirectX12CommitCommandList(ElemCommandList commandList)
     auto commandListData = GetDirectX12CommandListData(commandList);
     AssertIfFailed(commandListData->DeviceObject->Close());
     
+    FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
+
     commandListData->IsCommitted = true;
     threadDirectX12CommandBufferCommitted = true;
 }
@@ -326,8 +329,13 @@ ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemComman
         }
 
         UpdateCommandAllocatorPoolItemFence(commandListData->CommandAllocatorPoolItem, fence);
+        
+        for (uint32_t j = 0; j < commandListData->UploadBufferCount; j++)
+        {
+            UpdateUploadBufferPoolItemFence(commandListData->UploadBufferPoolItems[j], fence);
+        }
+
         ReleaseCommandListPoolItem(commandListData->CommandListPoolItem);
-        FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
 
         SystemRemoveDataPoolItem(directX12CommandListPool, commandLists.Items[i]);
     }
@@ -353,7 +361,8 @@ void DirectX12WaitForFenceOnCpu(ElemFence fence)
 
     if (fence.FenceValue > commandQueueToWaitDataFull->LastCompletedFenceValue)
     {
-        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
+        // TODO: Activate that message with a debug flag
+        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for Fence on CPU...");
         commandQueueToWaitDataFull->Fence->SetEventOnCompletion(fence.FenceValue, directX12GlobalFenceEvent);
 
         // TODO: It is a little bit extreme to block at infinity. We should set a timeout and break the program.

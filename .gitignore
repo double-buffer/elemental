@@ -7,6 +7,16 @@
 *.userosscache
 *.sln.docstates
 *.resolved
+*.obj
+*.mesh
+*.ini
+*.gltf
+*.bin
+*.tga
+*.png
+*.jpg
+*.dds
+*.mtl
 
 xcuserdata/
 packages/
@@ -32,3 +42,4 @@ bld/
 external/shader-compilers/
 .DS_Store
 artifacts/
+*.db

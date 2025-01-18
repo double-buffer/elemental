@@ -3,8 +3,47 @@
 #include "VulkanCommandList.h"
 #include "VulkanResource.h"
 #include "VulkanResourceBarrier.h"
-#include "SystemLogging.h"
 #include "SystemFunctions.h"
+
+VkAttachmentLoadOp ConvertToVulkanRenderPassAttachmentLoadOp(ElemRenderPassLoadAction loadAction)
+{
+    VkAttachmentLoadOp loadOperation;
+
+    switch (loadAction)
+    {
+        case ElemRenderPassLoadAction_Load:
+            loadOperation = VK_ATTACHMENT_LOAD_OP_LOAD;
+            break;
+
+        case ElemRenderPassLoadAction_Clear:
+            loadOperation = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            break;
+
+        default:
+            loadOperation = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            break;
+    }
+
+    return loadOperation;
+}
+
+VkAttachmentStoreOp ConvertToVulkanRenderPassAttachmentStoreOp(ElemRenderPassStoreAction storeAction)
+{
+    VkAttachmentStoreOp storeOperation;
+
+    switch (storeAction)
+    {
+        case ElemRenderPassStoreAction_Store:
+            storeOperation = VK_ATTACHMENT_STORE_OP_STORE;
+            break;
+
+        default:
+            storeOperation = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            break;
+    }
+
+    return storeOperation;
+}
 
 void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPassParameters* parameters)
 {
@@ -21,8 +60,10 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
     auto commandListDataFull = GetVulkanCommandListDataFull(commandList);
     SystemAssert(commandListDataFull);
     commandListDataFull->CurrentRenderPassParameters = *parameters;
+    
+    auto depthStencilCount = (parameters->DepthStencil.DepthStencil != ELEM_HANDLE_NULL) ? 1 : 0;
 
-    auto renderingAttachments = SystemPushArray<VkRenderingAttachmentInfo>(stackMemoryArena, parameters->RenderTargets.Length);
+    auto renderingAttachments = SystemPushArray<VkRenderingAttachmentInfo>(stackMemoryArena, parameters->RenderTargets.Length + depthStencilCount);
     auto renderingWidth = 0u;
     auto renderingHeight = 0u;
 
@@ -34,23 +75,8 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         auto textureData = GetVulkanGraphicsResourceData(renderTargetParameters.RenderTarget); 
         SystemAssert(textureData);
         
-        VkAttachmentLoadOp loadOperation;
+        auto loadOperation = ConvertToVulkanRenderPassAttachmentLoadOp(renderTargetParameters.LoadAction);
 
-        switch (renderTargetParameters.LoadAction)
-        {
-            case ElemRenderPassLoadAction_Load:
-                loadOperation = VK_ATTACHMENT_LOAD_OP_LOAD;
-                break;
-
-            case ElemRenderPassLoadAction_Clear:
-                loadOperation = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                break;
-
-            default:
-                loadOperation = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-                break;
-        }
-        
         VkClearValue clearValue
         {
             .color = 
@@ -62,18 +88,7 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
             }}
         };
 
-        VkAttachmentStoreOp storeOperation;
-
-        switch (renderTargetParameters.StoreAction)
-        {
-            case ElemRenderPassStoreAction_Store:
-                storeOperation = VK_ATTACHMENT_STORE_OP_STORE;
-                break;
-
-            default:
-                storeOperation = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                break;
-        }
+        auto storeOperation = ConvertToVulkanRenderPassAttachmentStoreOp(renderTargetParameters.StoreAction);
 
         renderingAttachments[i] =
         {
@@ -114,7 +129,67 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
 
                 ElemSetViewport(commandList, &viewport); 
             }
+        
+            if (i == 0 && parameters->ScissorRectangles.Length == 0)
+            {
+                ElemRectangle rectangle =
+                {
+                    .X = 0, 
+                    .Y = 0, 
+                    .Width = (float)textureData->Width, 
+                    .Height = (float)textureData->Height 
+                };
+
+                ElemSetScissorRectangle(commandList, &rectangle); 
+            }
         }
+    }
+    
+    if (parameters->DepthStencil.DepthStencil != ELEM_HANDLE_NULL)
+    {
+        auto depthStencilParameters = parameters->DepthStencil;
+
+        auto textureData = GetVulkanGraphicsResourceData(depthStencilParameters.DepthStencil);
+        SystemAssert(textureData);
+
+        if (renderingWidth == 0 || renderingHeight == 0)
+        {
+            renderingWidth = textureData->Width;
+            renderingHeight = textureData->Height;
+        }
+
+        // TODO: Validate usage
+        auto loadOperation = ConvertToVulkanRenderPassAttachmentLoadOp(depthStencilParameters.DepthLoadAction);
+        auto storeOperation = ConvertToVulkanRenderPassAttachmentStoreOp(depthStencilParameters.DepthStoreAction);
+
+        VkClearValue clearValue
+        {
+            .depthStencil = 
+            {
+                .depth = depthStencilParameters.DepthClearValue
+            }
+        };
+
+        renderingAttachments[parameters->RenderTargets.Length] =
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = textureData->DepthStencilImageView,
+            .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .loadOp = loadOperation,
+            .storeOp = storeOperation,
+            .clearValue = clearValue
+        };
+
+        ResourceBarrierItem resourceBarrier =
+        {
+            .Type = ElemGraphicsResourceType_Texture2D,
+            .IsDepthStencil = true,
+            .Resource = depthStencilParameters.DepthStencil,
+            .AfterAccess = ElemGraphicsResourceBarrierAccessType_DepthStencilWrite,
+            .AfterLayout = ElemGraphicsResourceBarrierLayoutType_DepthStencilWrite
+        };
+
+        EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
     }
 
     if (parameters->Viewports.Length > 0)
@@ -122,16 +197,24 @@ void VulkanBeginRenderPass(ElemCommandList commandList, const ElemBeginRenderPas
         ElemSetViewports(commandList, parameters->Viewports);
     }
     
-    // TODO: Take into account the depth buffer because it is possible to render only
-    // to the depth buffer without any color render targets
+    if (parameters->ScissorRectangles.Length > 0)
+    {
+        ElemSetScissorRectangles(commandList, parameters->ScissorRectangles);
+    }
+    
     SystemAssert(renderingWidth != 0 && renderingHeight != 0);
 
     VkRenderingInfo renderingInfo = { VK_STRUCTURE_TYPE_RENDERING_INFO };
     renderingInfo.renderArea.extent.width = renderingWidth;
     renderingInfo.renderArea.extent.height = renderingHeight;
     renderingInfo.layerCount = 1;
-    renderingInfo.colorAttachmentCount = renderingAttachments.Length;
+    renderingInfo.colorAttachmentCount = parameters->RenderTargets.Length;
     renderingInfo.pColorAttachments = renderingAttachments.Pointer;
+    
+    if (depthStencilCount > 0)
+    {
+        renderingInfo.pDepthAttachment = &renderingAttachments.Pointer[parameters->RenderTargets.Length];
+    }
 
     InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_RenderTarget);
     vkCmdBeginRendering(commandListData->DeviceObject, &renderingInfo);
@@ -180,6 +263,23 @@ void VulkanEndRenderPass(ElemCommandList commandList)
             commandQueueData->SignalPresentSemaphore = true;
         }
     }
+
+    // HACK: Review this, it is needed to avoid a validation error but I don't see why
+    // we need to transition the depth buffer to read here.
+    if (parameters->DepthStencil.DepthStencil != ELEM_HANDLE_NULL)
+    {
+        ResourceBarrierItem resourceBarrier =
+        {
+            .Type = ElemGraphicsResourceType_Texture2D,
+            .IsDepthStencil = true,
+            .Resource = parameters->DepthStencil.DepthStencil,
+            .AfterSync = ElemGraphicsResourceBarrierSyncType_RenderTarget,
+            .AfterAccess = ElemGraphicsResourceBarrierAccessType_NoAccess,
+            .AfterLayout = ElemGraphicsResourceBarrierLayoutType_Read
+        };
+
+        EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
+    }
     
     InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_None);
 }
@@ -192,7 +292,6 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto vulkanViewports = SystemPushArray<VkViewport>(stackMemoryArena, viewports.Length);
-    auto vulkanScissorRects = SystemPushArray<VkRect2D>(stackMemoryArena, viewports.Length);
 
     for (uint32_t i = 0; i < viewports.Length; i++)
     {
@@ -205,18 +304,36 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
             .minDepth = viewports.Items[i].MinDepth,
             .maxDepth = viewports.Items[i].MaxDepth
         };
+    }
 
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    vkCmdSetViewport(commandListData->DeviceObject, 0, vulkanViewports.Length, vulkanViewports.Pointer);
+}
+
+void VulkanSetScissorRectangles(ElemCommandList commandList, ElemRectangleSpan rectangles)
+{
+    // TODO: Check command list type != COMPUTE
+
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto vulkanScissorRects = SystemPushArray<VkRect2D>(stackMemoryArena, rectangles.Length);
+
+    for (uint32_t i = 0; i < rectangles.Length; i++)
+    {
         vulkanScissorRects[i] = 
         {
             .offset = 
             {
-                .x = (int32_t)viewports.Items[i].X,
-                .y = (int32_t)viewports.Items[i].Y,
+                .x = (int32_t)rectangles.Items[i].X,
+                .y = (int32_t)rectangles.Items[i].Y,
             },
             .extent = 
             {
-                .width = (uint32_t)viewports.Items[i].Width,
-                .height = (uint32_t)viewports.Items[i].Height
+                .width = (uint32_t)rectangles.Items[i].Width,
+                .height = (uint32_t)rectangles.Items[i].Height
             }
         };
     }
@@ -224,7 +341,6 @@ void VulkanSetViewports(ElemCommandList commandList, ElemViewportSpan viewports)
     auto commandListData = GetVulkanCommandListData(commandList);
     SystemAssert(commandListData);
 
-    vkCmdSetViewport(commandListData->DeviceObject, 0, vulkanViewports.Length, vulkanViewports.Pointer);
     vkCmdSetScissor(commandListData->DeviceObject, 0, vulkanScissorRects.Length, vulkanScissorRects.Pointer);
 }
 

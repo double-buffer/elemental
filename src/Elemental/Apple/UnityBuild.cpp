@@ -21,6 +21,7 @@
 #include "Graphics/ShaderReader.cpp"
 #include "Graphics/ResourceDeleteQueue.cpp"
 #include "Graphics/ResourceBarrier.cpp"
+#include "Graphics/UploadBufferPool.cpp"
 #include "Graphics/GraphicsDevice.cpp"
 #include "Graphics/CommandList.cpp"
 #include "Graphics/SwapChain.cpp"

@@ -48,7 +48,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);
@@ -122,7 +122,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferWriteAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeAddBufferDataPipelineState);
@@ -201,7 +201,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_DifferentBuffers)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);
@@ -235,7 +235,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWrite)
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
-    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT);
+    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_Write));
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, width * height * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
 
     auto writeTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteTextureData");
@@ -269,7 +269,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readTextureDataPipelineState);
     ElemFreePipelineState(writeTextureDataPipelineState);
@@ -309,12 +309,19 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureRenderTargetAfterWrite)
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
-    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT);
+    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_Write));
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, width * height * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
 
     auto writeTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteTextureData");
     auto readTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestReadTextureData");
-    auto meshShaderPipelineState = TestOpenMeshShader(graphicsDevice, "ResourceBarrierTests.shader", "TestMeshShader", "TestPixelShader", gpuTexture.Format);
+    
+    ElemGraphicsPipelineStateRenderTarget psoRenderTarget { .Format = gpuTexture.Format };
+    ElemGraphicsPipelineStateParameters psoParameters =
+    {
+        .RenderTargets = { .Items = &psoRenderTarget, .Length = 1 }
+    };
+
+    auto meshShaderPipelineState = TestOpenMeshShader(graphicsDevice, "ResourceBarrierTests.shader", "TestMeshShader", "TestPixelShader", &psoParameters);
 
     // Act
     auto commandList = ElemGetCommandList(commandQueue, nullptr);
@@ -329,7 +336,23 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureRenderTargetAfterWrite)
                         ElemGraphicsResourceBarrierLayoutType_Undefined, ElemGraphicsResourceBarrierLayoutType_Write)
     ));
 
-    TestBeginClearRenderPass(commandList, gpuTexture.Texture, { .Red = 0.0f, .Green = 0.0f, .Blue = 1.0f, .Alpha = 1.0f });
+    ElemRenderPassRenderTarget renderPassRenderTarget = 
+    {
+        .RenderTarget = gpuTexture.Texture,
+        .ClearColor = { .Red = 0.0f, .Green = 0.0f, .Blue = 1.0f, .Alpha = 1.0f },
+        .LoadAction = ElemRenderPassLoadAction_Clear
+    };
+
+    ElemBeginRenderPassParameters parameters =
+    {
+        .RenderTargets =
+        { 
+            .Items = &renderPassRenderTarget,
+            .Length = 1
+        }
+    };
+
+    ElemBeginRenderPass(commandList, &parameters);
     ElemBindPipelineState(commandList, meshShaderPipelineState);
     ElemDispatchMesh(commandList, 1, 1, 1);
     ElemEndRenderPass(commandList);
@@ -356,7 +379,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureRenderTargetAfterWrite)
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readTextureDataPipelineState);
     ElemFreePipelineState(writeTextureDataPipelineState);
@@ -386,6 +409,8 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureRenderTargetAfterWrite)
         }
     }
 }
+
+// TODO: DepthBuffer
 
 UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteWithCustomBeforeSyncAndAccess) 
 {
@@ -518,7 +543,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWriteWithCustomBe
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
-    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT);
+    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_Write));
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, width * height * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
 
     auto writeTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteTextureData");
@@ -590,7 +615,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_TextureReadAfterWriteWithCustomAf
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
 
-    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT);
+    auto gpuTexture = TestCreateGpuTexture(graphicsDevice, width, height, ElemGraphicsFormat_R16G16B16A16_FLOAT, (ElemGraphicsResourceUsage)(ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceUsage_Write));
     auto readbackBuffer = TestCreateGpuBuffer(graphicsDevice, width * height * 4 * sizeof(float), ElemGraphicsHeapType_Readback);
 
     auto writeTextureDataPipelineState = TestOpenComputeShader(graphicsDevice, "ResourceBarrierTests.shader", "TestWriteTextureData");
@@ -696,7 +721,7 @@ UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWriteMultiCommandL
 
     // Assert
     ElemWaitForFenceOnCpu(fence);
-    auto bufferData = ElemGetGraphicsResourceDataSpan(readbackBuffer.Buffer);
+    auto bufferData = ElemDownloadGraphicsBufferData(readbackBuffer.Buffer, nullptr);
 
     ElemFreePipelineState(readBufferDataPipelineState);
     ElemFreePipelineState(writeBufferDataPipelineState);

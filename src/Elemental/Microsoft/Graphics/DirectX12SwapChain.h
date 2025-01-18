@@ -1,8 +1,7 @@
 #pragma once
 
+#include "DirectX12Config.h"
 #include "Elemental.h"
-
-#define DIRECTX12_MAX_SWAPCHAIN_BUFFERS 3
 
 // TODO: Review structure
 struct DirectX12SwapChainData
@@ -19,6 +18,7 @@ struct DirectX12SwapChainData
     uint32_t Width;
     uint32_t Height;
     float AspectRatio;
+    float UIScale;
     ElemGraphicsFormat Format;
     bool PresentCalled;
     uint32_t FrameLatency;

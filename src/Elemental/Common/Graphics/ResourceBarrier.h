@@ -10,6 +10,7 @@ typedef ElemHandle ResourceBarrierPool;
 struct ResourceBarrierItem
 {
     ElemGraphicsResourceType Type;
+    bool IsDepthStencil;
     ElemGraphicsResource Resource;
     ElemGraphicsResourceBarrierSyncType BeforeSync; 
     ElemGraphicsResourceBarrierSyncType AfterSync; 
@@ -17,6 +18,7 @@ struct ResourceBarrierItem
     ElemGraphicsResourceBarrierAccessType AfterAccess;
     ElemGraphicsResourceBarrierLayoutType BeforeLayout;
     ElemGraphicsResourceBarrierLayoutType AfterLayout;
+    // TODO: Add offset and size for buffer
 };
 
 struct ResourceBarriers
