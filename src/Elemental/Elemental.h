@@ -1,10 +1,10 @@
 //--------------------------------------------------------------------------------
 // Elemental Library
-// Version: 1.0.0-dev5
+// Version: 1.0.0-dev6
 //
 // MIT License
 //
-// Copyright (c) 2023-2024 Double Buffer SRL
+// Copyright (c) 2023-2025 Double Buffer SRL
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@
 #define UseLoader
 #endif
 
-#define ELEM_VERSION_LABEL "1.0.0-dev5"
+#define ELEM_VERSION_LABEL "1.0.0-dev6"
 
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u

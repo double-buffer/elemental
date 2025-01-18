@@ -1,10 +1,10 @@
 //--------------------------------------------------------------------------------
 // Elemental Tools Library
-// Version: 1.0.0-dev5
+// Version: 1.0.0-dev6
 //
 // MIT License
 //
-// Copyright (c) 2023-2024 Double Buffer SRL
+// Copyright (c) 2023-2025 Double Buffer SRL
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal

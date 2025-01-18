@@ -20,6 +20,7 @@ typedef struct
 {
     ElemGraphicsResource Texture;
     ElemGraphicsResourceDescriptor ReadDescriptor;
+    ElemGraphicsResourceDescriptor WriteDescriptor;
 } SampleGpuTexture;
 
 SampleGpuMemory SampleCreateGpuMemory(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes)
@@ -95,7 +96,27 @@ SampleGpuTexture SampleCreateGpuTexture(SampleGpuMemory* gpuMemory, uint32_t wid
     return (SampleGpuTexture)
     {
         .Texture = texture,
-        .ReadDescriptor = readDescriptor
+        .ReadDescriptor = readDescriptor,
+        .WriteDescriptor = -1
+    };
+}
+
+SampleGpuTexture SampleCreateGpuRenderTarget(SampleGpuMemory* gpuMemory, uint32_t width, uint32_t height, ElemGraphicsFormat format, const char* debugName)
+{
+    ElemGraphicsResourceInfo textureDescription = ElemCreateTexture2DResourceInfo(gpuMemory->GraphicsDevice, width, height, 1, format, ElemGraphicsResourceUsage_Write, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
+
+    gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, textureDescription.Alignment);
+    ElemGraphicsResource texture = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &textureDescription);
+    gpuMemory->CurrentHeapOffset += textureDescription.SizeInBytes;
+
+    ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    ElemGraphicsResourceDescriptor writeDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Write, NULL);
+
+    return (SampleGpuTexture)
+    {
+        .Texture = texture,
+        .ReadDescriptor = readDescriptor,
+        .WriteDescriptor = writeDescriptor
     };
 }
 
@@ -105,6 +126,12 @@ void SampleFreeGpuTexture(SampleGpuTexture* gpuTexture)
 
     ElemFreeGraphicsResourceDescriptor(gpuTexture->ReadDescriptor, NULL);
     gpuTexture->ReadDescriptor = ELEM_HANDLE_NULL;
+
+    if (gpuTexture->WriteDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(gpuTexture->WriteDescriptor, NULL);
+        gpuTexture->WriteDescriptor = ELEM_HANDLE_NULL;
+    }
 
     ElemFreeGraphicsResource(gpuTexture->Texture, NULL);
     gpuTexture->Texture = ELEM_HANDLE_NULL;
