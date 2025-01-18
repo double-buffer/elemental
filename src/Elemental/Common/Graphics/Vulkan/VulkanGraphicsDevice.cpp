@@ -66,10 +66,10 @@ void InitVulkan()
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     AssertIfFailed(volkInitialize());
-    SystemAssert(volkGetInstanceVersion() >= VK_API_VERSION_1_3);
+    SystemAssert(volkGetInstanceVersion() >= VK_API_VERSION_1_4);
 
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    appInfo.apiVersion = VK_API_VERSION_1_3;
+    appInfo.apiVersion = VK_API_VERSION_1_4;
 
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     createInfo.pApplicationInfo = &appInfo;
@@ -358,7 +358,7 @@ bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
 
     vkGetPhysicalDeviceFeatures2(device, &features2);
     
-    if (meshShaderFeatures.meshShader && meshShaderFeatures.taskShader && presentIdFeatures.presentId)
+    if (meshShaderFeatures.meshShader && presentIdFeatures.presentId)
     {
         return true;
     }
@@ -671,8 +671,8 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features13.dynamicRendering = true;
     features13.shaderDemoteToHelperInvocation = true;
 
-    VkPhysicalDeviceMaintenance5Features maintenance5 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES };
-    maintenance5.maintenance5 = true;
+    VkPhysicalDeviceVulkan14Features features14 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES };
+    features14.maintenance5 = true;
 
     VkPhysicalDeviceMeshShaderFeaturesEXT meshFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
     meshFeatures.meshShader = true;
@@ -690,11 +690,11 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     createInfo.pNext = &features;
     features.pNext = &features12;
     features12.pNext = &features13;
-    features13.pNext = &presentIdFeatures;
+    features13.pNext = &features14;
+    features14.pNext = &presentIdFeatures;
     presentIdFeatures.pNext = &presentWaitFeatures;
     presentWaitFeatures.pNext = &meshFeatures;
-    meshFeatures.pNext = &maintenance5;
-    maintenance5.pNext = &mutableDescriptorFeatures;
+    meshFeatures.pNext = &mutableDescriptorFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
