@@ -31,6 +31,11 @@ ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDev
     DispatchReturnGraphicsFunction(CreateTexture2DResourceInfo, graphicsDevice, width, height, mipLevels, format, usage, options);
 }
 
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    DispatchReturnGraphicsFunction(GetRaytracingBlasAllocationInfo, graphicsDevice, parameters);
+}
+
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     DispatchReturnGraphicsFunction(CreateGraphicsResource, graphicsHeap, graphicsHeapOffset, resourceInfo);
@@ -46,14 +51,14 @@ ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResourc
     DispatchReturnGraphicsFunction(GetGraphicsResourceInfo, resource);
 }
 
-ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data)
 {
-    DispatchGraphicsFunction(UploadGraphicsBufferData, resource, offset, data);
+    DispatchGraphicsFunction(UploadGraphicsBufferData, buffer, offset, data);
 }
 
-ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options)
 {
-    DispatchReturnGraphicsFunction(DownloadGraphicsBufferData, resource, options);
+    DispatchReturnGraphicsFunction(DownloadGraphicsBufferData, buffer, options);
 }
 
 ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)

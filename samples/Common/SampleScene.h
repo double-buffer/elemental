@@ -43,6 +43,10 @@ typedef struct
     uint32_t MeshPrimitiveCount;
     uint32_t MeshBufferOffset;
     uint32_t MeshBufferSizeInBytes;
+    uint32_t VertexBufferOffset;
+    uint32_t VertexBufferSizeInBytes;
+    uint32_t IndexBufferOffset;
+    uint32_t IndexBufferSizeInBytes;
 } SampleMeshHeader;
 
 // TODO: Rename to mesh primitive?

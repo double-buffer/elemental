@@ -387,6 +387,7 @@ typedef struct
     uint8_t MeshletMaxVertexCount;
     uint8_t MeshletMaxTriangleCount;
     ElemVertexBuffer VertexBuffer;
+    ElemUInt32Span IndexBuffer;
     ElemMeshletSpan Meshlets;
     ElemUInt32Span MeshletVertexIndexBuffer;
     ElemUInt32Span MeshletTriangleIndexBuffer;

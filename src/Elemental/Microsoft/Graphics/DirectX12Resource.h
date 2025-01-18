@@ -55,7 +55,7 @@ DirectX12GraphicsResourceData* GetDirectX12GraphicsResourceData(ElemGraphicsReso
 DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGraphicsResource resource);
 
 ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
-DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format);
+DXGI_FORMAT ConvertToDirectX12Format(ElemGraphicsFormat format);
 bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format);
 
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
@@ -64,12 +64,14 @@ void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 ElemGraphicsResourceInfo DirectX12CreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 ElemGraphicsResourceInfo DirectX12CreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 
+ElemRaytracingAllocationInfo DirectX12GetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters);
+
 ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource resource);
 
-void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
-ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+void DirectX12UploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data);
+ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options);
 void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);

@@ -61,16 +61,19 @@ typedef struct ElementalFunctions
     ElemGraphicsResource (*ElemCreateGraphicsResource)(ElemGraphicsHeap, uint64_t, ElemGraphicsResourceInfo const *);
     void (*ElemFreeGraphicsResource)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *);
     ElemGraphicsResourceInfo (*ElemGetGraphicsResourceInfo)(ElemGraphicsResource);
+    void (*ElemProcessGraphicsResourceDeleteQueue)(ElemGraphicsDevice);
     void (*ElemUploadGraphicsBufferData)(ElemGraphicsResource, unsigned int, ElemDataSpan);
     ElemDataSpan (*ElemDownloadGraphicsBufferData)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *);
     void (*ElemCopyDataToGraphicsResource)(ElemCommandList, ElemCopyDataToGraphicsResourceParameters const *);
     ElemGraphicsResourceDescriptor (*ElemCreateGraphicsResourceDescriptor)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *);
     ElemGraphicsResourceDescriptorInfo (*ElemGetGraphicsResourceDescriptorInfo)(ElemGraphicsResourceDescriptor);
     void (*ElemFreeGraphicsResourceDescriptor)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *);
-    void (*ElemProcessGraphicsResourceDeleteQueue)(ElemGraphicsDevice);
     ElemGraphicsSampler (*ElemCreateGraphicsSampler)(ElemGraphicsDevice, ElemGraphicsSamplerInfo const *);
     ElemGraphicsSamplerInfo (*ElemGetGraphicsSamplerInfo)(ElemGraphicsSampler);
     void (*ElemFreeGraphicsSampler)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *);
+    ElemRaytracingAllocationInfo (*ElemGetRaytracingBlasAllocationInfo)(ElemGraphicsDevice, ElemRaytracingBlasParameters const *);
+    ElemGraphicsResource (*ElemCreateRaytracingAccelerationStructureResource)(ElemGraphicsDevice, ElemGraphicsResource, ElemRaytracingAccelerationStructureOptions const *);
+    void (*ElemBuildRaytracingBlas)(ElemCommandList, ElemGraphicsResource, ElemRaytracingBlasParameters const *);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
@@ -179,16 +182,19 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemCreateGraphicsResource = (ElemGraphicsResource (*)(ElemGraphicsHeap, uint64_t, ElemGraphicsResourceInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsResource");
     listElementalFunctions.ElemFreeGraphicsResource = (void (*)(ElemGraphicsResource, ElemFreeGraphicsResourceOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResource");
     listElementalFunctions.ElemGetGraphicsResourceInfo = (ElemGraphicsResourceInfo (*)(ElemGraphicsResource))GetElementalFunctionPointer("ElemGetGraphicsResourceInfo");
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
     listElementalFunctions.ElemUploadGraphicsBufferData = (void (*)(ElemGraphicsResource, unsigned int, ElemDataSpan))GetElementalFunctionPointer("ElemUploadGraphicsBufferData");
     listElementalFunctions.ElemDownloadGraphicsBufferData = (ElemDataSpan (*)(ElemGraphicsResource, ElemDownloadGraphicsBufferDataOptions const *))GetElementalFunctionPointer("ElemDownloadGraphicsBufferData");
     listElementalFunctions.ElemCopyDataToGraphicsResource = (void (*)(ElemCommandList, ElemCopyDataToGraphicsResourceParameters const *))GetElementalFunctionPointer("ElemCopyDataToGraphicsResource");
     listElementalFunctions.ElemCreateGraphicsResourceDescriptor = (ElemGraphicsResourceDescriptor (*)(ElemGraphicsResource, ElemGraphicsResourceDescriptorUsage, ElemGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemCreateGraphicsResourceDescriptor");
     listElementalFunctions.ElemGetGraphicsResourceDescriptorInfo = (ElemGraphicsResourceDescriptorInfo (*)(ElemGraphicsResourceDescriptor))GetElementalFunctionPointer("ElemGetGraphicsResourceDescriptorInfo");
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor = (void (*)(ElemGraphicsResourceDescriptor, ElemFreeGraphicsResourceDescriptorOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsResourceDescriptor");
-    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue = (void (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemProcessGraphicsResourceDeleteQueue");
     listElementalFunctions.ElemCreateGraphicsSampler = (ElemGraphicsSampler (*)(ElemGraphicsDevice, ElemGraphicsSamplerInfo const *))GetElementalFunctionPointer("ElemCreateGraphicsSampler");
     listElementalFunctions.ElemGetGraphicsSamplerInfo = (ElemGraphicsSamplerInfo (*)(ElemGraphicsSampler))GetElementalFunctionPointer("ElemGetGraphicsSamplerInfo");
     listElementalFunctions.ElemFreeGraphicsSampler = (void (*)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsSampler");
+    listElementalFunctions.ElemGetRaytracingBlasAllocationInfo = (ElemRaytracingAllocationInfo (*)(ElemGraphicsDevice, ElemRaytracingBlasParameters const *))GetElementalFunctionPointer("ElemGetRaytracingBlasAllocationInfo");
+    listElementalFunctions.ElemCreateRaytracingAccelerationStructureResource = (ElemGraphicsResource (*)(ElemGraphicsDevice, ElemGraphicsResource, ElemRaytracingAccelerationStructureOptions const *))GetElementalFunctionPointer("ElemCreateRaytracingAccelerationStructureResource");
+    listElementalFunctions.ElemBuildRaytracingBlas = (void (*)(ElemCommandList, ElemGraphicsResource, ElemRaytracingBlasParameters const *))GetElementalFunctionPointer("ElemBuildRaytracingBlas");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
@@ -1226,7 +1232,24 @@ static inline ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsR
     return listElementalFunctions.ElemGetGraphicsResourceInfo(resource);
 }
 
-static inline void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, unsigned int offset, ElemDataSpan data)
+static inline void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue) 
+    {
+        assert(listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue);
+        return;
+    }
+
+    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
+}
+
+static inline void ElemUploadGraphicsBufferData(ElemGraphicsResource buffer, unsigned int offset, ElemDataSpan data)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1240,10 +1263,10 @@ static inline void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, u
         return;
     }
 
-    listElementalFunctions.ElemUploadGraphicsBufferData(resource, offset, data);
+    listElementalFunctions.ElemUploadGraphicsBufferData(buffer, offset, data);
 }
 
-static inline ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, ElemDownloadGraphicsBufferDataOptions const * options)
+static inline ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource buffer, ElemDownloadGraphicsBufferDataOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1271,7 +1294,7 @@ static inline ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource r
         return result;
     }
 
-    return listElementalFunctions.ElemDownloadGraphicsBufferData(resource, options);
+    return listElementalFunctions.ElemDownloadGraphicsBufferData(buffer, options);
 }
 
 static inline void ElemCopyDataToGraphicsResource(ElemCommandList commandList, ElemCopyDataToGraphicsResourceParameters const * parameters)
@@ -1370,23 +1393,6 @@ static inline void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescri
     listElementalFunctions.ElemFreeGraphicsResourceDescriptor(descriptor, options);
 }
 
-static inline void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
-{
-    if (!LoadElementalFunctionPointers()) 
-    {
-        assert(libraryElemental);
-        return;
-    }
-
-    if (!listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue) 
-    {
-        assert(listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue);
-        return;
-    }
-
-    listElementalFunctions.ElemProcessGraphicsResourceDeleteQueue(graphicsDevice);
-}
-
 static inline ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, ElemGraphicsSamplerInfo const * samplerInfo)
 {
     if (!LoadElementalFunctionPointers()) 
@@ -1464,6 +1470,85 @@ static inline void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, ElemFree
     }
 
     listElementalFunctions.ElemFreeGraphicsSampler(sampler, options);
+}
+
+static inline ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, ElemRaytracingBlasParameters const * parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemRaytracingAllocationInfo result = {};
+        #else
+        ElemRaytracingAllocationInfo result = (ElemRaytracingAllocationInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetRaytracingBlasAllocationInfo) 
+    {
+        assert(listElementalFunctions.ElemGetRaytracingBlasAllocationInfo);
+
+        #ifdef __cplusplus
+        ElemRaytracingAllocationInfo result = {};
+        #else
+        ElemRaytracingAllocationInfo result = (ElemRaytracingAllocationInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetRaytracingBlasAllocationInfo(graphicsDevice, parameters);
+}
+
+static inline ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, ElemRaytracingAccelerationStructureOptions const * options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsResource result = {};
+        #else
+        ElemGraphicsResource result = (ElemGraphicsResource){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateRaytracingAccelerationStructureResource) 
+    {
+        assert(listElementalFunctions.ElemCreateRaytracingAccelerationStructureResource);
+
+        #ifdef __cplusplus
+        ElemGraphicsResource result = {};
+        #else
+        ElemGraphicsResource result = (ElemGraphicsResource){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateRaytracingAccelerationStructureResource(graphicsDevice, storageBuffer, options);
+}
+
+static inline void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemRaytracingBlasParameters const * parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemBuildRaytracingBlas) 
+    {
+        assert(listElementalFunctions.ElemBuildRaytracingBlas);
+        return;
+    }
+
+    listElementalFunctions.ElemBuildRaytracingBlas(commandList, accelerationStructure, parameters);
 }
 
 static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)

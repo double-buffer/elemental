@@ -322,6 +322,11 @@ ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice gra
     return resourceInfo;
 }
 
+ElemRaytracingAllocationInfo MetalGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    return {};
+}
+
 ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     SystemAssert(graphicsHeap != ELEM_HANDLE_NULL);
@@ -444,11 +449,11 @@ ElemGraphicsResourceInfo MetalGetGraphicsResourceInfo(ElemGraphicsResource resou
     };
 }
 
-void MetalUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
+void MetalUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data)
 {
-    SystemAssert(resource != ELEM_HANDLE_NULL);
+    SystemAssert(buffer != ELEM_HANDLE_NULL);
 
-    auto resourceData = GetMetalResourceData(resource);
+    auto resourceData = GetMetalResourceData(buffer);
     SystemAssert(resourceData);
 
     auto heapData = GetMetalGraphicsHeapData(resourceData->GraphicsHeap);
@@ -472,11 +477,11 @@ void MetalUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offse
     memcpy(destinationPointer, data.Items, data.Length);
 }
 
-ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options)
 {
-    SystemAssert(resource != ELEM_HANDLE_NULL);
+    SystemAssert(buffer != ELEM_HANDLE_NULL);
 
-    auto resourceData = GetMetalResourceData(resource);
+    auto resourceData = GetMetalResourceData(buffer);
     SystemAssert(resourceData);
 
     auto heapData = GetMetalGraphicsHeapData(resourceData->GraphicsHeap);

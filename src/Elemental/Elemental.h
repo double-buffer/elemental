@@ -290,6 +290,8 @@ ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window);
 // ##Module_Graphics##
 //--------------------------------------------------------------------------------
 
+// TODO: IMPORTANT!!!!! Review each offset parameters and make them uint64_t!!!
+
  /**
  * Handle that represents a graphics device.
  */
@@ -397,7 +399,9 @@ typedef enum
     ElemGraphicsFormat_B8G8R8A8_SRGB,
     ElemGraphicsFormat_B8G8R8A8,
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
+    ElemGraphicsFormat_R32G32B32_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
+    ElemGraphicsFormat_R32_UINT,
     ElemGraphicsFormat_D32_FLOAT, 
     ElemGraphicsFormat_BC7,
     ElemGraphicsFormat_BC7_SRGB 
@@ -406,7 +410,8 @@ typedef enum
 typedef enum
 {
     ElemGraphicsResourceType_Buffer,
-    ElemGraphicsResourceType_Texture2D // TODO: Do we keep the distinction for 2D? Maybe just Texture is enough
+    ElemGraphicsResourceType_Texture2D, // TODO: Do we keep the distinction for 2D? Maybe just Texture is enough
+    ElemGraphicsResourceType_AccelerationStructure
 } ElemGraphicsResourceType;
 
 typedef enum
@@ -783,7 +788,34 @@ typedef struct
     const char* DebugName;
 } ElemGraphicsResourceInfoOptions;
 
-// TODO: Mip Levels
+typedef struct
+{
+    // TODO: Add transform matrix?
+    ElemGraphicsFormat VertexFormat;
+    ElemGraphicsResource VertexBuffer;
+    uint32_t VertexBufferOffset;
+    uint32_t VertexCount;
+    uint32_t VertexSizeInBytes;
+    ElemGraphicsFormat IndexFormat;
+    ElemGraphicsResource IndexBuffer;
+    uint32_t IndexBufferOffset;
+    uint32_t IndexCount;
+} ElemRaytracingBlasParameters; 
+
+typedef struct
+{
+    uint64_t Alignment;
+    uint64_t SizeInBytes;
+    uint64_t ScratchSizeInBytes;
+    uint64_t UpdateScratchSizeInBytes;
+} ElemRaytracingAllocationInfo;
+
+typedef struct
+{
+    uint64_t StorageOffset;
+    uint64_t StorageSizeInBytes;
+} ElemRaytracingAccelerationStructureOptions;
+
 // TODO: Clear values
 typedef struct
 {
@@ -1161,27 +1193,37 @@ ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevic
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
 // TODO: uint64_t for sizeInBytes?
+// TODO: We will have a create GraphicsResource function for each type of resources and a corresponding get size and alignment function
+// TODO: To refactor after the acceleration structure is done, this one will be the POC
 ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
+
+// ElemGetGraphicsBufferAllocationInfo()
+// ElemCreateGraphicsBufferResource()
+// ElemGetTexture2DAllocationInfo()
+// ElemCreateTexture2DResource()
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
 // TODO: uint64_t for offset?
-ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
-ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data);
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options);
 ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
-ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
-
 ElemAPI ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
 ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
 ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
+
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters);
+ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
+ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, const ElemRaytracingBlasParameters* parameters);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

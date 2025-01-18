@@ -2,6 +2,9 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+// TODO: IMPORTANT !!! Split the tests into multiple types and files after refactoring
+
+
 // TODO: Add a test for texture2D uav + rendertarget
 // TODO: Add a test for gpupload heap can only be used for buffers
 // TODO: Add a test for GetResourcePointer only for GpuUpload

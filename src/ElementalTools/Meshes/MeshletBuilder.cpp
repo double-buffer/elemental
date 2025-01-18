@@ -11,7 +11,7 @@ void InitMeshletBuilderMemoryArena()
         MeshletBuilderMemoryArena = SystemAllocateMemoryArena(512 * 1024 * 1024);
     }
 
-    SystemClearMemoryArena(MeshletBuilderMemoryArena);
+    //SystemClearMemoryArena(MeshletBuilderMemoryArena);
 }
 
 ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuffer, ElemUInt32Span indexBuffer, const ElemBuildMeshletsOptions* options)
@@ -126,6 +126,7 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
         .MeshletMaxVertexCount = meshletMaxVertexCount,
         .MeshletMaxTriangleCount = meshletMaxTriangleCount,
         .VertexBuffer = { .Data = { .Items = vertexList.Pointer, .Length = (uint32_t)vertexList.Length }, .VertexSize = vertexBuffer.VertexSize, .VertexCount = vertexBuffer.VertexCount },
+        .IndexBuffer = { .Items = indexList.Pointer, .Length = (uint32_t)indexList.Length },
         .Meshlets = { .Items = meshletList.Pointer, .Length = (uint32_t)meshletList.Length },
         .MeshletVertexIndexBuffer = { .Items = meshletVertexIndexList.Pointer, .Length = meshletVertexIndexCount },
         .MeshletTriangleIndexBuffer = { .Items = meshletTriangleIndexList.Pointer, .Length = meshletTriangleIndexCount }

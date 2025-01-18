@@ -204,7 +204,6 @@ ElemSceneMeshPrimitive ConstructObjMeshPrimitive(MemoryArena memoryArena, const 
         }
     }
     
-    printf("IndexCount: %d\n", indexCount);
     auto indexBufferData = SystemPushArray<uint32_t>(memoryArena, indexCount);
     auto currentIndex = 0u;
     auto currentObjIndex = 0u;
@@ -365,7 +364,6 @@ ElemLoadSceneResult LoadObjSceneAndNodes(const fastObjMesh* objFileData, const E
             if (faceMaterial != currentMaterial)
             {
                 currentMaterial = faceMaterial;
-                printf("Material: %d\n", currentMaterial);
 
                 auto previousVertexOffset = meshPrimitiveInfo->VertexOffset;
                 auto previousVertexCount = meshPrimitiveInfo->VertexCount;
@@ -479,8 +477,6 @@ ElemSceneMaterialSpan LoadObjMaterials(const fastObjMesh* objFileData, const Ele
         }
 
         material->AlbedoFactor = {{ 1.0f, 1.0f, 1.0f, 1.0f }};
-
-        printf("material: %s\n", objFileData->materials[i].name);
     }
 
     return { .Items = materials.Pointer, .Length = (uint32_t)materials.Length };

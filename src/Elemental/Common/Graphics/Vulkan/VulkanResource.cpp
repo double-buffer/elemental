@@ -413,6 +413,11 @@ ElemGraphicsResourceInfo VulkanCreateTexture2DResourceInfo(ElemGraphicsDevice gr
     return resourceInfo;
 }
 
+ElemRaytracingAllocationInfo VulkanGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    return {};
+}
+
 ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     SystemAssert(graphicsHeap != ELEM_HANDLE_NULL);
@@ -570,11 +575,11 @@ ElemGraphicsResourceInfo VulkanGetGraphicsResourceInfo(ElemGraphicsResource reso
     };
 }
 
-void VulkanUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
+void VulkanUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data)
 {
-    SystemAssert(resource != ELEM_HANDLE_NULL);
+    SystemAssert(buffer != ELEM_HANDLE_NULL);
 
-    auto resourceData = GetVulkanGraphicsResourceData(resource);
+    auto resourceData = GetVulkanGraphicsResourceData(buffer);
     SystemAssert(resourceData);
 
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
@@ -583,7 +588,7 @@ void VulkanUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offs
         return;
     }
 
-    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(buffer);
     SystemAssert(resourceDataFull);
 
     auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
@@ -606,11 +611,11 @@ void VulkanUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offs
     vkUnmapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject);
 }
 
-ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options)
 {
-    SystemAssert(resource != ELEM_HANDLE_NULL);
+    SystemAssert(buffer != ELEM_HANDLE_NULL);
 
-    auto resourceData = GetVulkanGraphicsResourceData(resource);
+    auto resourceData = GetVulkanGraphicsResourceData(buffer);
     SystemAssert(resourceData);
 
     if (resourceData->Type != ElemGraphicsResourceType_Buffer)
@@ -619,7 +624,7 @@ ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, con
         return {};
     }
 
-    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(resource);
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(buffer);
     SystemAssert(resourceDataFull);
 
     auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);

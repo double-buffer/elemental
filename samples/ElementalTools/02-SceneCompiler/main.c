@@ -2,8 +2,6 @@
 #include "SampleUtils.h"
 #include "SampleScene.h"
 
-// TODO: Restore MeshBuilder to use for hello mesh?
-
 bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
 {
     assert(file);
@@ -24,6 +22,13 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
 
     meshHeader.MeshBufferOffset = ftell(file);
 
+    ElemBuildMeshletResult* buildMeshletResults = (ElemBuildMeshletResult*)malloc(sizeof(ElemBuildMeshletResult) * mesh.MeshPrimitives.Length);
+    uint32_t vertexBufferSizeInBytes = 0u;
+    uint32_t indexBufferSizeInBytes = 0u;
+    uint32_t meshletCount = 0u;
+    uint32_t meshletVertexIndexCount = 0u;
+    uint32_t meshletTriangleIndexCount = 0u;
+
     for (uint32_t i = 0; i < mesh.MeshPrimitives.Length; i++)
     {
         ElemSceneMeshPrimitive* meshPrimitive = &mesh.MeshPrimitives.Items[i];
@@ -38,24 +43,63 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
             return false; 
         }
 
+        buildMeshletResults[i] = result;
+
+        vertexBufferSizeInBytes += result.VertexBuffer.Data.Length;
+        indexBufferSizeInBytes += result.IndexBuffer.Length * sizeof(uint32_t);
+
+        meshletCount += result.Meshlets.Length;
+        meshletVertexIndexCount += result.MeshletVertexIndexBuffer.Length;
+        meshletTriangleIndexCount += result.MeshletTriangleIndexBuffer.Length;
+    }
+
+    meshHeader.VertexBufferOffset = meshHeader.MeshBufferOffset;
+    meshHeader.VertexBufferSizeInBytes = vertexBufferSizeInBytes;
+
+    meshHeader.IndexBufferOffset = meshHeader.VertexBufferOffset + meshHeader.VertexBufferSizeInBytes;
+    meshHeader.IndexBufferSizeInBytes = indexBufferSizeInBytes;
+
+    uint32_t meshletBufferOffset = meshHeader.IndexBufferOffset + indexBufferSizeInBytes;
+    uint32_t meshletVertexIndexBufferOffset = meshletBufferOffset + meshletCount * sizeof(ElemMeshlet);
+    uint32_t meshletTriangleIndexBufferOffset = meshletVertexIndexBufferOffset + meshletVertexIndexCount * sizeof(uint32_t);
+
+    meshHeader.MeshBufferSizeInBytes = meshletTriangleIndexBufferOffset + meshletTriangleIndexCount * sizeof(uint32_t);
+
+    uint32_t currentVertexBufferOffset = 0u;
+    uint32_t currentMeshletBufferOffset = 0u;
+    uint32_t currentMeshletVertexIndexBufferOffset = 0u;
+    uint32_t currentMeshletTriangleIndexBufferOffset = 0u;
+
+    for (uint32_t i = 0; i < mesh.MeshPrimitives.Length; i++)
+    {
+        ElemSceneMeshPrimitive* meshPrimitive = &mesh.MeshPrimitives.Items[i];
+
+        ElemBuildMeshletResult result = buildMeshletResults[i];
+
         SampleMeshPrimitiveHeader* meshPrimitiveHeader = &meshPrimitiveHeaders[i];
         meshPrimitiveHeader->MaterialId = meshPrimitive->MaterialId;
         meshPrimitiveHeader->MeshletCount = result.Meshlets.Length;
 
-        meshPrimitiveHeader->VertexBufferOffset = ftell(file) - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->VertexBufferOffset = meshHeader.VertexBufferOffset + currentVertexBufferOffset - meshHeader.MeshBufferOffset;
+        fseek(file, meshPrimitiveHeader->VertexBufferOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.VertexBuffer.Data.Items, sizeof(uint8_t), result.VertexBuffer.Data.Length, file);
+        currentVertexBufferOffset += result.VertexBuffer.Data.Length;
 
-        meshPrimitiveHeader->MeshletOffset = ftell(file) - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->MeshletOffset = meshletBufferOffset + currentMeshletBufferOffset - meshHeader.MeshBufferOffset;
+        fseek(file, meshPrimitiveHeader->MeshletOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.Meshlets.Items, sizeof(ElemMeshlet), result.Meshlets.Length, file);
+        currentMeshletBufferOffset += result.Meshlets.Length * sizeof(ElemMeshlet);
 
-        meshPrimitiveHeader->MeshletVertexIndexOffset = ftell(file) - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->MeshletVertexIndexOffset = meshletVertexIndexBufferOffset + currentMeshletVertexIndexBufferOffset - meshHeader.MeshBufferOffset;
+        fseek(file, meshPrimitiveHeader->MeshletVertexIndexOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.MeshletVertexIndexBuffer.Items, sizeof(uint32_t), result.MeshletVertexIndexBuffer.Length, file);
+        currentMeshletVertexIndexBufferOffset += result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t);
 
-        meshPrimitiveHeader->MeshletTriangleIndexOffset = ftell(file) - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->MeshletTriangleIndexOffset = meshletTriangleIndexBufferOffset + currentMeshletTriangleIndexBufferOffset - meshHeader.MeshBufferOffset;
+        fseek(file, meshPrimitiveHeader->MeshletTriangleIndexOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.MeshletTriangleIndexBuffer.Items, sizeof(uint32_t), result.MeshletTriangleIndexBuffer.Length, file);
+        currentMeshletTriangleIndexBufferOffset += result.MeshletTriangleIndexBuffer.Length * sizeof(uint32_t);
     }
-
-    meshHeader.MeshBufferSizeInBytes = ftell(file) - meshHeader.MeshBufferOffset;
 
     fseek(file, meshHeaderOffset, SEEK_SET);
     fwrite(&meshHeader, sizeof(SampleMeshHeader), 1, file);
@@ -65,6 +109,8 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
 
     fseek(file, 0, SEEK_END);
     
+    free(buildMeshletResults);
+
     return true;
 }
 
@@ -209,12 +255,12 @@ int main(int argc, const char* argv[])
     ElemLoadSceneOptions loadSceneOptions = {};
 
     // HACK: For now we hardcode options
-    if (strstr(inputPath, "sponza"))
+    if (strstr(inputPath, "sponza.gltf"))
+    {
+    }
+    else if (strstr(inputPath, "sponza.obj"))
     {
         loadSceneOptions.Scaling = 0.01f;
-    }
-    else if (strstr(inputPath, "Sponza.gltf"))
-    {
         //loadSceneOptions.CoordinateSystem = ElemSceneCoordinateSystem_RightHanded;
     }
     else if (strstr(inputPath, "bistro"))
@@ -225,6 +271,7 @@ int main(int argc, const char* argv[])
     // TODO: Scaling should be passed as a parameter
     ElemLoadSceneResult scene = ElemLoadScene(inputPath, &loadSceneOptions);
     
+    printf("Scene Loaded: Meshes Count=%d, Material Count=%d, Nodes Count=%d\n", scene.Meshes.Length, scene.Materials.Length, scene.Nodes.Length);
     DisplayOutputMessages("LoadScene", scene.Messages);
 
     if (scene.HasErrors)

@@ -14,10 +14,13 @@ SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull>
 
 thread_local UploadBufferDevicePool<ComPtr<ID3D12Resource>> threadDirectX12UploadBufferPools[DIRECTX12_MAX_DEVICES];
 
-// TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
+// TODO: Can we get rid of those???
 Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
 Span<ElemGraphicsSamplerInfo> directX12SamplerInfos;
+
 MemoryArena directX12ReadBackMemoryArena;
+
+// TODO: Reorder the functions to match the header
 
 void InitDirectX12ResourceMemory()
 {
@@ -174,7 +177,7 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
     return handle;
 }
 
-DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
+DXGI_FORMAT ConvertToDirectX12Format(ElemGraphicsFormat format)
 {
     switch (format) 
     {
@@ -189,6 +192,12 @@ DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format)
 
         case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
+
+        case ElemGraphicsFormat_R32G32B32_FLOAT:
+            return DXGI_FORMAT_R32G32B32_FLOAT;
+
+        case ElemGraphicsFormat_R32_UINT:
+            return DXGI_FORMAT_R32_UINT;
 
         case ElemGraphicsFormat_D32_FLOAT:
             return DXGI_FORMAT_D32_FLOAT;
@@ -290,7 +299,7 @@ D3D12_RESOURCE_DESC1 CreateDirectX12BufferDescription(const ElemGraphicsResource
         .Height = 1,
         .DepthOrArraySize = 1,
         .MipLevels = 1,
-        .Format = ConvertToDirectX12TextureFormat(resourceInfo->Format),
+        .Format = ConvertToDirectX12Format(resourceInfo->Format),
         .SampleDesc =
         {
             .Count = 1,
@@ -313,7 +322,7 @@ D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemGraphicsResourc
         .Height = resourceInfo->Height,
         .DepthOrArraySize = 1,
         .MipLevels = (uint16_t)resourceInfo->MipLevels,
-        .Format = ConvertToDirectX12TextureFormat(resourceInfo->Format),
+        .Format = ConvertToDirectX12Format(resourceInfo->Format),
         .SampleDesc =
         {
             .Count = 1,
@@ -446,6 +455,62 @@ ElemGraphicsResourceInfo DirectX12CreateTexture2DResourceInfo(ElemGraphicsDevice
     resourceInfo.SizeInBytes = sizeAndAlignInfo.SizeInBytes;
 
     return resourceInfo;
+}
+
+ElemRaytracingAllocationInfo DirectX12GetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    // TODO: Add validation
+    
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto vertexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->VertexBuffer);
+    SystemAssert(vertexBufferResourceData);
+
+    auto indexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->IndexBuffer);
+    SystemAssert(indexBufferResourceData);
+
+    D3D12_RAYTRACING_GEOMETRY_DESC description =
+    {
+        .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
+        .Triangles = 
+        {
+            .IndexFormat = ConvertToDirectX12Format(parameters->IndexFormat),
+            .VertexFormat = ConvertToDirectX12Format(parameters->VertexFormat),
+            .IndexCount = parameters->IndexCount,
+            .VertexCount = parameters->VertexCount,
+            .IndexBuffer = indexBufferResourceData->DeviceObject->GetGPUVirtualAddress(),
+            .VertexBuffer = 
+            {
+                .StartAddress = vertexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + parameters->VertexBufferOffset,
+                .StrideInBytes = parameters->VertexSizeInBytes
+            }
+        }
+    };
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs =
+    {
+        .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
+        .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE, 
+        .NumDescs = 1,
+        .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
+        .pGeometryDescs = &description
+    };
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO allocationInfo;     
+    graphicsDeviceData->Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &allocationInfo);
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", allocationInfo.ResultDataMaxSizeInBytes);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scrath Size: %d", allocationInfo.ScratchDataSizeInBytes);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scrath Size: %d", allocationInfo.UpdateScratchDataSizeInBytes);
+
+    return 
+    {
+        .Alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT,
+        .SizeInBytes = allocationInfo.ResultDataMaxSizeInBytes,
+        .ScratchSizeInBytes = allocationInfo.ScratchDataSizeInBytes,
+        .UpdateScratchSizeInBytes = allocationInfo.UpdateScratchDataSizeInBytes
+    };
 }
 
 ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
@@ -596,11 +661,11 @@ ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource r
     };
 }
 
-void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
+void DirectX12UploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data)
 {
-    SystemAssert(resource != ELEM_HANDLE_NULL);
+    SystemAssert(buffer != ELEM_HANDLE_NULL);
 
-    auto resourceData = GetDirectX12GraphicsResourceData(resource);
+    auto resourceData = GetDirectX12GraphicsResourceData(buffer);
     SystemAssert(resourceData);
 
     auto heapData = GetDirectX12GraphicsHeapData(resourceData->GraphicsHeap);
@@ -628,11 +693,11 @@ void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t o
     memcpy(destinationPointer, data.Items, data.Length);
 }
 
-ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options)
 {
-    SystemAssert(resource != ELEM_HANDLE_NULL);
+    SystemAssert(buffer != ELEM_HANDLE_NULL);
 
-    auto resourceData = GetDirectX12GraphicsResourceData(resource);
+    auto resourceData = GetDirectX12GraphicsResourceData(buffer);
     SystemAssert(resourceData);
 
     auto heapData = GetDirectX12GraphicsHeapData(resourceData->GraphicsHeap);
