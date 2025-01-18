@@ -25,7 +25,7 @@ UploadBufferMemory<T> GetUploadBufferPoolItem(UploadBufferDevicePool<T>* uploadB
         uploadBufferPool->CurrentUploadBufferIndex = (uploadBufferPool->CurrentUploadBufferIndex + 1) % MAX_UPLOAD_BUFFERS;
 
         auto currentUploadBuffer = uploadBufferPool->CurrentUploadBuffer;
-        uint64_t uploadBufferSize = SystemMin(uploadBufferPool->LastBufferSize * 2u, 512llu * 1024u * 1024u);
+        uint64_t uploadBufferSize = SystemMin<uint64_t>(uploadBufferPool->LastBufferSize * 2u, 512u * 1024u * 1024u);
 
         if (uploadBufferSize == 0)
         {

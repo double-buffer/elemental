@@ -1,24 +1,20 @@
 #include "VulkanResource.h"
+#include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
-#include "VulkanResourceBarrier.h"
 #include "Graphics/Resource.h"
-#include "Graphics/ResourceBarrier.h"
 #include "Graphics/ResourceDeleteQueue.h"
 #include "Graphics/UploadBufferPool.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
-#define VULKAN_MAX_GRAPHICSHEAP 32
-#define VULKAN_MAX_SAMPLERS 2048
-
 SystemDataPool<VulkanGraphicsHeapData, SystemDataPoolDefaultFull> vulkanGraphicsHeapPool;
 SystemDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull> vulkanGraphicsResourcePool;
 
 thread_local UploadBufferDevicePool<VulkanUploadBuffer> threadVulkanUploadBufferPools[VULKAN_MAX_DEVICES];
 
-// TODO: This descriptor infos should be linked to the graphics device like the resource desc heaps
+// TODO: IMPORTANT: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> vulkanResourceDescriptorInfos;
 Span<VulkanGraphicsSamplerInfo> vulkanSamplerInfos;
 // TODO: To refactor 
@@ -671,7 +667,7 @@ ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, con
 
 VulkanUploadBuffer CreateVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create Vulkan UploadBuffer with : %d\n", sizeInBytes);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create Vulkan UploadBuffer with : %d", sizeInBytes);
     SystemAssert(graphicsDevice);
 
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
@@ -1111,7 +1107,7 @@ ElemGraphicsSampler VulkanCreateGraphicsSampler(ElemGraphicsDevice graphicsDevic
     samplerCreateInfo.compareEnable = localSamplerInfo.CompareFunction != ElemGraphicsCompareFunction_Never;
     samplerCreateInfo.compareOp = ConvertToVulkanCompareFunction(localSamplerInfo.CompareFunction);
     samplerCreateInfo.minLod = localSamplerInfo.MinLod;
-    samplerCreateInfo.maxLod = localSamplerInfo.MaxLod == 0 ? 1000 : localSamplerInfo.MaxLod;
+    samplerCreateInfo.maxLod = localSamplerInfo.MaxLod == 0 ? VULKAN_MAX_MIPS : localSamplerInfo.MaxLod;
     samplerCreateInfo.borderColor = borderColor;
 
     VkSampler sampler;
@@ -1170,9 +1166,14 @@ void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphi
         return;
     }
 
-    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(vulkanSamplerInfos[sampler].GraphicsDevice);
-    SystemAssert(graphicsDeviceData);
+    auto samplerInfo = vulkanSamplerInfos[sampler];
 
-    vkDestroySampler(graphicsDeviceData->Device, vulkanSamplerInfos[sampler].VulkanSampler, nullptr);
-    vulkanSamplerInfos[sampler] = {};
+    if (samplerInfo.VulkanSampler != VK_NULL_HANDLE)
+    {
+        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(samplerInfo.GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        vkDestroySampler(graphicsDeviceData->Device, samplerInfo.VulkanSampler, nullptr);
+        vulkanSamplerInfos[sampler] = {};
+    }
 }

@@ -1,4 +1,5 @@
 #include "VulkanSwapChain.h"
+#include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
 #include "VulkanResource.h"
@@ -14,8 +15,6 @@
 #include "../Elemental/Linux/WaylandApplication.h"
 #include "../Elemental/Linux/WaylandWindow.h"
 #endif
-
-#define VULKAN_MAX_SWAPCHAINS 10u
 
 SystemDataPool<VulkanSwapChainData, VulkanSwapChainDataFull> vulkanSwapChainPool;
 
@@ -200,7 +199,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
         // Looks like a windowed issue where we miss the vsync
         // The issue seems to be resolved for now... to monitor!
         #ifdef _WIN32
-        auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
+        //auto presentId = swapChainData->PresentId - swapChainData->FrameLatency;
 
         //if (presentId < 10)
             //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "PresentID: %d", presentId);

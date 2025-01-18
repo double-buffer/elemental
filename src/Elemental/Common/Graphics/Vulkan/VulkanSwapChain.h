@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Elemental.h"
+#include "VulkanConfig.h"
 
 #ifdef WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -8,8 +9,6 @@
 #define VK_USE_PLATFORM_WAYLAND_KHR
 #endif
 #include "volk.h"
-
-#define VULKAN_MAX_SWAPCHAIN_BUFFERS 3
 
 struct VulkanSwapChainData
 {

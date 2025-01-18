@@ -1,4 +1,5 @@
 #include "VulkanGraphicsDevice.h"
+#include "VulkanConfig.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
@@ -725,7 +726,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(handle);
 
     graphicsDeviceData->ResourceDescriptorHeap = CreateVulkanDescriptorHeap(memoryArena, graphicsDeviceData->Device, graphicsDeviceDataFull->ResourceDescriptorSetLayout, VULKAN_MAX_RESOURCES);
-    graphicsDeviceData->SamplerDescriptorHeap = CreateVulkanDescriptorHeap(memoryArena, graphicsDeviceData->Device, graphicsDeviceDataFull->SamplerDescriptorSetLayout, VULKAN_MAX_SAMPLER);
+    graphicsDeviceData->SamplerDescriptorHeap = CreateVulkanDescriptorHeap(memoryArena, graphicsDeviceData->Device, graphicsDeviceDataFull->SamplerDescriptorSetLayout, VULKAN_MAX_SAMPLERS);
 
     // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     graphicsDeviceData->UploadBufferPools = SystemPushArray<UploadBufferDevicePool<VulkanUploadBuffer>*>(VulkanGraphicsMemoryArena, MAX_UPLOAD_BUFFERS);

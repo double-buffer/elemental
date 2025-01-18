@@ -1,4 +1,5 @@
 #include "VulkanShader.h"
+#include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
 #include "VulkanResource.h"
@@ -8,9 +9,6 @@
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define VULKAN_MAX_LIBRARIES UINT16_MAX
-#define VULKAN_MAX_PIPELINESTATES UINT16_MAX
 
 SystemDataPool<VulkanShaderLibraryData, VulkanShaderLibraryDataFull> vulkanShaderLibraryPool;
 SystemDataPool<VulkanPipelineStateData, VulkanPipelineStateDataFull> vulkanPipelineStatePool;

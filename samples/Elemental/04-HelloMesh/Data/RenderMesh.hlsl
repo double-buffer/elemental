@@ -32,6 +32,7 @@ struct Vertex
 {
     float3 Position;
     float3 Normal;
+    float4 Tangent;
     float2 TextureCoordinates;
 };
 
@@ -114,7 +115,7 @@ void MeshMain(in uint groupId: SV_GroupID,
         Vertex vertex = meshBuffer.Load<Vertex>(parameters.VertexBufferOffset + vertexIndex * sizeof(Vertex));
 
         vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), worldViewProjectionMatrix);
-        vertices[groupThreadId].WorldNormal = mul(vertex.Normal, inverseTransposeWorldMatrix); // TODO: Compute inverse transpose
+        vertices[groupThreadId].WorldNormal = mul(float4(vertex.Normal, 0.0), inverseTransposeWorldMatrix).xyz; // TODO: Compute inverse transpose
         vertices[groupThreadId].MeshletIndex = groupId;
     }
 

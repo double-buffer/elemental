@@ -490,6 +490,7 @@ UTEST(ResourceIO, CopyDataToGraphicsResource_WithTexture)
 
     ElemDataSpan outputMipData[mipLevelCount];
 
+    // BUG: Problem in vulkan with last mip level
     for (uint32_t i = 0; i < mipLevelCount; i++)
     {
         auto currentWidth = Max(1u, width >> i);

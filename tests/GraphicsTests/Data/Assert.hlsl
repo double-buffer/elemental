@@ -20,7 +20,10 @@ void CopyTexture(uint2 threadId: SV_DispatchThreadID)
     float mipLevelCount;
     sourceTexture.GetDimensions(parameters.MipLevel, width, height, mipLevelCount);
 
-    destinationBuffer[threadId.y * width + threadId.x] = sourceTexture.Load(uint3(threadId, parameters.MipLevel));
+    if (threadId.x < width && threadId.y < height)
+    {
+        destinationBuffer[threadId.y * width + threadId.x] = sourceTexture.Load(uint3(threadId, parameters.MipLevel));
+    }
 }
 
 [shader("compute")]
@@ -35,5 +38,8 @@ void CopyTextureFloat(uint2 threadId: SV_DispatchThreadID)
     float mipLevelCount;
     sourceTexture.GetDimensions(parameters.MipLevel, width, height, mipLevelCount);
 
-    destinationBuffer[threadId.y * width + threadId.x] = sourceTexture.Load(uint3(threadId, parameters.MipLevel));
+    if (threadId.x < width && threadId.y < height)
+    {
+        destinationBuffer[threadId.y * width + threadId.x] = sourceTexture.Load(uint3(threadId, parameters.MipLevel));
+    }
 }

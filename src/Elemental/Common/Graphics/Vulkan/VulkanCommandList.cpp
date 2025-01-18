@@ -1,11 +1,9 @@
 #include "VulkanCommandList.h"
+#include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
-
-#define VULKAN_MAX_COMMANDQUEUES 10u
-#define VULKAN_MAX_COMMANDLISTS 64u
 
 SystemDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull> vulkanCommandQueuePool;
 SystemDataPool<VulkanCommandListData, VulkanCommandListDataFull> vulkanCommandListPool;
