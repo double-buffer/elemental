@@ -10,7 +10,7 @@ void InitDirectXShaderCompiler()
 {
     if (!directXShaderCompilerLibrary.Handle)
     {
-        directXShaderCompilerLibrary = SystemLoadLibrary("./dxcompiler");
+        directXShaderCompilerLibrary = SystemLoadLibrary("dxcompiler");
 
         if (directXShaderCompilerLibrary.Handle != nullptr)
         {
