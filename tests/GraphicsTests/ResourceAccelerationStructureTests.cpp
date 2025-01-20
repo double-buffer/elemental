@@ -2,6 +2,9 @@
 #include "GraphicsTests.h"
 #include "utest.h"
 
+// TODO: Rename that to raytracing?
+
+// TODO: Add test, storage buffer for acc struct only on GPU heap
 // TODO: Check the validation of all parameters
 // TODO: Check when we pass 0 to the buffers size (should be resource size then)
 // TODO: Check when passing different flags that memory alloc info is different

@@ -19,6 +19,7 @@ struct MetalResourceData
 {
     NS::SharedPtr<MTL::Resource> DeviceObject;
     ElemGraphicsHeap GraphicsHeap;
+    uint64_t HeapOffset;
     ElemGraphicsResourceType Type;
     uint32_t Width;
     uint32_t Height;
@@ -26,6 +27,7 @@ struct MetalResourceData
     ElemGraphicsFormat Format;
     ElemGraphicsResourceUsage Usage;
     bool IsPresentTexture;
+    uint32_t BlasIndex;
 };
 
 struct MetalResourceDataFull
@@ -67,7 +69,7 @@ void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descript
 
 void MetalProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
-ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, uint64_t heapOffset, uint64_t sizeInBytes, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);
 
 ElemGraphicsSampler MetalCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
 ElemGraphicsSamplerInfo MetalGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);

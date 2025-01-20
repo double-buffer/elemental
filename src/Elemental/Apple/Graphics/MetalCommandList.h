@@ -8,7 +8,8 @@ enum MetalCommandEncoderType
     MetalCommandEncoderType_None = 0,
     MetalCommandEncoderType_Render = 1,
     MetalCommandEncoderType_Compute = 2,
-    MetalCommandEncoderType_Copy = 3
+    MetalCommandEncoderType_Copy = 3,
+    MetalCommandEncoderType_AccelerationStructure = 4
 };
 
 enum MetalResourceBarrierType

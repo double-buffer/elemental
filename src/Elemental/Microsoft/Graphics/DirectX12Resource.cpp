@@ -1368,6 +1368,7 @@ ElemGraphicsResource DirectX12CreateRaytracingAccelerationStructureResource(Elem
 
     auto result = CreateDirectX12GraphicsResourceFromResource(graphicsDevice, ElemGraphicsResourceType_RaytracingAccelerationStructure, resourceData->GraphicsHeap, resourceData->DeviceObject, false);
 
+    // TODO: Debug Label
     auto resultResourceData = GetDirectX12GraphicsResourceData(result);
     SystemAssert(resultResourceData);
 

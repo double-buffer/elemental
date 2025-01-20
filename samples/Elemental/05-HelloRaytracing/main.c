@@ -57,6 +57,7 @@ typedef struct
     SampleInputsCamera InputsCamera;
     SampleSceneData TestSceneData;
     SampleGpuMemory GpuMemory;
+    SampleGpuMemory GpuMemoryUpload;
 
     ShaderFrameData FrameData;
     SampleGpuBuffer FrameDataBuffer;
@@ -97,7 +98,7 @@ void CreateRenderTarget(ApplicationPayload* applicationPayload, uint32_t width, 
 
     printf("Creating render texture...\n");
 
-    applicationPayload->RenderTargetTexture = SampleCreateGpuRenderTarget(&applicationPayload->GpuMemory, width, height, ElemGraphicsFormat_R32G32B32A32_FLOAT, "RenderTarget");
+    applicationPayload->RenderTargetTexture = SampleCreateGpuRenderTarget(&applicationPayload->GpuMemoryUpload, width, height, ElemGraphicsFormat_R32G32B32A32_FLOAT, "RenderTarget");
 }
 
 void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPayload)
@@ -128,12 +129,12 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
         ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingBlasAllocationInfo(applicationPayload->GraphicsDevice, &blasParameters);
 
         meshData->RaytracingStorageBuffer = SampleCreateGpuRaytracingBuffer(&applicationPayload->GpuMemory, allocationInfos.SizeInBytes, "AccelStorage");
-        meshData->RaytracingScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemory, allocationInfos.ScratchSizeInBytes, "ScratchStorage");
+        meshData->RaytracingScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, allocationInfos.ScratchSizeInBytes, "ScratchStorage");
         meshData->RaytracingAccelerationStructure = ElemCreateRaytracingAccelerationStructureResource(applicationPayload->GraphicsDevice, meshData->RaytracingStorageBuffer.Buffer, NULL);
     }
         
     ElemGraphicsResourceAllocationInfo tlasInstanceAllocationInfo = ElemGetRaytracingTlasInstanceAllocationInfo(applicationPayload->GraphicsDevice, applicationPayload->TestSceneData.NodeCount);
-    sceneData->TlasInstanceBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemory, tlasInstanceAllocationInfo.SizeInBytes, "TlasInstanceBuffer");
+    sceneData->TlasInstanceBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, tlasInstanceAllocationInfo.SizeInBytes, "TlasInstanceBuffer");
 
     uint32_t tlasInstanceCount = 0u;
 
@@ -156,14 +157,14 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
     ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingTlasAllocationInfo(applicationPayload->GraphicsDevice, &tlasParameters);
 
     sceneData->RaytracingStorageBuffer = SampleCreateGpuRaytracingBuffer(&applicationPayload->GpuMemory, allocationInfos.SizeInBytes, "TLASAccelStorage");
-    sceneData->RaytracingScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemory, allocationInfos.ScratchSizeInBytes, "TLASScratchStorage");
+    sceneData->RaytracingScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, allocationInfos.ScratchSizeInBytes, "TLASScratchStorage");
     sceneData->RaytracingAccelerationStructure = ElemCreateRaytracingAccelerationStructureResource(applicationPayload->GraphicsDevice, sceneData->RaytracingStorageBuffer.Buffer, NULL);
     sceneData->RaytracingAccelerationStructureReadDescriptor = ElemCreateGraphicsResourceDescriptor(sceneData->RaytracingAccelerationStructure, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 }
 
 void BuildRaytracingAccelerationStructures(ElemCommandList commandList, ApplicationPayload* applicationPayload)
 {
-    // TODO: Reuse the blas scture?
+    // TODO: Reuse the BLAS/TLAS parameters struct?
 
     SampleSceneData* sceneData = &applicationPayload->TestSceneData;
 
@@ -172,6 +173,7 @@ void BuildRaytracingAccelerationStructures(ElemCommandList commandList, Applicat
         SampleMeshData* meshData = &sceneData->Meshes[i];
 
         // TODO: Here we have to force the before access, change that
+        // TODO: Do we really need that one?
         ElemGraphicsResourceBarrierOptions barrierOptions = 
         {
             .BeforeSync = ElemGraphicsResourceBarrierSyncType_Copy,
@@ -269,13 +271,14 @@ void InitSample(void* payload)
 
     // TODO: For now we create a separate heap to avoid memory management
     applicationPayload->DepthBufferHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
-    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(256));
+    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_Gpu, SampleMegaBytesToBytes(256));
+    applicationPayload->GpuMemoryUpload = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(256));
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     CreateRenderTarget(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene("CornellBox.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
+    SampleLoadScene("CornellBox.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemoryUpload);
     
-    applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");
+    applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemoryUpload, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");
     applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;
 
     ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
@@ -290,7 +293,7 @@ void InitSample(void* payload)
 
             if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
             { 
-                SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemory);
+                SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemoryUpload);
             }
         }
     }
@@ -373,6 +376,7 @@ void FreeSample(void* payload)
     ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
     ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
 
+    SampleFreeGpuMemory(&applicationPayload->GpuMemoryUpload);
     SampleFreeGpuMemory(&applicationPayload->GpuMemory);
 
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
@@ -449,7 +453,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     {
         ElemBindPipelineState(commandList, applicationPayload->RaytracingGraphicsPipeline); 
     
-
         RaytracingShaderParameters parameters = 
         {
             .MaterialBuffer = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor,

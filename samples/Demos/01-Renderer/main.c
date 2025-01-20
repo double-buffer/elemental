@@ -110,7 +110,9 @@ void InitSample(void* payload)
     // TODO: Having GPU Upload is still annoying 😞
     // TODO: For the moment we implement all textures of the scene in GPU memory. That is why we need 2GB for bistro scene
     // We will implement virtual texturing/texture streaming in the future
-    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(2048));
+    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(2048));
+
+    // TODO: IMPORTANT: Make a seoncd head : GpuMemory and rename the other GpuMemoryUpload
 
     applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");
     applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;

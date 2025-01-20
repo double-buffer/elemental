@@ -1,6 +1,7 @@
 #include "MetalResource.h"
 #include "MetalConfig.h"
 #include "MetalGraphicsDevice.h"
+#include "MetalResourceBarrier.h"
 #include "MetalCommandList.h"
 #include "Graphics/UploadBufferPool.h"
 #include "Graphics/ResourceDeleteQueue.h"
@@ -13,7 +14,12 @@ SystemDataPool<MetalGraphicsHeapData, MetalGraphicsHeapDataFull> metalGraphicsHe
 SystemDataPool<MetalResourceData, MetalResourceDataFull> metalResourcePool;
 Span<ElemGraphicsResourceDescriptorInfo> metalResourceDescriptorInfos;
 Span<MetalGraphicsSamplerInfo> metalSamplerInfos;
+
+MemoryArena metalRaytracingInstanceMemoryArena;
 MemoryArena metalReadBackMemoryArena;
+
+Span<ElemGraphicsResource> metalBlasList;
+uint32_t metalBlasCount = 0;
 
 thread_local UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>> threadDirectX12UploadBufferPools[METAL_MAX_DEVICES];
 
@@ -29,7 +35,11 @@ void InitMetalResourceMemory()
         metalSamplerInfos = SystemPushArray<MetalGraphicsSamplerInfo>(MetalGraphicsMemoryArena, METAL_MAX_SAMPLERS, AllocationState_Reserved);
 
         // TODO: Allow to increase the size as a parameter
+        metalRaytracingInstanceMemoryArena = SystemAllocateMemoryArena(METAL_RAYTRACING_INSTANCE_MEMORY_ARENA);
         metalReadBackMemoryArena = SystemAllocateMemoryArena(METAL_READBACK_MEMORY_ARENA);
+
+        // HACK: Find a better solution
+        metalBlasList = SystemPushArray<ElemGraphicsResource>(MetalGraphicsMemoryArena, 1024);
     }
 }
 
@@ -131,7 +141,7 @@ MTL::TextureUsage ConvertToMetalResourceUsage(ElemGraphicsResourceUsage usage)
     return result;
 }
 
-ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, uint64_t heapOffset, uint64_t sizeInBytes, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture)
 {
     InitMetalResourceMemory();
 
@@ -148,15 +158,20 @@ ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice 
         mipLevels = texture->mipmapLevelCount();
         format = ConvertFromMetalResourceFormat(texture->pixelFormat());
     }
-    else
+    else if (!(usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
     {
         auto buffer = (MTL::Buffer*)resource.get();
         width = buffer->length();
+    }
+    else
+    {
+        width = sizeInBytes;
     }
 
     auto handle = SystemAddDataPoolItem(metalResourcePool, {
         .DeviceObject = resource,
         .GraphicsHeap = graphicsHeap,
+        .HeapOffset = heapOffset,
         .Type = type,
         .Width = width,
         .Height = height,
@@ -173,8 +188,7 @@ ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice 
     return handle;
 }
 
-
-NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGraphicsResourceInfo* resourceInfo)
+NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGraphicsResourceInfo* resourceInfo, ElemGraphicsHeapType heapType)
 {
     // TODO: Other resourceInfo
 
@@ -188,11 +202,118 @@ NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGra
     textureDescriptor->setMipmapLevelCount(resourceInfo->MipLevels);
     textureDescriptor->setPixelFormat(ConvertToMetalResourceFormat(resourceInfo->Format));
     textureDescriptor->setSampleCount(1);
-    textureDescriptor->setStorageMode(MTL::StorageModeShared);
+
+    if (heapType == ElemGraphicsHeapType_Gpu)
+    {
+        textureDescriptor->setStorageMode(MTL::StorageModePrivate);
+    }
+    else
+    {
+        textureDescriptor->setStorageMode(MTL::StorageModeShared);
+    }
+
     textureDescriptor->setHazardTrackingMode(MTL::HazardTrackingModeUntracked);
     textureDescriptor->setUsage(ConvertToMetalResourceUsage(resourceInfo->Usage));
 
     return textureDescriptor;
+}
+
+MTL::AttributeFormat ConvertToMetalAttributeFormat(ElemGraphicsFormat format)
+{
+    if (format == ElemGraphicsFormat_R32G32B32_FLOAT)
+    {
+        return MTL::AttributeFormatFloat3;
+    }
+    else if (format == ElemGraphicsFormat_R32G32B32A32_FLOAT)
+    {
+        return MTL::AttributeFormatFloat4;
+    }
+
+    return MTL::AttributeFormatInvalid;
+}
+
+MTL::AccelerationStructureUsage ConvertToMetalRaytraceBuildUsage(ElemRaytracingBuildFlags buildOptions)
+{
+    MTL::AccelerationStructureUsage result = MTL::AccelerationStructureUsageNone;
+
+    if (buildOptions & ElemRaytracingBuildFlags_AllowUpdate)
+    {
+        result |= MTL::AccelerationStructureUsageRefit;
+    }
+
+    if (buildOptions & ElemRaytracingBuildFlags_PreferFastBuild)
+    {
+        result |= MTL::AccelerationStructureUsagePreferFastBuild;
+    }
+
+    return result;
+}
+
+NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> BuildMetalBlasDescriptor(const ElemRaytracingBlasParameters* parameters)
+{
+    auto vertexBufferResourceData = GetMetalResourceData(parameters->VertexBuffer);
+    SystemAssert(vertexBufferResourceData);
+
+    auto indexBufferResourceData = GetMetalResourceData(parameters->IndexBuffer);
+    SystemAssert(indexBufferResourceData);
+
+    auto blasDescriptor = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
+
+    blasDescriptor->setUsage(ConvertToMetalRaytraceBuildUsage(parameters->BuildFlags));
+
+    auto geometryDescriptor = NS::TransferPtr(MTL::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
+
+    geometryDescriptor->setOpaque(true);
+    geometryDescriptor->setIndexType(parameters->IndexFormat == ElemGraphicsFormat_R32_UINT ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16);
+    geometryDescriptor->setVertexFormat(ConvertToMetalAttributeFormat(parameters->VertexFormat));
+    geometryDescriptor->setTriangleCount(parameters->IndexCount / 3);
+    geometryDescriptor->setIndexBuffer((MTL::Buffer*)indexBufferResourceData->DeviceObject.get());
+    geometryDescriptor->setIndexBufferOffset(parameters->IndexBufferOffset);
+    geometryDescriptor->setVertexBuffer((MTL::Buffer*)vertexBufferResourceData->DeviceObject.get());
+    geometryDescriptor->setVertexBufferOffset(parameters->VertexBufferOffset);
+    geometryDescriptor->setVertexStride(parameters->VertexSizeInBytes);
+
+    MTL::AccelerationStructureTriangleGeometryDescriptor* geometryDescriptors[] = { geometryDescriptor.get() };
+
+    auto geometryDescriptorArray = NS::TransferPtr(NS::Array::alloc()->init((NS::Object**)geometryDescriptors, ARRAYSIZE(geometryDescriptors)));
+    blasDescriptor->setGeometryDescriptors(geometryDescriptorArray.get());
+
+    return blasDescriptor;
+}
+
+NS::SharedPtr<MTL::InstanceAccelerationStructureDescriptor> BuildMetalTlasDescriptor(MemoryArena memoryArena, const ElemRaytracingTlasParameters* parameters)
+{
+    auto blasDescriptor = NS::TransferPtr(MTL::InstanceAccelerationStructureDescriptor::alloc()->init());
+
+    blasDescriptor->setUsage(ConvertToMetalRaytraceBuildUsage(parameters->BuildFlags));
+    blasDescriptor->setInstanceCount(parameters->InstanceCount); 
+    blasDescriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeUserID);
+    blasDescriptor->setInstanceDescriptorStride(68);
+
+    if (parameters->InstanceBuffer)
+    {
+        auto instanceBufferResourceData = GetMetalResourceData(parameters->InstanceBuffer);
+        SystemAssert(instanceBufferResourceData);
+
+        auto blasList = SystemPushArray<MTL::AccelerationStructure*>(memoryArena, metalBlasCount);
+
+        for (uint32_t i = 0; i < metalBlasCount; i++)
+        {
+            auto blasResourceData = GetMetalResourceData(metalBlasList[i]);
+            SystemAssert(blasResourceData);
+
+            auto pointer = (MTL::AccelerationStructure*)blasResourceData->DeviceObject.get();
+            blasList[i] = pointer;
+        }
+
+        auto blasArray = NS::TransferPtr(NS::Array::alloc()->init((NS::Object**)blasList.Pointer, metalBlasCount));
+        blasDescriptor->setInstancedAccelerationStructures(blasArray.get());
+
+        blasDescriptor->setInstanceDescriptorBuffer((MTL::Buffer*)instanceBufferResourceData->DeviceObject.get());
+        blasDescriptor->setInstanceDescriptorBufferOffset(parameters->InstanceBufferOffset);
+    }
+  
+    return blasDescriptor;
 }
 
 ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options)
@@ -215,10 +336,18 @@ ElemGraphicsHeap MetalCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint
     SystemAssert(graphicsDeviceDataFull);
 
     auto heapDescriptor = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
-    heapDescriptor->setStorageMode(MTL::StorageModeShared);
     heapDescriptor->setType(MTL::HeapTypePlacement);
     heapDescriptor->setSize(sizeInBytes);
     heapDescriptor->setHazardTrackingMode(MTL::HazardTrackingModeUntracked);
+
+    if (heapType == ElemGraphicsHeapType_Gpu)
+    {
+        heapDescriptor->setStorageMode(MTL::StorageModePrivate);
+    }
+    else
+    {
+        heapDescriptor->setStorageMode(MTL::StorageModeShared);
+    }
 
     auto graphicsHeap = NS::TransferPtr(graphicsDeviceData->Device->newHeap(heapDescriptor.get()));
     SystemAssertReturnNullHandle(graphicsHeap);
@@ -283,7 +412,17 @@ ElemGraphicsResourceInfo MetalCreateGraphicsBufferResourceInfo(ElemGraphicsDevic
         resourceInfo.DebugName = options->DebugName;
     }
 
-    auto sizeAndAlignInfo = graphicsDeviceData->Device->heapBufferSizeAndAlign(sizeInBytes, {});
+    MTL::SizeAndAlign sizeAndAlignInfo;
+
+    if (usage == ElemGraphicsResourceUsage_RaytracingAccelerationStructure)
+    {
+        sizeAndAlignInfo = graphicsDeviceData->Device->heapAccelerationStructureSizeAndAlign(sizeInBytes);
+    }
+    else
+    {
+        sizeAndAlignInfo = graphicsDeviceData->Device->heapBufferSizeAndAlign(sizeInBytes, {});
+    }
+
     resourceInfo.Alignment = sizeAndAlignInfo.align;
     resourceInfo.SizeInBytes = sizeAndAlignInfo.size;
 
@@ -313,7 +452,7 @@ ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice gra
         resourceInfo.DebugName = options->DebugName;
     }
 
-    auto metalTextureDescriptor = CreateMetalTextureDescriptor(&resourceInfo);
+    auto metalTextureDescriptor = CreateMetalTextureDescriptor(&resourceInfo, ElemGraphicsHeapType_Gpu);
     auto sizeAndAlignInfo = graphicsDeviceData->Device->heapTextureSizeAndAlign(metalTextureDescriptor.get());
 
     resourceInfo.Alignment = sizeAndAlignInfo.align;
@@ -367,7 +506,7 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
             return ELEM_HANDLE_NULL;
         }
 
-        auto textureDescriptor = CreateMetalTextureDescriptor(resourceInfo);
+        auto textureDescriptor = CreateMetalTextureDescriptor(resourceInfo, graphicsHeapData->HeapType);
         resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newTexture(textureDescriptor.get(), graphicsHeapOffset));
     }
     else
@@ -390,17 +529,34 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
             return ELEM_HANDLE_NULL;
         }
 
-        resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newBuffer(resourceInfo->Width, MTL::ResourceHazardTrackingModeUntracked, graphicsHeapOffset));
+        if (!(resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
+        {
+            MTL::ResourceOptions metalResourceOptions = MTL::ResourceHazardTrackingModeUntracked;
+
+            if (graphicsHeapData->HeapType == ElemGraphicsHeapType_Gpu)
+            {
+                metalResourceOptions |= MTL::ResourceStorageModePrivate;
+            }
+            else 
+            {
+                metalResourceOptions |= MTL::ResourceStorageModeShared;
+            }
+
+            resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newBuffer(resourceInfo->Width, metalResourceOptions, graphicsHeapOffset));
+        }
     }
         
-    SystemAssertReturnNullHandle(resource);
-
-    if (MetalDebugLayerEnabled && resourceInfo->DebugName)
+    if (!(resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
     {
-        resource->setLabel(NS::String::string(resourceInfo->DebugName, NS::UTF8StringEncoding));
+        SystemAssertReturnNullHandle(resource);
+
+        if (MetalDebugLayerEnabled && resourceInfo->DebugName)
+        {
+            resource->setLabel(NS::String::string(resourceInfo->DebugName, NS::UTF8StringEncoding));
+        }
     }
 
-    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, graphicsHeap, resourceInfo->Usage, resource, false);
+    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, graphicsHeap, graphicsHeapOffset, resourceInfo->Width, resourceInfo->Usage, resource, false);
 }
 
 void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
@@ -711,7 +867,14 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
             return -1;
         }
   
-        handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
+        if (resourceData->Usage == ElemGraphicsResourceUsage_RaytracingAccelerationStructure)
+        {
+            handle = CreateMetalArgumentBufferHandleForAccelerationStructure(graphicsDeviceData->ResourceArgumentBuffer, (MTL::AccelerationStructure*)resourceData->DeviceObject.get(), resourceData->Width);
+        }
+        else
+        {
+            handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->DeviceObject.get(), resourceData->Width);
+        }
     }
 
     if (handle != -1)
@@ -920,33 +1083,232 @@ void MetalFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphic
 
 ElemRaytracingAllocationInfo MetalGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
 {
-    return {};
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    // TODO: Add validation
+    
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto descriptor = BuildMetalBlasDescriptor(parameters);
+    auto allocationInfo = graphicsDeviceData->Device->accelerationStructureSizes(descriptor.get());
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", allocationInfo.accelerationStructureSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", allocationInfo.buildScratchBufferSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", allocationInfo.refitScratchBufferSize);
+
+    // TODO: For the moment we are forced to have 16KB align for each accel struct in metal
+    // We emulate the storage buffer behavior because metal doesn't allow the creation of an accel struct by specifying 
+    // the underlining storage and offset
+    auto sizeAndAlignInfo = graphicsDeviceData->Device->heapAccelerationStructureSizeAndAlign(allocationInfo.accelerationStructureSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Align: %d", sizeAndAlignInfo.align);
+
+    return 
+    {
+        .Alignment = sizeAndAlignInfo.align,
+        .SizeInBytes = allocationInfo.accelerationStructureSize,
+        .ScratchSizeInBytes = allocationInfo.buildScratchBufferSize,
+        .UpdateScratchSizeInBytes = allocationInfo.refitScratchBufferSize
+    };
 }
 
 ElemRaytracingAllocationInfo MetalGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters)
 {
-    return {};
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    // TODO: Add validation
+    
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto descriptor = BuildMetalTlasDescriptor(stackMemoryArena, parameters);
+    auto allocationInfo = graphicsDeviceData->Device->accelerationStructureSizes(descriptor.get());
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "TLAS Size: %d", allocationInfo.accelerationStructureSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", allocationInfo.buildScratchBufferSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", allocationInfo.refitScratchBufferSize);
+
+    // TODO: For the moment we are forced to have 16KB align for each accel struct in metal
+    // We emulate the storage buffer behavior because metal doesn't allow the creation of an accel struct by specifying 
+    // the underlining storage and offset
+    auto sizeAndAlignInfo = graphicsDeviceData->Device->heapAccelerationStructureSizeAndAlign(allocationInfo.accelerationStructureSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "TLAS Align: %d", sizeAndAlignInfo.align);
+
+    return 
+    {
+        .Alignment = sizeAndAlignInfo.align,
+        .SizeInBytes = allocationInfo.accelerationStructureSize,
+        .ScratchSizeInBytes = allocationInfo.buildScratchBufferSize,
+        .UpdateScratchSizeInBytes = allocationInfo.refitScratchBufferSize
+    };
 }
 
 ElemGraphicsResourceAllocationInfo MetalGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount)
 {
-    return {};
+    // TODO: Put 68 bytes in a define
+
+    return 
+    {
+        .Alignment = 4,
+        .SizeInBytes = instanceCount * 68
+    };
 }
 
 ElemDataSpan MetalEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
 {
-    return {};
+    InitMetalResourceMemory();
+
+    auto result = SystemPushArray<uint8_t>(metalRaytracingInstanceMemoryArena, instances.Length * 68);
+    auto currentPointer = result.Pointer;
+
+    for (uint32_t i = 0; i < instances.Length; i++)
+    {
+        auto instance = &instances.Items[i];
+
+        auto blasResourceData = GetMetalResourceData(instance->BlasResource);
+        SystemAssert(blasResourceData);
+
+        auto instanceDescriptor = (MTL::AccelerationStructureUserIDInstanceDescriptor*)currentPointer;
+
+        /*_MTL_OPTIONS(uint32_t, AccelerationStructureInstanceOptions) {
+        AccelerationStructureInstanceOptionNone = 0,
+        AccelerationStructureInstanceOptionDisableTriangleCulling = 1,
+        AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise = 2,
+        AccelerationStructureInstanceOptionOpaque = 4,
+        AccelerationStructureInstanceOptionNonOpaque = 8,*/
+
+        // TODO: Options
+        instanceDescriptor->options = MTL::AccelerationStructureInstanceOptionNone;
+        instanceDescriptor->mask = instance->InstanceMask;
+        instanceDescriptor->accelerationStructureIndex = blasResourceData->BlasIndex;
+        instanceDescriptor->userID = instance->InstanceId;
+    
+        for (uint32_t j = 0; j < 3; j++)
+        {
+            for (uint32_t k = 0; k < 4; k++)
+            {
+                instanceDescriptor->transformationMatrix[j][k] = instance->TransformMatrix.Elements[k][j];
+            }
+        }
+
+        // TODO: Replace magic value
+        currentPointer += 68;
+    }
+    
+    return { .Items = (uint8_t*)result.Pointer, .Length = (uint32_t)(instances.Length * 68) };
 }
 
 ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options)
 {
-    return {};
+    InitMetalResourceMemory();
+
+    auto storageBufferResourceData = GetMetalResourceData(storageBuffer);
+    SystemAssert(storageBufferResourceData);
+
+    auto graphicsHeapData = GetMetalGraphicsHeapData(storageBufferResourceData->GraphicsHeap);
+    SystemAssert(graphicsHeapData);
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test:%d", storageBufferResourceData->Width);
+
+    auto resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newAccelerationStructure(storageBufferResourceData->Width, storageBufferResourceData->HeapOffset));
+    SystemAssertReturnNullHandle(resource);
+
+    if (MetalDebugLayerEnabled && options && options->DebugName)
+    {
+        resource->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
+    }
+
+    auto result = CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, ElemGraphicsResourceType_RaytracingAccelerationStructure, storageBufferResourceData->GraphicsHeap, storageBufferResourceData->Width, storageBufferResourceData->HeapOffset, ElemGraphicsResourceUsage_RaytracingAccelerationStructure, resource, false);
+
+    // HACK: Find a better solution
+    auto resourceData = GetMetalResourceData(result);
+
+    resourceData->BlasIndex = metalBlasCount;
+    metalBlasList[metalBlasCount++] = result;
+
+    return result;
 }
 
 void MetalBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    // TODO: Add validation
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto accelerationStructureResourceData = GetMetalResourceData(accelerationStructure);
+    SystemAssert(accelerationStructureResourceData);
+
+    auto scratchBufferResourceData = GetMetalResourceData(scratchBuffer);
+    SystemAssert(scratchBufferResourceData);
+    
+    auto blasDescriptor = BuildMetalBlasDescriptor(parameters);
+
+    auto scratchOffset = 0u;
+
+    if (options)
+    {
+        scratchOffset = options->ScratchOffset;
+    }
+
+    InsertMetalResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure);
+
+    if (commandListData->CommandEncoderType != MetalCommandEncoderType_AccelerationStructure)
+    {
+        ResetMetalCommandEncoder(commandList);
+
+        commandListData->CommandEncoder = NS::RetainPtr(commandListData->DeviceObject->accelerationStructureCommandEncoder()); 
+        commandListData->CommandEncoderType = MetalCommandEncoderType_AccelerationStructure;
+    }
+    
+    auto commandEncoder = (MTL::AccelerationStructureCommandEncoder*)commandListData->CommandEncoder.get();
+
+    commandEncoder->buildAccelerationStructure((MTL::AccelerationStructure*)accelerationStructureResourceData->DeviceObject.get(),
+                                               blasDescriptor.get(), 
+                                               (MTL::Buffer*)scratchBufferResourceData->DeviceObject.get(), scratchOffset);
 }
 
 void MetalBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    // TODO: Add validation
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetMetalGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto accelerationStructureResourceData = GetMetalResourceData(accelerationStructure);
+    SystemAssert(accelerationStructureResourceData);
+
+    auto scratchBufferResourceData = GetMetalResourceData(scratchBuffer);
+    SystemAssert(scratchBufferResourceData);
+    
+    auto tlasDescriptor = BuildMetalTlasDescriptor(stackMemoryArena, parameters);
+
+    auto scratchOffset = 0u;
+
+    if (options)
+    {
+        scratchOffset = options->ScratchOffset;
+    }
+
+    InsertMetalResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure);
+
+    if (commandListData->CommandEncoderType != MetalCommandEncoderType_AccelerationStructure)
+    {
+        ResetMetalCommandEncoder(commandList);
+
+        commandListData->CommandEncoder = NS::RetainPtr(commandListData->DeviceObject->accelerationStructureCommandEncoder()); 
+        commandListData->CommandEncoderType = MetalCommandEncoderType_AccelerationStructure;
+    }
+    
+    auto commandEncoder = (MTL::AccelerationStructureCommandEncoder*)commandListData->CommandEncoder.get();
+
+    commandEncoder->buildAccelerationStructure((MTL::AccelerationStructure*)accelerationStructureResourceData->DeviceObject.get(),
+                                               tlasDescriptor.get(), 
+                                               (MTL::Buffer*)scratchBufferResourceData->DeviceObject.get(), scratchOffset);
 }

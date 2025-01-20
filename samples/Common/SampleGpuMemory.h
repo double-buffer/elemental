@@ -23,11 +23,11 @@ typedef struct
     ElemGraphicsResourceDescriptor WriteDescriptor;
 } SampleGpuTexture;
 
-SampleGpuMemory SampleCreateGpuMemory(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes)
+SampleGpuMemory SampleCreateGpuMemory(ElemGraphicsDevice graphicsDevice, ElemGraphicsHeapType heapType, uint32_t sizeInBytes)
 {
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
     // TODO: Having GPU Upload is still annoying 😞
-    ElemGraphicsHeap graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
+    ElemGraphicsHeap graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &(ElemGraphicsHeapOptions) { .HeapType = heapType });
 
     return (SampleGpuMemory)
     {

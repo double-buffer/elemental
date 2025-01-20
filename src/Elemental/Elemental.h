@@ -386,6 +386,7 @@ typedef enum
     ElemGraphicsHeapType_Gpu = 0,
     // TODO: Still not convinced about that one. should we let GPU be gpu upload by default?
     // TODO: This may cause a bug in vulkan with textures (flickering)
+    // TODO: Also, in metal, Accelstruct needs to be in private memory even if it is unified memory
     ElemGraphicsHeapType_GpuUpload = 1, 
     ElemGraphicsHeapType_Readback = 2
 } ElemGraphicsHeapType;
@@ -873,6 +874,7 @@ typedef struct
 {
     uint64_t StorageOffset;
     uint64_t StorageSizeInBytes;
+    const char* DebugName;
 } ElemRaytracingAccelerationStructureOptions;
 
 typedef struct
