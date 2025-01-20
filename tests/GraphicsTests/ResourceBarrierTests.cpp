@@ -6,6 +6,8 @@
 // TODO: Multiple rendertargets in begin render
 // TODO: For the moment it is impossible to test for present
 // TODO: Test Additional commands (when adding new ones)
+// TODO: Add copy tests
+// TODO: Add build raytracing struct tests
 
 UTEST(ResourceBarrier, GraphicsResourceBarrier_BufferReadAfterWrite) 
 {

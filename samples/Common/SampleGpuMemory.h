@@ -43,6 +43,24 @@ void SampleFreeGpuMemory(SampleGpuMemory* gpuMemory)
     gpuMemory->GraphicsHeap = ELEM_HANDLE_NULL;
 }
 
+SampleGpuBuffer SampleCreateGpuRaytracingBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
+{
+    // TODO: Alignment should be used with the offset before adding the size of the resource!
+    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_RaytracingAccelerationStructure, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
+
+    gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
+    ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
+    gpuMemory->CurrentHeapOffset += bufferDescription.SizeInBytes;
+
+    ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+
+    return (SampleGpuBuffer)
+    {
+        .Buffer = buffer,
+        .ReadDescriptor = readDescriptor
+    };
+}
+
 SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
 {
     // TODO: Alignment should be used with the offset before adding the size of the resource!

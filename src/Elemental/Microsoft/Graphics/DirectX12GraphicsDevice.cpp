@@ -158,6 +158,9 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         D3D12_FEATURE_DATA_D3D12_OPTIONS deviceOptions = {};
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &deviceOptions, sizeof(deviceOptions)));
 
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 deviceOptions5 = {};
+        AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &deviceOptions5, sizeof(deviceOptions5)));
+
         D3D12_FEATURE_DATA_D3D12_OPTIONS7 deviceOptions7 = {};
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &deviceOptions7, sizeof(deviceOptions7)));
 
@@ -168,9 +171,9 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_8;
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
 
-        // TODO: Update checks
         if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
             deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
+            deviceOptions5.RaytracingTier == D3D12_RAYTRACING_TIER_1_1 &&
             deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
             shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8 && 
             deviceOptions16.GPUUploadHeapSupported)

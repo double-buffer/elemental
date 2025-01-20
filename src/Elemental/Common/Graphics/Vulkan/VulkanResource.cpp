@@ -413,11 +413,6 @@ ElemGraphicsResourceInfo VulkanCreateTexture2DResourceInfo(ElemGraphicsDevice gr
     return resourceInfo;
 }
 
-ElemRaytracingAllocationInfo VulkanGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
-{
-    return {};
-}
-
 ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     SystemAssert(graphicsHeap != ELEM_HANDLE_NULL);
@@ -1181,4 +1176,37 @@ void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphi
         vkDestroySampler(graphicsDeviceData->Device, samplerInfo.VulkanSampler, nullptr);
         vulkanSamplerInfos[sampler] = {};
     }
+}
+
+ElemRaytracingAllocationInfo VulkanGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    return {};
+}
+
+ElemRaytracingAllocationInfo VulkanGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters)
+{
+    return {};
+}
+
+ElemGraphicsResourceAllocationInfo VulkanGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount)
+{
+    return {};
+}
+
+ElemDataSpan VulkanEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
+{
+    return {};
+}
+
+ElemGraphicsResource VulkanCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options)
+{
+    return {};
+}
+
+void VulkanBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+}
+
+void VulkanBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
 }

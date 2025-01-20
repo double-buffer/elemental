@@ -31,11 +31,6 @@ ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDev
     DispatchReturnGraphicsFunction(CreateTexture2DResourceInfo, graphicsDevice, width, height, mipLevels, format, usage, options);
 }
 
-ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
-{
-    DispatchReturnGraphicsFunction(GetRaytracingBlasAllocationInfo, graphicsDevice, parameters);
-}
-
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     DispatchReturnGraphicsFunction(CreateGraphicsResource, graphicsHeap, graphicsHeapOffset, resourceInfo);
@@ -104,4 +99,39 @@ ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler s
 ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
 {
     DispatchGraphicsFunction(FreeGraphicsSampler, sampler, options);
+}
+
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    DispatchReturnGraphicsFunction(GetRaytracingBlasAllocationInfo, graphicsDevice, parameters);
+}
+
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters)
+{
+    DispatchReturnGraphicsFunction(GetRaytracingTlasAllocationInfo, graphicsDevice, parameters);
+}
+
+ElemAPI ElemGraphicsResourceAllocationInfo ElemGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount)
+{
+    DispatchReturnGraphicsFunction(GetRaytracingTlasInstanceAllocationInfo, graphicsDevice, instanceCount);
+}
+
+ElemAPI ElemDataSpan ElemEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
+{
+    DispatchReturnGraphicsFunction(EncodeRaytracingTlasInstances, instances);
+}
+
+ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options)
+{
+    DispatchReturnGraphicsFunction(CreateRaytracingAccelerationStructureResource, graphicsDevice, storageBuffer, options);
+}
+
+ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+    DispatchGraphicsFunction(BuildRaytracingBlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
+}
+
+ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+    DispatchGraphicsFunction(BuildRaytracingTlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
 }

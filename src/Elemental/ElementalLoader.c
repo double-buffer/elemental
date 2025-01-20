@@ -72,8 +72,12 @@ typedef struct ElementalFunctions
     ElemGraphicsSamplerInfo (*ElemGetGraphicsSamplerInfo)(ElemGraphicsSampler);
     void (*ElemFreeGraphicsSampler)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *);
     ElemRaytracingAllocationInfo (*ElemGetRaytracingBlasAllocationInfo)(ElemGraphicsDevice, ElemRaytracingBlasParameters const *);
+    ElemRaytracingAllocationInfo (*ElemGetRaytracingTlasAllocationInfo)(ElemGraphicsDevice, ElemRaytracingTlasParameters const *);
+    ElemGraphicsResourceAllocationInfo (*ElemGetRaytracingTlasInstanceAllocationInfo)(ElemGraphicsDevice, unsigned int);
+    ElemDataSpan (*ElemEncodeRaytracingTlasInstances)(ElemRaytracingTlasInstanceSpan);
     ElemGraphicsResource (*ElemCreateRaytracingAccelerationStructureResource)(ElemGraphicsDevice, ElemGraphicsResource, ElemRaytracingAccelerationStructureOptions const *);
-    void (*ElemBuildRaytracingBlas)(ElemCommandList, ElemGraphicsResource, ElemRaytracingBlasParameters const *);
+    void (*ElemBuildRaytracingBlas)(ElemCommandList, ElemGraphicsResource, ElemGraphicsResource, ElemRaytracingBlasParameters const *, ElemRaytracingBuildOptions const *);
+    void (*ElemBuildRaytracingTlas)(ElemCommandList, ElemGraphicsResource, ElemGraphicsResource, ElemRaytracingTlasParameters const *, ElemRaytracingBuildOptions const *);
     ElemShaderLibrary (*ElemCreateShaderLibrary)(ElemGraphicsDevice, ElemDataSpan);
     void (*ElemFreeShaderLibrary)(ElemShaderLibrary);
     ElemPipelineState (*ElemCompileGraphicsPipelineState)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *);
@@ -193,8 +197,12 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemGetGraphicsSamplerInfo = (ElemGraphicsSamplerInfo (*)(ElemGraphicsSampler))GetElementalFunctionPointer("ElemGetGraphicsSamplerInfo");
     listElementalFunctions.ElemFreeGraphicsSampler = (void (*)(ElemGraphicsSampler, ElemFreeGraphicsSamplerOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsSampler");
     listElementalFunctions.ElemGetRaytracingBlasAllocationInfo = (ElemRaytracingAllocationInfo (*)(ElemGraphicsDevice, ElemRaytracingBlasParameters const *))GetElementalFunctionPointer("ElemGetRaytracingBlasAllocationInfo");
+    listElementalFunctions.ElemGetRaytracingTlasAllocationInfo = (ElemRaytracingAllocationInfo (*)(ElemGraphicsDevice, ElemRaytracingTlasParameters const *))GetElementalFunctionPointer("ElemGetRaytracingTlasAllocationInfo");
+    listElementalFunctions.ElemGetRaytracingTlasInstanceAllocationInfo = (ElemGraphicsResourceAllocationInfo (*)(ElemGraphicsDevice, unsigned int))GetElementalFunctionPointer("ElemGetRaytracingTlasInstanceAllocationInfo");
+    listElementalFunctions.ElemEncodeRaytracingTlasInstances = (ElemDataSpan (*)(ElemRaytracingTlasInstanceSpan))GetElementalFunctionPointer("ElemEncodeRaytracingTlasInstances");
     listElementalFunctions.ElemCreateRaytracingAccelerationStructureResource = (ElemGraphicsResource (*)(ElemGraphicsDevice, ElemGraphicsResource, ElemRaytracingAccelerationStructureOptions const *))GetElementalFunctionPointer("ElemCreateRaytracingAccelerationStructureResource");
-    listElementalFunctions.ElemBuildRaytracingBlas = (void (*)(ElemCommandList, ElemGraphicsResource, ElemRaytracingBlasParameters const *))GetElementalFunctionPointer("ElemBuildRaytracingBlas");
+    listElementalFunctions.ElemBuildRaytracingBlas = (void (*)(ElemCommandList, ElemGraphicsResource, ElemGraphicsResource, ElemRaytracingBlasParameters const *, ElemRaytracingBuildOptions const *))GetElementalFunctionPointer("ElemBuildRaytracingBlas");
+    listElementalFunctions.ElemBuildRaytracingTlas = (void (*)(ElemCommandList, ElemGraphicsResource, ElemGraphicsResource, ElemRaytracingTlasParameters const *, ElemRaytracingBuildOptions const *))GetElementalFunctionPointer("ElemBuildRaytracingTlas");
     listElementalFunctions.ElemCreateShaderLibrary = (ElemShaderLibrary (*)(ElemGraphicsDevice, ElemDataSpan))GetElementalFunctionPointer("ElemCreateShaderLibrary");
     listElementalFunctions.ElemFreeShaderLibrary = (void (*)(ElemShaderLibrary))GetElementalFunctionPointer("ElemFreeShaderLibrary");
     listElementalFunctions.ElemCompileGraphicsPipelineState = (ElemPipelineState (*)(ElemGraphicsDevice, ElemGraphicsPipelineStateParameters const *))GetElementalFunctionPointer("ElemCompileGraphicsPipelineState");
@@ -1503,6 +1511,99 @@ static inline ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(E
     return listElementalFunctions.ElemGetRaytracingBlasAllocationInfo(graphicsDevice, parameters);
 }
 
+static inline ElemRaytracingAllocationInfo ElemGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, ElemRaytracingTlasParameters const * parameters)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemRaytracingAllocationInfo result = {};
+        #else
+        ElemRaytracingAllocationInfo result = (ElemRaytracingAllocationInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetRaytracingTlasAllocationInfo) 
+    {
+        assert(listElementalFunctions.ElemGetRaytracingTlasAllocationInfo);
+
+        #ifdef __cplusplus
+        ElemRaytracingAllocationInfo result = {};
+        #else
+        ElemRaytracingAllocationInfo result = (ElemRaytracingAllocationInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetRaytracingTlasAllocationInfo(graphicsDevice, parameters);
+}
+
+static inline ElemGraphicsResourceAllocationInfo ElemGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, unsigned int instanceCount)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsResourceAllocationInfo result = {};
+        #else
+        ElemGraphicsResourceAllocationInfo result = (ElemGraphicsResourceAllocationInfo){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetRaytracingTlasInstanceAllocationInfo) 
+    {
+        assert(listElementalFunctions.ElemGetRaytracingTlasInstanceAllocationInfo);
+
+        #ifdef __cplusplus
+        ElemGraphicsResourceAllocationInfo result = {};
+        #else
+        ElemGraphicsResourceAllocationInfo result = (ElemGraphicsResourceAllocationInfo){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetRaytracingTlasInstanceAllocationInfo(graphicsDevice, instanceCount);
+}
+
+static inline ElemDataSpan ElemEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemDataSpan result = {};
+        #else
+        ElemDataSpan result = (ElemDataSpan){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemEncodeRaytracingTlasInstances) 
+    {
+        assert(listElementalFunctions.ElemEncodeRaytracingTlasInstances);
+
+        #ifdef __cplusplus
+        ElemDataSpan result = {};
+        #else
+        ElemDataSpan result = (ElemDataSpan){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemEncodeRaytracingTlasInstances(instances);
+}
+
 static inline ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, ElemRaytracingAccelerationStructureOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
@@ -1534,7 +1635,7 @@ static inline ElemGraphicsResource ElemCreateRaytracingAccelerationStructureReso
     return listElementalFunctions.ElemCreateRaytracingAccelerationStructureResource(graphicsDevice, storageBuffer, options);
 }
 
-static inline void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemRaytracingBlasParameters const * parameters)
+static inline void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, ElemRaytracingBlasParameters const * parameters, ElemRaytracingBuildOptions const * options)
 {
     if (!LoadElementalFunctionPointers()) 
     {
@@ -1548,7 +1649,24 @@ static inline void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGrap
         return;
     }
 
-    listElementalFunctions.ElemBuildRaytracingBlas(commandList, accelerationStructure, parameters);
+    listElementalFunctions.ElemBuildRaytracingBlas(commandList, accelerationStructure, scratchBuffer, parameters, options);
+}
+
+static inline void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, ElemRaytracingTlasParameters const * parameters, ElemRaytracingBuildOptions const * options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemBuildRaytracingTlas) 
+    {
+        assert(listElementalFunctions.ElemBuildRaytracingTlas);
+        return;
+    }
+
+    listElementalFunctions.ElemBuildRaytracingTlas(commandList, accelerationStructure, scratchBuffer, parameters, options);
 }
 
 static inline ElemShaderLibrary ElemCreateShaderLibrary(ElemGraphicsDevice graphicsDevice, ElemDataSpan shaderLibraryData)

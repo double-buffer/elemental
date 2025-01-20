@@ -411,7 +411,7 @@ typedef enum
 {
     ElemGraphicsResourceType_Buffer,
     ElemGraphicsResourceType_Texture2D, // TODO: Do we keep the distinction for 2D? Maybe just Texture is enough
-    ElemGraphicsResourceType_AccelerationStructure
+    ElemGraphicsResourceType_RaytracingAccelerationStructure
 } ElemGraphicsResourceType;
 
 typedef enum
@@ -419,7 +419,8 @@ typedef enum
     ElemGraphicsResourceUsage_Read = 0x00,
     ElemGraphicsResourceUsage_Write = 0x01,
     ElemGraphicsResourceUsage_RenderTarget = 0x02,
-    ElemGraphicsResourceUsage_DepthStencil = 0x04
+    ElemGraphicsResourceUsage_DepthStencil = 0x04,
+    ElemGraphicsResourceUsage_RaytracingAccelerationStructure = 0x08
 } ElemGraphicsResourceUsage;
 
 typedef enum
@@ -442,6 +443,24 @@ typedef enum
     ElemGraphicsSamplerAddressMode_ClampToEdgeMirror = 3,
     ElemGraphicsSamplerAddressMode_ClampToBorderColor = 4
 } ElemGraphicsSamplerAddressMode;
+
+typedef enum
+{
+    ElemRaytracingBuildFlags_None = 0x00,
+    ElemRaytracingBuildFlags_AllowUpdate = 0x01,
+    ElemRaytracingBuildFlags_AllowCompaction = 0x02,
+    ElemRaytracingBuildFlags_PreferFastTrace = 0x04,
+    ElemRaytracingBuildFlags_PreferFastBuild = 0x08,
+    ElemRaytracingBuildFlags_MinimizeMemory = 0x10
+} ElemRaytracingBuildFlags;
+
+typedef enum
+{
+    ElemRaytracingTlasInstanceFlags_None = 0x00,
+    ElemRaytracingTlasInstanceFlags_DisableTriangleCulling = 0x01,
+    ElemRaytracingTlasInstanceFlags_FlipTriangleFaces = 0x02,
+    ElemRaytracingTlasInstanceFlags_NonOpaque = 0x04,
+} ElemRaytracingTlasInstanceFlags;
 
 typedef enum
 {
@@ -497,6 +516,8 @@ typedef enum
     ElemGraphicsResourceBarrierSyncType_None,
     ElemGraphicsResourceBarrierSyncType_Compute,
     ElemGraphicsResourceBarrierSyncType_RenderTarget,
+    ElemGraphicsResourceBarrierSyncType_Copy,
+    ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure,
 } ElemGraphicsResourceBarrierSyncType;
 
 typedef enum
@@ -504,6 +525,7 @@ typedef enum
     ElemGraphicsResourceBarrierAccessType_NoAccess,
     ElemGraphicsResourceBarrierAccessType_Read,
     ElemGraphicsResourceBarrierAccessType_Write,
+    ElemGraphicsResourceBarrierAccessType_Copy,
     ElemGraphicsResourceBarrierAccessType_RenderTarget,
     ElemGraphicsResourceBarrierAccessType_DepthStencilWrite,
 } ElemGraphicsResourceBarrierAccessType;
@@ -598,6 +620,12 @@ typedef union
         ElemVector3 XYZ;
     }; 
 } ElemVector4;
+
+typedef union
+{
+    float Elements[4][3];
+    ElemVector3 Rows[4];
+} ElemMatrix4x3;
 
 typedef struct
 {
@@ -790,6 +818,13 @@ typedef struct
 
 typedef struct
 {
+    uint64_t Alignment;
+    uint64_t SizeInBytes;
+} ElemGraphicsResourceAllocationInfo;
+
+typedef struct
+{
+    ElemRaytracingBuildFlags BuildFlags;
     // TODO: Add transform matrix?
     ElemGraphicsFormat VertexFormat;
     ElemGraphicsResource VertexBuffer;
@@ -804,6 +839,30 @@ typedef struct
 
 typedef struct
 {
+    ElemRaytracingBuildFlags BuildFlags;
+    ElemGraphicsResource InstanceBuffer;
+    uint32_t InstanceBufferOffset;
+    uint32_t InstanceCount;
+} ElemRaytracingTlasParameters; 
+
+typedef struct
+{
+    // TODO: Change the layout of the matrix to be more user friendly
+    ElemMatrix4x3 TransformMatrix;
+    uint32_t InstanceId;
+    uint32_t InstanceMask;
+    ElemRaytracingTlasInstanceFlags InstanceFlags;
+    ElemGraphicsResource BlasResource;
+} ElemRaytracingTlasInstance;
+
+typedef struct
+{
+    ElemRaytracingTlasInstance* Items;
+    uint32_t Length;
+} ElemRaytracingTlasInstanceSpan;
+
+typedef struct
+{
     uint64_t Alignment;
     uint64_t SizeInBytes;
     uint64_t ScratchSizeInBytes;
@@ -815,6 +874,11 @@ typedef struct
     uint64_t StorageOffset;
     uint64_t StorageSizeInBytes;
 } ElemRaytracingAccelerationStructureOptions;
+
+typedef struct
+{
+    uint64_t ScratchOffset;
+} ElemRaytracingBuildOptions;
 
 // TODO: Clear values
 typedef struct
@@ -1222,8 +1286,14 @@ ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler s
 ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
 
 ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters);
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters);
+ElemAPI ElemGraphicsResourceAllocationInfo ElemGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount);
+ElemAPI ElemDataSpan ElemEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances);
 ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
-ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, const ElemRaytracingBlasParameters* parameters);
+
+// TODO: Add options to be able to pass scratch buffer offset and source accel struct
+ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
+ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

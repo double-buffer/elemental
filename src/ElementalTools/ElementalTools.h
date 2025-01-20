@@ -145,6 +145,12 @@ typedef union
 
 typedef union
 {
+    float m[4][3];
+    ElemToolsVector3 Rows[4];
+} ElemToolsMatrix4x3;
+
+typedef union
+{
     float m[4][4];
     ElemToolsVector4 Rows[4];
 } ElemToolsMatrix4x4;
@@ -158,7 +164,7 @@ typedef struct
 typedef struct
 {
     ElemToolsDataSpan Data;
-    uint32_t VertexSize;
+    uint32_t VertexSize; // TODO: Rename that to VertexSizeInBytes
     uint32_t VertexCount;
     // TODO: Add vertex description structure
 } ElemVertexBuffer;

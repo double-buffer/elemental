@@ -8,6 +8,7 @@
 #ifdef ElemToolsAPI
 typedef ElemToolsVector3 ElemVector3;
 typedef ElemToolsVector4 ElemVector4;
+typedef ElemToolsMatrix4x3 ElemMatrix4x3;
 #else
 #include "../Elemental/Elemental.h"
 #endif 
@@ -323,6 +324,22 @@ SampleMatrix4x4 SampleCreateTransformMatrix(SampleVector4 quaternion, ElemVector
     return result;
 }
 
+ElemMatrix4x3 SampleCreateTransformMatrix2(ElemVector4 quaternion, ElemVector3 translation)
+{
+	float xw = quaternion.X *quaternion.W , xx = quaternion.X *quaternion.X , yy = quaternion.Y *quaternion.Y ,
+      	yw = quaternion.Y *quaternion.W , xy = quaternion.X *quaternion.Y , yz = quaternion.Y *quaternion.Z ,
+      	zw = quaternion.Z *quaternion.W , xz = quaternion.X *quaternion.Z , zz = quaternion.Z *quaternion.Z ;
+
+    ElemMatrix4x3 result;
+
+	result.Rows[0] = (ElemVector3) { .X = 1-2*(yy+zz), .Y = 2*(xy+zw), .Z = 2*(xz-yw) };
+	result.Rows[1] = (ElemVector3) { .X = 2*(xy-zw), .Y = 1-2*(xx+zz), .Z = 2*(yz+xw) };
+	result.Rows[2] = (ElemVector3) { .X = 2*(xz+yw), .Y = 2*(yz-xw), .Z = 1-2*(xx+yy) };
+	result.Rows[3] = (ElemVector3) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f };
+
+    return result;
+}
+
 SampleMatrix4x4 SampleTransposeMatrix(SampleMatrix4x4 matrix)
 {
     SampleMatrix4x4 result;
@@ -433,6 +450,100 @@ SampleMatrix4x4 SampleCreatePerspectiveProjectionMatrix(float fovY, float aspect
     result.Rows[3] = (SampleVector4) { .X = 0.0f, .Y = 0.0f, .Z = zNear, .W = 0.0f };
 
     return result;
+}
+
+SampleMatrix4x4 SampleInvertMatrix4x4(SampleMatrix4x4 in, bool* outSuccess /* optional */)
+{
+    // Copy 'in' into a working area so we don’t overwrite the original
+    float w[4][4];
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            w[i][j] = in.m[i][j];
+        }
+    }
+
+    // Initialize 'inv' to the identity matrix
+    SampleMatrix4x4 inv;
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            inv.m[i][j] = (i == j) ? 1.0f : 0.0f;
+        }
+    }
+
+    // Gauss-Jordan elimination with partial pivoting
+    for (int col = 0; col < 4; col++)
+    {
+        // Find the pivot row (largest absolute value in this column below 'col')
+        float pivotValue = fabsf(w[col][col]);
+        int pivotRow = col;
+        for (int row = col + 1; row < 4; row++)
+        {
+            float test = fabsf(w[row][col]);
+            if (test > pivotValue)
+            {
+                pivotValue = test;
+                pivotRow = row;
+            }
+        }
+
+        // If pivot is too small, the matrix is likely singular
+        if (pivotValue < 1e-8f)
+        {
+            // We can set outSuccess = false if desired
+            if (outSuccess) *outSuccess = false;
+            // Return an identity or zero matrix (or handle differently)
+            // Here, we’ll return an identity as a fallback
+            SampleMatrix4x4 fallback;
+            for (int i = 0; i < 4; i++)
+                for (int j = 0; j < 4; j++)
+                    fallback.m[i][j] = (i == j) ? 1.0f : 0.0f;
+            return fallback;
+        }
+
+        // If pivot row is not the current row, swap
+        if (pivotRow != col)
+        {
+            for (int k = 0; k < 4; k++)
+            {
+                float tmp = w[col][k];
+                w[col][k] = w[pivotRow][k];
+                w[pivotRow][k] = tmp;
+
+                float tmp2 = inv.m[col][k];
+                inv.m[col][k] = inv.m[pivotRow][k];
+                inv.m[pivotRow][k] = tmp2;
+            }
+        }
+
+        // Normalize pivot row (divide everything by the pivot element)
+        float pivotElem = w[col][col];
+        for (int k = 0; k < 4; k++)
+        {
+            w[col][k]       /= pivotElem;
+            inv.m[col][k]   /= pivotElem;
+        }
+
+        // Eliminate this column in other rows
+        for (int row = 0; row < 4; row++)
+        {
+            if (row != col)
+            {
+                float factor = w[row][col];
+                for (int k = 0; k < 4; k++)
+                {
+                    w[row][k]     -= factor * w[col][k];
+                    inv.m[row][k] -= factor * inv.m[col][k];
+                }
+            }
+        }
+    }
+
+    if (outSuccess) *outSuccess = true;
+    return inv;
 }
 
 SampleMatrix4x4 SampleMulMatrix4x4(SampleMatrix4x4 a, SampleMatrix4x4 b)

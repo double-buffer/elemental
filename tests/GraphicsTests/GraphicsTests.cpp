@@ -344,14 +344,21 @@ ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const ch
     return pipelineState;
 }
 
-TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType)
+TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType, ElemGraphicsResourceUsage additionalUsage)
 {
     ElemGraphicsHeapOptions heapOptions =
     {
         .HeapType = heapType
     };
 
-    auto gpuBufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Write, nullptr);
+    auto usage = ElemGraphicsResourceUsage_Write;
+
+    if (additionalUsage != ElemGraphicsResourceUsage_Read)
+    {
+        usage = (ElemGraphicsResourceUsage)(usage | additionalUsage);
+    }
+
+    auto gpuBufferInfo = ElemCreateGraphicsBufferResourceInfo(graphicsDevice, sizeInBytes, usage, nullptr);
 
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, gpuBufferInfo.SizeInBytes, &heapOptions);
     auto gpuBuffer = ElemCreateGraphicsResource(graphicsHeap, 0, &gpuBufferInfo);

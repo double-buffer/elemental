@@ -42,6 +42,8 @@ typedef struct
     SampleCamera DebugCamera;
     SampleMatrix4x4 ProjectionMatrix;
     SampleMatrix4x4 ViewProjMatrix;
+    SampleMatrix4x4 InverseViewMatrix;
+    SampleMatrix4x4 InverseProjectionMatrix;
     float Action;
 } SampleInputsCameraState;
 
@@ -183,6 +185,12 @@ void SampleInputsCameraUpdate(ElemInputStream inputStream, SampleInputsCamera* i
         state->ProjectionMatrix = SampleCreatePerspectiveProjectionMatrix(0.78f, updateParameters->SwapChainInfo.AspectRatio, 0.001f);
     }
 
+    bool success = false;
+
     state->ViewProjMatrix = SampleMulMatrix4x4(viewMatrix, state->ProjectionMatrix);
+    state->InverseViewMatrix = SampleInvertMatrix4x4(viewMatrix, &success);
+    assert(success);
+    state->InverseProjectionMatrix = SampleInvertMatrix4x4(state->ProjectionMatrix, &success);
+    assert(success);
     state->Action = inputActions->Action;
 }

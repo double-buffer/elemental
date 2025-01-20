@@ -40,6 +40,7 @@ typedef struct
 {
     char Name[50];
     // TODO: Vertex size, etc.
+    uint32_t VertexSizeInBytes;
     uint32_t MeshPrimitiveCount;
     uint32_t MeshBufferOffset;
     uint32_t MeshBufferSizeInBytes;

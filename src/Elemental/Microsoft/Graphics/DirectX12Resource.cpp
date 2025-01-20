@@ -2,6 +2,7 @@
 #include "DirectX12Config.h"
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12CommandList.h"
+#include "DirectX12ResourceBarrier.h"
 #include "Graphics/Resource.h"
 #include "Graphics/ResourceDeleteQueue.h"
 #include "Graphics/UploadBufferPool.h"
@@ -18,6 +19,7 @@ thread_local UploadBufferDevicePool<ComPtr<ID3D12Resource>> threadDirectX12Uploa
 Span<ElemGraphicsResourceDescriptorInfo> directX12ResourceDescriptorInfos;
 Span<ElemGraphicsSamplerInfo> directX12SamplerInfos;
 
+MemoryArena directX12RaytracingInstanceMemoryArena;
 MemoryArena directX12ReadBackMemoryArena;
 
 // TODO: Reorder the functions to match the header
@@ -33,6 +35,7 @@ void InitDirectX12ResourceMemory()
         directX12SamplerInfos = SystemPushArray<ElemGraphicsSamplerInfo>(DirectX12MemoryArena, DIRECTX12_MAX_SAMPLERS, AllocationState_Reserved);
 
         // TODO: Allow to increase the size as a parameter
+        directX12RaytracingInstanceMemoryArena = SystemAllocateMemoryArena(DIRECTX12_RAYTRACING_INSTANCE_MEMORY_ARENA);
         directX12ReadBackMemoryArena = SystemAllocateMemoryArena(DIRECTX12_READBACK_MEMORY_ARENA);
     }
 }
@@ -167,7 +170,7 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
         .Width = (uint32_t)resourceDesc.Width,
         .Height = type != ElemGraphicsResourceType_Buffer ? (uint32_t)resourceDesc.Height : 0,
         .MipLevels = resourceDesc.MipLevels,
-        .IsPresentTexture = isPresentTexture,
+        .IsPresentTexture = isPresentTexture
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsResourcePool, handle, {
@@ -262,6 +265,12 @@ D3D12_RESOURCE_FLAGS ConvertToDirectX12ResourceFlags(ElemGraphicsResourceUsage u
         result |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     }
     
+    if (usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure)
+    {
+        result |= D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE;
+        result |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
+    
     return result;
 }
 
@@ -282,6 +291,11 @@ ElemGraphicsResourceUsage ConvertFromDirectX12ResourceFlags(D3D12_RESOURCE_FLAGS
     if (flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
     {
         result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_DepthStencil);
+    }
+    
+    if (flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE)
+    {
+        result = (ElemGraphicsResourceUsage)(result | ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
     }
 
     return result;
@@ -330,6 +344,99 @@ D3D12_RESOURCE_DESC1 CreateDirectX12TextureDescription(const ElemGraphicsResourc
         },
         .Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
         .Flags = ConvertToDirectX12ResourceFlags(resourceInfo->Usage)
+    };
+}
+
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS ConvertToDirectX12RaytraceBuildFlags(ElemRaytracingBuildFlags buildOptions)
+{
+    auto result = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+
+    if (buildOptions & ElemRaytracingBuildFlags_AllowUpdate)
+    {
+        result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+    }
+
+    if (buildOptions & ElemRaytracingBuildFlags_AllowCompaction)
+    {
+        result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
+    }
+    
+    if (buildOptions & ElemRaytracingBuildFlags_PreferFastTrace)
+    {
+        result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+    }
+
+    if (buildOptions & ElemRaytracingBuildFlags_PreferFastBuild)
+    {
+        result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
+    }
+
+    if (buildOptions & ElemRaytracingBuildFlags_MinimizeMemory)
+    {
+        result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
+    }
+
+    return result;
+}
+
+D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BuildDirectX12BlasInputs(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
+{
+    auto vertexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->VertexBuffer);
+    SystemAssert(vertexBufferResourceData);
+
+    auto indexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->IndexBuffer);
+    SystemAssert(indexBufferResourceData);
+
+    auto description = SystemPushStruct<D3D12_RAYTRACING_GEOMETRY_DESC>(memoryArena);
+
+    *description =
+    {
+        .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
+        .Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
+        .Triangles = 
+        {
+            .IndexFormat = ConvertToDirectX12Format(parameters->IndexFormat),
+            .VertexFormat = ConvertToDirectX12Format(parameters->VertexFormat),
+            .IndexCount = parameters->IndexCount,
+            .VertexCount = parameters->VertexCount,
+            .IndexBuffer = indexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + parameters->IndexBufferOffset,
+            .VertexBuffer = 
+            {
+                .StartAddress = vertexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + parameters->VertexBufferOffset,
+                .StrideInBytes = parameters->VertexSizeInBytes
+            }
+        }
+    };
+
+    return
+    {
+        .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
+        .Flags = ConvertToDirectX12RaytraceBuildFlags(parameters->BuildFlags), 
+        .NumDescs = 1,
+        .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
+        .pGeometryDescs = description
+    };
+}
+
+D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BuildDirectX12TlasInputs(MemoryArena memoryArena, const ElemRaytracingTlasParameters* parameters)
+{
+    // TODO: Validate parameters
+    
+    DirectX12GraphicsResourceData* instanceBufferResourceData = nullptr;
+    
+    if (parameters->InstanceBuffer)
+    {
+        instanceBufferResourceData = GetDirectX12GraphicsResourceData(parameters->InstanceBuffer);
+        SystemAssert(instanceBufferResourceData);
+    }
+
+    return
+    {
+        .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
+        .Flags = ConvertToDirectX12RaytraceBuildFlags(parameters->BuildFlags), 
+        .NumDescs = parameters->InstanceCount,
+        .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
+        .InstanceDescs = parameters->InstanceBuffer ? instanceBufferResourceData->DeviceObject->GetGPUVirtualAddress() + parameters->InstanceBufferOffset : 0
     };
 }
 
@@ -455,62 +562,6 @@ ElemGraphicsResourceInfo DirectX12CreateTexture2DResourceInfo(ElemGraphicsDevice
     resourceInfo.SizeInBytes = sizeAndAlignInfo.SizeInBytes;
 
     return resourceInfo;
-}
-
-ElemRaytracingAllocationInfo DirectX12GetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
-{
-    // TODO: Add validation
-    
-    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
-    SystemAssert(graphicsDeviceData);
-
-    auto vertexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->VertexBuffer);
-    SystemAssert(vertexBufferResourceData);
-
-    auto indexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->IndexBuffer);
-    SystemAssert(indexBufferResourceData);
-
-    D3D12_RAYTRACING_GEOMETRY_DESC description =
-    {
-        .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
-        .Triangles = 
-        {
-            .IndexFormat = ConvertToDirectX12Format(parameters->IndexFormat),
-            .VertexFormat = ConvertToDirectX12Format(parameters->VertexFormat),
-            .IndexCount = parameters->IndexCount,
-            .VertexCount = parameters->VertexCount,
-            .IndexBuffer = indexBufferResourceData->DeviceObject->GetGPUVirtualAddress(),
-            .VertexBuffer = 
-            {
-                .StartAddress = vertexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + parameters->VertexBufferOffset,
-                .StrideInBytes = parameters->VertexSizeInBytes
-            }
-        }
-    };
-
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs =
-    {
-        .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
-        .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE, 
-        .NumDescs = 1,
-        .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-        .pGeometryDescs = &description
-    };
-
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO allocationInfo;     
-    graphicsDeviceData->Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &allocationInfo);
-
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", allocationInfo.ResultDataMaxSizeInBytes);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scrath Size: %d", allocationInfo.ScratchDataSizeInBytes);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scrath Size: %d", allocationInfo.UpdateScratchDataSizeInBytes);
-
-    return 
-    {
-        .Alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT,
-        .SizeInBytes = allocationInfo.ResultDataMaxSizeInBytes,
-        .ScratchSizeInBytes = allocationInfo.ScratchDataSizeInBytes,
-        .UpdateScratchSizeInBytes = allocationInfo.UpdateScratchDataSizeInBytes
-    };
 }
 
 ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
@@ -985,27 +1036,38 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
             .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
         };
 
-        if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+        if (resourceData->Type == ElemGraphicsResourceType_RaytracingAccelerationStructure)
         {
-            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Texture2D =
-            {
-                .MostDetailedMip = textureMipIndex,
-                .MipLevels = resourceData->MipLevels - textureMipIndex
-            };
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE,
+            srvDesc.RaytracingAccelerationStructure.Location = resourceData->DeviceObject->GetGPUVirtualAddress() + resourceData->SubResourceOffset;
+
+            graphicsDeviceData->Device->CreateShaderResourceView(nullptr, &srvDesc, descriptorHandle);
         }
         else
         {
-            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-            srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-            srvDesc.Buffer =
+            if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
             {
-                .NumElements = resourceData->Width / 4,
-                .Flags = D3D12_BUFFER_SRV_FLAG_RAW
-            };
-        }
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+                srvDesc.Texture2D =
+                    {
+                        .MostDetailedMip = textureMipIndex,
+                        .MipLevels = resourceData->MipLevels - textureMipIndex
+                    };
+            }
 
-        graphicsDeviceData->Device->CreateShaderResourceView(resourceData->DeviceObject.Get(), &srvDesc, descriptorHandle);
+            else
+            {
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+                srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+                srvDesc.Buffer =
+                    {
+                        .NumElements = resourceData->Width / 4,
+                        .Flags = D3D12_BUFFER_SRV_FLAG_RAW
+                    };
+            }
+
+            graphicsDeviceData->Device->CreateShaderResourceView(resourceData->DeviceObject.Get(), &srvDesc, descriptorHandle);
+        }
     }
     else if (usage == ElemGraphicsResourceDescriptorUsage_Write)
     {
@@ -1082,6 +1144,7 @@ void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevi
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
     ProcessResourceDeleteQueue();
+    SystemClearMemoryArena(directX12RaytracingInstanceMemoryArena);
     SystemClearMemoryArena(directX12ReadBackMemoryArena);
     
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
@@ -1196,4 +1259,207 @@ void DirectX12FreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGra
     }
 
     directX12SamplerInfos[sampler] = {};
+}
+
+ElemRaytracingAllocationInfo DirectX12GetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    // TODO: Add validation
+    
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto inputs = BuildDirectX12BlasInputs(stackMemoryArena, parameters);
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO allocationInfo;     
+    graphicsDeviceData->Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &allocationInfo);
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", allocationInfo.ResultDataMaxSizeInBytes);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", allocationInfo.ScratchDataSizeInBytes);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", allocationInfo.UpdateScratchDataSizeInBytes);
+
+    return 
+    {
+        .Alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT,
+        .SizeInBytes = allocationInfo.ResultDataMaxSizeInBytes,
+        .ScratchSizeInBytes = allocationInfo.ScratchDataSizeInBytes,
+        .UpdateScratchSizeInBytes = allocationInfo.UpdateScratchDataSizeInBytes
+    };
+}
+
+ElemRaytracingAllocationInfo DirectX12GetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    // TODO: Add validation
+    
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto inputs = BuildDirectX12TlasInputs(stackMemoryArena, parameters);
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO allocationInfo;     
+    graphicsDeviceData->Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &allocationInfo);
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "TLAS Size: %d", allocationInfo.ResultDataMaxSizeInBytes);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", allocationInfo.ScratchDataSizeInBytes);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", allocationInfo.UpdateScratchDataSizeInBytes);
+
+    return 
+    {
+        .Alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT,
+        .SizeInBytes = allocationInfo.ResultDataMaxSizeInBytes,
+        .ScratchSizeInBytes = allocationInfo.ScratchDataSizeInBytes,
+        .UpdateScratchSizeInBytes = allocationInfo.UpdateScratchDataSizeInBytes
+    };
+}
+
+ElemGraphicsResourceAllocationInfo DirectX12GetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount)
+{
+    return 
+    {
+        .Alignment = 4,
+        .SizeInBytes = instanceCount * sizeof(D3D12_RAYTRACING_INSTANCE_DESC)
+    };
+}
+
+ElemDataSpan DirectX12EncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
+{
+    InitDirectX12ResourceMemory();
+
+    auto result = SystemPushArray<D3D12_RAYTRACING_INSTANCE_DESC>(directX12RaytracingInstanceMemoryArena, instances.Length);
+
+    for (uint32_t i = 0; i < instances.Length; i++)
+    {
+        auto instance = &instances.Items[i];
+
+        auto blasResourceData = GetDirectX12GraphicsResourceData(instance->BlasResource);
+        SystemAssert(blasResourceData);
+
+        result[i] =
+        {
+                // TODO: Flags
+            .InstanceID = instance->InstanceId,
+            .InstanceMask = instance->InstanceMask,
+            .Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE,
+            .AccelerationStructure = blasResourceData->DeviceObject->GetGPUVirtualAddress()
+        };
+                
+
+        result[i].Transform[0][0] = 1;
+        result[i].Transform[1][1] = 1;
+        result[i].Transform[2][2] = 1;
+
+        for (uint32_t j = 0; j < 3; j++)
+        {
+            for (uint32_t k = 0; k < 4; k++)
+            {
+                result[i].Transform[j][k] = instance->TransformMatrix.Elements[k][j];
+            }
+        }
+    }
+    
+    return { .Items = (uint8_t*)result.Pointer, .Length = (uint32_t)(result.Length * sizeof(D3D12_RAYTRACING_INSTANCE_DESC)) };
+}
+
+ElemGraphicsResource DirectX12CreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options)
+{
+    auto resourceData = GetDirectX12GraphicsResourceData(storageBuffer);
+    SystemAssert(resourceData);
+
+    auto result = CreateDirectX12GraphicsResourceFromResource(graphicsDevice, ElemGraphicsResourceType_RaytracingAccelerationStructure, resourceData->GraphicsHeap, resourceData->DeviceObject, false);
+
+    auto resultResourceData = GetDirectX12GraphicsResourceData(result);
+    SystemAssert(resultResourceData);
+
+    if (options)
+    {
+        resultResourceData->SubResourceOffset = options->StorageOffset;
+
+        if (options->StorageSizeInBytes > 0)
+        {
+            resultResourceData->Width = options->StorageSizeInBytes;
+        }
+    }
+
+    return result;
+}
+
+void DirectX12BuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    
+    // TODO: Add validation
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto accelerationStructureResourceData = GetDirectX12GraphicsResourceData(accelerationStructure);
+    SystemAssert(accelerationStructureResourceData);
+
+    auto scratchBufferResourceData = GetDirectX12GraphicsResourceData(scratchBuffer);
+    SystemAssert(scratchBufferResourceData);
+    
+    auto inputs = BuildDirectX12BlasInputs(stackMemoryArena, parameters);
+
+    auto scratchOffset = 0u;
+
+    if (options)
+    {
+        scratchOffset = options->ScratchOffset;
+    }
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC description 
+    {
+        .DestAccelerationStructureData = accelerationStructureResourceData->DeviceObject->GetGPUVirtualAddress() + accelerationStructureResourceData->SubResourceOffset,
+        .Inputs = inputs,
+        .ScratchAccelerationStructureData = scratchBufferResourceData->DeviceObject->GetGPUVirtualAddress() + scratchOffset
+    };
+
+    InsertDirectX12ResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure);
+
+    // TODO: Use the post structs?
+    commandListData->DeviceObject->BuildRaytracingAccelerationStructure(&description, 0, nullptr);
+}
+
+void DirectX12BuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    
+    // TODO: Add validation
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto accelerationStructureResourceData = GetDirectX12GraphicsResourceData(accelerationStructure);
+    SystemAssert(accelerationStructureResourceData);
+
+    auto scratchBufferResourceData = GetDirectX12GraphicsResourceData(scratchBuffer);
+    SystemAssert(scratchBufferResourceData);
+    
+    auto inputs = BuildDirectX12TlasInputs(stackMemoryArena, parameters);
+
+    auto scratchOffset = 0u;
+
+    if (options)
+    {
+        scratchOffset = options->ScratchOffset;
+    }
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC description 
+    {
+        .DestAccelerationStructureData = accelerationStructureResourceData->DeviceObject->GetGPUVirtualAddress() + accelerationStructureResourceData->SubResourceOffset,
+        .Inputs = inputs,
+        .ScratchAccelerationStructureData = scratchBufferResourceData->DeviceObject->GetGPUVirtualAddress() + scratchOffset
+    };
+
+    InsertDirectX12ResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure);
+
+    // TODO: Use the post structs?
+    commandListData->DeviceObject->BuildRaytracingAccelerationStructure(&description, 0, nullptr);
 }

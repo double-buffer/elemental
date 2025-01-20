@@ -182,7 +182,7 @@ ResourceBarriers GenerateBarrierCommands(MemoryArena memoryArena, ResourceBarrie
         auto barrierItem = barrierPoolData->Barriers[i];
         auto resourceStatus = GetResourceBarrierResourceStatus(barrierPoolData, barrierItem.Resource);
 
-        if (barrierItem.Type == ElemGraphicsResourceType_Buffer)
+        if (barrierItem.Type == ElemGraphicsResourceType_Buffer || barrierItem.Type == ElemGraphicsResourceType_RaytracingAccelerationStructure)
         {
             // TODO: Process status in a separate functions?
             if (resourceStatus)

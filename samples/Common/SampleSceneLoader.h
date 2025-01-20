@@ -13,6 +13,9 @@ typedef struct
     SampleMeshHeader MeshHeader;
     SampleMeshPrimitiveHeader* MeshPrimitives;
     SampleGpuBuffer MeshBuffer;
+    SampleGpuBuffer RaytracingStorageBuffer;
+    SampleGpuBuffer RaytracingScratchBuffer; // TODO: To remove use a global one
+    ElemGraphicsResource RaytracingAccelerationStructure;
 } SampleMeshData;
 
 typedef struct
@@ -48,6 +51,11 @@ typedef struct
     uint32_t NodeCount;
     SampleSceneNodeHeader* Nodes;
     SampleGpuBuffer MaterialBuffer;
+    SampleGpuBuffer TlasInstanceBuffer;
+    SampleGpuBuffer RaytracingStorageBuffer;
+    SampleGpuBuffer RaytracingScratchBuffer; // TODO: To remove use a global one
+    ElemGraphicsResource RaytracingAccelerationStructure;
+    ElemGraphicsResourceDescriptor RaytracingAccelerationStructureReadDescriptor;
 } SampleSceneData;
 
 // TODO: Change that. For now we use that simple implementation

@@ -22,6 +22,8 @@ ShaderParameters parameters : register(b0);
 struct FrameData
 {
     float4x4 ViewProjMatrix;
+    float4x4 InverseViewMatrix;
+    float4x4 InverseProjectionMatrix;
     uint32_t ShowMeshlets;
 };
 
@@ -130,20 +132,10 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[parameters.MaterialBuffer];
     ShaderMaterial material = materialBuffer.Load<ShaderMaterial>(parameters.MaterialId * sizeof(ShaderMaterial));
 
-    if (frameData.ShowMeshlets == 0)
-    {
-        float4 albedo = material.AlbedoFactor;
-        float3 worldNormal = normalize(input.WorldNormal);
-        float nDotL = max(dot(worldNormal, normalize(float3(1.0, 1.0, -1.0))), 0.0);
-        float ambient = 0.05;
+    float4 albedo = material.AlbedoFactor;
+    float3 worldNormal = normalize(input.WorldNormal);
+    float nDotL = max(dot(worldNormal, normalize(float3(1.0, 1.0, -1.0))), 0.0);
+    float ambient = 0.05;
 
-        return albedo * (nDotL + ambient);
-    }
-    else
-    {
-        uint hashResult = hash(input.MaterialId);
-        float3 meshletColor = float3(float(hashResult & 255), float((hashResult >> 8) & 255), float((hashResult >> 16) & 255)) / 255.0;
-
-        return float4(meshletColor, 1.0);
-    }
+    return albedo * (nDotL + ambient);
 }

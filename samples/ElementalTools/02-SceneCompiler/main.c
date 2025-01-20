@@ -28,6 +28,7 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
     uint32_t meshletCount = 0u;
     uint32_t meshletVertexIndexCount = 0u;
     uint32_t meshletTriangleIndexCount = 0u;
+    uint32_t vertexSizeInBytes = 0u;
 
     for (uint32_t i = 0; i < mesh.MeshPrimitives.Length; i++)
     {
@@ -51,10 +52,12 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
         meshletCount += result.Meshlets.Length;
         meshletVertexIndexCount += result.MeshletVertexIndexBuffer.Length;
         meshletTriangleIndexCount += result.MeshletTriangleIndexBuffer.Length;
+        vertexSizeInBytes = result.VertexBuffer.VertexSize;
     }
 
-    meshHeader.VertexBufferOffset = meshHeader.MeshBufferOffset;
+    meshHeader.VertexBufferOffset = 0;
     meshHeader.VertexBufferSizeInBytes = vertexBufferSizeInBytes;
+    meshHeader.VertexSizeInBytes = vertexSizeInBytes;
 
     meshHeader.IndexBufferOffset = meshHeader.VertexBufferOffset + meshHeader.VertexBufferSizeInBytes;
     meshHeader.IndexBufferSizeInBytes = indexBufferSizeInBytes;
@@ -66,6 +69,7 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
     meshHeader.MeshBufferSizeInBytes = meshletTriangleIndexBufferOffset + meshletTriangleIndexCount * sizeof(uint32_t);
 
     uint32_t currentVertexBufferOffset = 0u;
+    uint32_t currentIndexBufferOffset = 0u;
     uint32_t currentMeshletBufferOffset = 0u;
     uint32_t currentMeshletVertexIndexBufferOffset = 0u;
     uint32_t currentMeshletTriangleIndexBufferOffset = 0u;
@@ -80,22 +84,27 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
         meshPrimitiveHeader->MaterialId = meshPrimitive->MaterialId;
         meshPrimitiveHeader->MeshletCount = result.Meshlets.Length;
 
-        meshPrimitiveHeader->VertexBufferOffset = meshHeader.VertexBufferOffset + currentVertexBufferOffset - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->VertexBufferOffset = meshHeader.VertexBufferOffset + currentVertexBufferOffset;
         fseek(file, meshPrimitiveHeader->VertexBufferOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.VertexBuffer.Data.Items, sizeof(uint8_t), result.VertexBuffer.Data.Length, file);
         currentVertexBufferOffset += result.VertexBuffer.Data.Length;
+        
+        uint32_t indexBufferOffset = meshHeader.IndexBufferOffset + currentIndexBufferOffset;
+        fseek(file, indexBufferOffset + meshHeader.MeshBufferOffset, SEEK_SET);
+        fwrite(result.IndexBuffer.Items, sizeof(uint32_t), result.IndexBuffer.Length, file);
+        currentIndexBufferOffset += result.IndexBuffer.Length * sizeof(uint32_t);
 
-        meshPrimitiveHeader->MeshletOffset = meshletBufferOffset + currentMeshletBufferOffset - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->MeshletOffset = meshletBufferOffset + currentMeshletBufferOffset;
         fseek(file, meshPrimitiveHeader->MeshletOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.Meshlets.Items, sizeof(ElemMeshlet), result.Meshlets.Length, file);
         currentMeshletBufferOffset += result.Meshlets.Length * sizeof(ElemMeshlet);
 
-        meshPrimitiveHeader->MeshletVertexIndexOffset = meshletVertexIndexBufferOffset + currentMeshletVertexIndexBufferOffset - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->MeshletVertexIndexOffset = meshletVertexIndexBufferOffset + currentMeshletVertexIndexBufferOffset;
         fseek(file, meshPrimitiveHeader->MeshletVertexIndexOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.MeshletVertexIndexBuffer.Items, sizeof(uint32_t), result.MeshletVertexIndexBuffer.Length, file);
         currentMeshletVertexIndexBufferOffset += result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t);
 
-        meshPrimitiveHeader->MeshletTriangleIndexOffset = meshletTriangleIndexBufferOffset + currentMeshletTriangleIndexBufferOffset - meshHeader.MeshBufferOffset;
+        meshPrimitiveHeader->MeshletTriangleIndexOffset = meshletTriangleIndexBufferOffset + currentMeshletTriangleIndexBufferOffset;
         fseek(file, meshPrimitiveHeader->MeshletTriangleIndexOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.MeshletTriangleIndexBuffer.Items, sizeof(uint32_t), result.MeshletTriangleIndexBuffer.Length, file);
         currentMeshletTriangleIndexBufferOffset += result.MeshletTriangleIndexBuffer.Length * sizeof(uint32_t);

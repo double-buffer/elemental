@@ -322,11 +322,6 @@ ElemGraphicsResourceInfo MetalCreateTexture2DResourceInfo(ElemGraphicsDevice gra
     return resourceInfo;
 }
 
-ElemRaytracingAllocationInfo MetalGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
-{
-    return {};
-}
-
 ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo)
 {
     SystemAssert(graphicsHeap != ELEM_HANDLE_NULL);
@@ -921,4 +916,37 @@ void MetalFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphic
 
     metalSamplerInfos[sampler].MetalSampler.reset();
     metalSamplerInfos[sampler] = {};
+}
+
+ElemRaytracingAllocationInfo MetalGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    return {};
+}
+
+ElemRaytracingAllocationInfo MetalGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters)
+{
+    return {};
+}
+
+ElemGraphicsResourceAllocationInfo MetalGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount)
+{
+    return {};
+}
+
+ElemDataSpan MetalEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
+{
+    return {};
+}
+
+ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options)
+{
+    return {};
+}
+
+void MetalBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+}
+
+void MetalBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
 }
