@@ -1,31 +1,85 @@
 struct ShaderParameters
 {
-    uint32_t FrameDataBufferIndex;
-    uint32_t MeshBuffer;
-    uint32_t MaterialBuffer;
-    uint32_t VertexBufferOffset;
-    uint32_t MeshletOffset;
-    uint32_t MeshletVertexIndexOffset;
-    uint32_t MeshletTriangleIndexOffset;
-    float Scale;
-    float3 Translation;
-    uint32_t Reserved;
-    float4 Rotation;
-    uint32_t MaterialId;
-    uint32_t TextureSampler;
+    uint32_t GlobalParametersBufferIndex;
+    uint32_t PrimitiveId;
+    uint32_t MeshInstanceId;
 };
-
 
 [[vk::push_constant]]
 ShaderParameters parameters : register(b0);
 
-struct FrameData
+// TODO: Reorder parameters
+struct GlobalParameters
 {
     float4x4 ViewProjMatrix;
     float4x4 InverseViewMatrix;
     float4x4 InverseProjectionMatrix;
-    uint32_t ShowMeshlets;
+    uint32_t MaterialBufferIndex;
+    uint32_t GpuMeshInstanceBufferIndex;
+    uint32_t GpuMeshPrimitiveInstanceBufferIndex;
+    uint32_t Action; // TODO: One bit per action
 };
+
+struct GpuMeshPrimitive
+{
+    uint32_t MeshletOffset;
+    uint32_t MeshletCount;
+    uint32_t VertexBufferOffset;
+    uint32_t VertexCount;
+    uint32_t IndexBufferOffset;
+    uint32_t IndexCount;
+    int32_t MaterialId;
+    // TODO: BoundingBox
+};
+
+struct GpuMeshInstance
+{
+    int32_t MeshBufferIndex;
+    float4 Rotation;
+    float3 Translation;
+    float Scale;
+};
+
+struct GpuMeshPrimitiveInstance
+{
+    int32_t MeshInstanceId;
+    int32_t MeshPrimitiveId;
+};
+
+struct GpuDrawParameters
+{
+    int32_t MeshBufferIndex;
+    int32_t MaterialId;
+    uint32_t MeshletOffset;
+    float4 Rotation;
+    float3 Translation;
+    float Scale;
+};
+
+// TODO: Do other functions if we need less indirection
+GpuDrawParameters GetDrawParameters(GlobalParameters globalParameters, int32_t meshPrimitiveInstanceId)
+{
+    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshInstanceBufferIndex];
+    ByteAddressBuffer meshPrimitiveInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshPrimitiveInstanceBufferIndex];
+
+    GpuMeshPrimitiveInstance meshPrimitiveInstance = meshPrimitiveInstanceBuffer.Load<GpuMeshPrimitiveInstance>(meshPrimitiveInstanceId * sizeof(GpuMeshPrimitiveInstance));
+
+    GpuMeshInstance meshInstance = meshInstanceBuffer.Load<GpuMeshInstance>(meshPrimitiveInstance.MeshInstanceId * sizeof(GpuMeshInstance));
+    // TODO: Be carreful with uniform/nonuniform (normally it should be uniform here because we process one primitive per meshlet but for raytracing sometimes it isn't)
+    ByteAddressBuffer meshBuffer = ResourceDescriptorHeap[meshInstance.MeshBufferIndex];
+
+    GpuMeshPrimitive meshPrimitive = meshBuffer.Load<GpuMeshPrimitive>(meshPrimitiveInstance.MeshPrimitiveId * sizeof(GpuMeshPrimitive));
+
+    GpuDrawParameters result;
+    result.MeshBufferIndex = meshInstance.MeshBufferIndex;
+    result.MaterialId = meshPrimitive.MaterialId;
+    result.MeshletOffset = meshPrimitive.MeshletOffset;
+    result.Rotation = meshInstance.Rotation;
+    result.Translation = meshInstance.Translation;
+    result.Scale = meshInstance.Scale;
+
+    return result;
+}
 
 typedef struct
 {
@@ -34,6 +88,7 @@ typedef struct
     float4 AlbedoFactor;
 } ShaderMaterial;
 
+// TODO: Compress
 struct ElemMeshlet
 {
     uint32_t VertexIndexOffset;
@@ -78,35 +133,38 @@ void MeshMain(in uint groupId: SV_GroupID,
 {
     uint meshletIndex = groupId;
 
-    ByteAddressBuffer meshBuffer = ResourceDescriptorHeap[parameters.MeshBuffer];
-    ElemMeshlet meshlet = meshBuffer.Load<ElemMeshlet>(parameters.MeshletOffset + meshletIndex * sizeof(ElemMeshlet));
+    ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
+    GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
+
+    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshInstanceBufferIndex];
+    GpuMeshInstance meshInstance = meshInstanceBuffer.Load<GpuMeshInstance>(parameters.MeshInstanceId * sizeof(GpuMeshInstance));
+
+    ByteAddressBuffer meshBuffer = ResourceDescriptorHeap[meshInstance.MeshBufferIndex];
+
+    GpuMeshPrimitive meshPrimitive = meshBuffer.Load<GpuMeshPrimitive>(parameters.PrimitiveId * sizeof(GpuMeshPrimitive));
+    ElemMeshlet meshlet = meshBuffer.Load<ElemMeshlet>(meshPrimitive.MeshletOffset + meshletIndex * sizeof(ElemMeshlet));
 
     SetMeshOutputCounts(meshlet.VertexIndexCount, meshlet.TriangleCount);
 
     if (groupThreadId < meshlet.VertexIndexCount)
     {
-        ByteAddressBuffer frameDataBuffer = ResourceDescriptorHeap[parameters.FrameDataBufferIndex];
-        FrameData frameData = frameDataBuffer.Load<FrameData>(0);
+        uint vertexIndex = meshBuffer.Load<uint>(meshlet.VertexIndexOffset + groupThreadId * sizeof(uint));
+        Vertex vertex = meshBuffer.Load<Vertex>(meshPrimitive.VertexBufferOffset + vertexIndex * sizeof(Vertex));
 
-        uint vertexIndex = meshBuffer.Load<uint>(parameters.MeshletVertexIndexOffset + (meshlet.VertexIndexOffset + groupThreadId) * sizeof(uint));
-        Vertex vertex = meshBuffer.Load<Vertex>(parameters.VertexBufferOffset + vertexIndex * sizeof(Vertex));
+        float3 worldPosition = RotateQuaternion(vertex.Position, meshInstance.Rotation) * meshInstance.Scale + meshInstance.Translation;
+        float3 worldNormal = RotateQuaternion(vertex.Normal, meshInstance.Rotation);
+        float3 worldTangent = RotateQuaternion(vertex.Tangent.xyz, meshInstance.Rotation);
 
-        float3 worldPosition = RotateQuaternion(vertex.Position, parameters.Rotation) * parameters.Scale + parameters.Translation;
-        float3 worldNormal = RotateQuaternion(vertex.Normal, parameters.Rotation);
-        float3 worldTangent = RotateQuaternion(vertex.Tangent.xyz, parameters.Rotation);
-
-        //vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), mul(worldMatrix, frameData.ViewProjMatrix));
-        // NOTE: This calculation is faster because v * M is faster than M * M
-        vertices[groupThreadId].Position = mul(float4(worldPosition, 1.0), frameData.ViewProjMatrix);
+        vertices[groupThreadId].Position = mul(float4(worldPosition, 1.0), globalParameters.ViewProjMatrix);
         vertices[groupThreadId].WorldNormal = worldNormal;
         vertices[groupThreadId].TextureCoordinates = vertex.TextureCoordinates;
         vertices[groupThreadId].MeshletIndex = groupId;
-        vertices[groupThreadId].MaterialId = parameters.MaterialId;
+        vertices[groupThreadId].MaterialId = meshPrimitive.MaterialId;
     }
 
     if (groupThreadId < meshlet.TriangleCount)
     {
-        uint triangleIndex = meshBuffer.Load<uint>(parameters.MeshletTriangleIndexOffset + (meshlet.TriangleOffset + groupThreadId) * sizeof(uint));
+        uint triangleIndex = meshBuffer.Load<uint>(meshlet.TriangleOffset + groupThreadId * sizeof(uint));
         indices[groupThreadId] = unpack_u8u32(triangleIndex).xyz;
     }
 }
@@ -126,11 +184,11 @@ uint hash(uint a)
 [shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
-    ByteAddressBuffer frameDataBuffer = ResourceDescriptorHeap[parameters.FrameDataBufferIndex];
-    FrameData frameData = frameDataBuffer.Load<FrameData>(0);
+    ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
+    GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
 
-    ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[parameters.MaterialBuffer];
-    ShaderMaterial material = materialBuffer.Load<ShaderMaterial>(parameters.MaterialId * sizeof(ShaderMaterial));
+    ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[globalParameters.MaterialBufferIndex];
+    ShaderMaterial material = materialBuffer.Load<ShaderMaterial>(input.MaterialId * sizeof(ShaderMaterial));
 
     float4 albedo = material.AlbedoFactor;
     float3 worldNormal = normalize(input.WorldNormal);

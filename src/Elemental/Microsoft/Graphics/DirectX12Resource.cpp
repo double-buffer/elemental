@@ -381,6 +381,7 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS ConvertToDirectX12RaytraceBu
 
 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BuildDirectX12BlasInputs(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
 {
+    // TODO: Allow the filling of the structure if the buffer are not filled.
     auto vertexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->VertexBuffer);
     SystemAssert(vertexBufferResourceData);
 

@@ -42,6 +42,7 @@ typedef struct
     SampleCamera DebugCamera;
     SampleMatrix4x4 ProjectionMatrix;
     SampleMatrix4x4 ViewProjMatrix;
+    SampleMatrix4x4 InverseViewProjMatrix;
     SampleMatrix4x4 InverseViewMatrix;
     SampleMatrix4x4 InverseProjectionMatrix;
     float Action;

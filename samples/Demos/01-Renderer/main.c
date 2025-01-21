@@ -354,10 +354,10 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
             {
                 SampleMeshPrimitiveHeader* meshPrimitive = &meshData->MeshPrimitives[j];
-                applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
+                //applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
                 applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
-                applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
-                applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
+                //applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
+                //applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
                 applicationPayload->ShaderParameters.Scale = sceneNode->Scale;
                 applicationPayload->ShaderParameters.Translation = sceneNode->Translation;
                 applicationPayload->ShaderParameters.MaterialId = meshPrimitive->MaterialId;

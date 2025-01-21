@@ -7,15 +7,21 @@
 #include "SampleGpuMemory.h"
 
 // TODO: The struct here are temporary. The final data will be placed in buffer
+
+typedef struct
+{
+    SampleMeshPrimitiveHeader PrimitiveHeader;
+    SampleGpuBuffer RaytracingStorageBuffer; // TODO: To remove use a global one
+    SampleGpuBuffer RaytracingScratchBuffer; // TODO: To remove use a global one
+    ElemGraphicsResource RaytracingAccelerationStructure;
+} SampleMeshPrimitiveData;
+
 typedef struct 
 {
     const char* Path;
     SampleMeshHeader MeshHeader;
-    SampleMeshPrimitiveHeader* MeshPrimitives;
+    SampleMeshPrimitiveData* MeshPrimitives;
     SampleGpuBuffer MeshBuffer;
-    SampleGpuBuffer RaytracingStorageBuffer;
-    SampleGpuBuffer RaytracingScratchBuffer; // TODO: To remove use a global one
-    ElemGraphicsResource RaytracingAccelerationStructure;
 } SampleMeshData;
 
 typedef struct
@@ -44,6 +50,14 @@ typedef struct
 
 typedef struct
 {
+    int32_t MeshBufferIndex;
+    ElemVector4 Rotation;
+    ElemVector3 Translation;
+    float Scale;
+} GpuMeshInstance;
+
+typedef struct
+{
     uint32_t MeshCount;
     SampleMeshData* Meshes;
     uint32_t MaterialCount;
@@ -51,6 +65,7 @@ typedef struct
     uint32_t NodeCount;
     SampleSceneNodeHeader* Nodes;
     SampleGpuBuffer MaterialBuffer;
+    SampleGpuBuffer GpuMeshInstanceBuffer;
     SampleGpuBuffer TlasInstanceBuffer;
     SampleGpuBuffer RaytracingStorageBuffer;
     SampleGpuBuffer RaytracingScratchBuffer; // TODO: To remove use a global one
@@ -63,7 +78,7 @@ typedef struct
 SampleTextureData TextureCache[MAX_TEXTURE_COUNT];
 uint32_t CurrentTextureCacheIndex = 0u;
 
-void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
+void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
 {
     *meshData = (SampleMeshData){};
     meshData->Path = path;
@@ -80,17 +95,26 @@ void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
 
     // TODO: Can we get rid of the malloc?
 
-    meshData->MeshPrimitives = (SampleMeshPrimitiveHeader*)malloc(sizeof(SampleMeshPrimitiveHeader) * meshData->MeshHeader.MeshPrimitiveCount);
-    fread(meshData->MeshPrimitives, sizeof(SampleMeshPrimitiveHeader), meshData->MeshHeader.MeshPrimitiveCount, file);
+    meshData->MeshPrimitives = (SampleMeshPrimitiveData*)malloc(sizeof(SampleMeshPrimitiveData) * meshData->MeshHeader.MeshPrimitiveCount);
+
+    SampleMeshPrimitiveHeader* primitiveHeaders = (SampleMeshPrimitiveHeader*)malloc(sizeof(SampleMeshPrimitiveHeader) * meshData->MeshHeader.MeshPrimitiveCount);
+    fread(primitiveHeaders, sizeof(SampleMeshPrimitiveHeader), meshData->MeshHeader.MeshPrimitiveCount, file);
+
+    for (uint32_t i = 0; i < meshData->MeshHeader.MeshPrimitiveCount; i++)
+    {
+        SampleMeshPrimitiveData* primitiveData = &meshData->MeshPrimitives[i];
+        primitiveData->PrimitiveHeader = primitiveHeaders[i];
+    }
 
     fclose(file);
+    
+    // TODO: Construct debug name
+    meshData->MeshBuffer = SampleCreateGpuBuffer(gpuMemory, meshData->MeshHeader.MeshBufferSizeInBytes, meshData->MeshHeader.Name);
 }
 
 // TODO: We should be able to replace this whole function with IO Queues
 void SampleLoadMeshData(ElemCommandList commandList, SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
 {
-    // TODO: Construct debug name
-    meshData->MeshBuffer = SampleCreateGpuBuffer(gpuMemory, meshData->MeshHeader.MeshBufferSizeInBytes, meshData->MeshHeader.Name);
 
     // TODO: To replace with file IO 
     assert(meshData->Path);
@@ -316,7 +340,7 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemo
 
     for (uint32_t i = 0; i < sceneData->MeshCount; i++)
     {
-        SampleLoadMesh(path, meshDataBlocks[i].Offset, &sceneData->Meshes[i]);
+        SampleLoadMesh(path, meshDataBlocks[i].Offset, &sceneData->Meshes[i], gpuMemory);
     }
 
     char directoryPath[MAX_PATH];
@@ -335,6 +359,28 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemo
         free(shaderMaterials);
     }
 
+    GpuMeshInstance* gpuMeshInstancesData = (GpuMeshInstance*)malloc(sizeof(GpuMeshInstance) * 1024);
+    uint32_t gpuMeshInstanceCount = 0u;
+
+    for (uint32_t i = 0; i < sceneData->NodeCount; i++)
+    {
+        SampleSceneNodeHeader* sceneNode = &sceneData->Nodes[i];
+
+        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
+        {
+            GpuMeshInstance* gpuMeshInstance = &gpuMeshInstancesData[gpuMeshInstanceCount++];
+            SampleMeshData* meshData = &sceneData->Meshes[sceneNode->ReferenceIndex];
+
+            gpuMeshInstance->Rotation = sceneNode->Rotation;
+            gpuMeshInstance->Scale = sceneNode->Scale;
+            gpuMeshInstance->Translation = sceneNode->Translation;
+            gpuMeshInstance->MeshBufferIndex = meshData->MeshBuffer.ReadDescriptor;
+        }
+    }
+        
+    sceneData->GpuMeshInstanceBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, gpuMeshInstancesData, gpuMeshInstanceCount * sizeof(GpuMeshInstance), "GpuMeshInstanceBuffer");
+
+    free(gpuMeshInstancesData);
     free(materialHeaders);
     free(meshDataBlocks);
 }

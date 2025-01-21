@@ -7,26 +7,15 @@
 
 typedef struct
 {
-    uint32_t FrameDataBuffer;
-    // TODO: Embed that into a buffer
-    uint32_t MeshBuffer;
-    uint32_t MaterialBuffer;
-    uint32_t VertexBufferOffset;
-    uint32_t MeshletOffset;
-    uint32_t MeshletVertexIndexOffset;
-    uint32_t MeshletTriangleIndexOffset;
-    float Scale;
-    ElemVector3 Translation;
-    uint32_t Reserved;
-    ElemVector4 Rotation;
-    uint32_t MaterialId;
-    uint32_t TextureSampler;
+    uint32_t ShaderGlobalParametersBuffer;
+    uint32_t PrimitiveId;
+    uint32_t MeshInstanceId;
 } ShaderParameters;
 
 typedef struct
 {
     uint32_t AccelerationStructureIndex;
-    uint32_t FrameDataBufferIndex;
+    uint32_t ShaderGlobalParametersBufferIndex;
     uint32_t MaterialBuffer;
 } RaytracingShaderParameters;
 
@@ -35,8 +24,11 @@ typedef struct
     SampleMatrix4x4 ViewProjMatrix;
     SampleMatrix4x4 InverseViewMatrix;
     SampleMatrix4x4 InverseProjectionMatrix;
-    uint32_t ShowMeshlets;
-} ShaderFrameData;
+    uint32_t MaterialBufferIndex;
+    uint32_t GpuMeshInstanceBufferIndex;
+    uint32_t GpuMeshPrimitiveInstanceBufferIndex;
+    uint32_t Action;
+} ShaderShaderGlobalParameters;
 
 // TODO: Group common variables into separate structs
 typedef struct
@@ -59,8 +51,8 @@ typedef struct
     SampleGpuMemory GpuMemory;
     SampleGpuMemory GpuMemoryUpload;
 
-    ShaderFrameData FrameData;
-    SampleGpuBuffer FrameDataBuffer;
+    ShaderShaderGlobalParameters ShaderGlobalParameters;
+    SampleGpuBuffer ShaderGlobalParametersBuffer;
     
     SampleGpuTexture RenderTargetTexture;
 } ApplicationPayload;
@@ -112,25 +104,31 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
     {
         SampleMeshData* meshData = &sceneData->Meshes[i];
         
-        ElemRaytracingBlasParameters blasParameters =
+        for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
         {
-            .BuildFlags = ElemRaytracingBuildFlags_PreferFastTrace,
-            .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
-            .VertexBuffer = meshData->MeshBuffer.Buffer,
-            .VertexBufferOffset = meshData->MeshHeader.VertexBufferOffset,
-            .VertexCount = meshData->MeshHeader.VertexBufferSizeInBytes / meshData->MeshHeader.VertexSizeInBytes,
-            .VertexSizeInBytes = meshData->MeshHeader.VertexSizeInBytes,
-            .IndexFormat = ElemGraphicsFormat_R32_UINT,
-            .IndexBuffer = meshData->MeshBuffer.Buffer,
-            .IndexBufferOffset = meshData->MeshHeader.IndexBufferOffset,
-            .IndexCount = meshData->MeshHeader.IndexBufferSizeInBytes / sizeof(uint32_t)
-        };
+            SampleMeshPrimitiveData* meshPrimitiveData = &meshData->MeshPrimitives[j];
 
-        ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingBlasAllocationInfo(applicationPayload->GraphicsDevice, &blasParameters);
+            // TODO: Change that
+            ElemRaytracingBlasParameters blasParameters =
+            {
+                .BuildFlags = ElemRaytracingBuildFlags_PreferFastTrace,
+                .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
+                .VertexBuffer = meshData->MeshBuffer.Buffer,
+                .VertexBufferOffset = meshPrimitiveData->PrimitiveHeader.VertexBufferOffset,
+                .VertexCount = meshPrimitiveData->PrimitiveHeader.VertexCount,
+                .VertexSizeInBytes = meshData->MeshHeader.VertexSizeInBytes,
+                .IndexFormat = ElemGraphicsFormat_R32_UINT,
+                .IndexBuffer = meshData->MeshBuffer.Buffer,
+                .IndexBufferOffset = meshPrimitiveData->PrimitiveHeader.IndexBufferOffset,
+                .IndexCount = meshPrimitiveData->PrimitiveHeader.IndexCount
+            };
 
-        meshData->RaytracingStorageBuffer = SampleCreateGpuRaytracingBuffer(&applicationPayload->GpuMemory, allocationInfos.SizeInBytes, "AccelStorage");
-        meshData->RaytracingScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, allocationInfos.ScratchSizeInBytes, "ScratchStorage");
-        meshData->RaytracingAccelerationStructure = ElemCreateRaytracingAccelerationStructureResource(applicationPayload->GraphicsDevice, meshData->RaytracingStorageBuffer.Buffer, NULL);
+            ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingBlasAllocationInfo(applicationPayload->GraphicsDevice, &blasParameters);
+
+            meshPrimitiveData->RaytracingStorageBuffer = SampleCreateGpuRaytracingBuffer(&applicationPayload->GpuMemory, allocationInfos.SizeInBytes, "AccelStorage");
+            meshPrimitiveData->RaytracingScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, allocationInfos.ScratchSizeInBytes, "ScratchStorage");
+            meshPrimitiveData->RaytracingAccelerationStructure = ElemCreateRaytracingAccelerationStructureResource(applicationPayload->GraphicsDevice, meshPrimitiveData->RaytracingStorageBuffer.Buffer, NULL);
+        }
     }
         
     ElemGraphicsResourceAllocationInfo tlasInstanceAllocationInfo = ElemGetRaytracingTlasInstanceAllocationInfo(applicationPayload->GraphicsDevice, applicationPayload->TestSceneData.NodeCount);
@@ -138,13 +136,18 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
 
     uint32_t tlasInstanceCount = 0u;
 
-    for (uint32_t i = 0; i < sceneData->NodeCount; i++)
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
     {
-        SampleSceneNodeHeader* sceneNode = &sceneData->Nodes[i];
+        SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
 
         if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {
-            tlasInstanceCount++;
+            SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
+
+            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
+            {
+                tlasInstanceCount++;
+            }
         }
     }
 
@@ -172,35 +175,40 @@ void BuildRaytracingAccelerationStructures(ElemCommandList commandList, Applicat
     {
         SampleMeshData* meshData = &sceneData->Meshes[i];
 
-        // TODO: Here we have to force the before access, change that
-        // TODO: Do we really need that one?
-        ElemGraphicsResourceBarrierOptions barrierOptions = 
+        for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
         {
-            .BeforeSync = ElemGraphicsResourceBarrierSyncType_Copy,
-            .BeforeAccess = ElemGraphicsResourceBarrierAccessType_Copy
-        };
+            SampleMeshPrimitiveData* meshPrimitiveData = &meshData->MeshPrimitives[j];
 
-        // TODO: Should be write here
-        ElemGraphicsResourceBarrier(commandList, meshData->MeshBuffer.ReadDescriptor, &barrierOptions);
+            // TODO: Here we have to force the before access, change that
+            // TODO: Do we really need that one?
+            ElemGraphicsResourceBarrierOptions barrierOptions = 
+            {
+                .BeforeSync = ElemGraphicsResourceBarrierSyncType_Copy,
+                .BeforeAccess = ElemGraphicsResourceBarrierAccessType_Copy
+            };
 
-        ElemRaytracingBlasParameters blasParameters =
-        {
-            .BuildFlags = ElemRaytracingBuildFlags_PreferFastTrace,
-            .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
-            .VertexBuffer = meshData->MeshBuffer.Buffer,
-            .VertexBufferOffset = meshData->MeshHeader.VertexBufferOffset,
-            .VertexCount = meshData->MeshHeader.VertexBufferSizeInBytes / meshData->MeshHeader.VertexSizeInBytes,
-            .VertexSizeInBytes = meshData->MeshHeader.VertexSizeInBytes,
-            .IndexFormat = ElemGraphicsFormat_R32_UINT,
-            .IndexBuffer = meshData->MeshBuffer.Buffer,
-            .IndexBufferOffset = meshData->MeshHeader.IndexBufferOffset,
-            .IndexCount = meshData->MeshHeader.IndexBufferSizeInBytes / sizeof(uint32_t)
-        };
-    
-        ElemBuildRaytracingBlas(commandList, meshData->RaytracingAccelerationStructure, meshData->RaytracingScratchBuffer.Buffer, &blasParameters, NULL);
+            // TODO: Should be write here
+            ElemGraphicsResourceBarrier(commandList, meshData->MeshBuffer.ReadDescriptor, &barrierOptions);
 
-        ElemGraphicsResourceBarrier(commandList, meshData->MeshBuffer.ReadDescriptor, &barrierOptions);
-        ElemGraphicsResourceBarrier(commandList, meshData->RaytracingStorageBuffer.ReadDescriptor, NULL);
+            ElemRaytracingBlasParameters blasParameters =
+            {
+                .BuildFlags = ElemRaytracingBuildFlags_PreferFastTrace,
+                .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
+                .VertexBuffer = meshData->MeshBuffer.Buffer,
+                .VertexBufferOffset = meshPrimitiveData->PrimitiveHeader.VertexBufferOffset,
+                .VertexCount = meshPrimitiveData->PrimitiveHeader.VertexCount,
+                .VertexSizeInBytes = meshData->MeshHeader.VertexSizeInBytes,
+                .IndexFormat = ElemGraphicsFormat_R32_UINT,
+                .IndexBuffer = meshData->MeshBuffer.Buffer,
+                .IndexBufferOffset = meshPrimitiveData->PrimitiveHeader.IndexBufferOffset,
+                .IndexCount = meshPrimitiveData->PrimitiveHeader.IndexCount
+            };
+
+            ElemBuildRaytracingBlas(commandList, meshPrimitiveData->RaytracingAccelerationStructure, meshPrimitiveData->RaytracingScratchBuffer.Buffer, &blasParameters, NULL);
+
+            ElemGraphicsResourceBarrier(commandList, meshData->MeshBuffer.ReadDescriptor, &barrierOptions);
+            ElemGraphicsResourceBarrier(commandList, meshPrimitiveData->RaytracingStorageBuffer.ReadDescriptor, NULL);
+        }
     }
 
     // TODO: Move that part in the other function
@@ -215,23 +223,28 @@ void BuildRaytracingAccelerationStructures(ElemCommandList commandList, Applicat
         {
             SampleMeshData* meshData = &sceneData->Meshes[sceneNode->ReferenceIndex];
 
-            // TODO: Scale
-            ElemMatrix4x3 transformMatrix = SampleCreateTransformMatrix2(sceneNode->Rotation, sceneNode->Translation);
-
-            tlasInstances[tlasInstanceCount++] = (ElemRaytracingTlasInstance)
+            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
             {
-                .InstanceId = i,
-                .InstanceFlags = ElemRaytracingTlasInstanceFlags_DisableTriangleCulling,
-                .InstanceMask = 1,
-                .TransformMatrix = transformMatrix,
-                .BlasResource = meshData->RaytracingAccelerationStructure
-            };
+                SampleMeshPrimitiveData* meshPrimitiveData = &meshData->MeshPrimitives[j];
 
-            /*
+                // TODO: Scale
+                ElemMatrix4x3 transformMatrix = SampleCreateTransformMatrix2(sceneNode->Rotation, sceneNode->Translation);
+
+                tlasInstances[tlasInstanceCount++] = (ElemRaytracingTlasInstance)
+                {
+                    .InstanceId = i,
+                    .InstanceFlags = ElemRaytracingTlasInstanceFlags_DisableTriangleCulling,
+                    .InstanceMask = 1,
+                    .TransformMatrix = transformMatrix,
+                    .BlasResource = meshPrimitiveData->RaytracingAccelerationStructure
+                };
+
+                /*
             applicationPayload->ShaderParameters.Scale = sceneNode->Scale;
             applicationPayload->ShaderParameters.Translation = sceneNode->Translation;
             applicationPayload->ShaderParameters.Rotation = sceneNode->Rotation;
             */
+            }
         }
     }
 
@@ -278,8 +291,8 @@ void InitSample(void* payload)
     CreateRenderTarget(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     SampleLoadScene("CornellBox.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemoryUpload);
     
-    applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemoryUpload, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");
-    applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParametersBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemoryUpload, &applicationPayload->ShaderGlobalParameters, sizeof(ShaderShaderGlobalParameters), "ShaderGlobalParameters");
+    applicationPayload->ShaderParameters.ShaderGlobalParametersBuffer = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor;
 
     ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
     
@@ -290,11 +303,7 @@ void InitSample(void* payload)
         if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {
             SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
-
-            if (meshData->MeshBuffer.Buffer == ELEM_HANDLE_NULL)
-            { 
-                SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemoryUpload);
-            }
+            SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemoryUpload);
         }
     }
 
@@ -366,7 +375,7 @@ void FreeSample(void* payload)
 
     SampleFreeGpuTexture(&applicationPayload->RenderTargetTexture);
     SampleFreeScene(&applicationPayload->TestSceneData);
-    SampleFreeGpuBuffer(&applicationPayload->FrameDataBuffer);
+    SampleFreeGpuBuffer(&applicationPayload->ShaderGlobalParametersBuffer);
 
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreePipelineState(applicationPayload->RaytracingGraphicsPipeline);
@@ -387,14 +396,16 @@ void FreeSample(void* payload)
     printf("Exit application...\n");
 }
 
-void UpdateFrameData(ApplicationPayload* applicationPayload, SampleMatrix4x4 viewProjMatrix, SampleMatrix4x4 inverseViewMatrix, SampleMatrix4x4 inversProjectionMatrix, bool showMeshlets)
+void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const SampleInputsCameraState* cameraState)
 {
-    applicationPayload->FrameData.ViewProjMatrix = viewProjMatrix;
-    applicationPayload->FrameData.InverseViewMatrix = inverseViewMatrix;
-    applicationPayload->FrameData.InverseProjectionMatrix = inversProjectionMatrix;
-    applicationPayload->FrameData.ShowMeshlets = showMeshlets;
+    applicationPayload->ShaderGlobalParameters.ViewProjMatrix = cameraState->ViewProjMatrix;
+    applicationPayload->ShaderGlobalParameters.InverseViewMatrix = cameraState->InverseViewMatrix;
+    applicationPayload->ShaderGlobalParameters.InverseProjectionMatrix = cameraState->InverseProjectionMatrix;
+    applicationPayload->ShaderGlobalParameters.MaterialBufferIndex = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.GpuMeshInstanceBufferIndex = applicationPayload->TestSceneData.GpuMeshInstanceBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.Action = cameraState->Action;
 
-    ElemUploadGraphicsBufferData(applicationPayload->FrameDataBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->FrameData, .Length = sizeof(ShaderFrameData) });
+    ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderShaderGlobalParameters) });
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
@@ -429,7 +440,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     } 
 
     SampleInputsCameraState* inputsCameraState = &applicationPayload->InputsCamera.State;
-    UpdateFrameData(applicationPayload, inputsCameraState->ViewProjMatrix, inputsCameraState->InverseViewMatrix, inputsCameraState->InverseProjectionMatrix, inputsCameraState->Action);
+    UpdateShaderGlobalParameters(applicationPayload, inputsCameraState);
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -449,7 +460,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    if (!inputsCameraState->Action)
+    if (inputsCameraState->Action)
     {
         ElemBindPipelineState(commandList, applicationPayload->RaytracingGraphicsPipeline); 
     
@@ -457,7 +468,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         {
             .MaterialBuffer = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor,
             .AccelerationStructureIndex = applicationPayload->TestSceneData.RaytracingAccelerationStructureReadDescriptor,
-            .FrameDataBufferIndex = applicationPayload->FrameDataBuffer.ReadDescriptor
+            .ShaderGlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor
         };
 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(RaytracingShaderParameters) });
@@ -468,8 +479,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
-        applicationPayload->ShaderParameters.MaterialBuffer = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
-
+        uint32_t currentMeshIndexId = 0;
         for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
         {
             SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
@@ -478,23 +488,17 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             {
                 SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
 
-                applicationPayload->ShaderParameters.MeshBuffer = meshData->MeshBuffer.ReadDescriptor;
-
                 for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
                 {
-                    SampleMeshPrimitiveHeader* meshPrimitive = &meshData->MeshPrimitives[j];
-                    applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
-                    applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
-                    applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
-                    applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
-                    applicationPayload->ShaderParameters.Scale = sceneNode->Scale;
-                    applicationPayload->ShaderParameters.Translation = sceneNode->Translation;
-                    applicationPayload->ShaderParameters.MaterialId = meshPrimitive->MaterialId;
-                    applicationPayload->ShaderParameters.Rotation = sceneNode->Rotation;
+                    SampleMeshPrimitiveData* meshPrimitive = &meshData->MeshPrimitives[j];
+                    applicationPayload->ShaderParameters.PrimitiveId = j;
+                    applicationPayload->ShaderParameters.MeshInstanceId = currentMeshIndexId;
 
                     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-                    ElemDispatchMesh(commandList, meshPrimitive->MeshletCount, 1, 1);
+                    ElemDispatchMesh(commandList, meshPrimitive->PrimitiveHeader.MeshletCount, 1, 1);
                 }
+
+                currentMeshIndexId++;
             }
         }
     }
