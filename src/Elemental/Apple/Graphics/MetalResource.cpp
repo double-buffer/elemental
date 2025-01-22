@@ -21,6 +21,15 @@ MemoryArena metalReadBackMemoryArena;
 Span<ElemGraphicsResource> metalBlasList;
 uint32_t metalBlasCount = 0;
 
+// TODO: Rename
+typedef struct IRRaytracingAccelerationStructureGPUHeader
+{
+    uint64_t accelerationStructureID;
+    uint64_t addressOfInstanceContributions;
+    uint64_t pad0[4];
+    MTL::DispatchThreadgroupsIndirectArguments pad1;
+} IRRaytracingAccelerationStructureGPUHeader;
+
 thread_local UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>> threadDirectX12UploadBufferPools[METAL_MAX_DEVICES];
 
 void InitMetalResourceMemory()
@@ -544,6 +553,19 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
 
             resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newBuffer(resourceInfo->Width, metalResourceOptions, graphicsHeapOffset));
         }
+        else
+        {
+            resource = NS::TransferPtr(graphicsDeviceData->Device->newBuffer(sizeof(IRRaytracingAccelerationStructureGPUHeader), MTL::ResourceStorageModeShared));        
+            SystemAssertReturnNullHandle(resource);
+
+            if (MetalDebugLayerEnabled && resourceInfo->DebugName)
+            {
+                resource->setLabel(NS::String::string("AccelHeader", NS::UTF8StringEncoding));
+            }
+            
+            // TODO: Maybe we need to put the resource resident each time we allocate it?
+            // If this is the case, we need to record a list or create a heap
+        }
     }
         
     if (!(resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
@@ -867,9 +889,9 @@ ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphic
             return -1;
         }
   
-        if (resourceData->Usage == ElemGraphicsResourceUsage_RaytracingAccelerationStructure)
+        if (resourceData->Type == ElemGraphicsResourceType_RaytracingAccelerationStructure)
         {
-            handle = CreateMetalArgumentBufferHandleForAccelerationStructure(graphicsDeviceData->ResourceArgumentBuffer, (MTL::AccelerationStructure*)resourceData->DeviceObject.get(), resourceData->Width);
+            handle = CreateMetalArgumentBufferHandleForBuffer(graphicsDeviceData->ResourceArgumentBuffer, (MTL::Buffer*)resourceData->AccelerationStructureHeader, sizeof(IRRaytracingAccelerationStructureGPUHeader));
         }
         else
         {
@@ -1180,12 +1202,12 @@ ElemDataSpan MetalEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan i
         instanceDescriptor->mask = instance->InstanceMask;
         instanceDescriptor->accelerationStructureIndex = blasResourceData->BlasIndex;
         instanceDescriptor->userID = instance->InstanceId;
-    
-        for (uint32_t j = 0; j < 3; j++)
+
+        for (uint32_t j = 0; j < 4; j++)
         {
-            for (uint32_t k = 0; k < 4; k++)
+            for (uint32_t k = 0; k < 3; k++)
             {
-                instanceDescriptor->transformationMatrix[j][k] = instance->TransformMatrix.Elements[k][j];
+                instanceDescriptor->transformationMatrix.columns[j].elements[k] = instance->TransformMatrix.Elements[j][k];
             }
         }
 
@@ -1216,13 +1238,17 @@ ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGrap
         resource->setLabel(NS::String::string(options->DebugName, NS::UTF8StringEncoding));
     }
 
-    auto result = CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, ElemGraphicsResourceType_RaytracingAccelerationStructure, storageBufferResourceData->GraphicsHeap, storageBufferResourceData->Width, storageBufferResourceData->HeapOffset, ElemGraphicsResourceUsage_RaytracingAccelerationStructure, resource, false);
+    auto result = CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, ElemGraphicsResourceType_RaytracingAccelerationStructure, storageBufferResourceData->GraphicsHeap, storageBufferResourceData->Width, storageBufferResourceData->HeapOffset + sizeof(IRRaytracingAccelerationStructureGPUHeader), ElemGraphicsResourceUsage_RaytracingAccelerationStructure, resource, false);
 
     // HACK: Find a better solution
     auto resourceData = GetMetalResourceData(result);
 
+    resourceData->AccelerationStructureHeader = (MTL::Buffer*)storageBufferResourceData->DeviceObject.get();
     resourceData->BlasIndex = metalBlasCount;
     metalBlasList[metalBlasCount++] = result;
+
+    auto headerContent = (IRRaytracingAccelerationStructureGPUHeader*)resourceData->AccelerationStructureHeader->contents();
+    headerContent->accelerationStructureID = ((MTL::AccelerationStructure*)resourceData->DeviceObject.get())->gpuResourceID()._impl;
 
     return result;
 }
