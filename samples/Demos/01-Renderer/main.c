@@ -8,29 +8,23 @@
 
 // TODO: Share data between shader and C code
 
-typedef struct 
+typedef struct
 {
-    uint32_t FrameDataBuffer;
-    // TODO: Embed that into a buffer
-    uint32_t MeshBuffer;
-    uint32_t MaterialBuffer;
-    uint32_t VertexBufferOffset;
-    uint32_t MeshletOffset;
-    uint32_t MeshletVertexIndexOffset;
-    uint32_t MeshletTriangleIndexOffset;
-    float Scale;
-    ElemVector3 Translation;
-    uint32_t Reserved;
-    ElemVector4 Rotation;
-    uint32_t MaterialId;
-    uint32_t TextureSampler;
+    uint32_t ShaderGlobalParametersBuffer;
+    uint32_t MeshPrimitiveInstanceId;
 } ShaderParameters;
 
 typedef struct
 {
     SampleMatrix4x4 ViewProjMatrix;
-    uint32_t ShowMeshlets;
-} ShaderFrameData;
+    SampleMatrix4x4 InverseViewMatrix;
+    SampleMatrix4x4 InverseProjectionMatrix;
+    uint32_t MaterialBufferIndex;
+    uint32_t GpuMeshInstanceBufferIndex;
+    uint32_t GpuMeshPrimitiveInstanceBufferIndex;
+    uint32_t TextureSampler;
+    uint32_t Action;
+} ShaderShaderGlobalParameters;
 
 // TODO: Group common variables into separate structs
 typedef struct
@@ -54,8 +48,8 @@ typedef struct
     SampleInputsCamera InputsCamera;
     SampleSceneData TestSceneData; // TODO: Do we keep that structure here?
 
-    ShaderFrameData FrameData;
-    SampleGpuBuffer FrameDataBuffer;
+    ShaderShaderGlobalParameters ShaderGlobalParameters;
+    SampleGpuBuffer ShaderGlobalParametersBuffer;
 } ApplicationPayload;
 
 typedef struct
@@ -82,12 +76,17 @@ void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, u
     applicationPayload->DepthBuffer = ElemCreateGraphicsResource(applicationPayload->DepthBufferHeap, 0, &resourceInfo);
 }
 
-void UpdateFrameData(ApplicationPayload* applicationPayload, SampleMatrix4x4 viewProjMatrix, bool showMeshlets)
+void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const SampleInputsCameraState* cameraState)
 {
-    applicationPayload->FrameData.ViewProjMatrix = viewProjMatrix;
-    applicationPayload->FrameData.ShowMeshlets = showMeshlets;
+    applicationPayload->ShaderGlobalParameters.ViewProjMatrix = cameraState->ViewProjMatrix;
+    applicationPayload->ShaderGlobalParameters.InverseViewMatrix = cameraState->InverseViewMatrix;
+    applicationPayload->ShaderGlobalParameters.InverseProjectionMatrix = cameraState->InverseProjectionMatrix;
+    applicationPayload->ShaderGlobalParameters.MaterialBufferIndex = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.GpuMeshInstanceBufferIndex = applicationPayload->TestSceneData.GpuMeshInstanceBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.GpuMeshPrimitiveInstanceBufferIndex = applicationPayload->TestSceneData.GpuMeshPrimitiveInstanceBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.Action = cameraState->Action;
 
-    ElemUploadGraphicsBufferData(applicationPayload->FrameDataBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->FrameData, .Length = sizeof(ShaderFrameData) });
+    ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderShaderGlobalParameters) });
 }
 
 void InitSample(void* payload)
@@ -113,9 +112,8 @@ void InitSample(void* payload)
     applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(2048));
 
     // TODO: IMPORTANT: Make a seoncd head : GpuMemory and rename the other GpuMemoryUpload
-
-    applicationPayload->FrameDataBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, &applicationPayload->FrameData, sizeof(ShaderFrameData), "FrameData");
-    applicationPayload->ShaderParameters.FrameDataBuffer = applicationPayload->FrameDataBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParametersBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, &applicationPayload->ShaderGlobalParameters, sizeof(ShaderShaderGlobalParameters), "ShaderGlobalParameters");
+    applicationPayload->ShaderParameters.ShaderGlobalParametersBuffer = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor;
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
@@ -128,7 +126,7 @@ void InitSample(void* payload)
         .MaxAnisotropy = 16,
     };
 
-    applicationPayload->ShaderParameters.TextureSampler = ElemCreateGraphicsSampler(applicationPayload->GraphicsDevice, &samplerInfo);
+    applicationPayload->ShaderGlobalParameters.TextureSampler = ElemCreateGraphicsSampler(applicationPayload->GraphicsDevice, &samplerInfo);
 
     ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
@@ -158,6 +156,23 @@ void InitSample(void* payload)
         applicationPayload->InputsApplication.State.IsCursorDisplayed = false;
     }
 
+    // HACK: IMPORTANT
+    // BUG: We need to load the data for now in the load function to avoid a crash wit the new scene loader
+    ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
+    
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
+    {
+        SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
+
+        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
+        {
+            SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
+            SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemory);
+        }
+    }
+    ElemCommitCommandList(loadDataCommandList);
+    ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
+
     SampleStartFrameMeasurement();
 
     ElemDataSpan savedStateData = SampleReadFile("SavedState.bin", false);
@@ -176,13 +191,13 @@ void FreeSample(void* payload)
     ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
 
     SampleFreeScene(&applicationPayload->TestSceneData);
-    SampleFreeGpuBuffer(&applicationPayload->FrameDataBuffer);
+    SampleFreeGpuBuffer(&applicationPayload->ShaderGlobalParametersBuffer);
 
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
  
-    ElemFreeGraphicsSampler(applicationPayload->ShaderParameters.TextureSampler, NULL);
+    ElemFreeGraphicsSampler(applicationPayload->ShaderGlobalParameters.TextureSampler, NULL);
     ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
     ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
 
@@ -227,8 +242,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     } 
 
     SampleInputsCameraState* inputsCameraState = &applicationPayload->InputsCamera.State;
-
-    UpdateFrameData(applicationPayload, inputsCameraState->ViewProjMatrix, inputsCameraState->Action);
+    UpdateShaderGlobalParameters(applicationPayload, inputsCameraState);
 
     // TODO: We need to have a kind of queue system. The problem here is that if we don't have any
     // data to load we will create empty lists
@@ -335,38 +349,17 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
 
-    applicationPayload->ShaderParameters.MaterialBuffer = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
-
     // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
     // Be carreful with the limit per dimension of 65000
-    for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
+    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
+    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
+
+    for (uint32_t i = 0; i < applicationPayload->TestSceneData.GpuMeshPrimitiveInstanceCount; i++)
     {
-        SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
+        applicationPayload->ShaderParameters.MeshPrimitiveInstanceId = i;
 
-        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
-        {
-            SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
-            
-            // TODO: We need to check if the data is loaded into the gpu
-
-            applicationPayload->ShaderParameters.MeshBuffer = meshData->MeshBuffer.ReadDescriptor;
-
-            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
-            {
-                SampleMeshPrimitiveHeader* meshPrimitive = &meshData->MeshPrimitives[j];
-                //applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
-                applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
-                //applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
-                //applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
-                applicationPayload->ShaderParameters.Scale = sceneNode->Scale;
-                applicationPayload->ShaderParameters.Translation = sceneNode->Translation;
-                applicationPayload->ShaderParameters.MaterialId = meshPrimitive->MaterialId;
-                applicationPayload->ShaderParameters.Rotation = sceneNode->Rotation;
-
-                ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-                ElemDispatchMesh(commandList, meshPrimitive->MeshletCount, 1, 1);
-            }
-        }
+        ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
+        ElemDispatchMesh(commandList, applicationPayload->TestSceneData.GpuMeshPrimitiveMeshletCountList[i], 1, 1);
     }
 
     ElemEndRenderPass(commandList);
