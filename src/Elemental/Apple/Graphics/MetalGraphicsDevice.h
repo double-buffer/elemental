@@ -38,7 +38,6 @@ MTL::CompareFunction ConvertToMetalCompareFunction(ElemGraphicsCompareFunction c
 
 uint32_t CreateMetalArgumentBufferHandleForTexture(MetalArgumentBuffer argumentBuffer, MTL::Texture* texture);
 uint32_t CreateMetalArgumentBufferHandleForBuffer(MetalArgumentBuffer argumentBuffer, MTL::Buffer* buffer, uint32_t length);
-uint32_t CreateMetalArgumentBufferHandleForAccelerationStructure(MetalArgumentBuffer argumentBuffer, MTL::AccelerationStructure* buffer, uint32_t length);
 uint32_t CreateMetalArgumentBufferHandleForSamplerState(MetalArgumentBuffer argumentBuffer, MTL::SamplerState* sampler);
 void FreeMetalArgumentBufferHandle(MetalArgumentBuffer argumentBuffer, uint64_t handle);
 

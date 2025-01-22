@@ -460,7 +460,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    if (inputsCameraState->Action)
+    if (!inputsCameraState->Action)
     {
         ElemBindPipelineState(commandList, applicationPayload->RaytracingGraphicsPipeline); 
     

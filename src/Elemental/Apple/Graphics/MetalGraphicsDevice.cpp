@@ -275,42 +275,6 @@ const uint64_t kIRBufSizeOffset     = 0;
 const uint64_t kIRBufSizeMask       = 0xffffffff;
 const uint64_t kIRTypedBufferOffset = 63;
 
-uint32_t CreateMetalArgumentBufferHandleForAccelerationStructure(MetalArgumentBuffer argumentBuffer, MTL::AccelerationStructure* buffer, uint32_t length)
-{            
-    SystemAssert(argumentBuffer.Storage);
-
-    auto storage = argumentBuffer.Storage;
-    auto argumentIndex = UINT32_MAX;
-
-    do
-    {
-        if (storage->FreeListIndex == UINT32_MAX)
-        {
-            argumentIndex = UINT32_MAX;
-            break;
-        }
-        
-        argumentIndex = storage->FreeListIndex;
-    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, argumentIndex, storage->Items[storage->FreeListIndex].Next));
-
-    if (argumentIndex == UINT32_MAX)
-    {
-        argumentIndex = SystemAtomicAdd(storage->CurrentIndex, 1);
-    }
-
-    auto argumentBufferData = (MetalArgumentBufferDescriptor*)storage->ArgumentBuffer->contents();
-    argumentBufferData[argumentIndex].BufferAddress = (uint64_t)buffer->gpuResourceID()._impl;
-
-    uint32_t typedBuffer = 1;
-    uint64_t md = (length & kIRBufSizeMask) << kIRBufSizeOffset;
-    //md |= ((uint64_t)view->textureViewOffsetInElements & kIRTexViewMask) << kIRTexViewOffset;
-    md |= (uint64_t)typedBuffer << kIRTypedBufferOffset; 
-    
-    argumentBufferData[argumentIndex].Metadata = md;
-
-    return argumentIndex;
-}
-
 uint32_t CreateMetalArgumentBufferHandleForBuffer(MetalArgumentBuffer argumentBuffer, MTL::Buffer* buffer, uint32_t length)
 {            
     SystemAssert(argumentBuffer.Storage);

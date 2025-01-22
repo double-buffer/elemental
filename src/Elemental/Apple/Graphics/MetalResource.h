@@ -28,6 +28,7 @@ struct MetalResourceData
     ElemGraphicsResourceUsage Usage;
     bool IsPresentTexture;
     uint32_t BlasIndex;
+    MTL::Buffer* AccelerationStructureHeader;
 };
 
 struct MetalResourceDataFull

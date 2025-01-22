@@ -1,5 +1,5 @@
 if (WIN32 OR APPLE)
-    set(METAL_SHADER_CONVERTER_VERSION "v2024-06-11")
+    set(METAL_SHADER_CONVERTER_VERSION "v2025-01-07")
 
     add_library(metal-shader-converter INTERFACE)
     target_include_directories(metal-shader-converter INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/MetalShaderConverter/include/)
