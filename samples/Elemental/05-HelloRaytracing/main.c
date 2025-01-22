@@ -8,8 +8,7 @@
 typedef struct
 {
     uint32_t ShaderGlobalParametersBuffer;
-    uint32_t PrimitiveId;
-    uint32_t MeshInstanceId;
+    uint32_t MeshPrimitiveInstanceId;
 } ShaderParameters;
 
 typedef struct
@@ -230,14 +229,16 @@ void BuildRaytracingAccelerationStructures(ElemCommandList commandList, Applicat
                 // TODO: Scale
                 ElemMatrix4x3 transformMatrix = SampleCreateTransformMatrix2(sceneNode->Rotation, sceneNode->Translation);
 
-                tlasInstances[tlasInstanceCount++] = (ElemRaytracingTlasInstance)
+                tlasInstances[tlasInstanceCount] = (ElemRaytracingTlasInstance)
                 {
-                    .InstanceId = i,
+                    .InstanceId = tlasInstanceCount,
                     .InstanceFlags = ElemRaytracingTlasInstanceFlags_DisableTriangleCulling,
                     .InstanceMask = 1,
                     .TransformMatrix = transformMatrix,
                     .BlasResource = meshPrimitiveData->RaytracingAccelerationStructure
                 };
+
+                tlasInstanceCount++;
 
                 /*
             applicationPayload->ShaderParameters.Scale = sceneNode->Scale;
@@ -403,6 +404,7 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
     applicationPayload->ShaderGlobalParameters.InverseProjectionMatrix = cameraState->InverseProjectionMatrix;
     applicationPayload->ShaderGlobalParameters.MaterialBufferIndex = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
     applicationPayload->ShaderGlobalParameters.GpuMeshInstanceBufferIndex = applicationPayload->TestSceneData.GpuMeshInstanceBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.GpuMeshPrimitiveInstanceBufferIndex = applicationPayload->TestSceneData.GpuMeshPrimitiveInstanceBuffer.ReadDescriptor;
     applicationPayload->ShaderGlobalParameters.Action = cameraState->Action;
 
     ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderShaderGlobalParameters) });
@@ -460,7 +462,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    if (inputsCameraState->Action)
+    if (!inputsCameraState->Action)
     {
         ElemBindPipelineState(commandList, applicationPayload->RaytracingGraphicsPipeline); 
     
@@ -479,27 +481,12 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
-        uint32_t currentMeshIndexId = 0;
-        for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
+        for (uint32_t i = 0; i < applicationPayload->TestSceneData.GpuMeshPrimitiveInstanceCount; i++)
         {
-            SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
+            applicationPayload->ShaderParameters.MeshPrimitiveInstanceId = i;
 
-            if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
-            {
-                SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
-
-                for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
-                {
-                    SampleMeshPrimitiveData* meshPrimitive = &meshData->MeshPrimitives[j];
-                    applicationPayload->ShaderParameters.PrimitiveId = j;
-                    applicationPayload->ShaderParameters.MeshInstanceId = currentMeshIndexId;
-
-                    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-                    ElemDispatchMesh(commandList, meshPrimitive->PrimitiveHeader.MeshletCount, 1, 1);
-                }
-
-                currentMeshIndexId++;
-            }
+            ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
+            ElemDispatchMesh(commandList, applicationPayload->TestSceneData.GpuMeshPrimitiveMeshletCountList[i], 1, 1);
         }
     }
 

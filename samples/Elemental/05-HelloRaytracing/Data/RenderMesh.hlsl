@@ -1,8 +1,7 @@
 struct ShaderParameters
 {
     uint32_t GlobalParametersBufferIndex;
-    uint32_t PrimitiveId;
-    uint32_t MeshInstanceId;
+    uint32_t MeshPrimitiveInstanceId;
 };
 
 [[vk::push_constant]]
@@ -48,8 +47,9 @@ struct GpuMeshPrimitiveInstance
 
 struct GpuDrawParameters
 {
-    int32_t MeshBufferIndex;
+    ByteAddressBuffer MeshBuffer;
     int32_t MaterialId;
+    uint32_t VertexBufferOffset;
     uint32_t MeshletOffset;
     float4 Rotation;
     float3 Translation;
@@ -71,8 +71,9 @@ GpuDrawParameters GetDrawParameters(GlobalParameters globalParameters, int32_t m
     GpuMeshPrimitive meshPrimitive = meshBuffer.Load<GpuMeshPrimitive>(meshPrimitiveInstance.MeshPrimitiveId * sizeof(GpuMeshPrimitive));
 
     GpuDrawParameters result;
-    result.MeshBufferIndex = meshInstance.MeshBufferIndex;
+    result.MeshBuffer = meshBuffer;
     result.MaterialId = meshPrimitive.MaterialId;
+    result.VertexBufferOffset = meshPrimitive.VertexBufferOffset;
     result.MeshletOffset = meshPrimitive.MeshletOffset;
     result.Rotation = meshInstance.Rotation;
     result.Translation = meshInstance.Translation;
@@ -136,35 +137,31 @@ void MeshMain(in uint groupId: SV_GroupID,
     ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
     GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
 
-    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshInstanceBufferIndex];
-    GpuMeshInstance meshInstance = meshInstanceBuffer.Load<GpuMeshInstance>(parameters.MeshInstanceId * sizeof(GpuMeshInstance));
+    GpuDrawParameters drawParameters = GetDrawParameters(globalParameters, parameters.MeshPrimitiveInstanceId);
 
-    ByteAddressBuffer meshBuffer = ResourceDescriptorHeap[meshInstance.MeshBufferIndex];
-
-    GpuMeshPrimitive meshPrimitive = meshBuffer.Load<GpuMeshPrimitive>(parameters.PrimitiveId * sizeof(GpuMeshPrimitive));
-    ElemMeshlet meshlet = meshBuffer.Load<ElemMeshlet>(meshPrimitive.MeshletOffset + meshletIndex * sizeof(ElemMeshlet));
+    ElemMeshlet meshlet = drawParameters.MeshBuffer.Load<ElemMeshlet>(drawParameters.MeshletOffset + meshletIndex * sizeof(ElemMeshlet));
 
     SetMeshOutputCounts(meshlet.VertexIndexCount, meshlet.TriangleCount);
 
     if (groupThreadId < meshlet.VertexIndexCount)
     {
-        uint vertexIndex = meshBuffer.Load<uint>(meshlet.VertexIndexOffset + groupThreadId * sizeof(uint));
-        Vertex vertex = meshBuffer.Load<Vertex>(meshPrimitive.VertexBufferOffset + vertexIndex * sizeof(Vertex));
+        uint vertexIndex = drawParameters.MeshBuffer.Load<uint>(meshlet.VertexIndexOffset + groupThreadId * sizeof(uint));
+        Vertex vertex = drawParameters.MeshBuffer.Load<Vertex>(drawParameters.VertexBufferOffset + vertexIndex * sizeof(Vertex));
 
-        float3 worldPosition = RotateQuaternion(vertex.Position, meshInstance.Rotation) * meshInstance.Scale + meshInstance.Translation;
-        float3 worldNormal = RotateQuaternion(vertex.Normal, meshInstance.Rotation);
-        float3 worldTangent = RotateQuaternion(vertex.Tangent.xyz, meshInstance.Rotation);
+        float3 worldPosition = RotateQuaternion(vertex.Position, drawParameters.Rotation) * drawParameters.Scale + drawParameters.Translation;
+        float3 worldNormal = RotateQuaternion(vertex.Normal, drawParameters.Rotation);
+        float3 worldTangent = RotateQuaternion(vertex.Tangent.xyz, drawParameters.Rotation);
 
         vertices[groupThreadId].Position = mul(float4(worldPosition, 1.0), globalParameters.ViewProjMatrix);
         vertices[groupThreadId].WorldNormal = worldNormal;
         vertices[groupThreadId].TextureCoordinates = vertex.TextureCoordinates;
         vertices[groupThreadId].MeshletIndex = groupId;
-        vertices[groupThreadId].MaterialId = meshPrimitive.MaterialId;
+        vertices[groupThreadId].MaterialId = drawParameters.MaterialId;
     }
 
     if (groupThreadId < meshlet.TriangleCount)
     {
-        uint triangleIndex = meshBuffer.Load<uint>(meshlet.TriangleOffset + groupThreadId * sizeof(uint));
+        uint triangleIndex = drawParameters.MeshBuffer.Load<uint>(meshlet.TriangleOffset + groupThreadId * sizeof(uint));
         indices[groupThreadId] = unpack_u8u32(triangleIndex).xyz;
     }
 }
