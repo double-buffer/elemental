@@ -220,11 +220,13 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
     SampleMeshPrimitiveHeader* meshPrimitive = &applicationPayload->TestSceneData.Meshes[0].MeshPrimitives[0];
-    //applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
+
+    applicationPayload->ShaderParameters.MeshBuffer = applicationPayload->TestSceneData.Meshes[0].MeshBuffer.ReadDescriptor;
+    applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
     applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
     //applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
     //applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
-    ElemDispatchMesh(commandList, meshPrimitive->MeshletCount, 1, 1);
+    ElemDispatchMesh(commandList, applicationPayload->TestSceneData.GpuMeshPrimitiveMeshletCountList[0], 1, 1);
 
     ElemEndRenderPass(commandList);
 

@@ -124,7 +124,6 @@ void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData,
 // TODO: We should be able to replace this whole function with IO Queues
 void SampleLoadMeshData(ElemCommandList commandList, SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
 {
-
     // TODO: To replace with file IO 
     assert(meshData->Path);
     uint8_t* meshBufferData = (uint8_t*)malloc(sizeof(uint8_t) * meshData->MeshHeader.MeshBufferSizeInBytes);
@@ -368,12 +367,12 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemo
         free(shaderMaterials);
     }
 
-    GpuMeshInstance* gpuMeshInstancesData = (GpuMeshInstance*)malloc(sizeof(GpuMeshInstance) * 1024);
+    GpuMeshInstance* gpuMeshInstancesData = (GpuMeshInstance*)malloc(sizeof(GpuMeshInstance) * 10000);
     uint32_t gpuMeshInstanceCount = 0u;
 
     // TODO: Change the max value here
-    GpuMeshPrimitiveInstance* gpuMeshPrimitiveInstancesData = (GpuMeshPrimitiveInstance*)malloc(sizeof(GpuMeshPrimitiveInstance) * 1024);
-    uint32_t* gpuMeshPrimitiveInstancesMeshletCountList = (uint32_t*)malloc(sizeof(uint32_t) * 1024);
+    GpuMeshPrimitiveInstance* gpuMeshPrimitiveInstancesData = (GpuMeshPrimitiveInstance*)malloc(sizeof(GpuMeshPrimitiveInstance) * 20000);
+    uint32_t* gpuMeshPrimitiveInstancesMeshletCountList = (uint32_t*)malloc(sizeof(uint32_t) * 20000);
     uint32_t gpuMeshPrimitiveInstanceCount = 0u;
 
     for (uint32_t i = 0; i < sceneData->NodeCount; i++)

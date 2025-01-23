@@ -170,6 +170,7 @@ void InitSample(void* payload)
             SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemory);
         }
     }
+
     ElemCommitCommandList(loadDataCommandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
 
@@ -293,13 +294,11 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             if (material->AlbedoTexture && !material->AlbedoTexture->IsLoaded)
             {
                 SampleLoadTextureData(loadDataCommandList, material->AlbedoTexture, &applicationPayload->GpuMemory);
-                loadResourceCounter++;
             }
 
             if (material->NormalTexture && !material->NormalTexture->IsLoaded)
             {
                 SampleLoadTextureData(loadDataCommandList, material->NormalTexture, &applicationPayload->GpuMemory);
-                loadResourceCounter++;
             }
         }
 
@@ -318,7 +317,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
                     // if the data was loaded.
                     // For now, we block to load the mesh if not already done which is equavalent at loading the full scene during the init.
                     SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemory);
-                    loadResourceCounter++;
                 }
             }
         }

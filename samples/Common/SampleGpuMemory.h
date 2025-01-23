@@ -65,6 +65,10 @@ SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeI
 {
     // TODO: Alignment should be used with the offset before adding the size of the resource!
     ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Read, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
+    
+    char formattedMemorySize[256];
+    FormatMemorySize(bufferDescription.SizeInBytes, formattedMemorySize, 256);
+    printf("Creating GpuBuffer: %s\n", formattedMemorySize);
 
     gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
     ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
