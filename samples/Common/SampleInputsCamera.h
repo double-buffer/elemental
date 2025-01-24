@@ -25,6 +25,9 @@ typedef struct
     float RotateMouse;
 
     float Action;
+    float Action2;
+    float IncreaseCounter;
+    float DecreaseCounter;
 } SampleInputsCameraActions;
 
 typedef struct
@@ -47,6 +50,8 @@ typedef struct
     SampleMatrix4x4 InverseViewMatrix;
     SampleMatrix4x4 InverseProjectionMatrix;
     float Action;
+    float Action2;
+    float Counter;
     bool HasChanged;
 } SampleInputsCameraState;
 
@@ -70,6 +75,10 @@ void SampleInputsCameraInit(SampleInputsCamera* inputs)
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyDownArrow, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateDown);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyQ, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateSideLeft);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyE, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateSideRight);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_Key1, 0, SampleInputActionBindingType_Released, &inputs->InputActions.DecreaseCounter);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_Key2, 0, SampleInputActionBindingType_Released, &inputs->InputActions.IncreaseCounter);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeySpacebar, 0, SampleInputActionBindingType_Released, &inputs->InputActions.Action);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyEnter, 0, SampleInputActionBindingType_Released, &inputs->InputActions.Action2);
 
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadLeftStickXNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.MoveLeft);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadLeftStickXPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.MoveRight);
@@ -79,6 +88,10 @@ void SampleInputsCameraInit(SampleInputsCamera* inputs)
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadRightStickXPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateRight);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadRightStickYPositive, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateUp);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadRightStickYNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateDown);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadLeftShoulder, 0, SampleInputActionBindingType_Released, &inputs->InputActions.DecreaseCounter);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadRightShoulder, 0, SampleInputActionBindingType_Released, &inputs->InputActions.IncreaseCounter);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadButtonA, 0, SampleInputActionBindingType_Released, &inputs->InputActions.Action);
+    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_GamepadButtonX, 0, SampleInputActionBindingType_Released, &inputs->InputActions.Action2);
     
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_MouseRightButton, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateMouse);
     SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_MouseAxisXNegative, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateMouseLeft);
@@ -88,9 +101,6 @@ void SampleInputsCameraInit(SampleInputsCamera* inputs)
 
     //SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyQ, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateSideLeft);
     //SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeyE, 0, SampleInputActionBindingType_Value, &inputs->InputActions.RotateSideRight);
-
-    // TODO: Remove that one?
-    SampleRegisterInputActionBinding(&inputs->InputActionBindings, ElemInputId_KeySpacebar, 0, SampleInputActionBindingType_Value, &inputs->InputActions.Action);
 
     // TODO: Temporary Init code for now
     SampleCamera* camera = &(inputs->State.Camera);
@@ -212,6 +222,27 @@ void SampleInputsCameraUpdate(ElemInputStream inputStream, SampleInputsCamera* i
     {
         state->Action = inputActions->Action;
         state->HasChanged = true;
+    }
+
+    if (state->Action2 != inputActions->Action2)
+    {
+        state->Action2 = inputActions->Action2;
+        state->HasChanged = true;
+    }
+
+    if (inputActions->IncreaseCounter)
+    {
+        state->HasChanged = true;
+        state->Counter = 1;
+    }
+    else if (inputActions->DecreaseCounter)
+    {
+        state->HasChanged = true;
+        state->Counter = -1;
+    }
+    else
+    {
+        state->Counter = 0;
     }
 
     state->InverseViewMatrix = SampleInvertMatrix4x4(viewMatrix, &success);

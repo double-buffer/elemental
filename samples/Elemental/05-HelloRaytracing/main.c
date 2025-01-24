@@ -16,6 +16,7 @@ typedef struct
     uint32_t AccelerationStructureIndex;
     uint32_t ShaderGlobalParametersBufferIndex;
     uint32_t FrameIndex;
+    uint32_t PathTraceLength;
 } RaytracingShaderParameters;
 
 typedef struct
@@ -63,6 +64,9 @@ typedef struct
     ShaderShaderGlobalParameters ShaderGlobalParameters;
     SampleGpuBuffer ShaderGlobalParametersBuffer;
     uint32_t PathTracingSamplingCount;
+    uint32_t PathTraceLength;
+    bool UsePathTracing;
+    bool UsePathTracingAccumulation;
     
 } ApplicationPayload;
     
@@ -147,9 +151,6 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
         }
     }
         
-    ElemGraphicsResourceAllocationInfo tlasInstanceAllocationInfo = ElemGetRaytracingTlasInstanceAllocationInfo(applicationPayload->GraphicsDevice, applicationPayload->TestSceneData.NodeCount);
-    sceneData->TlasInstanceBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, tlasInstanceAllocationInfo.SizeInBytes, "TlasInstanceBuffer");
-
     uint32_t tlasInstanceCount = 0u;
 
     for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
@@ -166,6 +167,9 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
             }
         }
     }
+    
+    ElemGraphicsResourceAllocationInfo tlasInstanceAllocationInfo = ElemGetRaytracingTlasInstanceAllocationInfo(applicationPayload->GraphicsDevice, tlasInstanceCount);
+    sceneData->TlasInstanceBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, tlasInstanceAllocationInfo.SizeInBytes, "TlasInstanceBuffer");
 
     ElemRaytracingTlasParameters tlasParameters =
     {
@@ -292,6 +296,9 @@ void InitSample(void* payload)
     
     applicationPayload->ShaderGlobalParametersBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemoryUpload, &applicationPayload->ShaderGlobalParameters, sizeof(ShaderShaderGlobalParameters), "ShaderGlobalParameters");
     applicationPayload->ShaderParameters.ShaderGlobalParametersBuffer = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor;
+    applicationPayload->PathTraceLength = 3;
+    applicationPayload->UsePathTracing = true;
+    applicationPayload->UsePathTracingAccumulation = true;
 
     ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
     
@@ -454,7 +461,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     SampleInputsApplicationUpdate(inputStream, &applicationPayload->InputsApplication, updateParameters->DeltaTimeInSeconds);
     SampleInputsCameraUpdate(inputStream, &applicationPayload->InputsCamera, updateParameters);
 
-    if (updateParameters->SizeChanged || applicationPayload->InputsCamera.State.HasChanged || applicationPayload->InputsCamera.State.Action)
+    if (updateParameters->SizeChanged || applicationPayload->InputsCamera.State.HasChanged || applicationPayload->InputsCamera.State.Action || !applicationPayload->UsePathTracingAccumulation)
     {
         applicationPayload->PathTracingSamplingCount = 0;
     }
@@ -477,6 +484,17 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     SampleInputsCameraState* inputsCameraState = &applicationPayload->InputsCamera.State;
     UpdateShaderGlobalParameters(applicationPayload, inputsCameraState);
+    applicationPayload->PathTraceLength = max(min(applicationPayload->PathTraceLength + inputsCameraState->Counter, 5), 1);
+
+    if (inputsCameraState->Action)
+    {
+        applicationPayload->UsePathTracing = !applicationPayload->UsePathTracing;
+    }
+
+    if (inputsCameraState->Action2)
+    {
+        applicationPayload->UsePathTracingAccumulation = !applicationPayload->UsePathTracingAccumulation;
+    }
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
@@ -496,10 +514,10 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    applicationPayload->PathTracingSamplingCount++;
 
-    if (!inputsCameraState->Action)
+    if (applicationPayload->UsePathTracing)
     {
+        applicationPayload->PathTracingSamplingCount++;
         ElemBindPipelineState(commandList, applicationPayload->RaytracingGraphicsPipeline); 
     
         RaytracingShaderParameters parameters = 
@@ -507,7 +525,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             .AccelerationStructureIndex = applicationPayload->TestSceneData.RaytracingAccelerationStructureReadDescriptor,
             .ShaderGlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor,
             //.FrameIndex = updateParameters->FrameIndex
-            .FrameIndex = test
+            .FrameIndex = test,
+            .PathTraceLength = applicationPayload->PathTraceLength
         };
 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(RaytracingShaderParameters) });
@@ -515,6 +534,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     }
     else
     {
+        applicationPayload->PathTracingSamplingCount = 1;
         ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 

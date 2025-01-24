@@ -113,5 +113,6 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     float4 color = renderTexture.Load(int3(input.Position.xy, 0));
 
     return float4(color.rgb / parameters.SampleCount, color.a);
+
     //return float4(ACESFitted(color / parameters.SampleCount), color.a);
 }

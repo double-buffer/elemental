@@ -3,6 +3,7 @@ struct ShaderParameters
     uint32_t AccelerationStructureIndex;
     uint32_t GlobalParametersBufferIndex;
     uint32_t FrameIndex;
+    uint32_t PathTraceLength;
 };
 
 [[vk::push_constant]]
@@ -310,17 +311,45 @@ RayHitInfo TraceRay(GlobalShaderData globalShaderData, float3 origin, float3 dir
 }
 
 
-float3 sample_hemisphere_spherical(float2 randoms) {
-	float azimuth = (2.0 * M_PI) * randoms[0] - M_PI;
-	float inclination = (0.5 * M_PI) * randoms[1];
+float3 sample_hemisphere_spherical(float2 randoms) 
+{
+    // Remap the random ranges
+	float azimuth = (2.0 * M_PI) * randoms.x - M_PI;
+	float inclination = (0.5 * M_PI) * randoms.y;
+
 	float radius = sin(inclination);
+
 	return float3(radius * cos(azimuth), radius * sin(azimuth), cos(inclination));
 }
 
-float get_hemisphere_spherical_density(float sampled_dir_z) {
+// TODO: SampledDirZ is cos angle
+float get_hemisphere_spherical_density(float sampled_dir_z) 
+{
 	if (sampled_dir_z < 0.0)
 		return 0.0;
-	return 1.0 / ((M_PI * M_PI) * sqrt(max(0.0, 1.0 - sampled_dir_z * sampled_dir_z)));
+
+    // sin²θ + cos²θ = 1
+    float sinAngle = sqrt(max(0.0, 1.0 - sampled_dir_z * sampled_dir_z));
+
+	return 1.0 / ((M_PI * M_PI) * sinAngle);
+}
+
+//! Produces a sample distributed uniformly with respect to projected solid
+//! angle (PSA) in the upper hemisphere (positive z).
+float3 sample_hemisphere_psa(float2 randoms) {
+	// Sample a disk uniformly
+	float azimuth = (2.0 * M_PI) * randoms[0] - M_PI;
+	float radius = sqrt(randoms[1]);
+	// Project to the hemisphere
+	float z = sqrt(1.0 - radius * radius);
+	return float3(radius * cos(azimuth), radius * sin(azimuth), z);
+}
+
+
+//! Returns the density w.r.t. solid angle sampled by sample_hemisphere_psa().
+//! It only needs the z-coordinate of the sampled direction (in shading space).
+float get_hemisphere_psa_density(float sampled_dir_z) {
+	return (1.0 / M_PI) * max(0.0, sampled_dir_z);
 }
 
 float3 EvaluateSimpleBrdf(RayHitInfo hitInfo, float3 inDirection)
@@ -334,7 +363,9 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     GlobalShaderData globalShaderData = InitGlobalShaderData();
     uint32_t randomSeed = initRand((input.TextureCoordinates.x * 10000) * parameters.FrameIndex, (input.TextureCoordinates.y * 15000) * parameters.FrameIndex, 16);
 
-    float4 targetClipSpace = float4(input.TextureCoordinates.xy * 2.0 - 1.0, 1.0, 1.0);
+    float2 textureCoordinatesJitter = float2(nextRand(randomSeed), nextRand(randomSeed)) * 0.001;
+
+    float4 targetClipSpace = float4((input.TextureCoordinates.xy + textureCoordinatesJitter) * 2.0 - 1.0, 1.0, 1.0);
     float4 targetViewSpace = mul(targetClipSpace, globalShaderData.InverseProjectionMatrix);
     targetViewSpace.xyz /= targetViewSpace.w;
 
@@ -346,57 +377,50 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     rayDirectionWorldSpace = normalize(rayDirectionWorldSpace);
 
     uint32_t hitCount = 0;
-    // TODO: Switch to progressive rendering
-    uint32_t iterationCount = 1;
-    uint32_t pathLength = 3;
 
-    float3 output = float3(0.0, 0.0, 0.0);
+    float3 pathTraceRayOrigin = rayOriginWorldSpace;
+    float3 pathTraceRayDirection = rayDirectionWorldSpace;
 
-    for (uint32_t i = 0; i < iterationCount; i++)
+    float3 radiance = float3(0.0, 0.0, 0.0);
+    float3 weight = float3(1.0, 1.0, 1.0);
+
+    for (uint32_t j = 0; j < parameters.PathTraceLength; j++)
     {
-        float3 pathTraceRayOrigin = rayOriginWorldSpace;
-        float3 pathTraceRayDirection = rayDirectionWorldSpace;
+        RayHitInfo hitInfo = TraceRay(globalShaderData, pathTraceRayOrigin, pathTraceRayDirection);
 
-        float3 radiance = float3(0.0, 0.0, 0.0);
-        float3 weight = float3(1.0, 1.0, 1.0);
-
-        for (uint32_t j = 0; j < pathLength; j++)
+        if (hitInfo.HasHit)
         {
-            RayHitInfo hitInfo = TraceRay(globalShaderData, pathTraceRayOrigin, pathTraceRayDirection);
+            hitCount++;
 
-            if (hitInfo.HasHit)
-            {
-                radiance += weight * hitInfo.Material.EmissiveFactor;
+            float3x3 shading_to_world_space = get_shading_space(hitInfo.WorldNormal);
+            //float3 sampledDirection = sample_hemisphere_spherical(float2(nextRand(randomSeed), nextRand(randomSeed)));
+            float3 sampledDirection = sample_hemisphere_psa(float2(nextRand(randomSeed), nextRand(randomSeed)));
 
-                float3x3 shading_to_world_space = get_shading_space(hitInfo.WorldNormal);
-                float3 sampledDirection = sample_hemisphere_spherical(float2(nextRand(randomSeed), nextRand(randomSeed)));
+            pathTraceRayOrigin = hitInfo.WorldPosition;
+            pathTraceRayDirection = mul(sampledDirection, shading_to_world_space);
 
-                pathTraceRayOrigin = hitInfo.WorldPosition;
-                pathTraceRayDirection = mul(sampledDirection, shading_to_world_space);
+            float3 brdf = EvaluateSimpleBrdf(hitInfo, pathTraceRayDirection);
+            // Sampled Direction Z in this case is already cos(O)
+            float nDotL = sampledDirection.z;//max(dot(hitInfo.WorldNormal, pathTraceRayDirection), 0.0);
+            //float density = get_hemisphere_spherical_density(sampledDirection.z);
+            float density = get_hemisphere_psa_density(sampledDirection.z);
 
-                float3 brdf = EvaluateSimpleBrdf(hitInfo, pathTraceRayDirection);
-                // Sampled Direction Z in this case is already cos(O)
-                float nDotL = sampledDirection.z;//max(dot(hitInfo.WorldNormal, pathTraceRayDirection), 0.0);
-                float density = get_hemisphere_spherical_density(sampledDirection.z);
+            radiance += hitInfo.Material.EmissiveFactor * weight;
 
-                weight *= brdf * nDotL / density;
-                hitCount++;
-            }
-            else
-            {
-                //radiance += weight * float3(0.25, 0.5, 1.0);
-                break;
-            }
+            // TODO: Why multiplication with the previous weight here
+            // TODO: Density is PDF
+            weight *= brdf * nDotL / density;
         }
-
-        output += radiance;
+        else
+        {
+            //radiance += weight * float3(0.25, 0.5, 1.0) * 10;
+            break;
+        }
     }
-
-    output /= iterationCount;
 
     if (hitCount > 0)
     {
-        return float4(output, 1.0);
+        return float4(radiance, 1.0);
     }
 
     return float4(0, 0, 0, 0);
