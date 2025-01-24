@@ -40,12 +40,14 @@ typedef struct
     SampleCamera Camera;
     // TODO: Instead of having a debug camera, we could "freeze" the camera like in AW2
     SampleCamera DebugCamera;
+    SampleMatrix4x4 ViewMatrix;
     SampleMatrix4x4 ProjectionMatrix;
     SampleMatrix4x4 ViewProjMatrix;
     SampleMatrix4x4 InverseViewProjMatrix;
     SampleMatrix4x4 InverseViewMatrix;
     SampleMatrix4x4 InverseProjectionMatrix;
     float Action;
+    bool HasChanged;
 } SampleInputsCameraState;
 
 typedef struct
@@ -179,19 +181,44 @@ void SampleInputsCameraUpdate(ElemInputStream inputStream, SampleInputsCamera* i
     // TODO: Change speed with a special "run" button
     // TODO: Select debug camera when needed 
     SampleCamera* currentCamera = &state->Camera;
+    state->HasChanged = false;
+    bool success = false;
+    
     SampleMatrix4x4 viewMatrix = UpdateCamera(currentCamera, inputActions, updateParameters);
+
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        for (uint32_t j = 0; j < 4; j++)
+        {
+            if (state->ViewMatrix.m[i][j] != viewMatrix.m[i][j])
+            {
+                state->HasChanged = true;
+                break;
+            }
+        }
+    }
+
+    state->ViewMatrix = viewMatrix;
 
     if (updateParameters->SizeChanged || state->ProjectionMatrix.m[2][3] == 0.0f)
     {
         state->ProjectionMatrix = SampleCreatePerspectiveProjectionMatrix(0.78f, updateParameters->SwapChainInfo.AspectRatio, 0.001f);
+        state->InverseProjectionMatrix = SampleInvertMatrix4x4(state->ProjectionMatrix, &success);
+        assert(success);
+        state->HasChanged = true;
+    }
+   
+    if (state->Action != inputActions->Action)
+    {
+        state->Action = inputActions->Action;
+        state->HasChanged = true;
     }
 
-    bool success = false;
-
-    state->ViewProjMatrix = SampleMulMatrix4x4(viewMatrix, state->ProjectionMatrix);
     state->InverseViewMatrix = SampleInvertMatrix4x4(viewMatrix, &success);
     assert(success);
-    state->InverseProjectionMatrix = SampleInvertMatrix4x4(state->ProjectionMatrix, &success);
-    assert(success);
-    state->Action = inputActions->Action;
+
+    if (state->HasChanged)
+    {
+        state->ViewProjMatrix = SampleMulMatrix4x4(viewMatrix, state->ProjectionMatrix);
+    }
 }

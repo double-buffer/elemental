@@ -123,7 +123,7 @@ D3D12_TEXTURE_ADDRESS_MODE ConvertToDirectX12TextureAddressMode(ElemGraphicsSamp
     }
 }
 
-ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture)
+ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture, bool convertToSrgb)
 {
     InitDirectX12ResourceMemory();
 
@@ -140,7 +140,7 @@ ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDev
         
         D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = 
         {
-            .Format = ConvertDirectX12FormatToSrgbIfNeeded(resourceDesc.Format),
+            .Format = convertToSrgb ? ConvertDirectX12FormatToSrgbIfNeeded(resourceDesc.Format) : resourceDesc.Format,
             .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
         };
  
@@ -1345,11 +1345,6 @@ ElemDataSpan DirectX12EncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSp
             .AccelerationStructure = blasResourceData->DeviceObject->GetGPUVirtualAddress()
         };
                 
-
-        result[i].Transform[0][0] = 1;
-        result[i].Transform[1][1] = 1;
-        result[i].Transform[2][2] = 1;
-
         for (uint32_t j = 0; j < 3; j++)
         {
             for (uint32_t k = 0; k < 4; k++)
@@ -1431,6 +1426,8 @@ void DirectX12BuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResou
     auto stackMemoryArena = SystemGetStackMemoryArena();
     
     // TODO: Add validation
+
+    // BUG: There is a problem with sponza with GPU address range
 
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);

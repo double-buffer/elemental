@@ -46,6 +46,7 @@ typedef struct
     int32_t AlbedoTextureId;
     int32_t NormalTextureId;
     ElemVector4 AlbedoFactor;
+    ElemVector3 EmissiveFactor;
 } ShaderMaterial;
 
 typedef struct
@@ -265,6 +266,7 @@ void SampleLoadMaterial(const SampleSceneMaterialHeader* materialHeader, SampleM
     materialData->MaterialHeader = *materialHeader;
 
     shaderMaterial->AlbedoFactor = materialData->MaterialHeader.AlbedoFactor;
+    shaderMaterial->EmissiveFactor = materialData->MaterialHeader.EmissiveFactor;
     shaderMaterial->AlbedoTextureId = -1;
     shaderMaterial->NormalTextureId = -1;
     
@@ -310,6 +312,8 @@ void SampleFreeMaterial(SampleMaterialData* materialData)
     }
 }
 
+// TODO: IMPORTANT: Don't fill the gpu buffers here. It should be the caller code that do that because we don't know
+// which strategy the caller will use to manage his buffers. Here we just need provide access to the data
 void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemory* gpuMemory)
 {
     // TODO: When IOQueues are implemented, we only need to read the header, not the whole file!

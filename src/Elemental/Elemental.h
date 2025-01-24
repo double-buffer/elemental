@@ -377,8 +377,9 @@ typedef enum
 {
     // Default format.
     ElemSwapChainFormat_Default = 0,
+    ElemSwapChainFormat_DefaultNoSrgb = 1,
     // High dynamic range format.
-    ElemSwapChainFormat_HighDynamicRange = 1
+    ElemSwapChainFormat_HighDynamicRange = 2
 } ElemSwapChainFormat;
 
 typedef enum
@@ -799,6 +800,7 @@ typedef struct
     double NextPresentTimestampInSeconds;
     // True if the size of the swapchain has changed from the previous update.
     bool SizeChanged;
+    uint64_t FrameIndex;
 } ElemSwapChainUpdateParameters;
 
 /**
@@ -1294,6 +1296,7 @@ ElemAPI ElemDataSpan ElemEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanc
 ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
 
 // TODO: Add options to be able to pass scratch buffer offset and source accel struct
+// TODO: Compaction!
 ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
 ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);
 

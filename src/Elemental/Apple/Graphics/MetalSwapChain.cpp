@@ -141,6 +141,8 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     metalLayer->setDrawableSize(CGSizeMake(width, height));
     metalLayer->setFramebufferOnly(true);
 
+    // TODO: Implement NoSrgb format
+
     auto handle = SystemAddDataPoolItem(metalSwapChainPool, {
         .DeviceObject = metalLayer,
         .Window = window,

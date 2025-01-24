@@ -89,6 +89,7 @@ typedef struct
     int32_t AlbedoTextureId;
     int32_t NormalTextureId;
     float4 AlbedoFactor;
+    float3 EmissiveFactor;
 } ShaderMaterial;
 
 struct ElemMeshlet

@@ -307,7 +307,7 @@ SampleMatrix4x4 SampleCreateIdentityMatrix()
     return result;
 }
 
-// TODO: To review
+// TODO: To remove
 SampleMatrix4x4 SampleCreateTransformMatrix(SampleVector4 quaternion, ElemVector3 translation)
 {
 	float xw = quaternion.X *quaternion.W , xx = quaternion.X *quaternion.X , yy = quaternion.Y *quaternion.Y ,
@@ -324,7 +324,7 @@ SampleMatrix4x4 SampleCreateTransformMatrix(SampleVector4 quaternion, ElemVector
     return result;
 }
 
-ElemMatrix4x3 SampleCreateTransformMatrix2(ElemVector4 quaternion, ElemVector3 translation)
+ElemMatrix4x3 SampleCreateTransformMatrix2(ElemVector4 quaternion, float scale, ElemVector3 translation)
 {
 	float xw = quaternion.X *quaternion.W , xx = quaternion.X *quaternion.X , yy = quaternion.Y *quaternion.Y ,
       	yw = quaternion.Y *quaternion.W , xy = quaternion.X *quaternion.Y , yz = quaternion.Y *quaternion.Z ,
@@ -332,10 +332,10 @@ ElemMatrix4x3 SampleCreateTransformMatrix2(ElemVector4 quaternion, ElemVector3 t
 
     ElemMatrix4x3 result;
 
-	result.Rows[0] = (ElemVector3) { .X = 1-2*(yy+zz), .Y = 2*(xy+zw), .Z = 2*(xz-yw) };
-	result.Rows[1] = (ElemVector3) { .X = 2*(xy-zw), .Y = 1-2*(xx+zz), .Z = 2*(yz+xw) };
-	result.Rows[2] = (ElemVector3) { .X = 2*(xz+yw), .Y = 2*(yz-xw), .Z = 1-2*(xx+yy) };
-	result.Rows[3] = (ElemVector3) { .X = 0.0f, .Y = 0.0f, .Z = 0.0f };
+	result.Rows[0] = (ElemVector3) { .X = (1-2*(yy+zz)) * scale, .Y = 2*(xy+zw) * scale, .Z = 2*(xz-yw) * scale };
+	result.Rows[1] = (ElemVector3) { .X = 2*(xy-zw) * scale, .Y = (1-2*(xx+zz)) * scale, .Z = 2*(yz+xw) * scale };
+	result.Rows[2] = (ElemVector3) { .X = 2*(xz+yw) * scale, .Y = 2*(yz-xw) * scale, .Z = (1-2*(xx+yy)) * scale };
+	result.Rows[3] = (ElemVector3) { .X = translation.X, .Y = translation.Y, .Z = translation.Z };
 
     return result;
 }

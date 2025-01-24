@@ -233,6 +233,20 @@ ReadOnlySpan<ElemSceneMaterial> LoadGltfMaterials(MemoryArena memoryArena, const
             material->Name = SystemConcatBuffers<char>(memoryArena, "Material_", SystemConvertNumberToString(stackMemoryArena, i)).Pointer;
         }
 
+        material->EmissiveFactor =
+        {
+            .X = gltfMaterial->emissive_factor[0],
+            .Y = gltfMaterial->emissive_factor[1],
+            .Z = gltfMaterial->emissive_factor[2]
+        };
+
+        if (gltfMaterial->has_emissive_strength)
+        {
+            material->EmissiveFactor.X *= gltfMaterial->emissive_strength.emissive_strength;
+            material->EmissiveFactor.Y *= gltfMaterial->emissive_strength.emissive_strength;
+            material->EmissiveFactor.Z *= gltfMaterial->emissive_strength.emissive_strength;
+        }
+
         if (gltfMaterial->has_pbr_metallic_roughness)
         {
             auto gltfMaterialData = &gltfMaterial->pbr_metallic_roughness;

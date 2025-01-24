@@ -56,7 +56,7 @@ DirectX12GraphicsHeapDataFull* GetDirectX12GraphicsHeapDataFull(ElemGraphicsHeap
 DirectX12GraphicsResourceData* GetDirectX12GraphicsResourceData(ElemGraphicsResource resource);
 DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGraphicsResource resource);
 
-ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
+ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture, bool convertToSrgb = true);
 DXGI_FORMAT ConvertToDirectX12Format(ElemGraphicsFormat format);
 bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format);
 

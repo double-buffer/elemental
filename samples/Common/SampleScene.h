@@ -23,6 +23,7 @@ typedef struct
     char AlbedoTexturePath[255];
     char NormalTexturePath[255];
     ElemVector4 AlbedoFactor;
+    ElemVector3 EmissiveFactor;
 } SampleSceneMaterialHeader;
 
 typedef struct

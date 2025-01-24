@@ -69,6 +69,8 @@ void CreateVulkanSwapChainBackBuffers(ElemSwapChain swapChain, uint32_t width, u
             .Usage = ElemGraphicsResourceUsage_RenderTarget
         };
 
+        // TODO: Implement NoSrgb format
+
         swapChainData->BackBufferTextures[i] = CreateVulkanTextureFromResource(swapChainData->GraphicsDevice, swapchainImages[i], &resourceInfo, true);
     }
 }

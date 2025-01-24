@@ -120,6 +120,7 @@ typedef struct
     uint32_t Length;
 } ElemToolsMessageSpan;
 
+// TODO: Get Rid of those if we make Elemental Tools dependant of elemental?
 typedef struct
 {
     float X, Y;
@@ -320,6 +321,7 @@ typedef struct
     const char* AlbedoTexturePath;
     const char* NormalTexturePath;
     ElemToolsVector4 AlbedoFactor;
+    ElemToolsVector3 EmissiveFactor;
 } ElemSceneMaterial;
 
 typedef struct

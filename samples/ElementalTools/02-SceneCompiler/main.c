@@ -165,7 +165,8 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInpu
 
         SampleSceneMaterialHeader materialHeader =
         {
-            .AlbedoFactor = material->AlbedoFactor
+            .AlbedoFactor = material->AlbedoFactor,
+            .EmissiveFactor = material->EmissiveFactor
         };
 
         strncpy(materialHeader.Name, material->Name, 50);

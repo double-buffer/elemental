@@ -87,6 +87,7 @@ typedef struct
     int32_t AlbedoTextureId;
     int32_t NormalTextureId;
     float4 AlbedoFactor;
+    float3 EmissiveFactor;
 } ShaderMaterial;
 
 // TODO: Compress
@@ -192,5 +193,5 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     float nDotL = max(dot(worldNormal, normalize(float3(1.0, 1.0, -1.0))), 0.0);
     float ambient = 0.05;
 
-    return albedo * (nDotL + ambient);
+    return float4(albedo.rgb * (nDotL + ambient), 1.0);
 }

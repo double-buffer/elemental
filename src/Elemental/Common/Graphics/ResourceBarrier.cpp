@@ -4,10 +4,10 @@
 #include "SystemMemory.h"
 #include "SystemLogging.h"
 
-#define GRAPHICS_MAX_RESOURCEBARRIERPOOL 64
+#define GRAPHICS_MAX_RESOURCEBARRIERPOOL 128
 
 // TODO: Check that it takes a lot of memory
-#define GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES 64
+#define GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES 128
 
 struct ResourceBarrierResourceStatus
 {
