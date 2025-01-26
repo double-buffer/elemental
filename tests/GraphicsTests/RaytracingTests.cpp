@@ -298,7 +298,7 @@ UTEST(Raytracing, BuildRaytracingTlas)
 
     for (uint32_t i = 0; i < 10; i++)
     {
-        tlasInstances[i] = (ElemRaytracingTlasInstance)
+        tlasInstances[i] =
         {
             .InstanceId = i,
             .InstanceMask = 1,
@@ -306,7 +306,7 @@ UTEST(Raytracing, BuildRaytracingTlas)
         };
     }
     
-    auto tlasInstanceData = ElemEncodeRaytracingTlasInstances((ElemRaytracingTlasInstanceSpan) { .Items = tlasInstances, .Length = 10 });
+    auto tlasInstanceData = ElemEncodeRaytracingTlasInstances({ .Items = tlasInstances, .Length = 10 });
     ElemUploadGraphicsBufferData(instancesStorageBuffer.Buffer, 0, tlasInstanceData);
 
     ElemRaytracingTlasParameters parameters

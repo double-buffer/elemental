@@ -14,6 +14,8 @@ typedef ElemToolsDataSpan ElemDataSpan;
 
 #ifndef _WIN32
 #define MAX_PATH 255
+#define max fmax
+#define min fmin
 #include <sys/time.h>
 #include <time.h>
 #else

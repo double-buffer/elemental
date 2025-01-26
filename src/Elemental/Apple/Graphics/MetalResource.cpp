@@ -19,6 +19,8 @@ MemoryArena metalRaytracingInstanceMemoryArena;
 MemoryArena metalReadBackMemoryArena;
 
 Span<ElemGraphicsResource> metalBlasList;
+
+// TODO: This should be moved to DeviceData, that is why the test is failing
 uint32_t metalBlasCount = 0;
 
 // TODO: Rename
@@ -258,14 +260,30 @@ MTL::AccelerationStructureUsage ConvertToMetalRaytraceBuildUsage(ElemRaytracingB
     return result;
 }
 
+MTL::AccelerationStructureInstanceOptions ConvertToMetalAccelerationStructureInstanceOptions(ElemRaytracingTlasInstanceFlags instanceFlags)
+{
+    MTL::AccelerationStructureInstanceOptions result = MTL::AccelerationStructureInstanceOptionNone;
+
+    if (instanceFlags & ElemRaytracingTlasInstanceFlags_DisableTriangleCulling)
+    {
+        result |= MTL::AccelerationStructureInstanceOptionDisableTriangleCulling;
+    }
+
+    if (instanceFlags & ElemRaytracingTlasInstanceFlags_FlipTriangleFaces)
+    {
+        result |= MTL::AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
+    }
+
+    if (instanceFlags & ElemRaytracingTlasInstanceFlags_NonOpaque)
+    {
+        result |= MTL::AccelerationStructureInstanceOptionNonOpaque;
+    }
+
+    return result;
+}
+
 NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> BuildMetalBlasDescriptor(const ElemRaytracingBlasParameters* parameters)
 {
-    auto vertexBufferResourceData = GetMetalResourceData(parameters->VertexBuffer);
-    SystemAssert(vertexBufferResourceData);
-
-    auto indexBufferResourceData = GetMetalResourceData(parameters->IndexBuffer);
-    SystemAssert(indexBufferResourceData);
-
     auto blasDescriptor = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
 
     blasDescriptor->setUsage(ConvertToMetalRaytraceBuildUsage(parameters->BuildFlags));
@@ -276,11 +294,25 @@ NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> BuildMetalBlasDescr
     geometryDescriptor->setIndexType(parameters->IndexFormat == ElemGraphicsFormat_R32_UINT ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16);
     geometryDescriptor->setVertexFormat(ConvertToMetalAttributeFormat(parameters->VertexFormat));
     geometryDescriptor->setTriangleCount(parameters->IndexCount / 3);
-    geometryDescriptor->setIndexBuffer((MTL::Buffer*)indexBufferResourceData->DeviceObject.get());
-    geometryDescriptor->setIndexBufferOffset(parameters->IndexBufferOffset);
-    geometryDescriptor->setVertexBuffer((MTL::Buffer*)vertexBufferResourceData->DeviceObject.get());
-    geometryDescriptor->setVertexBufferOffset(parameters->VertexBufferOffset);
     geometryDescriptor->setVertexStride(parameters->VertexSizeInBytes);
+    
+    if (parameters->VertexBuffer != ELEM_HANDLE_NULL)
+    {
+        auto vertexBufferResourceData = GetMetalResourceData(parameters->VertexBuffer);
+        SystemAssert(vertexBufferResourceData);
+
+        geometryDescriptor->setVertexBuffer((MTL::Buffer*)vertexBufferResourceData->DeviceObject.get());
+        geometryDescriptor->setVertexBufferOffset(parameters->VertexBufferOffset);
+    }
+
+    if (parameters->IndexBuffer != ELEM_HANDLE_NULL)
+    {
+        auto indexBufferResourceData = GetMetalResourceData(parameters->IndexBuffer);
+        SystemAssert(indexBufferResourceData);
+
+        geometryDescriptor->setIndexBuffer((MTL::Buffer*)indexBufferResourceData->DeviceObject.get());
+        geometryDescriptor->setIndexBufferOffset(parameters->IndexBufferOffset);
+    }
 
     MTL::AccelerationStructureTriangleGeometryDescriptor* geometryDescriptors[] = { geometryDescriptor.get() };
 
@@ -535,6 +567,12 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
         if (resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil)
         {
             SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer usage should not be equals to DepthStencil.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure && graphicsHeapData->HeapType != ElemGraphicsHeapType_Gpu)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer with usage RaytracingAccelerationStructure should be allocated on a Gpu Heap.");
             return ELEM_HANDLE_NULL;
         }
 
@@ -1185,22 +1223,25 @@ ElemDataSpan MetalEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan i
     {
         auto instance = &instances.Items[i];
 
-        auto blasResourceData = GetMetalResourceData(instance->BlasResource);
-        SystemAssert(blasResourceData);
-
         auto instanceDescriptor = (MTL::AccelerationStructureUserIDInstanceDescriptor*)currentPointer;
 
-        /*_MTL_OPTIONS(uint32_t, AccelerationStructureInstanceOptions) {
-        AccelerationStructureInstanceOptionNone = 0,
-        AccelerationStructureInstanceOptionDisableTriangleCulling = 1,
-        AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise = 2,
-        AccelerationStructureInstanceOptionOpaque = 4,
-        AccelerationStructureInstanceOptionNonOpaque = 8,*/
-
-        // TODO: Options
-        instanceDescriptor->options = MTL::AccelerationStructureInstanceOptionNone;
+        instanceDescriptor->options = ConvertToMetalAccelerationStructureInstanceOptions(instance->InstanceFlags);
         instanceDescriptor->mask = instance->InstanceMask;
-        instanceDescriptor->accelerationStructureIndex = blasResourceData->BlasIndex;
+
+        if (instance->BlasResource)
+        {
+            auto blasResourceData = GetMetalResourceData(instance->BlasResource);
+            SystemAssert(blasResourceData);
+            
+            if (blasResourceData->Type != ElemGraphicsResourceType_RaytracingAccelerationStructure)
+            {
+                SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "BlasResouce in Tlas instance should be an acceleration structure.");
+                return {};
+            }
+                
+            instanceDescriptor->accelerationStructureIndex = blasResourceData->BlasIndex;
+        }
+        
         instanceDescriptor->userID = instance->InstanceId;
 
         for (uint32_t j = 0; j < 4; j++)
@@ -1225,10 +1266,14 @@ ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGrap
     auto storageBufferResourceData = GetMetalResourceData(storageBuffer);
     SystemAssert(storageBufferResourceData);
 
+    if (!(storageBufferResourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "RaytracingAccelerationStructure need to have a storage buffer that was created with RaytracingAccelerationStructure usage.");
+        return ELEM_HANDLE_NULL;
+    }
+
     auto graphicsHeapData = GetMetalGraphicsHeapData(storageBufferResourceData->GraphicsHeap);
     SystemAssert(graphicsHeapData);
-
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Test:%d", storageBufferResourceData->Width);
 
     auto resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newAccelerationStructure(storageBufferResourceData->Width, storageBufferResourceData->HeapOffset));
     SystemAssertReturnNullHandle(resource);
@@ -1269,6 +1314,12 @@ void MetalBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource 
     auto scratchBufferResourceData = GetMetalResourceData(scratchBuffer);
     SystemAssert(scratchBufferResourceData);
     
+    if (accelerationStructureResourceData->Type != ElemGraphicsResourceType_RaytracingAccelerationStructure)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Acceleration structure is not an acceleration structure graphics resource.");
+        return;
+    }
+
     auto blasDescriptor = BuildMetalBlasDescriptor(parameters);
 
     auto scratchOffset = 0u;
