@@ -6,3 +6,7 @@ https://therealmjp.github.io/posts/gpu-memory-pool/
 
 # HDR
 https://github.com/h3r2tic/tony-mc-mapface/blob/main/shader/tony_mc_mapface.hlsl
+
+# Math
+https://iquilezles.org/articles/noacos/
+

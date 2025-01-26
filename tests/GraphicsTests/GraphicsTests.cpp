@@ -362,6 +362,13 @@ TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t si
 
     auto graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, gpuBufferInfo.SizeInBytes, &heapOptions);
     auto gpuBuffer = ElemCreateGraphicsResource(graphicsHeap, 0, &gpuBufferInfo);
+
+    if (gpuBuffer == ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsHeap(graphicsHeap);
+        return {};
+    }
+
     auto gpuBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Read, nullptr);
     auto gpuBufferWriteDescriptor = ElemCreateGraphicsResourceDescriptor(gpuBuffer, ElemGraphicsResourceDescriptorUsage_Write, nullptr);
 
@@ -376,10 +383,17 @@ TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t si
 
 void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer)
 {
-    ElemFreeGraphicsResourceDescriptor(gpuBuffer.WriteDescriptor, nullptr);
-    ElemFreeGraphicsResourceDescriptor(gpuBuffer.ReadDescriptor, nullptr);
-    ElemFreeGraphicsResource(gpuBuffer.Buffer, nullptr);
-    ElemFreeGraphicsHeap(gpuBuffer.GraphicsHeap);
+    if (gpuBuffer.Buffer != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsResourceDescriptor(gpuBuffer.WriteDescriptor, nullptr);
+        ElemFreeGraphicsResourceDescriptor(gpuBuffer.ReadDescriptor, nullptr);
+        ElemFreeGraphicsResource(gpuBuffer.Buffer, nullptr);
+    }
+
+    if (gpuBuffer.GraphicsHeap != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsHeap(gpuBuffer.GraphicsHeap);
+    }
 }
 
 TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage)

@@ -133,13 +133,9 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
             {
                 .BuildFlags = ElemRaytracingBuildFlags_PreferFastTrace,
                 .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
-                .VertexBuffer = meshData->MeshBuffer.Buffer,
-                .VertexBufferOffset = meshPrimitiveData->PrimitiveHeader.VertexBufferOffset,
                 .VertexCount = meshPrimitiveData->PrimitiveHeader.VertexCount,
                 .VertexSizeInBytes = meshData->MeshHeader.VertexSizeInBytes,
                 .IndexFormat = ElemGraphicsFormat_R32_UINT,
-                .IndexBuffer = meshData->MeshBuffer.Buffer,
-                .IndexBufferOffset = meshPrimitiveData->PrimitiveHeader.IndexBufferOffset,
                 .IndexCount = meshPrimitiveData->PrimitiveHeader.IndexCount
             };
 
@@ -241,7 +237,6 @@ void BuildRaytracingAccelerationStructures(ElemCommandList commandList, Applicat
                 tlasInstances[tlasInstanceCount] = (ElemRaytracingTlasInstance)
                 {
                     .InstanceId = tlasInstanceCount,
-                    .InstanceFlags = ElemRaytracingTlasInstanceFlags_DisableTriangleCulling,
                     .InstanceMask = 1,
                     .TransformMatrix = transformMatrix,
                     .BlasResource = meshPrimitiveData->RaytracingAccelerationStructure
@@ -299,6 +294,8 @@ void InitSample(void* payload)
     applicationPayload->PathTraceLength = 3;
     applicationPayload->UsePathTracing = true;
     applicationPayload->UsePathTracingAccumulation = true;
+    
+    CreateRaytracingAccelerationStructures(applicationPayload);
 
     ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
     
@@ -313,7 +310,6 @@ void InitSample(void* payload)
         }
     }
 
-    CreateRaytracingAccelerationStructures(applicationPayload);
     BuildRaytracingAccelerationStructures(loadDataCommandList, applicationPayload);
 
     ElemCommitCommandList(loadDataCommandList);
@@ -524,6 +520,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         {
             .AccelerationStructureIndex = applicationPayload->TestSceneData.RaytracingAccelerationStructureReadDescriptor,
             .ShaderGlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor,
+            // TODO: To Replace
             //.FrameIndex = updateParameters->FrameIndex
             .FrameIndex = test,
             .PathTraceLength = applicationPayload->PathTraceLength

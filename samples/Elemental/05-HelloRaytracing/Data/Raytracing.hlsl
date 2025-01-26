@@ -115,21 +115,6 @@ float nextRand(inout uint s)
   return float(s & 0x00FFFFFF) / float(0x01000000);
 }
 
-// TODO: To try
-/*
-vec2 get_random_numbers(inout uvec2 seed) {
-	// PCG2D, as described here: https://jcgt.org/published/0009/03/02/
-	seed = 1664525u * seed + 1013904223u;
-	seed.x += 1664525u * seed.y;
-	seed.y += 1664525u * seed.x;
-	seed ^= (seed >> 16u);
-	seed.x += 1664525u * seed.y;
-	seed.y += 1664525u * seed.x;
-	seed ^= (seed >> 16u);
-	// Multiply by 2^-32 to get floats
-	return vec2(seed) * 2.32830643654e-10;
-}*/
-
 GlobalShaderData InitGlobalShaderData()
 {
     ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
