@@ -14,6 +14,7 @@ typedef struct
 {
     ElemGraphicsResource Buffer;
     ElemGraphicsResourceDescriptor ReadDescriptor;
+    ElemGraphicsResourceDescriptor WriteDescriptor;
 } SampleGpuBuffer;
 
 typedef struct
@@ -53,11 +54,13 @@ SampleGpuBuffer SampleCreateGpuRaytracingBuffer(SampleGpuMemory* gpuMemory, uint
     gpuMemory->CurrentHeapOffset += bufferDescription.SizeInBytes;
 
     ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    ElemGraphicsResourceDescriptor writeDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, NULL);
 
     return (SampleGpuBuffer)
     {
         .Buffer = buffer,
-        .ReadDescriptor = readDescriptor
+        .ReadDescriptor = readDescriptor,
+        .WriteDescriptor = writeDescriptor
     };
 }
 

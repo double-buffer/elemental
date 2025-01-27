@@ -684,6 +684,13 @@ ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap,
             return ELEM_HANDLE_NULL;
         }
 
+        auto usage = resourceInfo->Usage;
+
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure)
+        {
+            usage = (ElemGraphicsResourceUsage)(usage | ElemGraphicsResourceUsage_Write);
+        }
+
         auto buffer = CreateVulkanBuffer(graphicsHeapData->GraphicsDevice, resourceInfo, resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
 
         AssertIfFailed(vkBindBufferMemory(graphicsDeviceData->Device, buffer, graphicsHeapData->DeviceObject, graphicsHeapOffset));
@@ -692,7 +699,7 @@ ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap,
             .BufferDeviceObject = buffer,
             .Type = ElemGraphicsResourceType_Buffer,
             .Width = resourceInfo->Width,
-            .Usage = resourceInfo->Usage
+            .Usage = usage
         }); 
 
         SystemAddDataPoolItemFull(vulkanGraphicsResourcePool, handle, {

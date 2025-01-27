@@ -14,8 +14,6 @@
 typedef struct
 {
     SampleMeshPrimitiveHeader PrimitiveHeader;
-    SampleGpuBuffer RaytracingStorageBuffer; // TODO: To remove use a global one
-    SampleGpuBuffer RaytracingScratchBuffer; // TODO: To remove use a global one
     ElemGraphicsResource RaytracingAccelerationStructure;
 } SampleMeshPrimitiveData;
 
