@@ -2,6 +2,7 @@
 #include "VulkanConfig.h"
 #include "VulkanGraphicsDevice.h"
 #include "VulkanCommandList.h"
+#include "VulkanResourceBarrier.h"
 #include "Graphics/Resource.h"
 #include "Graphics/ResourceDeleteQueue.h"
 #include "Graphics/UploadBufferPool.h"
@@ -19,6 +20,8 @@ Span<ElemGraphicsResourceDescriptorInfo> vulkanResourceDescriptorInfos;
 Span<VulkanGraphicsSamplerInfo> vulkanSamplerInfos;
 // TODO: To refactor 
 Span<VkImageView> vulkanResourceDescriptorImageViews;
+
+MemoryArena vulkanRaytracingInstanceMemoryArena;
 MemoryArena vulkanReadBackMemoryArena;
 
 void InitVulkanResourceMemory()
@@ -32,7 +35,8 @@ void InitVulkanResourceMemory()
         vulkanResourceDescriptorImageViews = SystemPushArray<VkImageView>(VulkanGraphicsMemoryArena, VULKAN_MAX_RESOURCES, AllocationState_Reserved);
         vulkanSamplerInfos = SystemPushArray<VulkanGraphicsSamplerInfo>(VulkanGraphicsMemoryArena, VULKAN_MAX_SAMPLERS, AllocationState_Reserved);
 
-        vulkanReadBackMemoryArena = SystemAllocateMemoryArena(32 * 1024 * 1024);
+        vulkanRaytracingInstanceMemoryArena = SystemAllocateMemoryArena(VULKAN_RAYTRACING_INSTANCE_MEMORY_ARENA);
+        vulkanReadBackMemoryArena = SystemAllocateMemoryArena(VULKAN_READBACK_MEMORY_ARENA);
     }
 }
 
@@ -66,9 +70,15 @@ VkFormat ConvertToVulkanTextureFormat(ElemGraphicsFormat format)
 
         case ElemGraphicsFormat_R32G32B32A32_FLOAT:
             return VK_FORMAT_R32G32B32A32_SFLOAT;
+
+        case ElemGraphicsFormat_R32G32B32_FLOAT:
+            return VK_FORMAT_R32G32B32_SFLOAT;
         
         case ElemGraphicsFormat_D32_FLOAT:
             return VK_FORMAT_D32_SFLOAT;
+        
+        case ElemGraphicsFormat_R32_UINT:
+            return VK_FORMAT_R32_UINT;
 
         case ElemGraphicsFormat_BC7:
             return VK_FORMAT_BC7_UNORM_BLOCK;
@@ -146,6 +156,183 @@ VkSamplerAddressMode ConvertToVulkanSamplerAddressMode(ElemGraphicsSamplerAddres
         case ElemGraphicsSamplerAddressMode_ClampToBorderColor:
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     }
+}
+
+VkBuildAccelerationStructureFlagsKHR ConvertToVulkanRaytracingBuildFlags(ElemRaytracingBuildFlags buildFlags)
+{
+    VkBuildAccelerationStructureFlagsKHR result = 0u;
+
+    if (buildFlags & ElemRaytracingBuildFlags_AllowUpdate)
+    {
+        result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR ;
+    }
+
+    if (buildFlags & ElemRaytracingBuildFlags_AllowCompaction)
+    {
+        result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+    }
+    
+    if (buildFlags & ElemRaytracingBuildFlags_PreferFastTrace)
+    {
+        result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    }
+
+    if (buildFlags & ElemRaytracingBuildFlags_PreferFastBuild)
+    {
+        result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+    }
+
+    if (buildFlags & ElemRaytracingBuildFlags_MinimizeMemory)
+    {
+        result |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
+    }
+
+    return result;
+}
+
+VkGeometryInstanceFlagsKHR ConvertToVulkanRaytracingInstanceFlags(ElemRaytracingTlasInstanceFlags instanceFlags)
+{
+    VkGeometryInstanceFlagsKHR result = 0u;
+ 
+    if (instanceFlags & ElemRaytracingTlasInstanceFlags_DisableTriangleCulling)
+    {
+        result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+    }
+
+    if (instanceFlags & ElemRaytracingTlasInstanceFlags_FlipTriangleFaces)
+    {
+        result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING_BIT_KHR;
+    }
+
+    if (instanceFlags & ElemRaytracingTlasInstanceFlags_NonOpaque)
+    {
+        result |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR;
+    }
+
+    return result;
+}
+
+VkAccelerationStructureBuildGeometryInfoKHR BuildVulkanBlasGeometryInfo(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
+{
+    SystemAssert(parameters);
+    auto description = SystemPushStruct<VkAccelerationStructureGeometryKHR>(memoryArena);
+
+    *description =
+    {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+        .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+        .geometry =
+        {
+            .triangles =
+            {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                .vertexFormat = ConvertToVulkanTextureFormat(parameters->VertexFormat),
+                .vertexStride = parameters->VertexSizeInBytes,
+                .maxVertex = parameters->VertexCount - 1,
+                .indexType = VK_INDEX_TYPE_UINT32 // TODO: To change
+            }
+        },
+        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+    };
+    
+    if (parameters->VertexBuffer != ELEM_HANDLE_NULL)
+    {
+        auto vertexBufferResourceData = GetVulkanGraphicsResourceData(parameters->VertexBuffer);
+        SystemAssert(vertexBufferResourceData);
+
+        auto vertexBufferResourceDataFull = GetVulkanGraphicsResourceDataFull(parameters->VertexBuffer);
+        SystemAssert(vertexBufferResourceDataFull);
+
+        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(vertexBufferResourceDataFull->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+        deviceAddressInfo.buffer = vertexBufferResourceData->BufferDeviceObject;
+
+        VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
+        SystemAssert(address);
+
+        description->geometry.triangles.vertexData.deviceAddress = address + parameters->VertexBufferOffset;
+    }
+
+    if (parameters->IndexBuffer != ELEM_HANDLE_NULL)
+    {
+        auto indexBufferResourceData = GetVulkanGraphicsResourceData(parameters->IndexBuffer);
+        SystemAssert(indexBufferResourceData);
+
+        auto indexBufferResourceDataFull = GetVulkanGraphicsResourceDataFull(parameters->IndexBuffer);
+        SystemAssert(indexBufferResourceDataFull);
+
+        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(indexBufferResourceDataFull->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+        deviceAddressInfo.buffer = indexBufferResourceData->BufferDeviceObject;
+
+        VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
+        SystemAssert(address);
+
+        description->geometry.triangles.indexData.deviceAddress = address + parameters->IndexBufferOffset;
+    }
+
+    return
+    {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+        .flags = ConvertToVulkanRaytracingBuildFlags(parameters->BuildFlags), 
+        .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+        .geometryCount = 1,
+        .pGeometries = description
+    };
+}
+
+VkAccelerationStructureBuildGeometryInfoKHR BuildVulkanTlasGeometryInfo(MemoryArena memoryArena, const ElemRaytracingTlasParameters* parameters)
+{
+    SystemAssert(parameters);
+    auto description = SystemPushStruct<VkAccelerationStructureGeometryKHR>(memoryArena);
+
+    *description =
+    {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+        .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+        .geometry =
+        {
+            .instances = 
+            {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR
+            }
+        }
+    };
+    
+    if (parameters->InstanceBuffer)
+    {
+        auto instanceBufferResourceData = GetVulkanGraphicsResourceData(parameters->InstanceBuffer);
+        SystemAssert(instanceBufferResourceData);
+
+        auto instanceBufferResourceDataFull = GetVulkanGraphicsResourceDataFull(parameters->InstanceBuffer);
+        SystemAssert(instanceBufferResourceDataFull);
+
+        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(instanceBufferResourceDataFull->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+        deviceAddressInfo.buffer = instanceBufferResourceData->BufferDeviceObject;
+
+        VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
+        SystemAssert(address);
+
+        description->geometry.instances.data.deviceAddress = address + parameters->InstanceBufferOffset;
+    }
+
+    return
+    {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+        .flags = ConvertToVulkanRaytracingBuildFlags(parameters->BuildFlags), 
+        .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+        .geometryCount = 1,
+        .pGeometries = description
+    };
 }
 
 ElemGraphicsResource CreateVulkanTextureFromResource(ElemGraphicsDevice graphicsDevice, VkImage resource, const ElemGraphicsResourceInfo* resourceInfo, bool isPresentTexture)
@@ -248,7 +435,7 @@ VkImage CreateVulkanTexture(ElemGraphicsDevice graphicsDevice, const ElemGraphic
     return image;
 }
 
-VkBuffer CreateVulkanBuffer(ElemGraphicsDevice graphicsDevice, const ElemGraphicsResourceInfo* resourceInfo)
+VkBuffer CreateVulkanBuffer(ElemGraphicsDevice graphicsDevice, const ElemGraphicsResourceInfo* resourceInfo, bool isAccelerationStructure)
 {
     SystemAssert(graphicsDevice != ELEM_HANDLE_NULL);
     SystemAssert(resourceInfo);
@@ -258,7 +445,13 @@ VkBuffer CreateVulkanBuffer(ElemGraphicsDevice graphicsDevice, const ElemGraphic
 
     VkBufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     createInfo.size = resourceInfo->Width;
-    createInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    // TODO: Review the accel struct read usage
+    createInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+
+    if (isAccelerationStructure)
+    {
+        createInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+    }
 
     VkBuffer buffer;
     AssertIfFailed(vkCreateBuffer(graphicsDeviceData->Device, &createInfo, nullptr, &buffer));
@@ -289,9 +482,13 @@ ElemGraphicsHeap VulkanCreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uin
     auto graphicsDeviceDataFull = GetVulkanGraphicsDeviceDataFull(graphicsDevice);
     SystemAssert(graphicsDeviceDataFull);
 
+    VkMemoryAllocateFlagsInfo flagInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO };
+    flagInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+
     VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     allocateInfo.allocationSize = sizeInBytes;
     allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuMemoryTypeIndex;
+    allocateInfo.pNext = &flagInfo;
 
     auto heapType = ElemGraphicsHeapType_Gpu;
 
@@ -365,7 +562,7 @@ ElemGraphicsResourceInfo VulkanCreateGraphicsBufferResourceInfo(ElemGraphicsDevi
         resourceInfo.DebugName = options->DebugName;
     }
 
-    auto buffer = CreateVulkanBuffer(graphicsDevice, &resourceInfo);
+    auto buffer = CreateVulkanBuffer(graphicsDevice, &resourceInfo, usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
 
     VkMemoryRequirements memoryRequirements = {};
     vkGetBufferMemoryRequirements(graphicsDeviceData->Device, buffer, &memoryRequirements);
@@ -481,7 +678,13 @@ ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap,
             return ELEM_HANDLE_NULL;
         }
 
-        auto buffer = CreateVulkanBuffer(graphicsHeapData->GraphicsDevice, resourceInfo);
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure && graphicsHeapData->HeapType != ElemGraphicsHeapType_Gpu)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "GraphicsBuffer with usage RaytracingAccelerationStructure should be allocated on a Gpu Heap.");
+            return ELEM_HANDLE_NULL;
+        }
+
+        auto buffer = CreateVulkanBuffer(graphicsHeapData->GraphicsDevice, resourceInfo, resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
 
         AssertIfFailed(vkBindBufferMemory(graphicsDeviceData->Device, buffer, graphicsHeapData->DeviceObject, graphicsHeapOffset));
 
@@ -525,6 +728,11 @@ void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGra
         if (resourceData->BufferDeviceObject)
         {
             vkDestroyBuffer(graphicsDeviceData->Device, resourceData->BufferDeviceObject, nullptr);
+        }
+
+        if (resourceData->AccelerationStructureDeviceObject)
+        {
+            vkDestroyAccelerationStructureKHR(graphicsDeviceData->Device, resourceData->AccelerationStructureDeviceObject, nullptr);
         }
     
         if (resourceData->Usage & ElemGraphicsResourceUsage_RenderTarget)
@@ -934,7 +1142,7 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
         SystemCommitMemory(VulkanGraphicsMemoryArena, &vulkanResourceDescriptorInfos[descriptorHandle], 1000 *  sizeof(ElemGraphicsResourceDescriptorInfo));
         SystemCommitMemory(VulkanGraphicsMemoryArena, &vulkanResourceDescriptorImageViews[descriptorHandle], 1000 *  sizeof(VkImageView));
     }
-
+    
     VkWriteDescriptorSet descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
     descriptor.dstSet = descriptorHeap.Storage->DescriptorSet->DescriptorSet;
     descriptor.dstBinding = 0;
@@ -949,6 +1157,16 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
 
         descriptor.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         descriptor.pBufferInfo = &bufferInfo;
+
+    }
+    else if (resourceData->Type == ElemGraphicsResourceType_RaytracingAccelerationStructure)
+    {
+        VkWriteDescriptorSetAccelerationStructureKHR accelerationStructInfo = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
+        accelerationStructInfo.accelerationStructureCount = 1;
+        accelerationStructInfo.pAccelerationStructures = &resourceData->AccelerationStructureDeviceObject;
+
+        descriptor.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        descriptor.pNext = &accelerationStructInfo;
     }
     else
     {
@@ -960,7 +1178,7 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
         createInfo.subresourceRange.baseMipLevel = textureMipIndex;
         createInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
         createInfo.subresourceRange.layerCount = 1;
-    
+
         VkImageView imageView;
         AssertIfFailed(vkCreateImageView(graphicsDeviceData->Device, &createInfo, 0, &imageView));
 
@@ -970,7 +1188,7 @@ ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphi
 
         descriptor.descriptorType = (usage == ElemGraphicsResourceDescriptorUsage_Read) ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         descriptor.pImageInfo = &imageInfo;
-    
+
         vulkanResourceDescriptorImageViews[descriptorHandle] = imageView;
     }
 
@@ -1180,33 +1398,299 @@ void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphi
 
 ElemRaytracingAllocationInfo VulkanGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
 {
-    return {};
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    // TODO: Add validation
+    
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto geometryInfo = BuildVulkanBlasGeometryInfo(stackMemoryArena, parameters);
+    auto triangleCount = parameters->IndexCount / 3;
+
+    VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+	vkGetAccelerationStructureBuildSizesKHR(graphicsDeviceData->Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_OR_DEVICE_KHR, &geometryInfo, &triangleCount, &sizeInfo);
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", sizeInfo.accelerationStructureSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", sizeInfo.buildScratchSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", sizeInfo.updateScratchSize);
+
+    return 
+    {
+        .Alignment = 256,
+        .SizeInBytes = sizeInfo.accelerationStructureSize,
+        .ScratchSizeInBytes = sizeInfo.buildScratchSize,
+        .UpdateScratchSizeInBytes = sizeInfo.updateScratchSize
+    };
 }
 
 ElemRaytracingAllocationInfo VulkanGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters)
 {
-    return {};
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    // TODO: Add validation
+    
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto geometryInfo = BuildVulkanTlasGeometryInfo(stackMemoryArena, parameters);
+
+    VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+	vkGetAccelerationStructureBuildSizesKHR(graphicsDeviceData->Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_OR_DEVICE_KHR, &geometryInfo, &parameters->InstanceCount, &sizeInfo);
+
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "TLAS Size: %d", sizeInfo.accelerationStructureSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", sizeInfo.buildScratchSize);
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", sizeInfo.updateScratchSize);
+
+    return 
+    {
+        .Alignment = 256,
+        .SizeInBytes = sizeInfo.accelerationStructureSize,
+        .ScratchSizeInBytes = sizeInfo.buildScratchSize,
+        .UpdateScratchSizeInBytes = sizeInfo.updateScratchSize
+    };
 }
 
 ElemGraphicsResourceAllocationInfo VulkanGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount)
 {
-    return {};
+    return 
+    {
+        .Alignment = 4,
+        .SizeInBytes = instanceCount * sizeof(VkAccelerationStructureInstanceKHR)
+    };
 }
 
 ElemDataSpan VulkanEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
 {
-    return {};
+    InitVulkanResourceMemory();
+
+    auto result = SystemPushArray<VkAccelerationStructureInstanceKHR>(vulkanRaytracingInstanceMemoryArena, instances.Length);
+
+    for (uint32_t i = 0; i < instances.Length; i++)
+    {
+        auto instance = &instances.Items[i];
+
+        auto validVirtualAddress = false;
+        uint64_t blasVirtualAddress = 0;
+
+        if (instance->BlasResource)
+        {
+            auto blasResourceData = GetVulkanGraphicsResourceData(instance->BlasResource);
+            SystemAssert(blasResourceData);
+
+            auto blasResourceDataFull = GetVulkanGraphicsResourceDataFull(instance->BlasResource);
+            SystemAssert(blasResourceDataFull);
+
+            auto graphicsDeviceData = GetVulkanGraphicsDeviceData(blasResourceDataFull->GraphicsDevice);
+            SystemAssert(graphicsDeviceData);
+
+            if (blasResourceData->Type == ElemGraphicsResourceType_RaytracingAccelerationStructure)
+            {
+                validVirtualAddress = true;
+    
+                VkAccelerationStructureDeviceAddressInfoKHR deviceAddressInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
+                deviceAddressInfo.accelerationStructure = blasResourceData->AccelerationStructureDeviceObject;
+
+                VkDeviceAddress address = vkGetAccelerationStructureDeviceAddressKHR(graphicsDeviceData->Device, &deviceAddressInfo);
+                SystemAssert(address);
+                blasVirtualAddress = address;
+            }
+        }
+
+        if (!validVirtualAddress)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "BlasResouce in Tlas instance should be an acceleration structure.");
+            return {};
+        }
+
+        result[i] =
+        {
+            .instanceCustomIndex = instance->InstanceId,
+            .mask = instance->InstanceMask,
+            .flags = (uint32_t)ConvertToVulkanRaytracingInstanceFlags(instance->InstanceFlags),
+            .accelerationStructureReference =  blasVirtualAddress
+        };
+                
+        for (uint32_t j = 0; j < 3; j++)
+        {
+            for (uint32_t k = 0; k < 4; k++)
+            {
+                result[i].transform.matrix[j][k] = instance->TransformMatrix.Elements[k][j];
+            }
+        }
+    }
+    
+    return { .Items = (uint8_t*)result.Pointer, .Length = (uint32_t)(result.Length * sizeof(VkAccelerationStructureInstanceKHR)) };
 }
 
 ElemGraphicsResource VulkanCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options)
 {
-    return {};
+    auto resourceData = GetVulkanGraphicsResourceData(storageBuffer);
+    SystemAssert(resourceData);
+
+    auto resourceDataFull = GetVulkanGraphicsResourceDataFull(storageBuffer);
+    SystemAssert(resourceDataFull);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(resourceDataFull->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto graphicsHeapData = GetVulkanGraphicsHeapData(resourceDataFull->GraphicsHeap);
+    SystemAssert(graphicsHeapData);
+
+    if (!(resourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "RaytracingAccelerationStructure need to have a storage buffer that was created with RaytracingAccelerationStructure usage.");
+        return ELEM_HANDLE_NULL;
+    }
+
+    auto storageBufferOffset = 0u;
+    auto storageBufferSizeInBytes = resourceData->Width;
+
+    if (options)
+    {
+        storageBufferOffset = options->StorageOffset;
+
+        if (options->StorageSizeInBytes > 0)
+        {
+            storageBufferSizeInBytes = options->StorageSizeInBytes;
+        }
+    }
+
+    VkAccelerationStructureCreateInfoKHR accelerationCreateInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
+    accelerationCreateInfo.buffer = resourceData->BufferDeviceObject;
+    accelerationCreateInfo.offset = storageBufferOffset;
+    accelerationCreateInfo.size = storageBufferSizeInBytes;
+    accelerationCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR;
+
+    VkAccelerationStructureKHR accelerationStructure;
+    AssertIfFailedReturnNullHandle(vkCreateAccelerationStructureKHR(graphicsDeviceData->Device, &accelerationCreateInfo, nullptr, &accelerationStructure));
+
+    if (VulkanDebugLayerEnabled && options && options->DebugName)
+    {
+        VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        nameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
+        nameInfo.objectHandle = (uint64_t)accelerationStructure;
+        nameInfo.pObjectName = options->DebugName;
+
+        AssertIfFailed(vkSetDebugUtilsObjectNameEXT(graphicsDeviceData->Device, &nameInfo)); 
+    }
+
+    auto handle = SystemAddDataPoolItem(vulkanGraphicsResourcePool, {
+        .AccelerationStructureDeviceObject = accelerationStructure,
+        .Type = ElemGraphicsResourceType_RaytracingAccelerationStructure,
+        .Width = storageBufferSizeInBytes,
+        .Usage = resourceData->Usage
+    }); 
+
+    SystemAddDataPoolItemFull(vulkanGraphicsResourcePool, handle, {
+        .GraphicsDevice = graphicsHeapData->GraphicsDevice,
+        .GraphicsHeap = resourceDataFull->GraphicsHeap,
+        .GraphicsHeapOffset = resourceDataFull->GraphicsHeapOffset + storageBufferOffset
+    });
+
+    return handle;
 }
 
 void VulkanBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    
+    // TODO: Add validation
+
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto accelerationStructureResourceData = GetVulkanGraphicsResourceData(accelerationStructure);
+    SystemAssert(accelerationStructureResourceData);
+
+    auto scratchBufferResourceData = GetVulkanGraphicsResourceData(scratchBuffer);
+    SystemAssert(scratchBufferResourceData);
+    
+    if (accelerationStructureResourceData->Type != ElemGraphicsResourceType_RaytracingAccelerationStructure)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Acceleration structure is not an acceleration structure graphics resource.");
+        return;
+    }
+    
+    auto inputs = BuildVulkanBlasGeometryInfo(stackMemoryArena, parameters);
+
+    auto scratchOffset = 0u;
+
+    if (options)
+    {
+        scratchOffset = options->ScratchOffset;
+    }
+
+    VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+    deviceAddressInfo.buffer = scratchBufferResourceData->BufferDeviceObject;
+
+    VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
+    SystemAssert(address);
+
+    inputs.scratchData.deviceAddress = address + scratchOffset;
+    inputs.dstAccelerationStructure = accelerationStructureResourceData->AccelerationStructureDeviceObject;
+
+    VkAccelerationStructureBuildRangeInfoKHR buildRanges =
+    {
+        .primitiveCount = parameters->IndexCount / 3
+    };
+
+    VkAccelerationStructureBuildRangeInfoKHR* buildRangesPtr = &buildRanges;
+
+    InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure);
+    vkCmdBuildAccelerationStructuresKHR(commandListData->DeviceObject, 1, &inputs, &buildRangesPtr);
 }
 
 void VulkanBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    
+    // TODO: Add validation
+
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandListData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto accelerationStructureResourceData = GetVulkanGraphicsResourceData(accelerationStructure);
+    SystemAssert(accelerationStructureResourceData);
+
+    auto scratchBufferResourceData = GetVulkanGraphicsResourceData(scratchBuffer);
+    SystemAssert(scratchBufferResourceData);
+    
+    if (accelerationStructureResourceData->Type != ElemGraphicsResourceType_RaytracingAccelerationStructure)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Acceleration structure is not an acceleration structure graphics resource.");
+        return;
+    }
+    
+    auto inputs = BuildVulkanTlasGeometryInfo(stackMemoryArena, parameters);
+
+    auto scratchOffset = 0u;
+
+    if (options)
+    {
+        scratchOffset = options->ScratchOffset;
+    }
+
+    VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+    deviceAddressInfo.buffer = scratchBufferResourceData->BufferDeviceObject;
+
+    VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
+    SystemAssert(address);
+
+    inputs.scratchData.deviceAddress = address + scratchOffset;
+    inputs.dstAccelerationStructure = accelerationStructureResourceData->AccelerationStructureDeviceObject;
+
+    VkAccelerationStructureBuildRangeInfoKHR buildRanges =
+    {
+        .primitiveCount = parameters->InstanceCount
+    };
+
+    VkAccelerationStructureBuildRangeInfoKHR* buildRangesPtr = &buildRanges;
+
+    InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure);
+    vkCmdBuildAccelerationStructuresKHR(commandListData->DeviceObject, 1, &inputs, &buildRangesPtr);
 }

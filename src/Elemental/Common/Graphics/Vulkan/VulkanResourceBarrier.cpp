@@ -14,6 +14,12 @@ VkPipelineStageFlags2 ConvertToVulkanBarrierSync(ElemGraphicsResourceBarrierSync
         case ElemGraphicsResourceBarrierSyncType_Compute:
             return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 
+        case ElemGraphicsResourceBarrierSyncType_Copy:
+            return VK_PIPELINE_STAGE_2_COPY_BIT;
+
+        case ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure:
+            return VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
         case ElemGraphicsResourceBarrierSyncType_RenderTarget:
         {
             if (!isDepthStencil)
@@ -31,7 +37,7 @@ VkPipelineStageFlags2 ConvertToVulkanBarrierSync(ElemGraphicsResourceBarrierSync
      }
 }
 
-VkAccessFlags2 ConvertToVulkanBarrierAccess(ElemGraphicsResourceBarrierAccessType accessType)
+VkAccessFlags2 ConvertToVulkanBarrierAccess(ElemGraphicsResourceBarrierAccessType accessType, bool isAccelerationStructure)
 {
     // TODO: Recheck the correct accesses
     // Maybe we can pass more info to the function to compute more precides accesses (or in the common code)
@@ -42,7 +48,7 @@ VkAccessFlags2 ConvertToVulkanBarrierAccess(ElemGraphicsResourceBarrierAccessTyp
             return VK_ACCESS_2_NONE;
 
         case ElemGraphicsResourceBarrierAccessType_Read:
-            return VK_ACCESS_2_SHADER_READ_BIT;
+            return isAccelerationStructure ? VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR : VK_ACCESS_2_SHADER_READ_BIT;
 
         case ElemGraphicsResourceBarrierAccessType_RenderTarget:
             return VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
@@ -52,6 +58,9 @@ VkAccessFlags2 ConvertToVulkanBarrierAccess(ElemGraphicsResourceBarrierAccessTyp
 
         case ElemGraphicsResourceBarrierAccessType_Write:
             return VK_ACCESS_2_SHADER_WRITE_BIT;
+
+        case ElemGraphicsResourceBarrierAccessType_Copy:
+            return VK_ACCESS_2_TRANSFER_WRITE_BIT;
     }
 }
 
@@ -121,8 +130,8 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
             vulkanBufferBarrier->size = graphicsResourceData->Width;
             vulkanBufferBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync, false);
             vulkanBufferBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync, false);
-            vulkanBufferBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess);
-            vulkanBufferBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess);
+            vulkanBufferBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess, graphicsResourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
+            vulkanBufferBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess, graphicsResourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
         }
     }
 
@@ -144,8 +153,8 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
             vulkanTextureBarrier->image = graphicsResourceData->TextureDeviceObject;
             vulkanTextureBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync, barrier.IsDepthStencil);
             vulkanTextureBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync, barrier.IsDepthStencil);
-            vulkanTextureBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess);
-            vulkanTextureBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess);
+            vulkanTextureBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess, false);
+            vulkanTextureBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess, false);
             vulkanTextureBarrier->oldLayout = ConvertToVulkanBarrierLayout(barrier.BeforeLayout);
             vulkanTextureBarrier->newLayout = ConvertToVulkanBarrierLayout(barrier.AfterLayout);
             vulkanTextureBarrier->subresourceRange.aspectMask = graphicsResourceData->Usage & ElemGraphicsResourceUsage_DepthStencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;

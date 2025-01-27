@@ -47,6 +47,8 @@ ReadOnlySpan<char> ResourceBarrierSyncTypeToString(MemoryArena memoryArena, Elem
         case ElemGraphicsResourceBarrierSyncType_None: return SystemDuplicateBuffer<char>(memoryArena, "None"); 
         case ElemGraphicsResourceBarrierSyncType_Compute: return SystemDuplicateBuffer<char>(memoryArena, "Compute");
         case ElemGraphicsResourceBarrierSyncType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
+        case ElemGraphicsResourceBarrierSyncType_Copy: return SystemDuplicateBuffer<char>(memoryArena, "Copy");
+        case ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure: return SystemDuplicateBuffer<char>(memoryArena, "BuildRaytracingAccelerationStructure");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Unknown"); 
     }
 }
@@ -59,6 +61,7 @@ ReadOnlySpan<char> ResourceBarrierAccessTypeToString(MemoryArena memoryArena, El
         case ElemGraphicsResourceBarrierAccessType_Read: return SystemDuplicateBuffer<char>(memoryArena, "Read");
         case ElemGraphicsResourceBarrierAccessType_Write: return SystemDuplicateBuffer<char>(memoryArena, "Write");
         case ElemGraphicsResourceBarrierAccessType_RenderTarget: return SystemDuplicateBuffer<char>(memoryArena, "RenderTarget");
+        case ElemGraphicsResourceBarrierAccessType_Copy: return SystemDuplicateBuffer<char>(memoryArena, "Copy");
         default: return SystemDuplicateBuffer<char>(memoryArena, "Unknown"); 
     }
 }

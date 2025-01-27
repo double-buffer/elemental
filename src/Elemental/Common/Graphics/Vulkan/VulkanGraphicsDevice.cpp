@@ -46,6 +46,12 @@ VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDeb
         messageType = ElemLogMessageType_Warning;
     }
 
+    // TODO: Remove when new drivers are released
+    if (SystemFindSubString(pMessage, "VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES") != -1)
+    {
+        return VK_FALSE;
+    }
+
     if (SystemFindSubString(pMessage, "VK_EXT_mutable_descriptor_type") != -1)
     {
         return VK_FALSE;
@@ -442,7 +448,7 @@ void CreateVulkanPipelineLayout(ElemGraphicsDevice graphicsDevice)
     layoutCreateInfo.pushConstantRangeCount = 1;
     
     // TODO: Recheck those
-    VkDescriptorType resourceDescriptorTypes[] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }; 
+    VkDescriptorType resourceDescriptorTypes[] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR }; 
     graphicsDeviceDataFull->ResourceDescriptorSetLayout = CreateVulkanDescriptorSetLayout(graphicsDevice, resourceDescriptorTypes, ARRAYSIZE(resourceDescriptorTypes));
 
     VkDescriptorType samplerDescriptorTypes[] = { VK_DESCRIPTOR_TYPE_SAMPLER }; 
@@ -633,11 +639,18 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
         VK_KHR_PRESENT_WAIT_EXTENSION_NAME, // TODO: To review
         VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
         VK_EXT_MESH_SHADER_EXTENSION_NAME,
-        VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME
+        VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+        VK_KHR_RAY_QUERY_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+        VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME
     };
 
     createInfo.ppEnabledExtensionNames = extensions;
     createInfo.enabledExtensionCount = ARRAYSIZE(extensions);
+
+    VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT dynamicUnusedFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_FEATURES_EXT };
+    dynamicUnusedFeatures.dynamicRenderingUnusedAttachments = true;
 
     VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     features.features.shaderInt16 = true;
@@ -659,6 +672,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     features12.separateDepthStencilLayouts = true;
     features12.hostQueryReset = true;
     features12.shaderInt8 = true;
+    features12.bufferDeviceAddress = true;
 
     if (VulkanDebugLayerEnabled)
     {
@@ -687,6 +701,12 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR };
     presentWaitFeatures.presentWait = true;
 
+    VkPhysicalDeviceRayQueryFeaturesKHR rayQueriesFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+	rayQueriesFeatures.rayQuery = true;
+
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+	accelerationStructureFeatures.accelerationStructure = true;
+
     createInfo.pNext = &features;
     features.pNext = &features12;
     features12.pNext = &features13;
@@ -695,6 +715,9 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     presentIdFeatures.pNext = &presentWaitFeatures;
     presentWaitFeatures.pNext = &meshFeatures;
     meshFeatures.pNext = &mutableDescriptorFeatures;
+    mutableDescriptorFeatures.pNext = &rayQueriesFeatures;
+    rayQueriesFeatures.pNext = &accelerationStructureFeatures;
+    accelerationStructureFeatures.pNext = &dynamicUnusedFeatures;
 
     VkDevice device = nullptr;
     AssertIfFailedReturnNullHandle(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));

@@ -8,6 +8,9 @@
 
 // TODO: The struct here are temporary. The final data will be placed in buffer
 
+// TODO: IMPORTANT!: Get rid of every gpu buffers or textures here. 
+// The goal of this is to just load the metadata not deciding the layout of the buffers
+
 typedef struct
 {
     SampleMeshPrimitiveHeader PrimitiveHeader;

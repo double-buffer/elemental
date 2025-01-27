@@ -403,7 +403,7 @@ typedef enum
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
     ElemGraphicsFormat_R32G32B32_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
-    ElemGraphicsFormat_R32_UINT,
+    ElemGraphicsFormat_R32_UINT, // TODO: Do we need this one ?
     ElemGraphicsFormat_D32_FLOAT, 
     ElemGraphicsFormat_BC7,
     ElemGraphicsFormat_BC7_SRGB 
@@ -829,12 +829,12 @@ typedef struct
 {
     ElemRaytracingBuildFlags BuildFlags;
     // TODO: Add transform matrix?
-    ElemGraphicsFormat VertexFormat;
+    ElemGraphicsFormat VertexFormat; // TODO: Use an enum instead?
     ElemGraphicsResource VertexBuffer;
     uint32_t VertexBufferOffset;
     uint32_t VertexCount;
     uint32_t VertexSizeInBytes;
-    ElemGraphicsFormat IndexFormat;
+    ElemGraphicsFormat IndexFormat; // TODO: Use an enum instead?
     ElemGraphicsResource IndexBuffer;
     uint32_t IndexBufferOffset;
     uint32_t IndexCount;
@@ -1295,7 +1295,7 @@ ElemAPI ElemGraphicsResourceAllocationInfo ElemGetRaytracingTlasInstanceAllocati
 ElemAPI ElemDataSpan ElemEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances);
 ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
 
-// TODO: Add options to be able to pass scratch buffer offset and source accel struct
+// TODO: Add options to be able to pass source accel struct
 // TODO: Compaction!
 ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
 ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);

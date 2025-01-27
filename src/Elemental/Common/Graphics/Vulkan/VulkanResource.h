@@ -16,6 +16,7 @@ struct VulkanGraphicsResourceData
 {
     VkBuffer BufferDeviceObject;
     VkImage TextureDeviceObject;
+    VkAccelerationStructureKHR AccelerationStructureDeviceObject;
     ElemGraphicsResourceType Type;
     VkImageView RenderTargetImageView;
     VkImageView DepthStencilImageView;
