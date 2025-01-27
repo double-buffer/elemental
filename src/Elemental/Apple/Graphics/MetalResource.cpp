@@ -514,6 +514,7 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
     SystemAssert(graphicsDeviceData);
 
     NS::SharedPtr<MTL::Resource> resource;
+    auto usage = resourceInfo->Usage;
 
     if (resourceInfo->Type == ElemGraphicsResourceType_Texture2D)
     {
@@ -600,7 +601,11 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
             {
                 resource->setLabel(NS::String::string("AccelHeader", NS::UTF8StringEncoding));
             }
-            
+
+            if (resourceInfo->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure)
+            {
+                usage = (ElemGraphicsResourceUsage)(usage | ElemGraphicsResourceUsage_Write);
+            }
             // TODO: Maybe we need to put the resource resident each time we allocate it?
             // If this is the case, we need to record a list or create a heap
         }
@@ -616,7 +621,7 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
         }
     }
 
-    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, graphicsHeap, graphicsHeapOffset, resourceInfo->Width, resourceInfo->Usage, resource, false);
+    return CreateMetalGraphicsResourceFromResource(graphicsHeapData->GraphicsDevice, resourceInfo->Type, graphicsHeap, graphicsHeapOffset, resourceInfo->Width, usage, resource, false);
 }
 
 void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options)
@@ -1275,7 +1280,20 @@ ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGrap
     auto graphicsHeapData = GetMetalGraphicsHeapData(storageBufferResourceData->GraphicsHeap);
     SystemAssert(graphicsHeapData);
 
-    auto resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newAccelerationStructure(storageBufferResourceData->Width, storageBufferResourceData->HeapOffset));
+    auto offset = 0u;
+    auto sizeInBytes = storageBufferResourceData->Width;
+
+    if (options)
+    {
+        offset = options->StorageOffset;
+
+        if (options->StorageSizeInBytes > 0)
+        {
+            sizeInBytes = options->StorageSizeInBytes;
+        }
+    }
+
+    auto resource = NS::TransferPtr(graphicsHeapData->DeviceObject->newAccelerationStructure(sizeInBytes, storageBufferResourceData->HeapOffset + offset));
     SystemAssertReturnNullHandle(resource);
 
     if (MetalDebugLayerEnabled && options && options->DebugName)
