@@ -12,14 +12,19 @@ UTEST(Raytracing, GetRaytracingBlasAllocationInfo)
     auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
     auto vertexSizeInBytes = (uint32_t)sizeof(float) * 3u;
 
-    ElemRaytracingBlasParameters parameters
+    ElemRaytracingBlasGeometry geometry =
     {
-        .BuildFlags = (ElemRaytracingBuildFlags)(ElemRaytracingBuildFlags_PreferFastTrace | ElemRaytracingBuildFlags_AllowUpdate),
         .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
         .VertexCount = 50,
         .VertexSizeInBytes = vertexSizeInBytes,
         .IndexFormat = ElemGraphicsFormat_R32_UINT,
         .IndexCount = 20
+    };
+
+    ElemRaytracingBlasParameters parameters
+    {
+        .BuildFlags = (ElemRaytracingBuildFlags)(ElemRaytracingBuildFlags_PreferFastTrace | ElemRaytracingBuildFlags_AllowUpdate),
+        .GeometryList = { .Items = &geometry, .Length = 1 }
     };
 
     // Act
@@ -127,9 +132,8 @@ UTEST(Raytracing, BuildRaytracingBlas)
     auto indexBuffer = TestCreateGpuBuffer(graphicsDevice, 256);
     auto vertexSizeInBytes = (uint32_t)sizeof(float) * 3u;
 
-    ElemRaytracingBlasParameters parameters
+    ElemRaytracingBlasGeometry geometry =
     {
-        .BuildFlags = (ElemRaytracingBuildFlags)(ElemRaytracingBuildFlags_PreferFastTrace | ElemRaytracingBuildFlags_AllowUpdate),
         .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
         .VertexBuffer = vertexBuffer.Buffer,
         .VertexBufferOffset = 0,
@@ -139,6 +143,12 @@ UTEST(Raytracing, BuildRaytracingBlas)
         .IndexBuffer = indexBuffer.Buffer,
         .IndexBufferOffset = 0,
         .IndexCount = 20
+    };
+
+    ElemRaytracingBlasParameters parameters
+    {
+        .BuildFlags = (ElemRaytracingBuildFlags)(ElemRaytracingBuildFlags_PreferFastTrace | ElemRaytracingBuildFlags_AllowUpdate),
+        .GeometryList = { .Items = &geometry, .Length = 1 }
     };
 
     auto allocationInfo = ElemGetRaytracingBlasAllocationInfo(graphicsDevice, &parameters); 
@@ -179,9 +189,8 @@ UTEST(Raytracing, BuildRaytracingBlas_NotAccelerationStructureResource)
     auto indexBuffer = TestCreateGpuBuffer(graphicsDevice, 256);
     auto vertexSizeInBytes = (uint32_t)sizeof(float) * 3u;
 
-    ElemRaytracingBlasParameters parameters
+    ElemRaytracingBlasGeometry geometry =
     {
-        .BuildFlags = (ElemRaytracingBuildFlags)(ElemRaytracingBuildFlags_PreferFastTrace | ElemRaytracingBuildFlags_AllowUpdate),
         .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
         .VertexBuffer = vertexBuffer.Buffer,
         .VertexBufferOffset = 0,
@@ -191,6 +200,12 @@ UTEST(Raytracing, BuildRaytracingBlas_NotAccelerationStructureResource)
         .IndexBuffer = indexBuffer.Buffer,
         .IndexBufferOffset = 0,
         .IndexCount = 20
+    };
+
+    ElemRaytracingBlasParameters parameters
+    {
+        .BuildFlags = (ElemRaytracingBuildFlags)(ElemRaytracingBuildFlags_PreferFastTrace | ElemRaytracingBuildFlags_AllowUpdate),
+        .GeometryList = { .Items = &geometry, .Length = 1 }
     };
 
     auto storageBuffer = TestCreateGpuBuffer(graphicsDevice, 1024, ElemGraphicsHeapType_Gpu);

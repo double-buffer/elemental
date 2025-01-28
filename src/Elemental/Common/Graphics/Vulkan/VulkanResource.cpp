@@ -215,64 +215,71 @@ VkGeometryInstanceFlagsKHR ConvertToVulkanRaytracingInstanceFlags(ElemRaytracing
 VkAccelerationStructureBuildGeometryInfoKHR BuildVulkanBlasGeometryInfo(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
 {
     SystemAssert(parameters);
-    auto description = SystemPushStruct<VkAccelerationStructureGeometryKHR>(memoryArena);
 
-    *description =
+    auto geometryList = SystemPushArray<VkAccelerationStructureGeometryKHR>(memoryArena, parameters->GeometryList.Length);
+
+    for (uint32_t i = 0; i < parameters->GeometryList.Length; i++)
     {
-        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-        .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
-        .geometry =
+        auto geometryDesc = &parameters->GeometryList.Items[i];
+        auto geometry = &geometryList[i];
+
+        *geometry =
         {
-            .triangles =
+            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+            .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+            .geometry =
             {
-                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
-                .vertexFormat = ConvertToVulkanTextureFormat(parameters->VertexFormat),
-                .vertexStride = parameters->VertexSizeInBytes,
-                .maxVertex = parameters->VertexCount - 1,
-                .indexType = VK_INDEX_TYPE_UINT32 // TODO: To change
-            }
-        },
-        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR
-    };
-    
-    if (parameters->VertexBuffer != ELEM_HANDLE_NULL)
-    {
-        auto vertexBufferResourceData = GetVulkanGraphicsResourceData(parameters->VertexBuffer);
-        SystemAssert(vertexBufferResourceData);
+                .triangles =
+                {
+                    .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                    .vertexFormat = ConvertToVulkanTextureFormat(geometryDesc->VertexFormat),
+                    .vertexStride = geometryDesc->VertexSizeInBytes,
+                    .maxVertex = geometryDesc->VertexCount - 1,
+                    .indexType = VK_INDEX_TYPE_UINT32 // TODO: To change
+                }
+            },
+            .flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+        };
 
-        auto vertexBufferResourceDataFull = GetVulkanGraphicsResourceDataFull(parameters->VertexBuffer);
-        SystemAssert(vertexBufferResourceDataFull);
+        if (geometryDesc->VertexBuffer != ELEM_HANDLE_NULL)
+        {
+            auto vertexBufferResourceData = GetVulkanGraphicsResourceData(geometryDesc->VertexBuffer);
+            SystemAssert(vertexBufferResourceData);
 
-        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(vertexBufferResourceDataFull->GraphicsDevice);
-        SystemAssert(graphicsDeviceData);
+            auto vertexBufferResourceDataFull = GetVulkanGraphicsResourceDataFull(geometryDesc->VertexBuffer);
+            SystemAssert(vertexBufferResourceDataFull);
 
-        VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-        deviceAddressInfo.buffer = vertexBufferResourceData->BufferDeviceObject;
+            auto graphicsDeviceData = GetVulkanGraphicsDeviceData(vertexBufferResourceDataFull->GraphicsDevice);
+            SystemAssert(graphicsDeviceData);
 
-        VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
-        SystemAssert(address);
+            VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+            deviceAddressInfo.buffer = vertexBufferResourceData->BufferDeviceObject;
 
-        description->geometry.triangles.vertexData.deviceAddress = address + parameters->VertexBufferOffset;
-    }
+            VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
+            SystemAssert(address);
 
-    if (parameters->IndexBuffer != ELEM_HANDLE_NULL)
-    {
-        auto indexBufferResourceData = GetVulkanGraphicsResourceData(parameters->IndexBuffer);
-        SystemAssert(indexBufferResourceData);
+            geometry->geometry.triangles.vertexData.deviceAddress = address + geometryDesc->VertexBufferOffset;
+        }
 
-        auto indexBufferResourceDataFull = GetVulkanGraphicsResourceDataFull(parameters->IndexBuffer);
-        SystemAssert(indexBufferResourceDataFull);
+        if (geometryDesc->IndexBuffer != ELEM_HANDLE_NULL)
+        {
+            auto indexBufferResourceData = GetVulkanGraphicsResourceData(geometryDesc->IndexBuffer);
+            SystemAssert(indexBufferResourceData);
 
-        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(indexBufferResourceDataFull->GraphicsDevice);
-        SystemAssert(graphicsDeviceData);
+            auto indexBufferResourceDataFull = GetVulkanGraphicsResourceDataFull(geometryDesc->IndexBuffer);
+            SystemAssert(indexBufferResourceDataFull);
 
-        VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-        deviceAddressInfo.buffer = indexBufferResourceData->BufferDeviceObject;
+            auto graphicsDeviceData = GetVulkanGraphicsDeviceData(indexBufferResourceDataFull->GraphicsDevice);
+            SystemAssert(graphicsDeviceData);
 
-        VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
-        SystemAssert(address);
+            VkBufferDeviceAddressInfo deviceAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+            deviceAddressInfo.buffer = indexBufferResourceData->BufferDeviceObject;
 
-        description->geometry.triangles.indexData.deviceAddress = address + parameters->IndexBufferOffset;
+            VkDeviceAddress address = vkGetBufferDeviceAddress(graphicsDeviceData->Device, &deviceAddressInfo);
+            SystemAssert(address);
+
+            geometry->geometry.triangles.indexData.deviceAddress = address + geometryDesc->IndexBufferOffset;
+        }
     }
 
     return
@@ -281,8 +288,8 @@ VkAccelerationStructureBuildGeometryInfoKHR BuildVulkanBlasGeometryInfo(MemoryAr
         .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
         .flags = ConvertToVulkanRaytracingBuildFlags(parameters->BuildFlags), 
         .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-        .geometryCount = 1,
-        .pGeometries = description
+        .geometryCount = (uint32_t)geometryList.Length,
+        .pGeometries = geometryList.Pointer
     };
 }
 
@@ -1412,10 +1419,17 @@ ElemRaytracingAllocationInfo VulkanGetRaytracingBlasAllocationInfo(ElemGraphicsD
     SystemAssert(graphicsDeviceData);
 
     auto geometryInfo = BuildVulkanBlasGeometryInfo(stackMemoryArena, parameters);
-    auto triangleCount = parameters->IndexCount / 3;
+
+    auto triangleCountList = SystemPushArray<uint32_t>(stackMemoryArena, parameters->GeometryList.Length);
+
+    for (uint32_t i = 0; i < parameters->GeometryList.Length; i++)
+    {
+        auto geometryDesc = &parameters->GeometryList.Items[i];
+        triangleCountList[i] = geometryDesc->IndexCount / 3;
+    }
 
     VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-	vkGetAccelerationStructureBuildSizesKHR(graphicsDeviceData->Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_OR_DEVICE_KHR, &geometryInfo, &triangleCount, &sizeInfo);
+	vkGetAccelerationStructureBuildSizesKHR(graphicsDeviceData->Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_OR_DEVICE_KHR, &geometryInfo, triangleCountList.Pointer, &sizeInfo);
 
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", sizeInfo.accelerationStructureSize);
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", sizeInfo.buildScratchSize);
@@ -1638,15 +1652,20 @@ void VulkanBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource
     inputs.scratchData.deviceAddress = address + scratchOffset;
     inputs.dstAccelerationStructure = accelerationStructureResourceData->AccelerationStructureDeviceObject;
 
-    VkAccelerationStructureBuildRangeInfoKHR buildRanges =
-    {
-        .primitiveCount = parameters->IndexCount / 3
-    };
+    auto buildRangeList = SystemPushArray<VkAccelerationStructureBuildRangeInfoKHR>(stackMemoryArena, parameters->GeometryList.Length);
 
-    VkAccelerationStructureBuildRangeInfoKHR* buildRangesPtr = &buildRanges;
+    for (uint32_t i = 0; i < parameters->GeometryList.Length; i++)
+    {
+        auto geometryDesc = &parameters->GeometryList.Items[i];
+        buildRangeList[i] = 
+        {
+            .primitiveCount = geometryDesc->IndexCount / 3
+        };
+    }
+
 
     InsertVulkanResourceBarriersIfNeeded(commandList, ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure);
-    vkCmdBuildAccelerationStructuresKHR(commandListData->DeviceObject, 1, &inputs, &buildRangesPtr);
+    vkCmdBuildAccelerationStructuresKHR(commandListData->DeviceObject, 1, &inputs, &buildRangeList.Pointer);
 }
 
 void VulkanBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)

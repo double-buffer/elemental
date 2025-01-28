@@ -140,14 +140,12 @@ GlobalShaderData InitGlobalShaderData()
 }
 
 // TODO: Do other functions if we need less indirection
-GpuDrawParameters GetDrawParametersNonUniform(GlobalShaderData globalShaderData, int32_t meshPrimitiveInstanceId)
+GpuDrawParameters GetDrawParametersNonUniform(GlobalShaderData globalShaderData, int32_t meshInstanceId, int32_t meshPrimitiveId)
 {
-    GpuMeshPrimitiveInstance meshPrimitiveInstance = globalShaderData.MeshPrimitiveInstanceBuffer.Load<GpuMeshPrimitiveInstance>(meshPrimitiveInstanceId * sizeof(GpuMeshPrimitiveInstance));
-
-    GpuMeshInstance meshInstance = globalShaderData.MeshInstanceBuffer.Load<GpuMeshInstance>(meshPrimitiveInstance.MeshInstanceId * sizeof(GpuMeshInstance));
+    GpuMeshInstance meshInstance = globalShaderData.MeshInstanceBuffer.Load<GpuMeshInstance>(meshInstanceId * sizeof(GpuMeshInstance));
 
     ByteAddressBuffer meshBuffer = ResourceDescriptorHeap[NonUniformResourceIndex(meshInstance.MeshBufferIndex)];
-    GpuMeshPrimitive meshPrimitive = meshBuffer.Load<GpuMeshPrimitive>(meshPrimitiveInstance.MeshPrimitiveId * sizeof(GpuMeshPrimitive));
+    GpuMeshPrimitive meshPrimitive = meshBuffer.Load<GpuMeshPrimitive>(meshPrimitiveId * sizeof(GpuMeshPrimitive));
 
     ShaderMaterial material = globalShaderData.MaterialBuffer.Load<ShaderMaterial>(meshPrimitive.MaterialId * sizeof(ShaderMaterial));
 
@@ -257,7 +255,7 @@ RayHitInfo TraceRay(GlobalShaderData globalShaderData, float3 origin, float3 dir
     RayHitInfo result;
     result.HasHit = false;
 
-    RayQuery<RAY_FLAG_CULL_BACK_FACING_TRIANGLES> rayQuery;
+    RayQuery<RAY_FLAG_NONE> rayQuery;
 
     RayDesc ray;
 	ray.Origin = origin;
@@ -272,10 +270,11 @@ RayHitInfo TraceRay(GlobalShaderData globalShaderData, float3 origin, float3 dir
     if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
     {
         uint instanceId = rayQuery.CommittedInstanceID();
+        uint geometryIndex = rayQuery.CommittedGeometryIndex();
         uint primitiveIndex = rayQuery.CommittedPrimitiveIndex();
         float2 bary = rayQuery.CommittedTriangleBarycentrics();
 
-        GpuDrawParameters drawParameters = GetDrawParametersNonUniform(globalShaderData, instanceId);
+        GpuDrawParameters drawParameters = GetDrawParametersNonUniform(globalShaderData, instanceId, geometryIndex);
         
         uint3 indices = drawParameters.MeshBuffer.Load<uint3>(drawParameters.IndexBufferOffset + primitiveIndex * sizeof(uint3));
 
@@ -398,7 +397,7 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
         }
         else
         {
-            //radiance += weight * float3(0.25, 0.5, 1.0) * 10;
+            radiance += weight * float3(0.25, 0.5, 1.0) * 10;
             break;
         }
     }

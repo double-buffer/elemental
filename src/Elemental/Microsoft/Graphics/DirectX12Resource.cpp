@@ -404,48 +404,54 @@ D3D12_RAYTRACING_INSTANCE_FLAGS ConvertToDirectX12RaytracingInstanceFlags(ElemRa
 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BuildDirectX12BlasInputs(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
 {
     SystemAssert(parameters);
-    auto description = SystemPushStruct<D3D12_RAYTRACING_GEOMETRY_DESC>(memoryArena);
+    auto geometryList = SystemPushArray<D3D12_RAYTRACING_GEOMETRY_DESC>(memoryArena, parameters->GeometryList.Length);
 
-    *description =
+    for (uint32_t i = 0; i < parameters->GeometryList.Length; i++)
     {
-        .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
-        .Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
-        .Triangles = 
+        auto geometryDesc = &parameters->GeometryList.Items[i];
+        auto geometry = &geometryList[i];
+
+        *geometry =
         {
-            .IndexFormat = ConvertToDirectX12Format(parameters->IndexFormat),
-            .VertexFormat = ConvertToDirectX12Format(parameters->VertexFormat),
-            .IndexCount = parameters->IndexCount,
-            .VertexCount = parameters->VertexCount,
-            .VertexBuffer = 
+            .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
+            .Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
+            .Triangles = 
             {
-                .StrideInBytes = parameters->VertexSizeInBytes
+                .IndexFormat = ConvertToDirectX12Format(geometryDesc->IndexFormat),
+                .VertexFormat = ConvertToDirectX12Format(geometryDesc->VertexFormat),
+                .IndexCount = geometryDesc->IndexCount,
+                .VertexCount = geometryDesc->VertexCount,
+                .VertexBuffer = 
+                {
+                    .StrideInBytes = geometryDesc->VertexSizeInBytes
+                }
             }
+        };
+
+        if (geometryDesc->VertexBuffer != ELEM_HANDLE_NULL)
+        {
+            auto vertexBufferResourceData = GetDirectX12GraphicsResourceData(geometryDesc->VertexBuffer);
+            SystemAssert(vertexBufferResourceData);
+
+            geometry->Triangles.VertexBuffer.StartAddress = vertexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + geometryDesc->VertexBufferOffset;
         }
-    };
 
-    if (parameters->VertexBuffer != ELEM_HANDLE_NULL)
-    {
-        auto vertexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->VertexBuffer);
-        SystemAssert(vertexBufferResourceData);
+        if (geometryDesc->IndexBuffer != ELEM_HANDLE_NULL)
+        {
+            auto indexBufferResourceData = GetDirectX12GraphicsResourceData(geometryDesc->IndexBuffer);
+            SystemAssert(indexBufferResourceData);
 
-        description->Triangles.VertexBuffer.StartAddress = vertexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + parameters->VertexBufferOffset;
-    }
-
-    if (parameters->IndexBuffer != ELEM_HANDLE_NULL)
-    {
-        auto indexBufferResourceData = GetDirectX12GraphicsResourceData(parameters->IndexBuffer);
-        SystemAssert(indexBufferResourceData);
-
-        description->Triangles.IndexBuffer = indexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + parameters->IndexBufferOffset;
+            geometry->Triangles.IndexBuffer = indexBufferResourceData->DeviceObject->GetGPUVirtualAddress() + geometryDesc->IndexBufferOffset;
+        }
     }
 
     return
     {
         .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
         .Flags = ConvertToDirectX12RaytracingBuildFlags(parameters->BuildFlags), 
-        .NumDescs = 1,
+        .NumDescs = (uint32_t)geometryList.Length,
         .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-        .pGeometryDescs = description
+        .pGeometryDescs = geometryList.Pointer
     };
 }
 

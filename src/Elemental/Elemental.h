@@ -827,8 +827,6 @@ typedef struct
 
 typedef struct
 {
-    ElemRaytracingBuildFlags BuildFlags;
-    // TODO: Add transform matrix?
     ElemGraphicsFormat VertexFormat; // TODO: Use an enum instead?
     ElemGraphicsResource VertexBuffer;
     uint32_t VertexBufferOffset;
@@ -838,6 +836,18 @@ typedef struct
     ElemGraphicsResource IndexBuffer;
     uint32_t IndexBufferOffset;
     uint32_t IndexCount;
+} ElemRaytracingBlasGeometry;
+
+typedef struct
+{
+    ElemRaytracingBlasGeometry* Items;
+    uint32_t Length;
+} ElemRaytracingBlasGeometrySpan;
+
+typedef struct
+{
+    ElemRaytracingBuildFlags BuildFlags;
+    ElemRaytracingBlasGeometrySpan GeometryList;
 } ElemRaytracingBlasParameters; 
 
 typedef struct

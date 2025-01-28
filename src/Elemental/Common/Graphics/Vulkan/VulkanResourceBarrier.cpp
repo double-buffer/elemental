@@ -57,10 +57,10 @@ VkAccessFlags2 ConvertToVulkanBarrierAccess(ElemGraphicsResourceBarrierAccessTyp
             return VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         case ElemGraphicsResourceBarrierAccessType_Write:
-            return VK_ACCESS_2_SHADER_WRITE_BIT;
+            return isAccelerationStructure ? VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR : VK_ACCESS_2_SHADER_WRITE_BIT;
 
         case ElemGraphicsResourceBarrierAccessType_Copy:
-            return isAccelerationStructure ? VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR : VK_ACCESS_2_TRANSFER_WRITE_BIT;
+            return VK_ACCESS_2_TRANSFER_WRITE_BIT;
     }
 }
 

@@ -14,7 +14,6 @@
 typedef struct
 {
     SampleMeshPrimitiveHeader PrimitiveHeader;
-    ElemGraphicsResource RaytracingAccelerationStructure;
 } SampleMeshPrimitiveData;
 
 typedef struct 

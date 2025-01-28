@@ -42,9 +42,9 @@ typedef struct
     uint64_t SizeInBytes;
     uint64_t ScratchOffset;
     uint64_t ScratchSizeInBytes;
-    SampleMeshPrimitiveData* MeshPrimitive;
     ElemRaytracingBlasParameters BlasParameters;
-} RaytracingAccelerationStructInfo;
+    ElemGraphicsResource Blas;
+} RaytracingBlasData;
 
 // TODO: Group common variables into separate structs
 typedef struct
@@ -80,8 +80,11 @@ typedef struct
     bool UsePathTracingAccumulation;
     SampleGpuBuffer BlasStorage;
     SampleGpuBuffer BlasScratchBuffer;
-    RaytracingAccelerationStructInfo BlasInfoList[1024];
+    RaytracingBlasData* BlasData;
     uint32_t BlasCount;
+
+    bool UseAnimation;
+    float AnimationDirection;
 } ApplicationPayload;
     
 typedef struct
@@ -136,17 +139,21 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
     uint64_t currentBlasOffset = 0u;
     uint64_t currentBlasScratchOffset = 0u;
 
+    applicationPayload->BlasData = (RaytracingBlasData*)malloc(sceneData->MeshCount * sizeof(RaytracingBlasData));
+
     for (uint32_t i = 0; i < sceneData->MeshCount; i++)
     {
         SampleMeshData* meshData = &sceneData->Meshes[i];
         
+        // TODO: Find another way
+        ElemRaytracingBlasGeometry* geometry = (ElemRaytracingBlasGeometry*)malloc(meshData->MeshHeader.MeshPrimitiveCount * sizeof(ElemRaytracingBlasGeometry));
+
         for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
         {
             SampleMeshPrimitiveData* meshPrimitiveData = &meshData->MeshPrimitives[j];
 
-            ElemRaytracingBlasParameters blasParameters =
+            geometry[j] = (ElemRaytracingBlasGeometry)
             {
-                .BuildFlags = ElemRaytracingBuildFlags_PreferFastTrace,
                 .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
                 .VertexBuffer = meshData->MeshBuffer.Buffer,
                 .VertexBufferOffset = meshPrimitiveData->PrimitiveHeader.VertexBufferOffset,
@@ -157,22 +164,27 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
                 .IndexBufferOffset = meshPrimitiveData->PrimitiveHeader.IndexBufferOffset,
                 .IndexCount = meshPrimitiveData->PrimitiveHeader.IndexCount
             };
-
-            ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingBlasAllocationInfo(applicationPayload->GraphicsDevice, &blasParameters);
-
-            applicationPayload->BlasInfoList[applicationPayload->BlasCount++] = (RaytracingAccelerationStructInfo)
-            { 
-                .Offset = currentBlasOffset, 
-                .SizeInBytes = allocationInfos.SizeInBytes,
-                .ScratchOffset = currentBlasScratchOffset,
-                .ScratchSizeInBytes = allocationInfos.ScratchSizeInBytes,
-                .MeshPrimitive = meshPrimitiveData,
-                .BlasParameters = blasParameters
-            };
-
-            currentBlasOffset = SampleAlignValue(currentBlasOffset + allocationInfos.SizeInBytes, allocationInfos.Alignment);
-            currentBlasScratchOffset = SampleAlignValue(currentBlasScratchOffset + allocationInfos.ScratchSizeInBytes, allocationInfos.Alignment);
         }
+
+        ElemRaytracingBlasParameters blasParameters =
+        {
+            .BuildFlags = ElemRaytracingBuildFlags_PreferFastTrace,
+            .GeometryList = { .Items = geometry, .Length = meshData->MeshHeader.MeshPrimitiveCount }
+        };
+
+        ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingBlasAllocationInfo(applicationPayload->GraphicsDevice, &blasParameters);
+
+        applicationPayload->BlasData[applicationPayload->BlasCount++] = (RaytracingBlasData)
+        { 
+            .Offset = currentBlasOffset, 
+            .SizeInBytes = allocationInfos.SizeInBytes,
+            .ScratchOffset = currentBlasScratchOffset,
+            .ScratchSizeInBytes = allocationInfos.ScratchSizeInBytes,
+            .BlasParameters = blasParameters
+        };
+
+        currentBlasOffset = SampleAlignValue(currentBlasOffset + allocationInfos.SizeInBytes, allocationInfos.Alignment);
+        currentBlasScratchOffset = SampleAlignValue(currentBlasScratchOffset + allocationInfos.ScratchSizeInBytes, allocationInfos.Alignment);
     }
 
     applicationPayload->BlasScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, currentBlasScratchOffset, "GlobalBlasScratch");
@@ -180,15 +192,15 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
 
     for (uint32_t i = 0; i < applicationPayload->BlasCount; i++)
     {
-        RaytracingAccelerationStructInfo* blasInfo = &applicationPayload->BlasInfoList[i];
+        RaytracingBlasData* blasInfo = &applicationPayload->BlasData[i];
 
-        blasInfo->MeshPrimitive->RaytracingAccelerationStructure = ElemCreateRaytracingAccelerationStructureResource(applicationPayload->GraphicsDevice, 
-                                                                                                                     applicationPayload->BlasStorage.Buffer, 
-                                                                                                                     &(ElemRaytracingAccelerationStructureOptions)
-                                                                                                                     {
-                                                                                                                        .StorageOffset = blasInfo->Offset,
-                                                                                                                        .StorageSizeInBytes = blasInfo->SizeInBytes
-                                                                                                                     });
+        blasInfo->Blas = ElemCreateRaytracingAccelerationStructureResource(applicationPayload->GraphicsDevice, 
+                                                                         applicationPayload->BlasStorage.Buffer, 
+                                                                         &(ElemRaytracingAccelerationStructureOptions)
+                                                                         {
+                                                                            .StorageOffset = blasInfo->Offset,
+                                                                            .StorageSizeInBytes = blasInfo->SizeInBytes
+                                                                         });
     }
         
     uint32_t tlasInstanceCount = 0u;
@@ -199,12 +211,7 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
 
         if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {
-            SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
-
-            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
-            {
-                tlasInstanceCount++;
-            }
+            tlasInstanceCount++;
         }
     }
     
@@ -225,23 +232,26 @@ void CreateRaytracingAccelerationStructures(ApplicationPayload* applicationPaylo
     sceneData->RaytracingAccelerationStructureReadDescriptor = ElemCreateGraphicsResourceDescriptor(sceneData->RaytracingAccelerationStructure, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 }
 
-void BuildRaytracingAccelerationStructures(ElemCommandList commandList, ApplicationPayload* applicationPayload)
+void BuildRaytracingBlas(ElemCommandList commandList, ApplicationPayload* applicationPayload)
 {
-    SampleSceneData* sceneData = &applicationPayload->TestSceneData;
-
     ElemGraphicsResourceBarrier(commandList, applicationPayload->BlasStorage.WriteDescriptor, NULL);
 
     for (uint32_t i = 0; i < applicationPayload->BlasCount; i++)
     {
-        RaytracingAccelerationStructInfo* blasInfo = &applicationPayload->BlasInfoList[i];
+        RaytracingBlasData* blasInfo = &applicationPayload->BlasData[i];
 
-        ElemBuildRaytracingBlas(commandList, blasInfo->MeshPrimitive->RaytracingAccelerationStructure, 
+        ElemBuildRaytracingBlas(commandList, blasInfo->Blas, 
                                              applicationPayload->BlasScratchBuffer.Buffer, 
                                              &blasInfo->BlasParameters, 
                                              &(ElemRaytracingBuildOptions) { .ScratchOffset = blasInfo->ScratchOffset });
     }
         
     ElemGraphicsResourceBarrier(commandList, applicationPayload->BlasStorage.ReadDescriptor, NULL);
+}
+
+void BuildRaytracingTlas(ElemCommandList commandList, ApplicationPayload* applicationPayload)
+{
+    SampleSceneData* sceneData = &applicationPayload->TestSceneData;
 
     // TODO: Move that part in the other function
     ElemRaytracingTlasInstance tlasInstances[1024];
@@ -253,24 +263,19 @@ void BuildRaytracingAccelerationStructures(ElemCommandList commandList, Applicat
 
         if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {
-            SampleMeshData* meshData = &sceneData->Meshes[sceneNode->ReferenceIndex];
+            RaytracingBlasData* blasData = &applicationPayload->BlasData[sceneNode->ReferenceIndex];
 
-            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
+            ElemMatrix4x3 transformMatrix = SampleCreateTransformMatrix2(sceneNode->Rotation, sceneNode->Scale, sceneNode->Translation);
+
+            tlasInstances[tlasInstanceCount] = (ElemRaytracingTlasInstance)
             {
-                SampleMeshPrimitiveData* meshPrimitiveData = &meshData->MeshPrimitives[j];
+                .InstanceId = tlasInstanceCount,
+                .InstanceMask = 1,
+                .TransformMatrix = transformMatrix,
+                .BlasResource = blasData->Blas
+            };
 
-                ElemMatrix4x3 transformMatrix = SampleCreateTransformMatrix2(sceneNode->Rotation, sceneNode->Scale, sceneNode->Translation);
-
-                tlasInstances[tlasInstanceCount] = (ElemRaytracingTlasInstance)
-                {
-                    .InstanceId = tlasInstanceCount,
-                    .InstanceMask = 1,
-                    .TransformMatrix = transformMatrix,
-                    .BlasResource = meshPrimitiveData->RaytracingAccelerationStructure
-                };
-
-                tlasInstanceCount++;
-            }
+            tlasInstanceCount++;
         }
     }
 
@@ -321,6 +326,7 @@ void InitSample(void* payload)
     applicationPayload->PathTraceLength = 3;
     applicationPayload->UsePathTracing = true;
     applicationPayload->UsePathTracingAccumulation = true;
+    applicationPayload->AnimationDirection = 1;
     
     CreateRaytracingAccelerationStructures(applicationPayload);
 
@@ -337,7 +343,8 @@ void InitSample(void* payload)
         }
     }
 
-    BuildRaytracingAccelerationStructures(loadDataCommandList, applicationPayload);
+    BuildRaytracingBlas(loadDataCommandList, applicationPayload);
+    BuildRaytracingTlas(loadDataCommandList, applicationPayload);
 
     ElemCommitCommandList(loadDataCommandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
@@ -433,6 +440,16 @@ void FreeSample(void* payload)
     SampleFreeGpuBuffer(&applicationPayload->ShaderGlobalParametersBuffer);
 
     SampleFreeGpuBuffer(&applicationPayload->BlasStorage);
+
+    for (uint32_t i = 0; i < applicationPayload->BlasCount; i++)
+    {
+        ElemFreeGraphicsResource(applicationPayload->BlasData[i].Blas, NULL);
+    }
+
+    free(applicationPayload->BlasData);
+
+    // TODO: For the scratch buffer we can delete it by passing the fence of the command list
+    // It means we don't need to store it in the payload
     SampleFreeGpuBuffer(&applicationPayload->BlasScratchBuffer);
 
     ElemFreePipelineState(applicationPayload->ToneMapGraphicsPipeline);
@@ -523,7 +540,26 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         applicationPayload->UsePathTracingAccumulation = !applicationPayload->UsePathTracingAccumulation;
     }
 
+    if (inputsCameraState->Action3)
+    {
+        applicationPayload->UseAnimation = !applicationPayload->UseAnimation;
+    }
+
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
+
+    if (applicationPayload->UseAnimation)
+    {
+        SampleSceneNodeHeader* node = &applicationPayload->TestSceneData.Nodes[applicationPayload->TestSceneData.NodeCount - 1];
+        node->Translation.Y += updateParameters->DeltaTimeInSeconds * applicationPayload->AnimationDirection;
+        applicationPayload->PathTracingSamplingCount = 0;
+
+        if (node->Translation.Y > 1.0f || node->Translation.Y < 0.0f)
+        {
+            applicationPayload->AnimationDirection = -applicationPayload->AnimationDirection;
+        }
+    
+        BuildRaytracingTlas(commandList, applicationPayload);
+    }
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
@@ -537,10 +573,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         },
         .DepthStencil =
         {
-            .DepthStencil = applicationPayload->DepthBuffer
+            .DepthStencil = !applicationPayload->UsePathTracing ? applicationPayload->DepthBuffer : ELEM_HANDLE_NULL
         }
     });
-
 
     if (applicationPayload->UsePathTracing)
     {
