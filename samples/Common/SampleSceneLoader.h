@@ -71,16 +71,7 @@ typedef struct
     SampleMaterialData* Materials;
     uint32_t NodeCount;
     SampleSceneNodeHeader* Nodes;
-    uint32_t GpuMeshPrimitiveInstanceCount;
-    uint32_t* GpuMeshPrimitiveMeshletCountList;
     SampleGpuBuffer MaterialBuffer;
-    SampleGpuBuffer GpuMeshInstanceBuffer;
-    SampleGpuBuffer GpuMeshPrimitiveInstanceBuffer;
-    SampleGpuBuffer TlasInstanceBuffer;
-    SampleGpuBuffer RaytracingStorageBuffer;
-    SampleGpuBuffer RaytracingScratchBuffer; // TODO: To remove use a global one
-    ElemGraphicsResource RaytracingAccelerationStructure;
-    ElemGraphicsResourceDescriptor RaytracingAccelerationStructureReadDescriptor;
 } SampleSceneData;
 
 // TODO: Change that. For now we use that simple implementation
@@ -371,48 +362,7 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemo
         free(shaderMaterials);
     }
 
-    GpuMeshInstance* gpuMeshInstancesData = (GpuMeshInstance*)malloc(sizeof(GpuMeshInstance) * 10000);
-    uint32_t gpuMeshInstanceCount = 0u;
 
-    // TODO: Change the max value here
-    GpuMeshPrimitiveInstance* gpuMeshPrimitiveInstancesData = (GpuMeshPrimitiveInstance*)malloc(sizeof(GpuMeshPrimitiveInstance) * 20000);
-    uint32_t* gpuMeshPrimitiveInstancesMeshletCountList = (uint32_t*)malloc(sizeof(uint32_t) * 20000);
-    uint32_t gpuMeshPrimitiveInstanceCount = 0u;
-
-    for (uint32_t i = 0; i < sceneData->NodeCount; i++)
-    {
-        SampleSceneNodeHeader* sceneNode = &sceneData->Nodes[i];
-
-        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
-        {
-            GpuMeshInstance* gpuMeshInstance = &gpuMeshInstancesData[gpuMeshInstanceCount];
-            SampleMeshData* meshData = &sceneData->Meshes[sceneNode->ReferenceIndex];
-
-            gpuMeshInstance->Rotation = sceneNode->Rotation;
-            gpuMeshInstance->Scale = sceneNode->Scale;
-            gpuMeshInstance->Translation = sceneNode->Translation;
-            gpuMeshInstance->MeshBufferIndex = meshData->MeshBuffer.ReadDescriptor;
-
-            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
-            {
-                GpuMeshPrimitiveInstance* gpuMeshPrimitiveInstance = &gpuMeshPrimitiveInstancesData[gpuMeshPrimitiveInstanceCount];
-                gpuMeshPrimitiveInstance->MeshInstanceId = gpuMeshInstanceCount;
-                gpuMeshPrimitiveInstance->MeshPrimitiveId = j;
-
-                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].PrimitiveHeader.MeshletCount;
-                gpuMeshPrimitiveInstanceCount++;
-            }
-
-            gpuMeshInstanceCount++;
-        }
-    }
-
-    sceneData->GpuMeshInstanceBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, gpuMeshInstancesData, gpuMeshInstanceCount * sizeof(GpuMeshInstance), "GpuMeshInstanceBuffer");
-    sceneData->GpuMeshPrimitiveInstanceBuffer = SampleCreateGpuBufferAndUploadData(gpuMemory, gpuMeshPrimitiveInstancesData, gpuMeshPrimitiveInstanceCount * sizeof(GpuMeshPrimitiveInstance), "GpuMeshPrimitiveInstanceBuffer");
-    sceneData->GpuMeshPrimitiveInstanceCount = gpuMeshPrimitiveInstanceCount;
-    sceneData->GpuMeshPrimitiveMeshletCountList = gpuMeshPrimitiveInstancesMeshletCountList;
-
-    free(gpuMeshInstancesData);
     free(materialHeaders);
     free(meshDataBlocks);
 }

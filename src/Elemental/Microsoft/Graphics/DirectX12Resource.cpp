@@ -401,6 +401,30 @@ D3D12_RAYTRACING_INSTANCE_FLAGS ConvertToDirectX12RaytracingInstanceFlags(ElemRa
     return result;
 }
 
+DXGI_FORMAT ConvertRaytracingIndexFormatToDirectX12Format(ElemRaytracingIndexFormat format)
+{
+    switch (format) 
+    {
+        case ElemRaytracingIndexFormat_UInt32:
+            return DXGI_FORMAT_R32_UINT;
+
+        case ElemRaytracingIndexFormat_UInt16:
+            return DXGI_FORMAT_R16_UINT;
+    }
+}
+
+DXGI_FORMAT ConvertRaytracingVertexFormatToDirectX12Format(ElemRaytracingVertexFormat format)
+{
+    switch (format) 
+    {
+        case ElemRaytracingVertexFormat_Float32:
+            return DXGI_FORMAT_R32G32B32_FLOAT;
+
+        case ElemRaytracingVertexFormat_Float16:
+            return DXGI_FORMAT_R16G16B16A16_FLOAT ;
+    }
+}
+
 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BuildDirectX12BlasInputs(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
 {
     SystemAssert(parameters);
@@ -417,8 +441,8 @@ D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BuildDirectX12BlasInputs(Me
             .Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
             .Triangles = 
             {
-                .IndexFormat = ConvertToDirectX12Format(geometryDesc->IndexFormat),
-                .VertexFormat = ConvertToDirectX12Format(geometryDesc->VertexFormat),
+                .IndexFormat = ConvertRaytracingIndexFormatToDirectX12Format(geometryDesc->IndexFormat),
+                .VertexFormat = ConvertRaytracingVertexFormatToDirectX12Format(geometryDesc->VertexFormat),
                 .IndexCount = geometryDesc->IndexCount,
                 .VertexCount = geometryDesc->VertexCount,
                 .VertexBuffer = 
@@ -1317,10 +1341,6 @@ ElemRaytracingAllocationInfo DirectX12GetRaytracingBlasAllocationInfo(ElemGraphi
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO allocationInfo;     
     graphicsDeviceData->Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &allocationInfo);
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", allocationInfo.ResultDataMaxSizeInBytes);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", allocationInfo.ScratchDataSizeInBytes);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", allocationInfo.UpdateScratchDataSizeInBytes);
-
     return 
     {
         .Alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT,
@@ -1342,10 +1362,6 @@ ElemRaytracingAllocationInfo DirectX12GetRaytracingTlasAllocationInfo(ElemGraphi
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO allocationInfo;     
     graphicsDeviceData->Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &allocationInfo);
-
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "TLAS Size: %d", allocationInfo.ResultDataMaxSizeInBytes);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", allocationInfo.ScratchDataSizeInBytes);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", allocationInfo.UpdateScratchDataSizeInBytes);
 
     return 
     {

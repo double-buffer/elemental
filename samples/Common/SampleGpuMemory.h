@@ -71,7 +71,6 @@ SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeI
     
     char formattedMemorySize[256];
     FormatMemorySize(bufferDescription.SizeInBytes, formattedMemorySize, 256);
-    printf("Creating GpuBuffer: %s\n", formattedMemorySize);
 
     gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
     ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
@@ -105,6 +104,15 @@ void SampleFreeGpuBuffer(SampleGpuBuffer* gpuBuffer)
     gpuBuffer->ReadDescriptor = ELEM_HANDLE_NULL;
 
     ElemFreeGraphicsResource(gpuBuffer->Buffer, NULL);
+    gpuBuffer->Buffer = ELEM_HANDLE_NULL;
+}
+
+void SampleFreeGpuBufferWithFence(SampleGpuBuffer* gpuBuffer, ElemFence fence)
+{
+    ElemFreeGraphicsResourceDescriptor(gpuBuffer->ReadDescriptor, &(ElemFreeGraphicsResourceDescriptorOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
+    gpuBuffer->ReadDescriptor = ELEM_HANDLE_NULL;
+
+    ElemFreeGraphicsResource(gpuBuffer->Buffer, &(ElemFreeGraphicsResourceOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
     gpuBuffer->Buffer = ELEM_HANDLE_NULL;
 }
 

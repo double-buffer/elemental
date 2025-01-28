@@ -50,6 +50,11 @@ typedef struct
 
     ShaderShaderGlobalParameters ShaderGlobalParameters;
     SampleGpuBuffer ShaderGlobalParametersBuffer;
+
+    SampleGpuBuffer GpuMeshInstanceBuffer;
+    SampleGpuBuffer GpuMeshPrimitiveInstanceBuffer;
+    uint32_t GpuMeshPrimitiveInstanceCount;
+    uint32_t* GpuMeshPrimitiveMeshletCountList;
 } ApplicationPayload;
 
 typedef struct
@@ -82,11 +87,59 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
     applicationPayload->ShaderGlobalParameters.InverseViewMatrix = cameraState->InverseViewMatrix;
     applicationPayload->ShaderGlobalParameters.InverseProjectionMatrix = cameraState->InverseProjectionMatrix;
     applicationPayload->ShaderGlobalParameters.MaterialBufferIndex = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
-    applicationPayload->ShaderGlobalParameters.GpuMeshInstanceBufferIndex = applicationPayload->TestSceneData.GpuMeshInstanceBuffer.ReadDescriptor;
-    applicationPayload->ShaderGlobalParameters.GpuMeshPrimitiveInstanceBufferIndex = applicationPayload->TestSceneData.GpuMeshPrimitiveInstanceBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.GpuMeshInstanceBufferIndex = applicationPayload->GpuMeshInstanceBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.GpuMeshPrimitiveInstanceBufferIndex = applicationPayload->GpuMeshPrimitiveInstanceBuffer.ReadDescriptor;
     applicationPayload->ShaderGlobalParameters.Action = cameraState->Action;
 
     ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderShaderGlobalParameters) });
+}
+
+void InitSceneGpuBuffers(ApplicationPayload* applicationPayload)
+{
+    SampleSceneData* sceneData = &applicationPayload->TestSceneData;
+
+    GpuMeshInstance* gpuMeshInstancesData = (GpuMeshInstance*)malloc(sizeof(GpuMeshInstance) * 10000);
+    uint32_t gpuMeshInstanceCount = 0u;
+
+    // TODO: Change the max value here
+    GpuMeshPrimitiveInstance* gpuMeshPrimitiveInstancesData = (GpuMeshPrimitiveInstance*)malloc(sizeof(GpuMeshPrimitiveInstance) * 20000);
+    uint32_t* gpuMeshPrimitiveInstancesMeshletCountList = (uint32_t*)malloc(sizeof(uint32_t) * 20000);
+    uint32_t gpuMeshPrimitiveInstanceCount = 0u;
+
+    for (uint32_t i = 0; i < sceneData->NodeCount; i++)
+    {
+        SampleSceneNodeHeader* sceneNode = &sceneData->Nodes[i];
+
+        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
+        {
+            GpuMeshInstance* gpuMeshInstance = &gpuMeshInstancesData[gpuMeshInstanceCount];
+            SampleMeshData* meshData = &sceneData->Meshes[sceneNode->ReferenceIndex];
+
+            gpuMeshInstance->Rotation = sceneNode->Rotation;
+            gpuMeshInstance->Scale = sceneNode->Scale;
+            gpuMeshInstance->Translation = sceneNode->Translation;
+            gpuMeshInstance->MeshBufferIndex = meshData->MeshBuffer.ReadDescriptor;
+
+            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
+            {
+                GpuMeshPrimitiveInstance* gpuMeshPrimitiveInstance = &gpuMeshPrimitiveInstancesData[gpuMeshPrimitiveInstanceCount];
+                gpuMeshPrimitiveInstance->MeshInstanceId = gpuMeshInstanceCount;
+                gpuMeshPrimitiveInstance->MeshPrimitiveId = j;
+
+                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].PrimitiveHeader.MeshletCount;
+                gpuMeshPrimitiveInstanceCount++;
+            }
+
+            gpuMeshInstanceCount++;
+        }
+    }
+
+    applicationPayload->GpuMeshInstanceBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, gpuMeshInstancesData, gpuMeshInstanceCount * sizeof(GpuMeshInstance), "GpuMeshInstanceBuffer");
+    applicationPayload->GpuMeshPrimitiveInstanceBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemory, gpuMeshPrimitiveInstancesData, gpuMeshPrimitiveInstanceCount * sizeof(GpuMeshPrimitiveInstance), "GpuMeshPrimitiveInstanceBuffer");
+    applicationPayload->GpuMeshPrimitiveInstanceCount = gpuMeshPrimitiveInstanceCount;
+    applicationPayload->GpuMeshPrimitiveMeshletCountList = gpuMeshPrimitiveInstancesMeshletCountList;
+
+    free(gpuMeshInstancesData);
 }
 
 void InitSample(void* payload)
@@ -117,6 +170,7 @@ void InitSample(void* payload)
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
+    InitSceneGpuBuffers(applicationPayload);
 
     ElemGraphicsSamplerInfo samplerInfo =
     {
@@ -352,12 +406,12 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
-    for (uint32_t i = 0; i < applicationPayload->TestSceneData.GpuMeshPrimitiveInstanceCount; i++)
+    for (uint32_t i = 0; i < applicationPayload->GpuMeshPrimitiveInstanceCount; i++)
     {
         applicationPayload->ShaderParameters.MeshPrimitiveInstanceId = i;
 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-        ElemDispatchMesh(commandList, applicationPayload->TestSceneData.GpuMeshPrimitiveMeshletCountList[i], 1, 1);
+        ElemDispatchMesh(commandList, applicationPayload->GpuMeshPrimitiveMeshletCountList[i], 1, 1);
     }
 
     ElemEndRenderPass(commandList);

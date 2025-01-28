@@ -5,6 +5,9 @@
 #include "SampleInputsModelViewer.h"
 #include "SampleSceneLoader.h"
 
+// TODO: Create a MeshCompiler project that use a more simple layout so that 
+// the mesh shader is simplier
+
 // TODO: Take all the code from the common headers and integrate it here
 // SampleSceneLoaderNeeds to disappear
 
@@ -45,6 +48,7 @@ typedef struct
     SampleInputsModelViewer InputsModelViewer;
     SampleSceneData TestSceneData;
     SampleGpuMemory GpuMemory; // TODO: To remove
+    uint32_t* GpuMeshPrimitiveMeshletCountList;
 } ApplicationPayload;
     
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
@@ -64,6 +68,33 @@ void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, u
                                                                             });
 
     applicationPayload->DepthBuffer = ElemCreateGraphicsResource(applicationPayload->DepthBufferHeap, 0, &resourceInfo);
+}
+
+void InitSceneGpuBuffers(ApplicationPayload* applicationPayload)
+{
+    SampleSceneData* sceneData = &applicationPayload->TestSceneData;
+
+    // TODO: Change the max value here
+    uint32_t* gpuMeshPrimitiveInstancesMeshletCountList = (uint32_t*)malloc(sizeof(uint32_t) * 20000);
+    uint32_t gpuMeshPrimitiveInstanceCount = 0u;
+
+    for (uint32_t i = 0; i < sceneData->NodeCount; i++)
+    {
+        SampleSceneNodeHeader* sceneNode = &sceneData->Nodes[i];
+
+        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
+        {
+            SampleMeshData* meshData = &sceneData->Meshes[sceneNode->ReferenceIndex];
+
+            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
+            {
+                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].PrimitiveHeader.MeshletCount;
+                gpuMeshPrimitiveInstanceCount++;
+            }
+        }
+    }
+    
+    applicationPayload->GpuMeshPrimitiveMeshletCountList = gpuMeshPrimitiveInstancesMeshletCountList;
 }
 
 void InitSample(void* payload)
@@ -94,7 +125,9 @@ void InitSample(void* payload)
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     SampleLoadScene("kitten.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
     //SampleLoadScene("buddha.scene", &applicationPayload->TestSceneData);
+    InitSceneGpuBuffers(applicationPayload);
     
+    // BUG: In the first frame, there is a glitch because we don't wait for the fence of the load command list
     ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
     SampleLoadMeshData(loadDataCommandList, &applicationPayload->TestSceneData.Meshes[0], &applicationPayload->GpuMemory);
     ElemCommitCommandList(loadDataCommandList);
@@ -226,7 +259,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
     //applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
     //applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
-    ElemDispatchMesh(commandList, applicationPayload->TestSceneData.GpuMeshPrimitiveMeshletCountList[0], 1, 1);
+    ElemDispatchMesh(commandList, applicationPayload->GpuMeshPrimitiveMeshletCountList[0], 1, 1);
 
     ElemEndRenderPass(commandList);
 

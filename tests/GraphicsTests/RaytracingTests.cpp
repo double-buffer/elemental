@@ -14,10 +14,10 @@ UTEST(Raytracing, GetRaytracingBlasAllocationInfo)
 
     ElemRaytracingBlasGeometry geometry =
     {
-        .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
+        .VertexFormat = ElemRaytracingVertexFormat_Float32,
         .VertexCount = 50,
         .VertexSizeInBytes = vertexSizeInBytes,
-        .IndexFormat = ElemGraphicsFormat_R32_UINT,
+        .IndexFormat = ElemRaytracingIndexFormat_UInt32,
         .IndexCount = 20
     };
 
@@ -134,12 +134,12 @@ UTEST(Raytracing, BuildRaytracingBlas)
 
     ElemRaytracingBlasGeometry geometry =
     {
-        .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
+        .VertexFormat = ElemRaytracingVertexFormat_Float32,
         .VertexBuffer = vertexBuffer.Buffer,
         .VertexBufferOffset = 0,
         .VertexCount = 50,
         .VertexSizeInBytes = vertexSizeInBytes,
-        .IndexFormat = ElemGraphicsFormat_R32_UINT,
+        .IndexFormat = ElemRaytracingIndexFormat_UInt32,
         .IndexBuffer = indexBuffer.Buffer,
         .IndexBufferOffset = 0,
         .IndexCount = 20
@@ -191,12 +191,12 @@ UTEST(Raytracing, BuildRaytracingBlas_NotAccelerationStructureResource)
 
     ElemRaytracingBlasGeometry geometry =
     {
-        .VertexFormat = ElemGraphicsFormat_R32G32B32_FLOAT,
+        .VertexFormat = ElemRaytracingVertexFormat_Float32,
         .VertexBuffer = vertexBuffer.Buffer,
         .VertexBufferOffset = 0,
         .VertexCount = 50,
         .VertexSizeInBytes = vertexSizeInBytes,
-        .IndexFormat = ElemGraphicsFormat_R32_UINT,
+        .IndexFormat = ElemRaytracingIndexFormat_UInt32,
         .IndexBuffer = indexBuffer.Buffer,
         .IndexBufferOffset = 0,
         .IndexCount = 20

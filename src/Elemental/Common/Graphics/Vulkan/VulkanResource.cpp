@@ -212,6 +212,30 @@ VkGeometryInstanceFlagsKHR ConvertToVulkanRaytracingInstanceFlags(ElemRaytracing
     return result;
 }
 
+VkIndexType ConvertRaytracingIndexFormatToVulkanIndexType(ElemRaytracingIndexFormat format)
+{
+    switch (format) 
+    {
+        case ElemRaytracingIndexFormat_UInt32:
+            return VK_INDEX_TYPE_UINT32;
+
+        case ElemRaytracingIndexFormat_UInt16:
+            return VK_INDEX_TYPE_UINT16;
+    }
+}
+
+VkFormat ConvertRaytracingVertexFormatToVulkanFormat(ElemRaytracingVertexFormat format)
+{
+    switch (format) 
+    {
+        case ElemRaytracingVertexFormat_Float32:
+            return VK_FORMAT_R32G32B32_SFLOAT;
+
+        case ElemRaytracingVertexFormat_Float16:
+            return VK_FORMAT_R16G16B16_SFLOAT;
+    }
+}
+
 VkAccelerationStructureBuildGeometryInfoKHR BuildVulkanBlasGeometryInfo(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
 {
     SystemAssert(parameters);
@@ -232,10 +256,10 @@ VkAccelerationStructureBuildGeometryInfoKHR BuildVulkanBlasGeometryInfo(MemoryAr
                 .triangles =
                 {
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
-                    .vertexFormat = ConvertToVulkanTextureFormat(geometryDesc->VertexFormat),
+                    .vertexFormat = ConvertRaytracingVertexFormatToVulkanFormat(geometryDesc->VertexFormat),
                     .vertexStride = geometryDesc->VertexSizeInBytes,
                     .maxVertex = geometryDesc->VertexCount - 1,
-                    .indexType = VK_INDEX_TYPE_UINT32 // TODO: To change
+                    .indexType = ConvertRaytracingIndexFormatToVulkanIndexType(geometryDesc->IndexFormat)
                 }
             },
             .flags = VK_GEOMETRY_OPAQUE_BIT_KHR

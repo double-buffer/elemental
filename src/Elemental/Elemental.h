@@ -466,6 +466,19 @@ typedef enum
 
 typedef enum
 {
+    ElemRaytracingVertexFormat_Float16,
+    ElemRaytracingVertexFormat_Float32
+} ElemRaytracingVertexFormat;
+
+typedef enum
+{
+    ElemRaytracingIndexFormat_UInt16,
+    ElemRaytracingIndexFormat_UInt32
+} ElemRaytracingIndexFormat;
+
+
+typedef enum
+{
     ElemGraphicsFillMode_Solid = 0,
     ElemGraphicsFillMode_Wireframe = 1
 } ElemGraphicsFillMode;
@@ -827,12 +840,12 @@ typedef struct
 
 typedef struct
 {
-    ElemGraphicsFormat VertexFormat; // TODO: Use an enum instead?
+    ElemRaytracingVertexFormat VertexFormat;
     ElemGraphicsResource VertexBuffer;
     uint32_t VertexBufferOffset;
     uint32_t VertexCount;
     uint32_t VertexSizeInBytes;
-    ElemGraphicsFormat IndexFormat; // TODO: Use an enum instead?
+    ElemRaytracingIndexFormat IndexFormat;
     ElemGraphicsResource IndexBuffer;
     uint32_t IndexBufferOffset;
     uint32_t IndexCount;
@@ -860,7 +873,6 @@ typedef struct
 
 typedef struct
 {
-    // TODO: Change the layout of the matrix to be more user friendly
     ElemMatrix4x3 TransformMatrix;
     uint32_t InstanceId;
     uint32_t InstanceMask;

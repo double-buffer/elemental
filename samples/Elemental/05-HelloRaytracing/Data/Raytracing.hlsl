@@ -397,7 +397,7 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
         }
         else
         {
-            radiance += weight * float3(0.25, 0.5, 1.0) * 10;
+            //radiance += weight * float3(0.25, 0.5, 1.0) * 10;
             break;
         }
     }

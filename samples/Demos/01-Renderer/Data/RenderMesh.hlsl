@@ -233,7 +233,10 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
         float nDotL = max(dot(worldNormal, normalize(float3(-1.0, 1.0, 1.0))), 0.0);
         float ambient = 0.05;
 
-        return albedo * (nDotL + ambient);
+        //float3 outputColor = material.EmissiveFactor + albedo.rgb * (nDotL + ambient);
+        float3 outputColor = albedo.rgb * (nDotL + ambient);
+
+        return float4(outputColor, 1.0);
         return float4(worldNormal * 0.5 + 0.5, 1.0);
 
         if (input.WorldTangent.w > 0)

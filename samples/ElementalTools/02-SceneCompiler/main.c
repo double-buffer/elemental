@@ -2,9 +2,7 @@
 #include "SampleUtils.h"
 #include "SampleScene.h"
 
-// TODO: What we could do is to separate the global index buffer and put it at the end of the file
-// so we can load the mesh buffer and the index buffer. And then dismiss the index buffer when
-// the BLAS has been generated.
+// TODO: Write a texture cache so that we have in the scene a collection of texture that are referenced by materials
 
 bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
 {
