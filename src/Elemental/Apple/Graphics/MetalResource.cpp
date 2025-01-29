@@ -18,11 +18,6 @@ Span<MetalGraphicsSamplerInfo> metalSamplerInfos;
 MemoryArena metalRaytracingInstanceMemoryArena;
 MemoryArena metalReadBackMemoryArena;
 
-Span<ElemGraphicsResource> metalBlasList;
-
-// TODO: This should be moved to DeviceData, that is why the test is failing
-uint32_t metalBlasCount = 0;
-
 // TODO: Rename
 typedef struct IRRaytracingAccelerationStructureGPUHeader
 {
@@ -48,9 +43,6 @@ void InitMetalResourceMemory()
         // TODO: Allow to increase the size as a parameter
         metalRaytracingInstanceMemoryArena = SystemAllocateMemoryArena(METAL_RAYTRACING_INSTANCE_MEMORY_ARENA);
         metalReadBackMemoryArena = SystemAllocateMemoryArena(METAL_READBACK_MEMORY_ARENA);
-
-        // HACK: Find a better solution
-        metalBlasList = SystemPushArray<ElemGraphicsResource>(MetalGraphicsMemoryArena, 1024);
     }
 }
 
@@ -229,18 +221,28 @@ NS::SharedPtr<MTL::TextureDescriptor> CreateMetalTextureDescriptor(const ElemGra
     return textureDescriptor;
 }
 
-MTL::AttributeFormat ConvertToMetalAttributeFormat(ElemGraphicsFormat format)
+MTL::AttributeFormat ConvertToMetalAttributeFormat(ElemRaytracingVertexFormat format)
 {
-    if (format == ElemGraphicsFormat_R32G32B32_FLOAT)
+    switch (format)
     {
-        return MTL::AttributeFormatFloat3;
-    }
-    else if (format == ElemGraphicsFormat_R32G32B32A32_FLOAT)
-    {
-        return MTL::AttributeFormatFloat4;
-    }
+        case ElemRaytracingVertexFormat_Float32:
+            return MTL::AttributeFormatFloat3;
 
-    return MTL::AttributeFormatInvalid;
+        case ElemRaytracingVertexFormat_Float16:
+            return MTL::AttributeFormatHalf3;
+    }
+}
+
+MTL::IndexType ConvertToMetalIndexType(ElemRaytracingIndexFormat format)
+{
+    switch (format)
+    {
+        case ElemRaytracingIndexFormat_UInt32:
+            return MTL::IndexTypeUInt32;
+
+        case ElemRaytracingIndexFormat_UInt16:
+            return MTL::IndexTypeUInt16;
+    }
 }
 
 MTL::AccelerationStructureUsage ConvertToMetalRaytraceBuildUsage(ElemRaytracingBuildFlags buildOptions)
@@ -282,41 +284,46 @@ MTL::AccelerationStructureInstanceOptions ConvertToMetalAccelerationStructureIns
     return result;
 }
 
-NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> BuildMetalBlasDescriptor(const ElemRaytracingBlasParameters* parameters)
+NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> BuildMetalBlasDescriptor(MemoryArena memoryArena, const ElemRaytracingBlasParameters* parameters)
 {
-    auto blasDescriptor = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
+    auto geometryDescriptors = SystemPushArray<MTL::AccelerationStructureTriangleGeometryDescriptor*>(memoryArena, parameters->GeometryList.Length);
 
+    auto blasDescriptor = NS::RetainPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
     blasDescriptor->setUsage(ConvertToMetalRaytraceBuildUsage(parameters->BuildFlags));
 
-    auto geometryDescriptor = NS::TransferPtr(MTL::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
-
-    geometryDescriptor->setOpaque(true);
-    geometryDescriptor->setIndexType(parameters->IndexFormat == ElemGraphicsFormat_R32_UINT ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16);
-    geometryDescriptor->setVertexFormat(ConvertToMetalAttributeFormat(parameters->VertexFormat));
-    geometryDescriptor->setTriangleCount(parameters->IndexCount / 3);
-    geometryDescriptor->setVertexStride(parameters->VertexSizeInBytes);
-    
-    if (parameters->VertexBuffer != ELEM_HANDLE_NULL)
+    for (uint32_t i = 0; i < parameters->GeometryList.Length; i++)
     {
-        auto vertexBufferResourceData = GetMetalResourceData(parameters->VertexBuffer);
-        SystemAssert(vertexBufferResourceData);
+        auto geometryDesc = &parameters->GeometryList.Items[i];
+        auto geometryDescriptor = NS::RetainPtr(MTL::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
 
-        geometryDescriptor->setVertexBuffer((MTL::Buffer*)vertexBufferResourceData->DeviceObject.get());
-        geometryDescriptor->setVertexBufferOffset(parameters->VertexBufferOffset);
+        geometryDescriptor->setOpaque(true);
+        geometryDescriptor->setIndexType(ConvertToMetalIndexType(geometryDesc->IndexFormat));
+        geometryDescriptor->setVertexFormat(ConvertToMetalAttributeFormat(geometryDesc->VertexFormat));
+        geometryDescriptor->setTriangleCount(geometryDesc->IndexCount / 3);
+        geometryDescriptor->setVertexStride(geometryDesc->VertexSizeInBytes);
+        
+        if (geometryDesc->VertexBuffer != ELEM_HANDLE_NULL)
+        {
+            auto vertexBufferResourceData = GetMetalResourceData(geometryDesc->VertexBuffer);
+            SystemAssert(vertexBufferResourceData);
+
+            geometryDescriptor->setVertexBuffer((MTL::Buffer*)vertexBufferResourceData->DeviceObject.get());
+            geometryDescriptor->setVertexBufferOffset(geometryDesc->VertexBufferOffset);
+        }
+
+        if (geometryDesc->IndexBuffer != ELEM_HANDLE_NULL)
+        {
+            auto indexBufferResourceData = GetMetalResourceData(geometryDesc->IndexBuffer);
+            SystemAssert(indexBufferResourceData);
+
+            geometryDescriptor->setIndexBuffer((MTL::Buffer*)indexBufferResourceData->DeviceObject.get());
+            geometryDescriptor->setIndexBufferOffset(geometryDesc->IndexBufferOffset);
+        }
+
+        geometryDescriptors[i] = geometryDescriptor.get();
     }
 
-    if (parameters->IndexBuffer != ELEM_HANDLE_NULL)
-    {
-        auto indexBufferResourceData = GetMetalResourceData(parameters->IndexBuffer);
-        SystemAssert(indexBufferResourceData);
-
-        geometryDescriptor->setIndexBuffer((MTL::Buffer*)indexBufferResourceData->DeviceObject.get());
-        geometryDescriptor->setIndexBufferOffset(parameters->IndexBufferOffset);
-    }
-
-    MTL::AccelerationStructureTriangleGeometryDescriptor* geometryDescriptors[] = { geometryDescriptor.get() };
-
-    auto geometryDescriptorArray = NS::TransferPtr(NS::Array::alloc()->init((NS::Object**)geometryDescriptors, ARRAYSIZE(geometryDescriptors)));
+    auto geometryDescriptorArray = NS::TransferPtr(NS::Array::alloc()->init((NS::Object**)geometryDescriptors.Pointer, parameters->GeometryList.Length));
     blasDescriptor->setGeometryDescriptors(geometryDescriptorArray.get());
 
     return blasDescriptor;
@@ -331,23 +338,29 @@ NS::SharedPtr<MTL::InstanceAccelerationStructureDescriptor> BuildMetalTlasDescri
     blasDescriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeUserID);
     blasDescriptor->setInstanceDescriptorStride(68);
 
-    if (parameters->InstanceBuffer)
+    if (parameters->InstanceBuffer != ELEM_HANDLE_NULL)
     {
         auto instanceBufferResourceData = GetMetalResourceData(parameters->InstanceBuffer);
         SystemAssert(instanceBufferResourceData);
 
-        auto blasList = SystemPushArray<MTL::AccelerationStructure*>(memoryArena, metalBlasCount);
+        auto instanceBufferResourceDataFull = GetMetalResourceDataFull(parameters->InstanceBuffer);
+        SystemAssert(instanceBufferResourceDataFull);
 
-        for (uint32_t i = 0; i < metalBlasCount; i++)
+        auto graphicsDeviceDataFull = GetMetalGraphicsDeviceDataFull(instanceBufferResourceDataFull->GraphicsDevice);
+        SystemAssert(graphicsDeviceDataFull);
+
+        auto blasList = SystemPushArray<MTL::AccelerationStructure*>(memoryArena, graphicsDeviceDataFull->BlasCount);
+
+        for (uint32_t i = 0; i < graphicsDeviceDataFull->BlasCount; i++)
         {
-            auto blasResourceData = GetMetalResourceData(metalBlasList[i]);
+            auto blasResourceData = GetMetalResourceData(graphicsDeviceDataFull->BlasList[i]);
             SystemAssert(blasResourceData);
 
             auto pointer = (MTL::AccelerationStructure*)blasResourceData->DeviceObject.get();
             blasList[i] = pointer;
         }
 
-        auto blasArray = NS::TransferPtr(NS::Array::alloc()->init((NS::Object**)blasList.Pointer, metalBlasCount));
+        auto blasArray = NS::TransferPtr(NS::Array::alloc()->init((NS::Object**)blasList.Pointer, graphicsDeviceDataFull->BlasCount));
         blasDescriptor->setInstancedAccelerationStructures(blasArray.get());
 
         blasDescriptor->setInstanceDescriptorBuffer((MTL::Buffer*)instanceBufferResourceData->DeviceObject.get());
@@ -1154,7 +1167,7 @@ ElemRaytracingAllocationInfo MetalGetRaytracingBlasAllocationInfo(ElemGraphicsDe
     auto graphicsDeviceData = GetMetalGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    auto descriptor = BuildMetalBlasDescriptor(parameters);
+    auto descriptor = BuildMetalBlasDescriptor(stackMemoryArena, parameters);
     auto allocationInfo = graphicsDeviceData->Device->accelerationStructureSizes(descriptor.get());
 
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", allocationInfo.accelerationStructureSize);
@@ -1305,10 +1318,14 @@ ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGrap
 
     // HACK: Find a better solution
     auto resourceData = GetMetalResourceData(result);
+    SystemAssert(resourceData);
+
+    auto graphicsDeviceDataFull = GetMetalGraphicsDeviceDataFull(graphicsDevice);
+    SystemAssert(graphicsDeviceDataFull);
 
     resourceData->AccelerationStructureHeader = (MTL::Buffer*)storageBufferResourceData->DeviceObject.get();
-    resourceData->BlasIndex = metalBlasCount;
-    metalBlasList[metalBlasCount++] = result;
+    resourceData->BlasIndex = graphicsDeviceDataFull->BlasCount;
+    graphicsDeviceDataFull->BlasList[graphicsDeviceDataFull->BlasCount++] = result;
 
     auto headerContent = (IRRaytracingAccelerationStructureGPUHeader*)resourceData->AccelerationStructureHeader->contents();
     headerContent->accelerationStructureID = ((MTL::AccelerationStructure*)resourceData->DeviceObject.get())->gpuResourceID()._impl;
@@ -1318,6 +1335,8 @@ ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGrap
 
 void MetalBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
     // TODO: Add validation
 
     auto commandListData = GetMetalCommandListData(commandList);
@@ -1338,7 +1357,7 @@ void MetalBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource 
         return;
     }
 
-    auto blasDescriptor = BuildMetalBlasDescriptor(parameters);
+    auto blasDescriptor = BuildMetalBlasDescriptor(stackMemoryArena, parameters);
 
     auto scratchOffset = 0u;
 
