@@ -1071,6 +1071,16 @@ void VulkanCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCop
     auto uploadBufferAlignment = 4u;
     auto uploadBufferSizeInBytes = sourceData.Length;
 
+    if (resourceData->Type == ElemGraphicsResourceType_Texture2D)
+    {
+        if (resourceData->InternalFormat == ElemGraphicsFormat_BC7 ||
+            resourceData->InternalFormat == ElemGraphicsFormat_BC7_SRGB)
+        {
+            uploadBufferAlignment = 16u;
+            uploadBufferSizeInBytes = SystemAlign(uploadBufferSizeInBytes, 16u);
+        }
+    }
+
     auto uploadBuffer = GetVulkanUploadBuffer(commandListData->GraphicsDevice, uploadBufferAlignment, uploadBufferSizeInBytes);
     SystemAssert(uploadBuffer.Offset + sourceData.Length <= uploadBuffer.PoolItem->SizeInBytes);
 

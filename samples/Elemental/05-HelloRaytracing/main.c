@@ -172,7 +172,7 @@ void InitSceneGpuBuffers(ApplicationPayload* applicationPayload)
             gpuMeshInstance->Rotation = sceneNode->Rotation;
             gpuMeshInstance->Scale = sceneNode->Scale;
             gpuMeshInstance->Translation = sceneNode->Translation;
-            gpuMeshInstance->MeshBufferIndex = meshData->MeshBuffer.ReadDescriptor;
+            //gpuMeshInstance->MeshBufferIndex = meshData->MeshBuffer.ReadDescriptor;
 
             for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
             {
@@ -180,7 +180,7 @@ void InitSceneGpuBuffers(ApplicationPayload* applicationPayload)
                 gpuMeshPrimitiveInstance->MeshInstanceId = gpuMeshInstanceCount;
                 gpuMeshPrimitiveInstance->MeshPrimitiveId = j;
 
-                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].PrimitiveHeader.MeshletCount;
+                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].MeshletCount;
                 gpuMeshPrimitiveInstanceCount++;
             }
 
@@ -215,19 +215,19 @@ void CreateRaytracingBlas(ElemCommandList commandList, ApplicationPayload* appli
 
         for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
         {
-            SampleMeshPrimitiveData* meshPrimitiveData = &meshData->MeshPrimitives[j];
+            SampleMeshPrimitiveHeader* meshPrimitiveData = &meshData->MeshPrimitives[j];
 
             geometry[j] = (ElemRaytracingBlasGeometry)
             {
                 .VertexFormat = ElemRaytracingVertexFormat_Float32,
-                .VertexBuffer = meshData->MeshBuffer.Buffer,
-                .VertexBufferOffset = meshPrimitiveData->PrimitiveHeader.VertexBufferOffset,
-                .VertexCount = meshPrimitiveData->PrimitiveHeader.VertexCount,
+                //.VertexBuffer = meshData->MeshBuffer.Buffer,
+                .VertexBufferOffset = meshPrimitiveData->VertexBufferOffset,
+                .VertexCount = meshPrimitiveData->VertexCount,
                 .VertexSizeInBytes = meshData->MeshHeader.VertexSizeInBytes,
                 .IndexFormat = ElemRaytracingIndexFormat_UInt32,
-                .IndexBuffer = meshData->MeshBuffer.Buffer,
-                .IndexBufferOffset = meshPrimitiveData->PrimitiveHeader.IndexBufferOffset,
-                .IndexCount = meshPrimitiveData->PrimitiveHeader.IndexCount
+                //.IndexBuffer = meshData->MeshBuffer.Buffer,
+                .IndexBufferOffset = meshPrimitiveData->IndexBufferOffset,
+                .IndexCount = meshPrimitiveData->IndexCount
             };
         }
 
@@ -252,7 +252,7 @@ void CreateRaytracingBlas(ElemCommandList commandList, ApplicationPayload* appli
         currentBlasScratchOffset = SampleAlignValue(currentBlasScratchOffset + allocationInfos.ScratchSizeInBytes, allocationInfos.Alignment);
     }
 
-    applicationPayload->BlasScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, currentBlasScratchOffset, "GlobalBlasScratch");
+    applicationPayload->BlasScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemory, currentBlasScratchOffset, "GlobalBlasScratch");
     applicationPayload->BlasStorage = SampleCreateGpuRaytracingBuffer(&applicationPayload->GpuMemory, currentBlasOffset, "GlobalBlasStorage");
     
     char formattedSize[256];
@@ -317,7 +317,7 @@ void CreateRaytracingTlas(ApplicationPayload* applicationPayload)
     ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingTlasAllocationInfo(applicationPayload->GraphicsDevice, &tlasParameters);
 
     applicationPayload->TlasStorage = SampleCreateGpuRaytracingBuffer(&applicationPayload->GpuMemory, allocationInfos.SizeInBytes, "TLASAccelStorage");
-    applicationPayload->TlasScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, allocationInfos.ScratchSizeInBytes, "TLASScratchStorage");
+    applicationPayload->TlasScratchBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemory, allocationInfos.ScratchSizeInBytes, "TLASScratchStorage");
     applicationPayload->Tlas = ElemCreateRaytracingAccelerationStructureResource(applicationPayload->GraphicsDevice, applicationPayload->TlasStorage.Buffer, NULL);
     applicationPayload->TlasReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->Tlas, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 }
@@ -411,7 +411,7 @@ void InitSample(void* payload)
         if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {
             SampleMeshData* meshData = &applicationPayload->TestSceneData.Meshes[sceneNode->ReferenceIndex];
-            SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemoryUpload);
+            //SampleLoadMeshData(loadDataCommandList, meshData, &applicationPayload->GpuMemoryUpload);
         }
     }
 
@@ -556,7 +556,7 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
     applicationPayload->ShaderGlobalParameters.ViewProjMatrix = cameraState->ViewProjMatrix;
     applicationPayload->ShaderGlobalParameters.InverseViewMatrix = cameraState->InverseViewMatrix;
     applicationPayload->ShaderGlobalParameters.InverseProjectionMatrix = cameraState->InverseProjectionMatrix;
-    applicationPayload->ShaderGlobalParameters.MaterialBufferIndex = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
+    //applicationPayload->ShaderGlobalParameters.MaterialBufferIndex = applicationPayload->TestSceneData.MaterialBuffer.ReadDescriptor;
     applicationPayload->ShaderGlobalParameters.GpuMeshInstanceBufferIndex = applicationPayload->GpuMeshInstanceBuffer.ReadDescriptor;
     applicationPayload->ShaderGlobalParameters.GpuMeshPrimitiveInstanceBufferIndex = applicationPayload->GpuMeshPrimitiveInstanceBuffer.ReadDescriptor;
     applicationPayload->ShaderGlobalParameters.Action = cameraState->Action;

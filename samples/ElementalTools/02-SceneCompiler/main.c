@@ -139,6 +139,51 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
     return true;
 }
 
+#define MAX_TEXTURE_COUNT 2048
+
+typedef struct
+{
+    SampleSceneTextureData* Textures;
+    uint32_t TextureCount;
+} TextureCache;
+
+TextureCache* InitTextureCache()
+{
+    // TODO: Free data
+    TextureCache* pointer = (TextureCache*)malloc(sizeof(TextureCache));
+    pointer->Textures = (SampleSceneTextureData*)malloc(sizeof(SampleSceneTextureData) * MAX_TEXTURE_COUNT);
+    pointer->TextureCount = 0;
+
+    return pointer;
+}
+
+uint32_t GetOrCreateTextureEntry(TextureCache* textureCache, const char* path, bool isNormalTexture)
+{
+    for (uint32_t i = 0; i < textureCache->TextureCount; i++)
+    {
+        SampleSceneTextureData* cacheItem = &textureCache->Textures[i];
+
+        if (strstr(cacheItem->Path, path))
+        {
+            printf("Found texture in cache!\n");
+            return i;
+        }
+    }
+
+    if (textureCache->TextureCount == MAX_TEXTURE_COUNT)
+    {
+        printf("Texture cache at max!!!\n");
+    }
+
+    uint32_t result = textureCache->TextureCount++;
+    textureCache->Textures[result] = (SampleSceneTextureData) {};
+    strcpy(textureCache->Textures[result].Path, path);
+
+    textureCache->Textures[result].IsNormalTexture = isNormalTexture;
+
+    return result;
+}
+
 bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInputPath)
 {
     assert(file);
@@ -156,33 +201,51 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInpu
     // TODO: Get rid of malloc?
     SampleDataBlockEntry* meshDataOffsets = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * scene.Meshes.Length);
     fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
-    
+
+    // TODO: Change that. For now we use that simple implementation
+    TextureCache* textureCache = InitTextureCache(); 
+
+    SampleSceneMaterialHeader* materialHeaders = (SampleSceneMaterialHeader*)malloc(sizeof(SampleSceneMaterialHeader) * scene.Materials.Length);
+
     for (uint32_t i = 0; i < scene.Materials.Length; i++)
     {
         ElemSceneMaterial* material = &scene.Materials.Items[i];
 
-        SampleSceneMaterialHeader materialHeader =
+        SampleSceneMaterialHeader* materialHeader = &materialHeaders[i];
+
+        *materialHeader = (SampleSceneMaterialHeader)
         {
             .AlbedoFactor = material->AlbedoFactor,
-            .EmissiveFactor = material->EmissiveFactor
+            .EmissiveFactor = material->EmissiveFactor,
+            .AlbedoTextureId = -1,
+            .NormalTextureId = -1
         };
 
-        strncpy(materialHeader.Name, material->Name, 50);
+        strncpy(materialHeader->Name, material->Name, 50);
 
         // TODO: Here we need to compute a list of unique textures and add them to a list
         // so we don't need to compute that unique list at runtime
         if (material->AlbedoTexturePath)
         {
-            GetRelativeResourcePath(sceneInputPath, material->AlbedoTexturePath, ".texture", materialHeader.AlbedoTexturePath, 255);
+            char texturePath[255];
+            GetRelativeResourcePath(sceneInputPath, material->AlbedoTexturePath, ".texture", texturePath, 255);
+
+            materialHeader->AlbedoTextureId = GetOrCreateTextureEntry(textureCache, texturePath, false);
         }
         
         if (material->NormalTexturePath)
         {
-            GetRelativeResourcePath(sceneInputPath, material->NormalTexturePath, ".texture", materialHeader.NormalTexturePath, 255);
-        }
+            char texturePath[255];
+            GetRelativeResourcePath(sceneInputPath, material->NormalTexturePath, ".texture", texturePath, 255);
 
-        fwrite(&materialHeader, sizeof(SampleSceneMaterialHeader), 1, file);
+            materialHeader->NormalTextureId = GetOrCreateTextureEntry(textureCache, texturePath, true);
+        }
     }
+
+    sceneHeader.TextureCount = textureCache->TextureCount;
+    fwrite(textureCache->Textures, sizeof(SampleSceneTextureData), textureCache->TextureCount, file);
+
+    fwrite(materialHeaders, sizeof(SampleSceneMaterialHeader), scene.Materials.Length, file);
 
     for (uint32_t i = 0; i < scene.Nodes.Length; i++)
     {
@@ -220,6 +283,8 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInpu
     fseek(file, sizeof(sceneHeader), SEEK_SET);
     fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
 
+    fseek(file, 0, SEEK_SET);
+    fwrite(&sceneHeader, sizeof(SampleSceneHeader), 1, file);
     return true;
 }
 

@@ -196,14 +196,14 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
     if (globalParameters.Action == 0 && input.MaterialId >= 0)
     {
         float3 worldNormal = input.WorldNormal;
-        float4 albedo = float4(1, 1, 1, 1);
+        float4 albedo = material.AlbedoFactor;
 
         if (material.AlbedoTextureId >= 0)
         {
             // TODO: Should we use non uniform index here? We know we have the same material for each meshlet.
             // But we sometimes may group some meshlets together
             Texture2D<float4> albedoTexture = ResourceDescriptorHeap[NonUniformResourceIndex(material.AlbedoTextureId)];
-            albedo = albedoTexture.Sample(textureSampler, input.TextureCoordinates) * material.AlbedoFactor;
+            albedo *= albedoTexture.Sample(textureSampler, input.TextureCoordinates);
 
             // TODO: Doing discard on the main pass is really bad for performance.
             // Doing it disable the early depth test in the shader, so all pixel shader code has to run for
@@ -221,7 +221,6 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
         {
             Texture2D<float4> normalTexture = ResourceDescriptorHeap[NonUniformResourceIndex(material.NormalTextureId)];
             float3 normalMap = normalTexture.Sample(textureSampler, input.TextureCoordinates).rgb * 2.0 - 1.0;
-            //return float4(normalMap, 1);
 
             float3 bitangent = cross(worldNormal, input.WorldTangent.xyz) * input.WorldTangent.w;
 	        worldNormal = normalize(normalMap.x * input.WorldTangent.xyz + normalMap.y * bitangent + normalMap.z * worldNormal);

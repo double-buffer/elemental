@@ -88,7 +88,7 @@ void InitSceneGpuBuffers(ApplicationPayload* applicationPayload)
 
             for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
             {
-                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].PrimitiveHeader.MeshletCount;
+                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].MeshletCount;
                 gpuMeshPrimitiveInstanceCount++;
             }
         }
@@ -129,7 +129,7 @@ void InitSample(void* payload)
     
     // BUG: In the first frame, there is a glitch because we don't wait for the fence of the load command list
     ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
-    SampleLoadMeshData(loadDataCommandList, &applicationPayload->TestSceneData.Meshes[0], &applicationPayload->GpuMemory);
+    //SampleLoadMeshData(loadDataCommandList, &applicationPayload->TestSceneData.Meshes[0], &applicationPayload->GpuMemory);
     ElemCommitCommandList(loadDataCommandList);
     ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
 
@@ -254,7 +254,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     SampleMeshPrimitiveHeader* meshPrimitive = &applicationPayload->TestSceneData.Meshes[0].MeshPrimitives[0];
 
-    applicationPayload->ShaderParameters.MeshBuffer = applicationPayload->TestSceneData.Meshes[0].MeshBuffer.ReadDescriptor;
+    //applicationPayload->ShaderParameters.MeshBuffer = applicationPayload->TestSceneData.Meshes[0].MeshBuffer.ReadDescriptor;
     applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
     applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
     //applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;

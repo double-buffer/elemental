@@ -239,6 +239,70 @@ void GetRelativeResourcePath(const char* mainPath, const char* path, const char*
     strncpy(destination, startPath, strlen(resourcePath) - (startPath - resourcePath));
 }
 
+// TODO: Put that in sample utils
+// TODO: Reset the log file at each run
+#ifdef ElemAPI
+static inline void SampleConsoleAndFileLogHandler(ElemLogMessageType messageType, ElemLogMessageCategory category, const char* function, const char* message) 
+{
+    char absolutePath[MAX_PATH];
+    SampleGetFullPath(absolutePath, "log.txt", false);
+
+    FILE* logFile = fopen(absolutePath, "a"); 
+
+    printf("[");
+    printf("\033[36m");
+
+    if (category == ElemLogMessageCategory_Assert)
+    {
+        printf("Assert");
+    }
+    else if (category == ElemLogMessageCategory_Memory)
+    {
+        printf("Memory");
+    }
+    else if (category == ElemLogMessageCategory_Application)
+    {
+        printf("Application");
+    }
+    else if (category == ElemLogMessageCategory_Graphics)
+    {
+        printf("Graphics");
+    }
+    else if (category == ElemLogMessageCategory_Inputs)
+    {
+        printf("Inputs");
+    }
+
+    printf("\033[0m]");
+
+    printf("\033[32m %s", function);
+
+    if (messageType == ElemLogMessageType_Error)
+    {
+        printf("\033[31m Error:");
+    }
+    else if (messageType == ElemLogMessageType_Warning)
+    {
+        printf("\033[33m Warning:");
+    }
+    else if (messageType == ElemLogMessageType_Debug)
+    {
+        printf("\033[0m Debug:");
+    }
+    else
+    {
+        printf("\033[0m");
+    }
+
+    printf(" %s\033[0m\n", message);
+
+    fprintf(logFile, "%s\n", message);
+
+    fflush(stdout);
+    fclose(logFile);
+}
+#endif
+
 // -----------------------------------------------------------------------------
 // UI Functions
 // -----------------------------------------------------------------------------
