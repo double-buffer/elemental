@@ -38,10 +38,12 @@ ComPtr<ID3D12DeviceFactory> directX12DeviceFactory;
 void InitDirectX12()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
-
+    auto applicationPath = SystemGetExecutableFolderPath(stackMemoryArena);
+    
     ComPtr<ID3D12SDKConfiguration1> directX12SdkConfiguration;
     AssertIfFailed(D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(directX12SdkConfiguration.GetAddressOf())));
-    AssertIfFailed(directX12SdkConfiguration->CreateDeviceFactory(D3D12SDK_VERSION, D3D12SDK_PATH, IID_PPV_ARGS(directX12DeviceFactory.GetAddressOf())));
+
+    AssertIfFailed(directX12SdkConfiguration->CreateDeviceFactory(D3D12SDK_VERSION, applicationPath.Pointer, IID_PPV_ARGS(directX12DeviceFactory.GetAddressOf())));
 
     auto dxgiCreateFactoryFlags = 0u;
 
@@ -85,9 +87,6 @@ void InitDirectX12()
     }
 
     AssertIfFailed(CreateDXGIFactory2(dxgiCreateFactoryFlags, IID_PPV_ARGS(DxgiFactory.GetAddressOf())));
-
-    // HACK: Remove this when DXIL signing is fully open source!
-    AssertIfFailed(directX12DeviceFactory->EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, nullptr));
 }
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
@@ -171,6 +170,7 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_8;
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
 
+        // TODO: Update checks
         if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
             deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
             deviceOptions5.RaytracingTier == D3D12_RAYTRACING_TIER_1_1 &&

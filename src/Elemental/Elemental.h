@@ -307,8 +307,6 @@ typedef ElemHandle ElemCommandQueue;
  */
 typedef ElemHandle ElemCommandList;
 
-typedef ElemHandle ElemIOCommandQueue;
-
 /**
  * Handle that represents a swap chain.
  */
@@ -929,6 +927,8 @@ typedef struct
 // TODO: Here, we could add options to support StructuredBuffer (we need a different stride for that)
 typedef struct
 {
+    // TODO: IMPORTANT!: Add a buffer offset this is super important to allow sub allocating within a buffer to avoid
+    // alignment cost
     uint32_t TextureMipIndex;
 } ElemGraphicsResourceDescriptorOptions;
 

@@ -166,7 +166,9 @@ void DirectX12BeginRenderPass(ElemCommandList commandList, const ElemBeginRender
         {
             .cpuDescriptor = textureData->DsvHandle,
             .DepthBeginningAccess = { .Type = depthBeginAccessType, .Clear = beginAccessClearValue },
-            .DepthEndingAccess = { .Type = depthEndAccessType }
+            .StencilBeginningAccess = { .Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS },
+            .DepthEndingAccess = { .Type = depthEndAccessType },
+            .StencilEndingAccess = { .Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS }
         };
 
         ResourceBarrierItem resourceBarrier =

@@ -10,6 +10,9 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
 
+// TODO: Implement: https://github.com/microsoft/DirectX-Specs/blob/master/d3d/D3D12TightPlacedResourceAlignment.md
+
+
 SystemDataPool<DirectX12GraphicsHeapData, DirectX12GraphicsHeapDataFull> directX12GraphicsHeapPool;
 SystemDataPool<DirectX12GraphicsResourceData, DirectX12GraphicsResourceDataFull> directX12GraphicsResourcePool;
 
@@ -640,7 +643,11 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
     D3D12_BARRIER_LAYOUT initialState = D3D12_BARRIER_LAYOUT_COMMON;
 
     // TODO: Handle clear value
-    D3D12_CLEAR_VALUE* clearValue = nullptr;
+    D3D12_CLEAR_VALUE clearValue = 
+    {
+    };
+
+    D3D12_CLEAR_VALUE* clearValuePointer = nullptr;
 
     D3D12_RESOURCE_DESC1 resourceDescription = {}; 
 
@@ -677,6 +684,12 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
         }
 
         resourceDescription = CreateDirectX12TextureDescription(resourceInfo);
+
+        if (resourceInfo->Usage & ElemGraphicsResourceUsage_RenderTarget || resourceInfo->Usage & ElemGraphicsResourceUsage_DepthStencil)
+        {
+            clearValue.Format = resourceDescription.Format;
+            clearValuePointer = &clearValue;
+        }
     }
     else
     {
@@ -713,7 +726,7 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
                                                                      graphicsHeapOffset, 
                                                                      &resourceDescription, 
                                                                      initialState, 
-                                                                     clearValue, 
+                                                                     clearValuePointer, 
                                                                      0,
                                                                      nullptr,
                                                                      IID_PPV_ARGS(resource.GetAddressOf())));
@@ -1127,10 +1140,10 @@ ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGra
                 srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
                 srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
                 srvDesc.Buffer =
-                    {
-                        .NumElements = resourceData->Width / 4,
-                        .Flags = D3D12_BUFFER_SRV_FLAG_RAW
-                    };
+                {
+                    .NumElements = resourceData->Width / 4,
+                    .Flags = D3D12_BUFFER_SRV_FLAG_RAW
+                };
             }
 
             graphicsDeviceData->Device->CreateShaderResourceView(resourceData->DeviceObject.Get(), &srvDesc, descriptorHandle);

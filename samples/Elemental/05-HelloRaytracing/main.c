@@ -10,6 +10,7 @@
 // TODO: Remove the depth buffer
 // TODO: Change the shortcut for animation to space
 // TODO: Refactor Raytracing shader
+// TODO: Use a compute shader for raytracing?
 
 typedef struct
 {
@@ -73,7 +74,7 @@ typedef struct
     ShaderParameters ShaderParameters;
     SampleInputsApplication InputsApplication;
     SampleInputsCamera InputsCamera;
-    SampleSceneData TestSceneData;
+    SampleSceneData TestSceneData; // TODO: Get rid of scene data after loading?
     SampleGpuMemory GpuMemory;
     SampleGpuMemory GpuMemoryUpload;
 
@@ -294,9 +295,9 @@ void CreateRaytracingTlas(ApplicationPayload* applicationPayload)
 
     uint32_t tlasInstanceCount = 0u;
 
-    for (uint32_t i = 0; i < applicationPayload->TestSceneData.NodeCount; i++)
+    for (uint32_t i = 0; i < sceneData->NodeCount; i++)
     {
-        SampleSceneNodeHeader* sceneNode = &applicationPayload->TestSceneData.Nodes[i];
+        SampleSceneNodeHeader* sceneNode = &sceneData->Nodes[i];
 
         if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
         {

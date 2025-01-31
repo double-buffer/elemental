@@ -46,12 +46,6 @@ VkBool32 VKAPI_CALL VulkanDebugReportCallback(VkDebugReportFlagsEXT flags, VkDeb
         messageType = ElemLogMessageType_Warning;
     }
 
-    // TODO: Remove when new drivers are released
-    if (SystemFindSubString(pMessage, "VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES") != -1)
-    {
-        return VK_FALSE;
-    }
-
     if (SystemFindSubString(pMessage, "VK_EXT_mutable_descriptor_type") != -1)
     {
         return VK_FALSE;
