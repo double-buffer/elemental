@@ -986,7 +986,7 @@ typedef struct
     uint32_t BufferOffset;
     uint32_t TextureMipLevel;
     ElemCopyDataSourceType SourceType;
-    uint32_t SourceFilePath;
+    const char* SourceFilePath;
     uint32_t SourceFileOffset;
     uint32_t SourceFileSizeInBytes;
     ElemDataSpan SourceMemoryData;

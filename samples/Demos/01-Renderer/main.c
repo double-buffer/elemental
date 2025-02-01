@@ -6,25 +6,7 @@
 #include "SampleSceneLoader.h"
 #include "SampleGpuMemory.h"
 
-// TODO: Share data between shader and C code
-
-typedef struct
-{
-    uint32_t ShaderGlobalParametersBuffer;
-    uint32_t MeshPrimitiveInstanceId;
-} ShaderParameters;
-
-typedef struct
-{
-    SampleMatrix4x4 ViewProjMatrix;
-    SampleMatrix4x4 InverseViewMatrix;
-    SampleMatrix4x4 InverseProjectionMatrix;
-    uint32_t MaterialBufferIndex;
-    uint32_t MeshInstanceBufferIndex;
-    uint32_t MeshPrimitiveInstanceBufferIndex;
-    uint32_t TextureSampler;
-    uint32_t Action;
-} ShaderShaderGlobalParameters;
+#include "Data/ShaderData.h"
 
 typedef struct
 {
@@ -111,13 +93,8 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
     ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderShaderGlobalParameters) });
 }
 
-void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneData, GpuSceneData* gpuSceneData, SampleGpuMemory* gpuMemory)
+void LoadGpuTextures(ElemCommandList commandList, const SampleSceneData* sceneData, GpuSceneData* gpuSceneData, SampleGpuMemory* gpuMemory)
 {
-    // TODO: Refactor/Optimize this function
-
-    uint32_t gpuMeshInstanceCount = 0u;
-    uint32_t gpuMeshPrimitiveInstanceCount = 0u;
-
     gpuSceneData->Textures = (SampleGpuTexture*)malloc(sizeof(SampleGpuTexture) * sceneData->TextureCount);
     gpuSceneData->TextureCount = sceneData->TextureCount;
 
@@ -129,32 +106,30 @@ void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneD
         ElemGraphicsFormat format = !textureData->IsNormalTexture ? ElemGraphicsFormat_BC7_SRGB : ElemGraphicsFormat_BC7;
         *texture = SampleCreateGpuTexture(gpuMemory, textureData->TextureHeader.Width, textureData->TextureHeader.Height, textureData->TextureHeader.MipCount, format, textureData->Path);
 
-        // TODO: Replace that with file logic
         for (uint32_t i = 0; i < textureData->TextureHeader.MipCount; i++)
         {
             SampleTextureDataBlockEntry mipEntry = textureData->MipDataEntries[i];
-            uint8_t* mipData = (uint8_t*)malloc(sizeof(uint8_t) * mipEntry.SizeInBytes);
-
-            FILE* file = SampleOpenFile(textureData->Path, true);
-            assert(file);
-
-            fseek(file, mipEntry.Offset, SEEK_SET);
-            fread(mipData, sizeof(uint8_t), mipEntry.SizeInBytes, file);
-            fclose(file);
+        
+            char absolutePath[MAX_PATH];
+            SampleGetFullPath(absolutePath, textureData->Path, true);
 
             ElemCopyDataToGraphicsResourceParameters copyParameters =
             {
                 .Resource = texture->Texture,
                 .TextureMipLevel = i,
-                .SourceType = ElemCopyDataSourceType_Memory,
-                .SourceMemoryData = { .Items = (uint8_t*)mipData, .Length = mipEntry.SizeInBytes } 
+                .SourceType = ElemCopyDataSourceType_File,
+                .SourceFilePath = absolutePath,
+                .SourceFileOffset = mipEntry.Offset,
+                .SourceFileSizeInBytes = mipEntry.SizeInBytes
             };
 
             ElemCopyDataToGraphicsResource(commandList, &copyParameters);
-            free(mipData);
         }
     }
+}
 
+void LoadGpuMaterials(ElemCommandList commandList, const SampleSceneData* sceneData, GpuSceneData* gpuSceneData, SampleGpuMemory* gpuMemory)
+{
     ShaderMaterial* shaderMaterials = (ShaderMaterial*)malloc(sizeof(ShaderMaterial) * sceneData->MaterialCount);
 
     for (uint32_t i = 0; i < sceneData->MaterialCount; i++)
@@ -167,14 +142,17 @@ void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneD
         shaderMaterial->AlbedoTextureId = -1;
         shaderMaterial->NormalTextureId = -1;
 
-        if (materialHeader->AlbedoTextureId >= 0)
+        if (gpuSceneData->TextureCount > 0)
         {
-            shaderMaterial->AlbedoTextureId = gpuSceneData->Textures[materialHeader->AlbedoTextureId].ReadDescriptor;
-        }
+            if (materialHeader->AlbedoTextureId >= 0)
+            {
+                shaderMaterial->AlbedoTextureId = gpuSceneData->Textures[materialHeader->AlbedoTextureId].ReadDescriptor;
+            }
 
-        if (materialHeader->NormalTextureId >= 0)
-        {
-            shaderMaterial->NormalTextureId = gpuSceneData->Textures[materialHeader->NormalTextureId].ReadDescriptor;
+            if (materialHeader->NormalTextureId >= 0)
+            {
+                shaderMaterial->NormalTextureId = gpuSceneData->Textures[materialHeader->NormalTextureId].ReadDescriptor;
+            }
         }
     }
 
@@ -190,7 +168,10 @@ void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneD
     ElemCopyDataToGraphicsResource(commandList, &copyParameters);
 
     free(shaderMaterials);
+}
 
+void LoadGpuMeshes(ElemCommandList commandList, const SampleSceneData* sceneData, GpuSceneData* gpuSceneData, SampleGpuMemory* gpuMemory)
+{
     gpuSceneData->MeshBuffers = (SampleGpuBuffer*)malloc(sizeof(SampleGpuBuffer) * sceneData->MeshCount);
     gpuSceneData->MeshCount = sceneData->MeshCount;
 
@@ -201,27 +182,26 @@ void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneD
         SampleGpuBuffer* meshBuffer = &gpuSceneData->MeshBuffers[i];
         *meshBuffer = SampleCreateGpuBuffer(gpuMemory, meshData->MeshHeader.MeshBufferSizeInBytes, meshData->MeshHeader.Name);
 
-        // TODO: this will be simplified when file io will be implemented
-        assert(meshData->Path);
-        uint8_t* meshBufferData = (uint8_t*)malloc(sizeof(uint8_t) * meshData->MeshHeader.MeshBufferSizeInBytes);
-
-        FILE* file = SampleOpenFile(meshData->Path, true);
-        assert(file);
-
-        fseek(file, meshData->MeshHeader.MeshBufferOffset, SEEK_SET);
-        fread(meshBufferData, sizeof(uint8_t), meshData->MeshHeader.MeshBufferSizeInBytes, file);
-        fclose(file);
+        char absolutePath[MAX_PATH];
+        SampleGetFullPath(absolutePath, meshData->Path, true);
 
         ElemCopyDataToGraphicsResourceParameters copyParameters =
         {
             .Resource = meshBuffer->Buffer,
-            .SourceType = ElemCopyDataSourceType_Memory,
-            .SourceMemoryData = { .Items = (uint8_t*)meshBufferData, .Length = meshData->MeshHeader.MeshBufferSizeInBytes } 
+            .SourceType = ElemCopyDataSourceType_File,
+            .SourceFilePath = absolutePath,
+            .SourceFileOffset = meshData->MeshHeader.MeshBufferOffset,
+            .SourceFileSizeInBytes = meshData->MeshHeader.MeshBufferSizeInBytes
         };
 
         ElemCopyDataToGraphicsResource(commandList, &copyParameters);
-        free(meshBufferData);
     }
+}
+
+void LoadGpuMeshInstances(ElemCommandList commandList, const SampleSceneData* sceneData, GpuSceneData* gpuSceneData, SampleGpuMemory* gpuMemory)
+{ 
+    uint32_t gpuMeshInstanceCount = 0u;
+    uint32_t gpuMeshPrimitiveInstanceCount = 0u;
 
     GpuMeshInstance* gpuMeshInstancesData = (GpuMeshInstance*)malloc(sizeof(GpuMeshInstance) * 10000);
 
@@ -259,7 +239,7 @@ void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneD
 
     gpuSceneData->MeshInstanceBuffer = SampleCreateGpuBuffer(gpuMemory, gpuMeshInstanceCount * sizeof(GpuMeshInstance), "GpuMeshInstanceBuffer");
 
-    copyParameters = (ElemCopyDataToGraphicsResourceParameters)
+    ElemCopyDataToGraphicsResourceParameters copyParameters =
     {
         .Resource = gpuSceneData->MeshInstanceBuffer.Buffer,
         .SourceType = ElemCopyDataSourceType_Memory,
@@ -285,6 +265,15 @@ void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneD
 
     free(gpuMeshInstancesData);
     free(gpuMeshPrimitiveInstancesData);
+
+}
+
+void LoadGpuSceneData(ElemCommandList commandList, const SampleSceneData* sceneData, GpuSceneData* gpuSceneData, SampleGpuMemory* gpuMemory)
+{
+    LoadGpuTextures(commandList, sceneData, gpuSceneData, gpuMemory);
+    LoadGpuMaterials(commandList, sceneData, gpuSceneData, gpuMemory);
+    LoadGpuMeshes(commandList, sceneData, gpuSceneData, gpuMemory);
+    LoadGpuMeshInstances(commandList, sceneData, gpuSceneData, gpuMemory);
 }
 
 void FreeGpuSceneData(GpuSceneData* gpuSceneData)
@@ -327,12 +316,12 @@ void InitSample(void* payload)
     applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_Gpu, SampleMegaBytesToBytes(2048));
     applicationPayload->GpuMemoryUpload = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(64));
 
-    applicationPayload->ShaderGlobalParametersBuffer = SampleCreateGpuBufferAndUploadData(&applicationPayload->GpuMemoryUpload, &applicationPayload->ShaderGlobalParameters, sizeof(ShaderShaderGlobalParameters), "ShaderGlobalParameters");
-    applicationPayload->ShaderParameters.ShaderGlobalParametersBuffer = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParametersBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, sizeof(ShaderShaderGlobalParameters), "ShaderGlobalParameters");
+    applicationPayload->ShaderParameters.GlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor;
 
     // TODO: Do we need the scene data after that?
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData, &applicationPayload->GpuMemoryUpload);
+    SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData);
 
     ElemGraphicsSamplerInfo samplerInfo =
     {

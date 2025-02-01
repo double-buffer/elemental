@@ -11,7 +11,7 @@ UTEST(IOFunctions, GeneralIO)
     auto fileName = SystemGenerateTempFilename(stackMemoryArena, "TestFile");
     SystemFileWriteBytes(fileName, Span<uint8_t>((uint8_t*)fileContent.Pointer, fileContent.Length + 1));
     auto fileExists = SystemFileExists(fileName);
-    auto result = SystemFileReadBytes(stackMemoryArena, fileName);
+    auto result = SystemFileReadBytes(stackMemoryArena, 0, 0, fileName);
     SystemFileDelete(fileName);
     auto fileExistsAfterDelete = SystemFileExists(fileName);
 

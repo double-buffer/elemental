@@ -160,7 +160,7 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
     CloseHandle(fileHandle);
 }
 
-void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
+void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, uint64_t offset, Span<uint8_t> data)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto pathWide = SystemConvertUtf8ToWideChar(stackMemoryArena, path);
@@ -172,6 +172,8 @@ void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
         SystemLogErrorMessage(ElemLogMessageCategory_Application, "Cannot open file %s for reading. (Error code: %d)", path.Pointer, (int32_t)GetLastError());
         return;
     }
+
+    SetFilePointer(fileHandle, offset, nullptr, FILE_BEGIN);
     
     DWORD bytesRead;
     if (!ReadFile(fileHandle, data.Pointer, data.Length, &bytesRead, nullptr) || bytesRead != data.Length) 

@@ -2,6 +2,7 @@
 #include "ShaderCompilerUtils.h"
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
+#include "ToolsUtils.h"
 
 SystemLibrary directXShaderCompilerLibrary = {};
 DxcCreateInstanceProc directXShaderCompilerCreateInstanceFunction = nullptr;
@@ -99,6 +100,30 @@ ShaderType GetShaderTypeEnum(DxilShaderKind shaderKind)
     }
 }
 
+struct DirectXCompilerIncludeHandler : public IDxcIncludeHandler
+{
+    HRESULT QueryInterface(REFIID iid, void** ppvObject) override { return S_OK; }
+    ULONG AddRef() override { return 1; }
+    ULONG Release() override { return 1; }
+
+    HRESULT STDMETHODCALLTYPE LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
+    {
+        auto stackMemoryArena = SystemGetStackMemoryArena();
+
+        ComPtr<IDxcUtils> _dxcUtils;
+        AssertIfFailed(directXShaderCompilerCreateInstanceFunction(CLSID_DxcUtils, IID_PPV_ARGS(&_dxcUtils)));
+
+        printf("INclude handler\n");
+        auto data = LoadFileData(SystemConvertWideCharToUtf8(stackMemoryArena, pFilename).Pointer);
+
+        IDxcBlobEncoding* includeCode;
+        AssertIfFailed(_dxcUtils->CreateBlob(data.Pointer, data.Length, DXC_CP_UTF8, &includeCode));
+
+        *ppIncludeSource = includeCode;
+        return S_OK;
+    }
+};
+
 ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOnlySpan<char> target, ElemToolsGraphicsApi targetApi, ReadOnlySpan<char> entryPoint, const ElemCompileShaderOptions* options)
 {
     // TODO: Allow passing the pass to have a correct name in the messages
@@ -162,8 +187,10 @@ ComPtr<IDxcResult> CompileDirectXShader(ReadOnlySpan<uint8_t> shaderCode, ReadOn
 
     parameters = parameters.Slice(0, parameterIndex);
 
+    DirectXCompilerIncludeHandler includeHandler;
+
     ComPtr<IDxcResult> dxilCompileResult;
-    AssertIfFailed(compiler->Compile(&sourceBuffer, parameters.Pointer, parameterIndex, nullptr, IID_PPV_ARGS(&dxilCompileResult)));
+    AssertIfFailed(compiler->Compile(&sourceBuffer, parameters.Pointer, parameterIndex, &includeHandler, IID_PPV_ARGS(&dxilCompileResult)));
 
     return dxilCompileResult;
 }

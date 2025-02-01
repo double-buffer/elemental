@@ -982,10 +982,14 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
 
     ReadOnlySpan<uint8_t> sourceData;
 
-    // TODO: Implement file source
     if (parameters->SourceType == ElemCopyDataSourceType_Memory)
     {
         sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
+    }
+    else
+    {
+        // TODO: Check parameters
+        sourceData = SystemFileReadBytes(stackMemoryArena, parameters->SourceFileOffset, parameters->SourceFileSizeInBytes, parameters->SourceFilePath);
     }
     
     auto uploadBufferAlignment = 4u;

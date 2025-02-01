@@ -1,9 +1,4 @@
-
-struct ShaderParameters
-{
-    uint32_t GlobalParametersBufferIndex;
-    uint32_t MeshPrimitiveInstanceId;
-};
+#include "ShaderData.h"
 
 [[vk::push_constant]]
 ShaderParameters parameters : register(b0);
@@ -21,6 +16,14 @@ struct GlobalParameters
     uint32_t Action; // TODO: One bit per action
 };
 
+struct ElemMeshlet
+{
+    uint32_t VertexIndexOffset;
+    uint32_t VertexIndexCount;
+    uint32_t TriangleOffset;
+    uint32_t TriangleCount;
+};
+
 struct GpuMeshPrimitive
 {
     uint32_t MeshletOffset;
@@ -31,20 +34,6 @@ struct GpuMeshPrimitive
     uint32_t IndexCount;
     int32_t MaterialId;
     // TODO: BoundingBox
-};
-
-struct GpuMeshInstance
-{
-    int32_t MeshBufferIndex;
-    float4 Rotation;
-    float3 Translation;
-    float Scale;
-};
-
-struct GpuMeshPrimitiveInstance
-{
-    int32_t MeshInstanceId;
-    int32_t MeshPrimitiveId;
 };
 
 struct GpuDrawParameters
@@ -83,22 +72,6 @@ GpuDrawParameters GetDrawParameters(GlobalParameters globalParameters, int32_t m
 
     return result;
 }
-
-typedef struct
-{
-    int32_t AlbedoTextureId;
-    int32_t NormalTextureId;
-    float4 AlbedoFactor;
-    float3 EmissiveFactor;
-} ShaderMaterial;
-
-struct ElemMeshlet
-{
-    uint32_t VertexIndexOffset;
-    uint32_t VertexIndexCount;
-    uint32_t TriangleOffset;
-    uint32_t TriangleCount;
-};
 
 // Compress Data
 struct Vertex

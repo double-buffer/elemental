@@ -4,7 +4,6 @@
 #include "SampleUtils.h"
 #include "SampleScene.h"
 #include "SampleTexture.h"
-#include "SampleGpuMemory.h"
 
 // TODO: Refactor those 3 structs
 typedef struct 
@@ -35,32 +34,7 @@ typedef struct
 } SampleSceneData;
 
 
-// TODO: This should be removed and the struct is specific per sample
-// it should be shared with an header file between c code and shaders
-typedef struct
-{
-    int32_t AlbedoTextureId;
-    int32_t NormalTextureId;
-    ElemVector4 AlbedoFactor;
-    ElemVector3 EmissiveFactor;
-} ShaderMaterial;
-
-typedef struct
-{
-    int32_t MeshBufferIndex;
-    ElemVector4 Rotation;
-    ElemVector3 Translation;
-    float Scale;
-} GpuMeshInstance;
-
-typedef struct 
-{
-    int32_t MeshInstanceId;
-    int32_t MeshPrimitiveId;
-} GpuMeshPrimitiveInstance;
-
-
-void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData, SampleGpuMemory* gpuMemory)
+void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData)
 {
     *meshData = (SampleMeshData){};
     meshData->Path = path;
@@ -74,8 +48,6 @@ void SampleLoadMesh(const char* path, uint32_t offset, SampleMeshData* meshData,
     }
     
     fread(&meshData->MeshHeader, sizeof(SampleMeshHeader), 1, file);
-
-    // TODO: Can we get rid of the malloc?
 
     meshData->MeshPrimitives = (SampleMeshPrimitiveHeader*)malloc(sizeof(SampleMeshPrimitiveHeader) * meshData->MeshHeader.MeshPrimitiveCount);
     fread(meshData->MeshPrimitives, sizeof(SampleMeshPrimitiveHeader), meshData->MeshHeader.MeshPrimitiveCount, file);
@@ -111,12 +83,8 @@ void SampleLoadTexture(const char* path, SampleTextureData* textureData, bool is
     fclose(file);
 }
 
-// TODO: IMPORTANT: Don't fill the gpu buffers here. It should be the caller code that do that because we don't know
-// which strategy the caller will use to manage his buffers. Here we just need provide access to the data
-void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemory* gpuMemory)
+void SampleLoadScene(const char* path, SampleSceneData* sceneData)
 {
-    // TODO: When IOQueues are implemented, we only need to read the header, not the whole file!
-
     FILE* file = SampleOpenFile(path, true);
     assert(file);
 
@@ -155,7 +123,7 @@ void SampleLoadScene(const char* path, SampleSceneData* sceneData, SampleGpuMemo
 
     for (uint32_t i = 0; i < sceneData->MeshCount; i++)
     {
-        SampleLoadMesh(path, meshDataBlocks[i].Offset, &sceneData->Meshes[i], gpuMemory);
+        SampleLoadMesh(path, meshDataBlocks[i].Offset, &sceneData->Meshes[i]);
     }
 
     char directoryPath[MAX_PATH];

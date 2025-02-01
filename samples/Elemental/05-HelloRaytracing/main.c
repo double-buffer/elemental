@@ -4,6 +4,7 @@
 #include "SampleInputsApplication.h"
 #include "SampleInputsCamera.h"
 #include "SampleSceneLoader.h"
+#include "SampleGpuMemory.h"
 
 // TODO: Move the gpu buffers creation from sceneloading to main
 // TODO: Remove Rasterization path
@@ -11,7 +12,27 @@
 // TODO: Change the shortcut for animation to space
 // TODO: Refactor Raytracing shader
 // TODO: Use a compute shader for raytracing?
+typedef struct
+{
+    int32_t AlbedoTextureId;
+    int32_t NormalTextureId;
+    ElemVector4 AlbedoFactor;
+    ElemVector3 EmissiveFactor;
+} ShaderMaterial;
 
+typedef struct
+{
+    int32_t MeshBufferIndex;
+    ElemVector4 Rotation;
+    ElemVector3 Translation;
+    float Scale;
+} GpuMeshInstance;
+
+typedef struct 
+{
+    int32_t MeshInstanceId;
+    int32_t MeshPrimitiveId;
+} GpuMeshPrimitiveInstance;
 typedef struct
 {
     uint32_t ShaderGlobalParametersBuffer;
@@ -391,7 +412,7 @@ void InitSample(void* payload)
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     CreateRenderTarget(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene("CornellBox.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemoryUpload);
+    SampleLoadScene("CornellBox.scene", &applicationPayload->TestSceneData);
     //SampleLoadScene("sponza.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemoryUpload);
     InitSceneGpuBuffers(applicationPayload);
     

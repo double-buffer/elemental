@@ -495,12 +495,17 @@ void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data)
     SystemPlatformFileWriteBytes(path, data);
 }
 
-Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, ReadOnlySpan<char> path)
+Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, uint64_t offset, uint64_t sizeInBytes, ReadOnlySpan<char> path)
 {
-    auto fileSizeInBytes = SystemPlatformFileGetSizeInBytes(path);
-    auto fileData = SystemPushArray<uint8_t>(memoryArena, fileSizeInBytes);
+    if (sizeInBytes == 0)
+    {
+        auto fileSizeInBytes = SystemPlatformFileGetSizeInBytes(path);
+        sizeInBytes = fileSizeInBytes;
+    }
 
-    SystemPlatformFileReadBytes(path, fileData);
+    auto fileData = SystemPushArray<uint8_t>(memoryArena, sizeInBytes);
+
+    SystemPlatformFileReadBytes(path, offset, fileData);
     
     return fileData;
 }

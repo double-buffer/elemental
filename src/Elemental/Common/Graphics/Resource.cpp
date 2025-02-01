@@ -1,5 +1,6 @@
 #include "Resource.h"
 #include "GraphicsCommon.h"
+#include "SystemFunctions.h"
 
 bool CheckDepthStencilFormat(ElemGraphicsFormat format)
 {

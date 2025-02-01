@@ -4,6 +4,7 @@
 #include "SampleInputsApplication.h"
 #include "SampleInputsModelViewer.h"
 #include "SampleSceneLoader.h"
+#include "SampleGpuMemory.h"
 
 // TODO: Create a MeshCompiler project that use a more simple layout so that 
 // the mesh shader is simplier
@@ -123,7 +124,7 @@ void InitSample(void* payload)
     applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(256));
 
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene("kitten.scene", &applicationPayload->TestSceneData, &applicationPayload->GpuMemory);
+    SampleLoadScene("kitten.scene", &applicationPayload->TestSceneData);
     //SampleLoadScene("buddha.scene", &applicationPayload->TestSceneData);
     InitSceneGpuBuffers(applicationPayload);
     

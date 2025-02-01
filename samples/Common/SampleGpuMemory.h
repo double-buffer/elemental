@@ -26,8 +26,6 @@ typedef struct
 
 SampleGpuMemory SampleCreateGpuMemory(ElemGraphicsDevice graphicsDevice, ElemGraphicsHeapType heapType, uint32_t sizeInBytes)
 {
-    // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
-    // TODO: Having GPU Upload is still annoying 😞
     ElemGraphicsHeap graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &(ElemGraphicsHeapOptions) { .HeapType = heapType });
 
     return (SampleGpuMemory)
@@ -46,7 +44,6 @@ void SampleFreeGpuMemory(SampleGpuMemory* gpuMemory)
 
 SampleGpuBuffer SampleCreateGpuRaytracingBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
 {
-    // TODO: Alignment should be used with the offset before adding the size of the resource!
     ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_RaytracingAccelerationStructure, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
 
     gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
@@ -66,11 +63,7 @@ SampleGpuBuffer SampleCreateGpuRaytracingBuffer(SampleGpuMemory* gpuMemory, uint
 
 SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
 {
-    // TODO: Alignment should be used with the offset before adding the size of the resource!
     ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Read, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
-    
-    char formattedMemorySize[256];
-    FormatMemorySize(bufferDescription.SizeInBytes, formattedMemorySize, 256);
 
     gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
     ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
@@ -85,7 +78,7 @@ SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeI
     };
 }
 
-// TODO: To remove when IOQueues
+// TODO: To Remove
 SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, const void* dataPointer, uint32_t sizeInBytes, const char* debugName)
 {
     SampleGpuBuffer result = SampleCreateGpuBuffer(gpuMemory, sizeInBytes, debugName);

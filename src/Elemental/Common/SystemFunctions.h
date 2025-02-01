@@ -246,7 +246,7 @@ void SystemFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
  * @param path The path to the file.
  * @return A span containing the read bytes.
  */
-Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, ReadOnlySpan<char> path);
+Span<uint8_t> SystemFileReadBytes(MemoryArena memoryArena, uint64_t offset, uint64_t sizeInBytes, ReadOnlySpan<char> path);
 
 /**
  * Deletes the file at the specified path.

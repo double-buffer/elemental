@@ -150,7 +150,7 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
     close(fileHandle);
 }
 
-void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
+void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, uint64_t offset, Span<uint8_t> data)
 {
     auto fileHandle = open(path.Pointer, O_RDONLY, 0644);
 
@@ -160,7 +160,7 @@ void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data)
         return;
     }
 
-    auto bytesRead = read(fileHandle, data.Pointer, data.Length);
+    auto bytesRead = pread(fileHandle, data.Pointer, data.Length, offset);
 
     if (bytesRead < 0) 
     {
