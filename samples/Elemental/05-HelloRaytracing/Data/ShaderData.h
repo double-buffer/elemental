@@ -6,7 +6,6 @@ typedef struct
 {
     uint32_t GlobalParametersBufferIndex;
     uint32_t MeshPrimitiveInstanceId;
-    uint32_t AccelerationStructureIndex;
 } ShaderParameters;
 
 typedef struct
@@ -17,6 +16,5 @@ typedef struct
     uint32_t MaterialBufferIndex;
     uint32_t MeshInstanceBufferIndex;
     uint32_t MeshPrimitiveInstanceBufferIndex;
-    uint32_t TextureSampler;
     uint32_t Action;
 } ShaderGlobalParameters;

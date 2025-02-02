@@ -3,19 +3,6 @@
 [[vk::push_constant]]
 ShaderParameters parameters : register(b0);
 
-// TODO: Reorder parameters
-struct GlobalParameters
-{
-    float4x4 ViewProjMatrix;
-    float4x4 InverseViewMatrix;
-    float4x4 InverseProjectionMatrix;
-    uint32_t MaterialBufferIndex;
-    uint32_t GpuMeshInstanceBufferIndex;
-    uint32_t GpuMeshPrimitiveInstanceBufferIndex;
-    uint32_t TextureSampler;
-    uint32_t Action; // TODO: One bit per action
-};
-
 struct ElemMeshlet
 {
     uint32_t VertexIndexOffset;
@@ -48,10 +35,10 @@ struct GpuDrawParameters
 };
 
 // TODO: Do other functions if we need less indirection
-GpuDrawParameters GetDrawParameters(GlobalParameters globalParameters, int32_t meshPrimitiveInstanceId)
+GpuDrawParameters GetDrawParameters(ShaderGlobalParameters globalParameters, int32_t meshPrimitiveInstanceId)
 {
-    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshInstanceBufferIndex];
-    ByteAddressBuffer meshPrimitiveInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshPrimitiveInstanceBufferIndex];
+    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.MeshInstanceBufferIndex];
+    ByteAddressBuffer meshPrimitiveInstanceBuffer = ResourceDescriptorHeap[globalParameters.MeshPrimitiveInstanceBufferIndex];
 
     GpuMeshPrimitiveInstance meshPrimitiveInstance = meshPrimitiveInstanceBuffer.Load<GpuMeshPrimitiveInstance>(meshPrimitiveInstanceId * sizeof(GpuMeshPrimitiveInstance));
 
@@ -85,6 +72,7 @@ struct Vertex
 struct VertexOutput
 {
     float4 Position: SV_Position;
+    float3 WorldPosition: Attribute6;
     float3 WorldNormal: Attribute0;
     float4 WorldTangent: Attribute5;
     float2 TextureCoordinates: Attribute1;
@@ -110,7 +98,7 @@ void MeshMain(in uint groupId: SV_GroupID,
     uint meshletIndex = groupId;
 
     ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
-    GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
+    ShaderGlobalParameters globalParameters = globalParametersBuffer.Load<ShaderGlobalParameters>(0);
 
     GpuDrawParameters drawParameters = GetDrawParameters(globalParameters, parameters.MeshPrimitiveInstanceId);
 
@@ -128,6 +116,7 @@ void MeshMain(in uint groupId: SV_GroupID,
         float3 worldTangent = RotateQuaternion(vertex.Tangent.xyz, drawParameters.Rotation);
 
         vertices[groupThreadId].Position = mul(float4(worldPosition, 1.0), globalParameters.ViewProjMatrix);
+        vertices[groupThreadId].WorldPosition = worldPosition;
         vertices[groupThreadId].WorldNormal = worldNormal;
         vertices[groupThreadId].WorldTangent = float4(worldTangent, vertex.Tangent.w);
         vertices[groupThreadId].TextureCoordinates = vertex.TextureCoordinates;
@@ -158,8 +147,8 @@ uint hash(uint a)
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
     // TODO: Get the framedata only in the mesh shader?
-     ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
-    GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
+    ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
+    ShaderGlobalParameters globalParameters = globalParametersBuffer.Load<ShaderGlobalParameters>(0);
 
     ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[globalParameters.MaterialBufferIndex];
     ShaderMaterial material = materialBuffer.Load<ShaderMaterial>(input.MaterialId * sizeof(ShaderMaterial));
@@ -202,11 +191,33 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
             //worldNormal = ResolveNormalFromSurfaceGradient(worldNormal, surfaceGradient);
         }
 
-        float nDotL = max(dot(worldNormal, normalize(float3(-1.0, 1.0, 1.0))), 0.0);
+        float3 lightDirection = normalize(float3(-0.2, 1.0, -0.4));
+
+        RaytracingAccelerationStructure raytracingAccelerationStructure = ResourceDescriptorHeap[parameters.AccelerationStructureIndex];
+        RayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
+
+        float shadowContribution = 1.0;
+
+        RayDesc ray;
+        ray.Origin = input.WorldPosition;
+        ray.TMin = 0.0001;
+        ray.TMax = 10000.0;
+        ray.Direction = lightDirection;
+
+        rayQuery.TraceRayInline(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, ray);
+
+        while (rayQuery.Proceed());
+
+        if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+        {
+            shadowContribution = 0.0;
+        }
+
+        float nDotL = max(dot(worldNormal, lightDirection), 0.0);
         float ambient = 0.05;
 
         //float3 outputColor = material.EmissiveFactor + albedo.rgb * (nDotL + ambient);
-        float3 outputColor = albedo.rgb * (nDotL + ambient);
+        float3 outputColor = albedo.rgb * (nDotL * shadowContribution + ambient);
 
         return float4(outputColor, 1.0);
         return float4(worldNormal * 0.5 + 0.5, 1.0);

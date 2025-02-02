@@ -988,6 +988,12 @@ void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const Elem
     }
     else
     {
+        if (!SystemFileExists(parameters->SourceFilePath))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "SourceFile '%s' doesn't exist.", parameters->SourceFilePath);
+            return;
+        }
+
         // TODO: Check parameters
         sourceData = SystemFileReadBytes(stackMemoryArena, parameters->SourceFileOffset, parameters->SourceFileSizeInBytes, parameters->SourceFilePath);
     }

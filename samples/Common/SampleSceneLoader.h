@@ -59,10 +59,10 @@ void SampleLoadTexture(const char* path, SampleTextureData* textureData, bool is
 {
     *textureData = (SampleTextureData){};
 
-    printf("Loading Texture: %s\n", path);
     // TODO: Do better here
     char* tmp = malloc(strlen(path) + 1);
     strcpy(tmp, path);
+
     textureData->Path = tmp;
     textureData->IsNormalTexture = isNormalTexture;
 
@@ -73,6 +73,7 @@ void SampleLoadTexture(const char* path, SampleTextureData* textureData, bool is
         printf("NO TEXT: %s\n", path);
         return;
     }
+
     assert(file);
     
     fread(&textureData->TextureHeader, sizeof(SampleTextureHeader), 1, file);

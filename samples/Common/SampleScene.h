@@ -3,6 +3,8 @@
 #include "SampleMath.h"
 #include <stdint.h>
 
+// TODO: Put the loader and the writer here too
+
 // TODO: Rename *Header by data when we have refactored the sceneloader
 typedef enum
 {

@@ -1,23 +1,7 @@
-struct ShaderParameters
-{
-    uint32_t GlobalParametersBufferIndex;
-    uint32_t MeshPrimitiveInstanceId;
-};
+#include "ShaderData.h"
 
 [[vk::push_constant]]
 ShaderParameters parameters : register(b0);
-
-// TODO: Reorder parameters
-struct GlobalParameters
-{
-    float4x4 ViewProjMatrix;
-    float4x4 InverseViewMatrix;
-    float4x4 InverseProjectionMatrix;
-    uint32_t MaterialBufferIndex;
-    uint32_t GpuMeshInstanceBufferIndex;
-    uint32_t GpuMeshPrimitiveInstanceBufferIndex;
-    uint32_t Action; // TODO: One bit per action
-};
 
 struct GpuMeshPrimitive
 {
@@ -29,20 +13,6 @@ struct GpuMeshPrimitive
     uint32_t IndexCount;
     int32_t MaterialId;
     // TODO: BoundingBox
-};
-
-struct GpuMeshInstance
-{
-    int32_t MeshBufferIndex;
-    float4 Rotation;
-    float3 Translation;
-    float Scale;
-};
-
-struct GpuMeshPrimitiveInstance
-{
-    int32_t MeshInstanceId;
-    int32_t MeshPrimitiveId;
 };
 
 struct GpuDrawParameters
@@ -57,10 +27,10 @@ struct GpuDrawParameters
 };
 
 // TODO: Do other functions if we need less indirection
-GpuDrawParameters GetDrawParameters(GlobalParameters globalParameters, int32_t meshPrimitiveInstanceId)
+GpuDrawParameters GetDrawParameters(ShaderGlobalParameters globalParameters, int32_t meshPrimitiveInstanceId)
 {
-    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshInstanceBufferIndex];
-    ByteAddressBuffer meshPrimitiveInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshPrimitiveInstanceBufferIndex];
+    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.MeshInstanceBufferIndex];
+    ByteAddressBuffer meshPrimitiveInstanceBuffer = ResourceDescriptorHeap[globalParameters.MeshPrimitiveInstanceBufferIndex];
 
     GpuMeshPrimitiveInstance meshPrimitiveInstance = meshPrimitiveInstanceBuffer.Load<GpuMeshPrimitiveInstance>(meshPrimitiveInstanceId * sizeof(GpuMeshPrimitiveInstance));
 
@@ -81,14 +51,6 @@ GpuDrawParameters GetDrawParameters(GlobalParameters globalParameters, int32_t m
 
     return result;
 }
-
-typedef struct
-{
-    int32_t AlbedoTextureId;
-    int32_t NormalTextureId;
-    float4 AlbedoFactor;
-    float3 EmissiveFactor;
-} ShaderMaterial;
 
 // TODO: Compress
 struct ElemMeshlet
@@ -136,7 +98,7 @@ void MeshMain(in uint groupId: SV_GroupID,
     uint meshletIndex = groupId;
 
     ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
-    GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
+    ShaderGlobalParameters globalParameters = globalParametersBuffer.Load<ShaderGlobalParameters>(0);
 
     GpuDrawParameters drawParameters = GetDrawParameters(globalParameters, parameters.MeshPrimitiveInstanceId);
 
@@ -183,7 +145,7 @@ uint hash(uint a)
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
     ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
-    GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
+    ShaderGlobalParameters globalParameters = globalParametersBuffer.Load<ShaderGlobalParameters>(0);
 
     ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[globalParameters.MaterialBufferIndex];
     ShaderMaterial material = materialBuffer.Load<ShaderMaterial>(input.MaterialId * sizeof(ShaderMaterial));

@@ -6,11 +6,11 @@
 #include "SampleSceneLoader.h"
 #include "SampleGpuMemory.h"
 
+// TODO: Like all samples, take the common code to put it in the sample when the code is
+// stabilized so that all the relevant sample code is in one file
+
 // TODO: Create a MeshCompiler project that use a more simple layout so that 
 // the mesh shader is simplier
-
-// TODO: Take all the code from the common headers and integrate it here
-// SampleSceneLoaderNeeds to disappear
 
 typedef struct
 {

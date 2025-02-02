@@ -1,4 +1,6 @@
-struct ShaderParameters
+#include "ShaderData.h"
+
+struct RaytraceShaderParameters
 {
     uint32_t AccelerationStructureIndex;
     uint32_t GlobalParametersBufferIndex;
@@ -7,19 +9,7 @@ struct ShaderParameters
 };
 
 [[vk::push_constant]]
-ShaderParameters parameters : register(b0);
-
-// TODO: Reorder parameters
-struct GlobalParameters
-{
-    float4x4 ViewProjMatrix;
-    float4x4 InverseViewMatrix;
-    float4x4 InverseProjectionMatrix;
-    uint32_t MaterialBufferIndex;
-    uint32_t GpuMeshInstanceBufferIndex;
-    uint32_t GpuMeshPrimitiveInstanceBufferIndex;
-    uint32_t Action; // TODO: One bit per action
-};
+RaytraceShaderParameters parameters : register(b0);
 
 struct GpuMeshPrimitive
 {
@@ -32,28 +22,6 @@ struct GpuMeshPrimitive
     int32_t MaterialId;
     // TODO: BoundingBox
 };
-
-struct GpuMeshInstance
-{
-    int32_t MeshBufferIndex;
-    float4 Rotation;
-    float3 Translation;
-    float Scale;
-};
-
-struct GpuMeshPrimitiveInstance
-{
-    int32_t MeshInstanceId;
-    int32_t MeshPrimitiveId;
-};
-
-typedef struct
-{
-    int32_t AlbedoTextureId;
-    int32_t NormalTextureId;
-    float4 AlbedoFactor;
-    float3 EmissiveFactor;
-} ShaderMaterial;
 
 struct GpuDrawParameters
 {
@@ -118,10 +86,10 @@ float nextRand(inout uint s)
 GlobalShaderData InitGlobalShaderData()
 {
     ByteAddressBuffer globalParametersBuffer = ResourceDescriptorHeap[parameters.GlobalParametersBufferIndex];
-    GlobalParameters globalParameters = globalParametersBuffer.Load<GlobalParameters>(0);
+    ShaderGlobalParameters globalParameters = globalParametersBuffer.Load<ShaderGlobalParameters>(0);
 
-    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshInstanceBufferIndex];
-    ByteAddressBuffer meshPrimitiveInstanceBuffer = ResourceDescriptorHeap[globalParameters.GpuMeshPrimitiveInstanceBufferIndex];
+    ByteAddressBuffer meshInstanceBuffer = ResourceDescriptorHeap[globalParameters.MeshInstanceBufferIndex];
+    ByteAddressBuffer meshPrimitiveInstanceBuffer = ResourceDescriptorHeap[globalParameters.MeshPrimitiveInstanceBufferIndex];
     ByteAddressBuffer materialBuffer = ResourceDescriptorHeap[globalParameters.MaterialBufferIndex];
     RaytracingAccelerationStructure raytracingAccelerationStructure = ResourceDescriptorHeap[parameters.AccelerationStructureIndex];
 

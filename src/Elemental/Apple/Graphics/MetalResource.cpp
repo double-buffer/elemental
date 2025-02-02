@@ -840,6 +840,17 @@ void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopy
     {
         sourceData = ReadOnlySpan<uint8_t>(parameters->SourceMemoryData.Items, parameters->SourceMemoryData.Length);
     }
+    else
+    {
+        if (!SystemFileExists(parameters->SourceFilePath))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "SourceFile '%s' doesn't exist.", parameters->SourceFilePath);
+            return;
+        }
+
+        // TODO: Check parameters
+        sourceData = SystemFileReadBytes(stackMemoryArena, parameters->SourceFileOffset, parameters->SourceFileSizeInBytes, parameters->SourceFilePath);
+    }    
     
     // TODO: Unit test first !!!!!
         
