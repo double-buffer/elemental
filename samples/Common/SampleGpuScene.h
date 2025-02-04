@@ -72,6 +72,9 @@ void SampleCreateGpuMaterials(ElemCommandList commandList, const SampleSceneData
         shaderMaterial->EmissiveFactor = materialHeader->EmissiveFactor;
         shaderMaterial->AlbedoTextureId = -1;
         shaderMaterial->NormalTextureId = -1;
+        shaderMaterial->TransparentMode = materialHeader->TransparentMode;
+        shaderMaterial->AlphaCutoff = materialHeader->AlphaCutoff;
+        shaderMaterial->IsLoaded = true;
 
         if (gpuSceneData->TextureCount > 0)
         {
@@ -87,7 +90,7 @@ void SampleCreateGpuMaterials(ElemCommandList commandList, const SampleSceneData
         }
     }
 
-    gpuSceneData->MaterialBuffer = SampleCreateGpuBuffer(gpuMemory, sceneData->MaterialCount * sizeof(ShaderMaterial), "MaterialBuffer");
+    gpuSceneData->MaterialBuffer = SampleCreateGpuBuffer(gpuMemory, sceneData->MaterialCount * sizeof(ShaderMaterial), ElemGraphicsResourceUsage_Read, "MaterialBuffer");
 
     ElemCopyDataToGraphicsResourceParameters copyParameters =
     {
@@ -111,7 +114,7 @@ void SampleCreateGpuMeshes(ElemCommandList commandList, const SampleSceneData* s
         SampleMeshData* meshData = &sceneData->Meshes[i];
 
         SampleGpuBuffer* meshBuffer = &gpuSceneData->MeshBuffers[i];
-        *meshBuffer = SampleCreateGpuBuffer(gpuMemory, meshData->MeshHeader.MeshBufferSizeInBytes, meshData->MeshHeader.Name);
+        *meshBuffer = SampleCreateGpuBuffer(gpuMemory, meshData->MeshHeader.MeshBufferSizeInBytes, ElemGraphicsResourceUsage_Read, meshData->MeshHeader.Name);
 
         char absolutePath[MAX_PATH];
         SampleGetFullPath(absolutePath, meshData->Path, true);
@@ -168,7 +171,7 @@ void SampleCreateGpuMeshInstances(ElemCommandList commandList, const SampleScene
         }
     }
 
-    gpuSceneData->MeshInstanceBuffer = SampleCreateGpuBuffer(gpuMemory, gpuMeshInstanceCount * sizeof(GpuMeshInstance), "GpuMeshInstanceBuffer");
+    gpuSceneData->MeshInstanceBuffer = SampleCreateGpuBuffer(gpuMemory, gpuMeshInstanceCount * sizeof(GpuMeshInstance), ElemGraphicsResourceUsage_Read, "GpuMeshInstanceBuffer");
 
     ElemCopyDataToGraphicsResourceParameters copyParameters =
     {
@@ -179,7 +182,7 @@ void SampleCreateGpuMeshInstances(ElemCommandList commandList, const SampleScene
 
     ElemCopyDataToGraphicsResource(commandList, &copyParameters);
 
-    gpuSceneData->MeshPrimitiveInstanceBuffer = SampleCreateGpuBuffer(gpuMemory, gpuMeshPrimitiveInstanceCount * sizeof(GpuMeshPrimitiveInstance), "GpuMeshPrimitiveInstanceBuffer");
+    gpuSceneData->MeshPrimitiveInstanceBuffer = SampleCreateGpuBuffer(gpuMemory, gpuMeshPrimitiveInstanceCount * sizeof(GpuMeshPrimitiveInstance), ElemGraphicsResourceUsage_Read, "GpuMeshPrimitiveInstanceBuffer");
 
     copyParameters = (ElemCopyDataToGraphicsResourceParameters)
     {

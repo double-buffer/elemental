@@ -847,6 +847,7 @@ typedef struct
     ElemGraphicsResource IndexBuffer;
     uint32_t IndexBufferOffset;
     uint32_t IndexCount;
+    bool IsTransparent;
 } ElemRaytracingBlasGeometry;
 
 typedef struct

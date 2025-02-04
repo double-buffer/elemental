@@ -13,7 +13,6 @@
 // TODO: Like all samples, take the common code to put it in the sample when the code is
 // stabilized so that all the relevant sample code is in one file
 
-// TODO: Move the gpu buffers creation from sceneloading to main
 // TODO: Remove Rasterization path
 // TODO: Remove the depth buffer
 // TODO: Change the shortcut for animation to space

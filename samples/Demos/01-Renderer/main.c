@@ -25,9 +25,18 @@ typedef struct
 
     ElemFence LastExecutionFence;
     ElemSwapChain SwapChain;
+
+    ElemGraphicsHeap RenderTargetHeap;
+    ElemGraphicsResource RenderTargetTexture;
+    ElemGraphicsResourceDescriptor RenderTargetTextureReadDescriptor;
+
     ElemGraphicsHeap DepthBufferHeap;
     ElemGraphicsResource DepthBuffer;
+    
     ElemPipelineState GraphicsPipeline;
+    ElemPipelineState PathTracingGraphicsPipeline;
+    ElemPipelineState ToneMapGraphicsPipeline;
+
     ShaderParameters ShaderParameters;
     SampleInputsApplication InputsApplication;
     SampleInputsCamera InputsCamera;
@@ -38,7 +47,26 @@ typedef struct
 
     SampleGpuSceneData GpuSceneData;
     SampleRaytracingSceneData RaytracingSceneData;
+
+    uint32_t RenderTargetSampleCount;
+    bool UsePathTracing;
+    bool UsePathTracingAccumulation;
+    uint32_t PathTraceLength;
 } ApplicationPayload;
+
+typedef struct
+{
+    uint32_t AccelerationStructureIndex;
+    uint32_t ShaderGlobalParametersBufferIndex;
+    uint32_t FrameIndex;
+    uint32_t PathTraceLength;
+} RaytracingShaderParameters;
+
+typedef struct
+{
+    uint32_t SourceTexture;
+    uint32_t SampleCount;
+} ToneMapShaderParameters;
 
 typedef struct
 {
@@ -47,6 +75,25 @@ typedef struct
     
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
+
+void CreateRenderTarget(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
+{
+    if (applicationPayload->RenderTargetTexture != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTargetTextureReadDescriptor, NULL);
+        ElemFreeGraphicsResource(applicationPayload->RenderTargetTexture, NULL);
+    }
+
+    printf("Creating render texture...\n");
+
+    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget,
+                                                                            &(ElemGraphicsResourceInfoOptions) { 
+                                                                                .DebugName = "FloatRenderTarget" 
+                                                                            });
+
+    applicationPayload->RenderTargetTexture = ElemCreateGraphicsResource(applicationPayload->RenderTargetHeap, 0, &resourceInfo);
+    applicationPayload->RenderTargetTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTargetTexture, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+}
 
 void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
 {
@@ -76,7 +123,7 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
 
     if (cameraState->Action)
     {
-        applicationPayload->ShaderGlobalParameters.Action = !applicationPayload->ShaderGlobalParameters.Action;
+        //applicationPayload->ShaderGlobalParameters.Action = !applicationPayload->ShaderGlobalParameters.Action;
     }
 
     ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderGlobalParameters) });
@@ -96,6 +143,7 @@ void InitSample(void* payload)
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
     // TODO: For now we create a separate heap to avoid memory management
+    applicationPayload->RenderTargetHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(128), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
     applicationPayload->DepthBufferHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
 
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
@@ -103,12 +151,13 @@ void InitSample(void* payload)
     // TODO: For the moment we implement all textures of the scene in GPU memory. That is why we need 2GB for bistro scene
     // We will implement virtual texturing/texture streaming in the future
     applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_Gpu, SampleMegaBytesToBytes(2048));
-    applicationPayload->GpuMemoryUpload = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(256));
+    applicationPayload->GpuMemoryUpload = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(128));
 
-    applicationPayload->ShaderGlobalParametersBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, sizeof(ShaderGlobalParameters), "ShaderGlobalParameters");
+    applicationPayload->ShaderGlobalParametersBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, sizeof(ShaderGlobalParameters), ElemGraphicsResourceUsage_Write, "ShaderGlobalParameters");
     applicationPayload->ShaderParameters.GlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor;
 
     // TODO: Do we need the scene data after that?
+    CreateRenderTarget(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData);
 
@@ -141,6 +190,46 @@ void InitSample(void* payload)
 
     ElemFreeShaderLibrary(shaderLibrary);
 
+    shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "PathTracing.shader": "PathTracing_vulkan.shader", true);
+    shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
+
+    applicationPayload->PathTracingGraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+        .DebugName = "PathTracing PSO",
+        .ShaderLibrary = shaderLibrary,
+        .MeshShaderFunction = "MeshMain",
+        .PixelShaderFunction = "PixelMain",
+        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
+        { 
+            .Format = ElemGraphicsFormat_R32G32B32A32_FLOAT,
+            .BlendOperation = ElemGraphicsBlendOperation_Add,
+            .SourceBlendFactor = ElemGraphicsBlendFactor_One,
+            .DestinationBlendFactor = ElemGraphicsBlendFactor_One,
+            .SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One,
+            .DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One,
+        }}, .Length = 1 },
+    });
+
+    ElemFreeShaderLibrary(shaderLibrary);
+
+    shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "Tonemap.shader": "Tonemap_vulkan.shader", true);
+    shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
+
+    applicationPayload->ToneMapGraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+        .DebugName = "Tonemap PSO",
+        .ShaderLibrary = shaderLibrary,
+        .MeshShaderFunction = "MeshMain",
+        .PixelShaderFunction = "PixelMain",
+        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
+        { 
+            .Format = swapChainInfo.Format,
+            .BlendOperation = ElemGraphicsBlendOperation_Add,
+            .SourceBlendFactor = ElemGraphicsBlendFactor_SourceAlpha,
+            .DestinationBlendFactor = ElemGraphicsBlendFactor_InverseSourceAlpha,
+        }}, .Length = 1 },
+    });
+
+    ElemFreeShaderLibrary(shaderLibrary);
+
     SampleInputsApplicationInit(&applicationPayload->InputsApplication);
     SampleInputsCameraInit(&applicationPayload->InputsCamera);
     
@@ -149,6 +238,10 @@ void InitSample(void* payload)
         ElemHideWindowCursor(applicationPayload->Window);
         applicationPayload->InputsApplication.State.IsCursorDisplayed = false;
     }
+
+    applicationPayload->RenderTargetSampleCount = 1;
+    applicationPayload->UsePathTracingAccumulation = true;
+    applicationPayload->PathTraceLength = 3;
 
     SampleStartFrameMeasurement();
 
@@ -168,6 +261,8 @@ void FreeSample(void* payload)
     ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
 
     SampleFreeGpuSceneData(&applicationPayload->GpuSceneData);
+    SampleFreeRaytracingSceneData(&applicationPayload->RaytracingSceneData);
+
     SampleFreeScene(&applicationPayload->TestSceneData);
     SampleFreeGpuBuffer(&applicationPayload->ShaderGlobalParametersBuffer);
 
@@ -189,13 +284,22 @@ void FreeSample(void* payload)
     printf("Exit application...\n");
 }
 
+uint32_t test = 0;
+
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
+    test++;
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     
     if (updateParameters->SizeChanged)
     {
         CreateDepthBuffer(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
+        CreateRenderTarget(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
+    }
+
+    if (updateParameters->SizeChanged || applicationPayload->InputsCamera.State.HasChanged || applicationPayload->InputsCamera.State.Action || !applicationPayload->UsePathTracingAccumulation)
+    {
+        applicationPayload->RenderTargetSampleCount = 0;
     }
 
     ElemInputStream inputStream = ElemGetInputStream();
@@ -223,6 +327,15 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     SampleInputsCameraState* inputsCameraState = &applicationPayload->InputsCamera.State;
     UpdateShaderGlobalParameters(applicationPayload, inputsCameraState);
 
+    if (inputsCameraState->Action)
+    {
+        applicationPayload->UsePathTracing = !applicationPayload->UsePathTracing;
+    }
+
+    if (inputsCameraState->Action2)
+    {
+        applicationPayload->UsePathTracingAccumulation = !applicationPayload->UsePathTracingAccumulation;
+    }
     // TODO: We need to have a kind of queue system. The problem here is that if we don't have any
     // data to load we will create empty lists
 
@@ -249,8 +362,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         {
             .Items = (ElemRenderPassRenderTarget[]) { 
             {
-                .RenderTarget = updateParameters->BackBufferRenderTarget,
-                .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
+                .RenderTarget = applicationPayload->RenderTargetTexture,
+                .LoadAction = applicationPayload->RenderTargetSampleCount ? ElemRenderPassLoadAction_Load : ElemRenderPassLoadAction_Clear,
             }},
             .Length = 1
         },
@@ -260,23 +373,74 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
-
-    // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
-    // Be carreful with the limit per dimension of 65000
-    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
-    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-
-    for (uint32_t i = 0; i < applicationPayload->GpuSceneData.MeshPrimitiveInstanceCount; i++)
+    if (!applicationPayload->UsePathTracing)
     {
-        applicationPayload->ShaderParameters.AccelerationStructureIndex = applicationPayload->RaytracingSceneData.TlasReadDescriptor;
-        applicationPayload->ShaderParameters.MeshPrimitiveInstanceId = i;
+        applicationPayload->RenderTargetSampleCount = 1;
+        ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
 
+        // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
+        // Be carreful with the limit per dimension of 65000
+        ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-        ElemDispatchMesh(commandList, applicationPayload->GpuSceneData.MeshPrimitiveMeshletCountList[i], 1, 1);
+
+        for (uint32_t i = 0; i < applicationPayload->GpuSceneData.MeshPrimitiveInstanceCount; i++)
+        {
+            applicationPayload->ShaderParameters.AccelerationStructureIndex = applicationPayload->RaytracingSceneData.TlasReadDescriptor;
+            applicationPayload->ShaderParameters.MeshPrimitiveInstanceId = i;
+
+            ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
+            ElemDispatchMesh(commandList, applicationPayload->GpuSceneData.MeshPrimitiveMeshletCountList[i], 1, 1);
+        }
+    }
+    else
+    {
+        applicationPayload->RenderTargetSampleCount++;
+        ElemBindPipelineState(commandList, applicationPayload->PathTracingGraphicsPipeline); 
+    
+        RaytracingShaderParameters parameters = 
+        {
+            .AccelerationStructureIndex = applicationPayload->RaytracingSceneData.TlasReadDescriptor,
+            .ShaderGlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor,
+            // TODO: To Replace
+            //.FrameIndex = updateParameters->FrameIndex
+            .FrameIndex = test,
+            .PathTraceLength = applicationPayload->PathTraceLength
+        };
+
+        ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(RaytracingShaderParameters) });
+        ElemDispatchMesh(commandList, 1, 1, 1);
     }
 
     ElemEndRenderPass(commandList);
+
+    ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureReadDescriptor, NULL);
+
+    ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
+        .RenderTargets = 
+        {
+            .Items = (ElemRenderPassRenderTarget[]) { 
+            {
+                .RenderTarget = updateParameters->BackBufferRenderTarget,
+                .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
+                .LoadAction = ElemRenderPassLoadAction_Clear
+            }},
+            .Length = 1
+        }
+    });
+        
+    ToneMapShaderParameters parameters = 
+    {
+        .SourceTexture = applicationPayload->RenderTargetTextureReadDescriptor,
+        .SampleCount = applicationPayload->RenderTargetSampleCount
+    };
+
+    ElemBindPipelineState(commandList, applicationPayload->ToneMapGraphicsPipeline); 
+    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(ToneMapShaderParameters) });
+
+    ElemDispatchMesh(commandList, 1, 1, 1);
+
+    ElemEndRenderPass(commandList);
+
 
     ElemCommitCommandList(commandList);
 

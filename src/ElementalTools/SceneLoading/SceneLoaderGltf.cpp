@@ -232,6 +232,18 @@ ReadOnlySpan<ElemSceneMaterial> LoadGltfMaterials(MemoryArena memoryArena, const
         {
             material->Name = SystemConcatBuffers<char>(memoryArena, "Material_", SystemConvertNumberToString(stackMemoryArena, i)).Pointer;
         }
+        
+        material->TransparentMode = ElemSceneMaterialTransparentMode_None;
+
+        if (gltfMaterial->alpha_mode == cgltf_alpha_mode_mask)
+        {
+            material->TransparentMode = ElemSceneMaterialTransparentMode_Alpha;
+            material->AlphaCutoff = gltfMaterial->alpha_cutoff;
+        }
+        else if (gltfMaterial->alpha_mode == cgltf_alpha_mode_blend)
+        {
+            material->TransparentMode = ElemSceneMaterialTransparentMode_Blend;
+        }
 
         material->EmissiveFactor =
         {

@@ -296,7 +296,11 @@ NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> BuildMetalBlasDescr
         auto geometryDesc = &parameters->GeometryList.Items[i];
         auto geometryDescriptor = NS::RetainPtr(MTL::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
 
-        geometryDescriptor->setOpaque(true);
+        if (!geometryDesc->IsTransparent)
+        {
+            geometryDescriptor->setOpaque(true);
+        }
+
         geometryDescriptor->setIndexType(ConvertToMetalIndexType(geometryDesc->IndexFormat));
         geometryDescriptor->setVertexFormat(ConvertToMetalAttributeFormat(geometryDesc->VertexFormat));
         geometryDescriptor->setTriangleCount(geometryDesc->IndexCount / 3);

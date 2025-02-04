@@ -269,6 +269,13 @@ typedef enum
 
 typedef enum
 {
+    ElemSceneMaterialTransparentMode_None,
+    ElemSceneMaterialTransparentMode_Alpha,
+    ElemSceneMaterialTransparentMode_Blend,
+} ElemSceneMaterialTransparentMode;
+
+typedef enum
+{
     ElemSceneNodeType_Unknown = 0,
     ElemSceneNodeType_Mesh = 1
 } ElemSceneNodeType;
@@ -322,6 +329,8 @@ typedef struct
     const char* NormalTexturePath;
     ElemToolsVector4 AlbedoFactor;
     ElemToolsVector3 EmissiveFactor;
+    ElemSceneMaterialTransparentMode TransparentMode;
+    float AlphaCutoff;
 } ElemSceneMaterial;
 
 typedef struct

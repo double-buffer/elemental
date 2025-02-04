@@ -441,7 +441,7 @@ D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BuildDirectX12BlasInputs(Me
         *geometry =
         {
             .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
-            .Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
+            .Flags = geometryDesc->IsTransparent ? D3D12_RAYTRACING_GEOMETRY_FLAG_NONE : D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
             .Triangles = 
             {
                 .IndexFormat = ConvertRaytracingIndexFormatToDirectX12Format(geometryDesc->IndexFormat),
@@ -1231,16 +1231,17 @@ void DirectX12FreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor desc
 
 void DirectX12ProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
-    auto stackMemoryArena = SystemGetStackMemoryArena();
-
-    ProcessResourceDeleteQueue();
-    SystemClearMemoryArena(directX12RaytracingInstanceMemoryArena);
-    SystemClearMemoryArena(directX12ReadBackMemoryArena);
-    
     auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
     graphicsDeviceData->UploadBufferGeneration++;
+
+    SystemClearMemoryArena(directX12RaytracingInstanceMemoryArena);
+    SystemClearMemoryArena(directX12ReadBackMemoryArena);
+    
+    ProcessResourceDeleteQueue();
+
+    auto stackMemoryArena = SystemGetStackMemoryArena();
     
     for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
     {

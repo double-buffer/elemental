@@ -262,7 +262,7 @@ VkAccelerationStructureBuildGeometryInfoKHR BuildVulkanBlasGeometryInfo(MemoryAr
                     .indexType = ConvertRaytracingIndexFormatToVulkanIndexType(geometryDesc->IndexFormat)
                 }
             },
-            .flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+            .flags = geometryDesc->IsTransparent ? 0u : VK_GEOMETRY_OPAQUE_BIT_KHR
         };
 
         if (geometryDesc->VertexBuffer != ELEM_HANDLE_NULL)

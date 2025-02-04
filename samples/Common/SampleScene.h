@@ -12,6 +12,13 @@ typedef enum
     SampleSceneNodeType_Mesh = 1
 } SampleSceneNodeType;
 
+typedef enum
+{
+    SampleSceneMaterialTransparentMode_None,
+    SampleSceneMaterialTransparentMode_Alpha,
+    SampleSceneMaterialTransparentMode_Blend,
+} SampleSceneMaterialTransparentMode;
+
 typedef struct
 {
     char FileId[5];
@@ -30,6 +37,8 @@ typedef struct
     int32_t NormalTextureId;
     ElemVector4 AlbedoFactor;
     ElemVector3 EmissiveFactor;
+    SampleSceneMaterialTransparentMode TransparentMode;
+    float AlphaCutoff;
 } SampleSceneMaterialHeader;
 
 typedef struct

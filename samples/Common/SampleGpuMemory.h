@@ -42,46 +42,34 @@ void SampleFreeGpuMemory(SampleGpuMemory* gpuMemory)
     gpuMemory->GraphicsHeap = ELEM_HANDLE_NULL;
 }
 
-SampleGpuBuffer SampleCreateGpuRaytracingBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
+SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const char* debugName)
 {
-    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_RaytracingAccelerationStructure, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
+    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, usage, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
 
     gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
     ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
     gpuMemory->CurrentHeapOffset += bufferDescription.SizeInBytes;
 
     ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
-    ElemGraphicsResourceDescriptor writeDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, NULL);
 
-    return (SampleGpuBuffer)
+    SampleGpuBuffer result = (SampleGpuBuffer)
     {
         .Buffer = buffer,
         .ReadDescriptor = readDescriptor,
-        .WriteDescriptor = writeDescriptor
     };
-}
 
-SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
-{
-    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Read, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
-
-    gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
-    ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
-    gpuMemory->CurrentHeapOffset += bufferDescription.SizeInBytes;
-
-    ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
-
-    return (SampleGpuBuffer)
+    if ((usage & ElemGraphicsResourceUsage_Read) || (usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
     {
-        .Buffer = buffer,
-        .ReadDescriptor = readDescriptor
-    };
+        result.WriteDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, NULL);
+    }
+
+    return result;
 }
 
 // TODO: To Remove
 SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, const void* dataPointer, uint32_t sizeInBytes, const char* debugName)
 {
-    SampleGpuBuffer result = SampleCreateGpuBuffer(gpuMemory, sizeInBytes, debugName);
+    SampleGpuBuffer result = SampleCreateGpuBuffer(gpuMemory, sizeInBytes, ElemGraphicsResourceUsage_Read, debugName);
     ElemUploadGraphicsBufferData(result.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)dataPointer, .Length = sizeInBytes });
 
     return (SampleGpuBuffer)

@@ -165,7 +165,6 @@ uint32_t GetOrCreateTextureEntry(TextureCache* textureCache, const char* path, b
 
         if (strstr(cacheItem->Path, path))
         {
-            printf("Found texture in cache!\n");
             return i;
         }
     }
@@ -218,7 +217,9 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInpu
             .AlbedoFactor = material->AlbedoFactor,
             .EmissiveFactor = material->EmissiveFactor,
             .AlbedoTextureId = -1,
-            .NormalTextureId = -1
+            .NormalTextureId = -1,
+            .TransparentMode = (SampleSceneMaterialTransparentMode)material->TransparentMode,
+            .AlphaCutoff = material->AlphaCutoff
         };
 
         strncpy(materialHeader->Name, material->Name, 50);

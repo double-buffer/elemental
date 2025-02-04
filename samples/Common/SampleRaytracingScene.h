@@ -48,6 +48,7 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
         for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
         {
             SampleMeshPrimitiveHeader* meshPrimitiveData = &meshData->MeshPrimitives[j];
+            SampleSceneMaterialHeader* material = &sceneData->Materials[meshPrimitiveData->MaterialId];
 
             geometry[j] = (ElemRaytracingBlasGeometry)
             {
@@ -59,7 +60,8 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
                 .IndexFormat = ElemRaytracingIndexFormat_UInt32,
                 .IndexBuffer = meshBuffer.Buffer,
                 .IndexBufferOffset = meshPrimitiveData->IndexBufferOffset,
-                .IndexCount = meshPrimitiveData->IndexCount
+                .IndexCount = meshPrimitiveData->IndexCount,
+                .IsTransparent = material->TransparentMode != SampleSceneMaterialTransparentMode_None
             };
         }
 
@@ -84,8 +86,8 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
         currentBlasScratchOffset = SampleAlignValue(currentBlasScratchOffset + allocationInfos.ScratchSizeInBytes, allocationInfos.Alignment);
     }
 
-    raytracingSceneData->BlasScratchBuffer = SampleCreateGpuBuffer(gpuMemory, currentBlasScratchOffset, "GlobalBlasScratch");
-    raytracingSceneData->BlasStorage = SampleCreateGpuRaytracingBuffer(gpuMemory, currentBlasOffset, "GlobalBlasStorage");
+    raytracingSceneData->BlasScratchBuffer = SampleCreateGpuBuffer(gpuMemory, currentBlasScratchOffset, ElemGraphicsResourceUsage_Write, "GlobalBlasScratch");
+    raytracingSceneData->BlasStorage = SampleCreateGpuBuffer(gpuMemory, currentBlasOffset, ElemGraphicsResourceUsage_RaytracingAccelerationStructure, "GlobalBlasStorage");
     
     char formattedSize[256];
     FormatMemorySize((uint32_t)currentBlasOffset, formattedSize, 256);
@@ -107,6 +109,7 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
     }
 
     ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasStorage.WriteDescriptor, NULL);
+    ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasScratchBuffer.WriteDescriptor, NULL);
 
     for (uint32_t i = 0; i < raytracingSceneData->BlasCount; i++)
     {
@@ -136,7 +139,7 @@ void SampleCreateRaytracingTlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
     }
     
     ElemGraphicsResourceAllocationInfo tlasInstanceAllocationInfo = ElemGetRaytracingTlasInstanceAllocationInfo(graphicsDevice, tlasInstanceCount);
-    raytracingSceneData->TlasInstanceBuffer = SampleCreateGpuBuffer(gpuMemoryUpload, tlasInstanceAllocationInfo.SizeInBytes, "TlasInstanceBuffer");
+    raytracingSceneData->TlasInstanceBuffer = SampleCreateGpuBuffer(gpuMemoryUpload, tlasInstanceAllocationInfo.SizeInBytes, ElemGraphicsResourceUsage_Write, "TlasInstanceBuffer");
 
     ElemRaytracingTlasParameters tlasParameters =
     {
@@ -146,8 +149,8 @@ void SampleCreateRaytracingTlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
 
     ElemRaytracingAllocationInfo allocationInfos = ElemGetRaytracingTlasAllocationInfo(graphicsDevice, &tlasParameters);
 
-    raytracingSceneData->TlasStorage = SampleCreateGpuRaytracingBuffer(gpuMemory, allocationInfos.SizeInBytes, "TLASAccelStorage");
-    raytracingSceneData->TlasScratchBuffer = SampleCreateGpuBuffer(gpuMemory, allocationInfos.ScratchSizeInBytes, "TLASScratchStorage");
+    raytracingSceneData->TlasStorage = SampleCreateGpuBuffer(gpuMemory, allocationInfos.SizeInBytes, ElemGraphicsResourceUsage_RaytracingAccelerationStructure, "TLASAccelStorage");
+    raytracingSceneData->TlasScratchBuffer = SampleCreateGpuBuffer(gpuMemory, allocationInfos.ScratchSizeInBytes, ElemGraphicsResourceUsage_Write, "TLASScratchStorage");
     raytracingSceneData->Tlas = ElemCreateRaytracingAccelerationStructureResource(graphicsDevice, raytracingSceneData->TlasStorage.Buffer, NULL);
     raytracingSceneData->TlasReadDescriptor = ElemCreateGraphicsResourceDescriptor(raytracingSceneData->Tlas, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 }
@@ -205,6 +208,7 @@ void SampleCreateRaytracingSceneData(ElemGraphicsDevice graphicsDevice, ElemComm
 void SampleFreeRaytracingSceneData(SampleRaytracingSceneData* raytracingSceneData)
 {
     SampleFreeGpuBuffer(&raytracingSceneData->BlasStorage);
+    SampleFreeGpuBuffer(&raytracingSceneData->BlasScratchBuffer);
 
     for (uint32_t i = 0; i < raytracingSceneData->BlasCount; i++)
     {
