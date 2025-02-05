@@ -143,6 +143,9 @@ struct Vertex
     float2 TextureCoordinates;
 };
 
+// TODO: https://gpuopen.com/learn/mesh_shaders/mesh_shaders-optimization_and_best_practices/
+// We can put the non interpolated attributes in primitive attributes
+// TODO: Rename to VertexAttribute
 struct VertexOutput
 {
     float4 Position: SV_Position;
@@ -169,6 +172,7 @@ void MeshMain(in uint groupId: SV_GroupID,
               out vertices VertexOutput vertices[64], 
               out indices uint3 indices[126])
 {
+    // TODO: Cull primitives and use SV_CullPrimitive
     GlobalShaderData globalShaderData = InitGlobalShaderData();
     uint meshletIndex = groupId;
 

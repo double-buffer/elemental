@@ -48,6 +48,9 @@ ElemToolsAPI ElemBuildMeshletResult ElemBuildMeshlets(ElemVertexBuffer vertexBuf
 
     // TODO: Review the default values
     // TODO: Allow customisation
+
+    // TODO: https://gpuopen.com/learn/mesh_shaders/mesh_shaders-optimization_and_best_practices/
+    // Recommended is MaxVertex = 128 & MaxTriangles = 256
     uint8_t meshletMaxVertexCount = 64u;
     uint8_t meshletMaxTriangleCount = 64u;
     auto coneWeight = 0.5f;

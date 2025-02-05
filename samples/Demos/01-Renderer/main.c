@@ -180,7 +180,7 @@ void InitSample(void* payload)
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         //.CullMode = ElemGraphicsCullMode_None, // TODO: We need to deactivate cull only for transparent objects!
-        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = swapChainInfo.Format }}, .Length = 1 },
+        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {{ .Format = ElemGraphicsFormat_R32G32B32A32_FLOAT }}, .Length = 1 },
         .DepthStencil =
         {
             .Format = ElemGraphicsFormat_D32_FLOAT,
