@@ -418,7 +418,7 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
             //float density = get_hemisphere_spherical_density(sampledDirection.z);
             float density = get_hemisphere_psa_density(sampledDirection.z);
 
-            //radiance += hitInfo.Material.EmissiveFactor * weight;
+            radiance += hitInfo.Material.EmissiveFactor * weight;
 
             // TODO: Why multiplication with the previous weight here
             // TODO: Density is PDF
@@ -429,13 +429,14 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
             float3 lightDirection = normalize(float3(-0.2, 1.0, -0.4));
             float cosTheta = dot(pathTraceRayDirection, lightDirection);
 
-            if (cosTheta > 0.97)
+            if (cosTheta > 0.999)
             {
-                radiance += weight * float3(50, 50, 50) * 4;
+                radiance += weight * float3(100, 90, 80) * 1000;
             }
             else
             {
-                radiance += weight * float3(0.25, 0.5, 1.0) * 1;
+                // TODO: Check this value. The sky color is very bright here
+                radiance += weight * float3(0.25, 0.5, 1.0) * 100;
             }
             break;
         }

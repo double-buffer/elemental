@@ -55,53 +55,23 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
     }
 }
 
-//=================================================================================================
-//
-//  Baking Lab
-//  by MJP and David Neubelt
-//  http://mynameismjp.wordpress.com/
-//
-//  All code licensed under the MIT license
-//
-//=================================================================================================
-
-// The code in this file was originally written by Stephen Hill (@self_shadow), who deserves all
-// credit for coming up with this fit and implementing it. Buy him a beer next time you see him. :)
-
-// sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-static const float3x3 ACESInputMat =
+float3 ApplyExposure(float3 color, float exposure)
 {
-    {0.59719, 0.35458, 0.04823},
-    {0.07600, 0.90834, 0.01566},
-    {0.02840, 0.13383, 0.83777}
-};
-
-// ODT_SAT => XYZ => D60_2_D65 => sRGB
-static const float3x3 ACESOutputMat =
-{
-    { 1.60475, -0.53108, -0.07367},
-    {-0.10208,  1.10813, -0.00605},
-    {-0.00327, -0.07276,  1.07602}
-};
-
-float3 RRTAndODTFit(float3 v)
-{
-    float3 a = v * (v + 0.0245786f) - 0.000090537f;
-    float3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
-    return a / b;
+    color.rgb *= exp2(exposure);
+    return color;
 }
 
-float3 ACESFitted(float3 color)
+float3 ToneMapACESFitted(float3 color)
 {
-    color = mul(ACESInputMat, color);
+    color = (color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14);
+    return saturate(color);
+}
 
-    // Apply RRT and ODT
-    color = RRTAndODTFit(color);
-
-    color = mul(ACESOutputMat, color);
-
-    // Clamp to [0, 1]
-    color = saturate(color);
+float3 AdjustSaturation(float3 color, float saturationAdjust)
+{
+    float lum = dot(color, float3(0.299, 0.587, 0.114));
+    float3 grey = float3(lum, lum, lum);
+    color = lerp(grey, color, saturationAdjust);
 
     return color;
 }
@@ -109,10 +79,19 @@ float3 ACESFitted(float3 color)
 [shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
+    float exposure = -5.0;
+    float saturationAdjust = 0.85;
+
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[parameters.RenderTextureIndex];
-    float4 color = renderTexture.Load(int3(input.Position.xy, 0));
+    float4 sourceColor = renderTexture.Load(int3(input.Position.xy, 0));
 
-    return float4(color.rgb / parameters.SampleCount, color.a);
+    //return sourceColor;
 
-    //return float4(ACESFitted(color / parameters.SampleCount), color.a);
+    float3 color = sourceColor.rgb / parameters.SampleCount;
+
+    color = ApplyExposure(color, exposure);
+    color = ToneMapACESFitted(color);
+    color = AdjustSaturation(color, saturationAdjust);
+
+    return float4(color, sourceColor.a);
 }
