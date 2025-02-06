@@ -618,6 +618,11 @@ typedef struct
 typedef struct
 {
     float X, Y, Z;
+} ElemVector2;
+
+typedef struct
+{
+    float X, Y, Z;
 } ElemVector3;
 
 typedef union

@@ -11,6 +11,19 @@ typedef struct
 
 typedef struct
 {
+    uint32_t AccelerationStructureIndex;
+    uint32_t GlobalParametersBufferIndex;
+    uint32_t OutputTextureIndex;
+    uint32_t SampleCount;
+    uint32_t FrameIndex;
+    uint32_t PathTraceLength;
+    uint32_t Reserved1;
+    uint32_t Reserved2;
+    float2 OutputTextureSize;
+} RaytracingShaderParameters;
+
+typedef struct
+{
     float4x4 ViewProjMatrix;
     float4x4 InverseViewMatrix;
     float4x4 InverseProjectionMatrix;

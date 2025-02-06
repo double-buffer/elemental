@@ -27,14 +27,16 @@ typedef struct
     ElemSwapChain SwapChain;
 
     ElemGraphicsHeap RenderTargetHeap;
+    // TODO: Convert that to sample texture
     ElemGraphicsResource RenderTargetTexture;
     ElemGraphicsResourceDescriptor RenderTargetTextureReadDescriptor;
+    ElemGraphicsResourceDescriptor RenderTargetTextureWriteDescriptor;
 
     ElemGraphicsHeap DepthBufferHeap;
     ElemGraphicsResource DepthBuffer;
     
     ElemPipelineState GraphicsPipeline;
-    ElemPipelineState PathTracingGraphicsPipeline;
+    ElemPipelineState PathTracingGraphicsPipeline; // TODO: Rename
     ElemPipelineState ToneMapGraphicsPipeline;
 
     ShaderParameters ShaderParameters;
@@ -56,14 +58,6 @@ typedef struct
 
 typedef struct
 {
-    uint32_t AccelerationStructureIndex;
-    uint32_t ShaderGlobalParametersBufferIndex;
-    uint32_t FrameIndex;
-    uint32_t PathTraceLength;
-} RaytracingShaderParameters;
-
-typedef struct
-{
     uint32_t SourceTexture;
     uint32_t SampleCount;
 } ToneMapShaderParameters;
@@ -81,18 +75,20 @@ void CreateRenderTarget(ApplicationPayload* applicationPayload, uint32_t width, 
     if (applicationPayload->RenderTargetTexture != ELEM_HANDLE_NULL)
     {
         ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTargetTextureReadDescriptor, NULL);
+        ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTargetTextureWriteDescriptor, NULL);
         ElemFreeGraphicsResource(applicationPayload->RenderTargetTexture, NULL);
     }
 
     printf("Creating render texture...\n");
 
-    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget,
+    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget | ElemGraphicsResourceDescriptorUsage_Write,
                                                                             &(ElemGraphicsResourceInfoOptions) { 
                                                                                 .DebugName = "FloatRenderTarget" 
                                                                             });
 
     applicationPayload->RenderTargetTexture = ElemCreateGraphicsResource(applicationPayload->RenderTargetHeap, 0, &resourceInfo);
     applicationPayload->RenderTargetTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTargetTexture, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    applicationPayload->RenderTargetTextureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTargetTexture, ElemGraphicsResourceDescriptorUsage_Write, NULL);
 }
 
 void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
@@ -193,20 +189,10 @@ void InitSample(void* payload)
     shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "PathTracing.shader": "PathTracing_vulkan.shader", true);
     shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
 
-    applicationPayload->PathTracingGraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    applicationPayload->PathTracingGraphicsPipeline = ElemCompileComputePipelineState(applicationPayload->GraphicsDevice, &(ElemComputePipelineStateParameters) {
         .DebugName = "PathTracing PSO",
         .ShaderLibrary = shaderLibrary,
-        .MeshShaderFunction = "MeshMain",
-        .PixelShaderFunction = "PixelMain",
-        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
-        { 
-            .Format = ElemGraphicsFormat_R32G32B32A32_FLOAT,
-            .BlendOperation = ElemGraphicsBlendOperation_Add,
-            .SourceBlendFactor = ElemGraphicsBlendFactor_One,
-            .DestinationBlendFactor = ElemGraphicsBlendFactor_One,
-            .SourceBlendFactorAlpha = ElemGraphicsBlendFactor_One,
-            .DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One,
-        }}, .Length = 1 },
+        .ComputeShaderFunction = "PathTracing"
     });
 
     ElemFreeShaderLibrary(shaderLibrary);
@@ -262,11 +248,14 @@ void FreeSample(void* payload)
 
     SampleFreeGpuSceneData(&applicationPayload->GpuSceneData);
     SampleFreeRaytracingSceneData(&applicationPayload->RaytracingSceneData);
-
     SampleFreeScene(&applicationPayload->TestSceneData);
+
     SampleFreeGpuBuffer(&applicationPayload->ShaderGlobalParametersBuffer);
 
     ElemFreePipelineState(applicationPayload->GraphicsPipeline);
+    ElemFreePipelineState(applicationPayload->PathTracingGraphicsPipeline);
+    ElemFreePipelineState(applicationPayload->ToneMapGraphicsPipeline);
+
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
  
@@ -357,24 +346,25 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
-    ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
-        .RenderTargets = 
-        {
-            .Items = (ElemRenderPassRenderTarget[]) { 
-            {
-                .RenderTarget = applicationPayload->RenderTargetTexture,
-                .LoadAction = applicationPayload->RenderTargetSampleCount ? ElemRenderPassLoadAction_Load : ElemRenderPassLoadAction_Clear,
-            }},
-            .Length = 1
-        },
-        .DepthStencil =
-        {
-            .DepthStencil = !applicationPayload->UsePathTracing ? applicationPayload->DepthBuffer : ELEM_HANDLE_NULL
-        }
-    });
-
     if (!applicationPayload->UsePathTracing)
     {
+        ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
+            .RenderTargets = 
+            {
+                .Items = (ElemRenderPassRenderTarget[]) { 
+                {
+                    .RenderTarget = applicationPayload->RenderTargetTexture,
+                    .LoadAction = ElemRenderPassLoadAction_Clear,
+                }},
+                .Length = 1
+            },
+            .DepthStencil =
+            {
+                .DepthStencil = applicationPayload->DepthBuffer
+            }
+        });
+
+
         applicationPayload->RenderTargetSampleCount = 1;
         ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
 
@@ -391,27 +381,34 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
             ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
             ElemDispatchMesh(commandList, applicationPayload->GpuSceneData.MeshPrimitiveMeshletCountList[i], 1, 1);
         }
+    
+        ElemEndRenderPass(commandList);
     }
     else
     {
+        ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureWriteDescriptor, NULL);
+
         applicationPayload->RenderTargetSampleCount++;
         ElemBindPipelineState(commandList, applicationPayload->PathTracingGraphicsPipeline); 
     
         RaytracingShaderParameters parameters = 
         {
             .AccelerationStructureIndex = applicationPayload->RaytracingSceneData.TlasReadDescriptor,
-            .ShaderGlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor,
+            .GlobalParametersBufferIndex = applicationPayload->ShaderGlobalParametersBuffer.ReadDescriptor,
+            .OutputTextureIndex = applicationPayload->RenderTargetTextureWriteDescriptor,
+            .OutputTextureSize = { updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height },
             // TODO: To Replace
             //.FrameIndex = updateParameters->FrameIndex
             .FrameIndex = test,
+            .SampleCount = applicationPayload->RenderTargetSampleCount,
             .PathTraceLength = applicationPayload->PathTraceLength
         };
 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(RaytracingShaderParameters) });
-        ElemDispatchMesh(commandList, 1, 1, 1);
-    }
 
-    ElemEndRenderPass(commandList);
+        uint32_t threadSize = 8;
+        ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
+    }
 
     ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureReadDescriptor, NULL);
 
@@ -440,7 +437,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     ElemDispatchMesh(commandList, 1, 1, 1);
 
     ElemEndRenderPass(commandList);
-
 
     ElemCommitCommandList(commandList);
 

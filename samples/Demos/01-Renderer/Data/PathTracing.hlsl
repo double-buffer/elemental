@@ -1,15 +1,7 @@
 #include "ShaderData.h"
 
-struct RaytraceShaderParameters
-{
-    uint32_t AccelerationStructureIndex;
-    uint32_t GlobalParametersBufferIndex;
-    uint32_t FrameIndex;
-    uint32_t PathTraceLength;
-};
-
 [[vk::push_constant]]
-RaytraceShaderParameters parameters : register(b0);
+RaytracingShaderParameters parameters : register(b0);
 
 struct GpuMeshPrimitive
 {
@@ -131,55 +123,6 @@ GpuDrawParameters GetDrawParametersNonUniform(GlobalShaderData globalShaderData,
     result.Scale = meshInstance.Scale;
 
     return result;
-}
-
-
-struct Vertex
-{
-    float4 Position;
-    float2 TextureCoordinates;
-};
-
-struct VertexOutput
-{
-    float4 Position: SV_Position;
-    float2 TextureCoordinates: TEXCOORD0;
-};
-
-static Vertex quadVertices[] =
-{
-    { float4(-1.0, 1.0, 0.0, 1.0), float2(0.0, 1.0) },
-    { float4(1.0, 1.0, 0.0, 1.0), float2(1.0, 1.0) },
-    { float4(-1.0, -1.0, 0.0, 1.0), float2(0.0, 0.0) },
-    { float4(1.0, -1.0, 0.0, 1.0), float2(1.0, 0.0) }
-};
-
-static uint3 quadIndices[] =
-{
-    uint3(0, 1, 2),
-    uint3(2, 1, 3)
-};
-
-[shader("mesh")]
-[OutputTopology("triangle")]
-[NumThreads(4, 1, 1)]
-void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutput vertices[4], out indices uint3 indices[2])
-{
-    const uint meshVertexCount = 4;
-    const uint triangleCount = 2;
-
-    SetMeshOutputCounts(meshVertexCount, triangleCount);
-
-    if (groupThreadId < meshVertexCount)
-    {
-        vertices[groupThreadId].Position = quadVertices[groupThreadId].Position;
-        vertices[groupThreadId].TextureCoordinates = quadVertices[groupThreadId].TextureCoordinates;
-    }
-
-    if (groupThreadId < triangleCount)
-    {
-        indices[groupThreadId] = quadIndices[groupThreadId];
-    }
 }
 
 uint hash(uint a)
@@ -370,15 +313,60 @@ float3 EvaluateSimpleBrdf(GlobalShaderData globalShaderData, RayHitInfo hitInfo,
     return albedo.rgb / M_PI;
 }
 
-[shader("pixel")]
-float4 PixelMain(const VertexOutput input) : SV_Target0
+float3 HeatmapColor(float value)
 {
-    GlobalShaderData globalShaderData = InitGlobalShaderData();
-    uint32_t randomSeed = initRand((input.TextureCoordinates.x * 10000) * parameters.FrameIndex, (input.TextureCoordinates.y * 15000) * parameters.FrameIndex, 16);
+    // Ensure value is clamped between 0 and 1
+    value = saturate(value);
+    
+    // We break the [0..1] range into 4 segments:
+    //  0.0 - 0.25 : blue   -> cyan
+    //  0.25- 0.50 : cyan   -> green
+    //  0.50- 0.75 : green  -> yellow
+    //  0.75- 1.0  : yellow -> red
 
+    float   segment  = value * 4.0;
+    float   index    = floor(segment);
+    float   blend    = frac(segment);
+    float3  color;
+
+    if (index == 0.0)
+    {
+        // Blue -> Cyan
+        color = lerp(float3(0, 0, 1), float3(0, 1, 1), blend);
+    }
+    else if (index == 1.0)
+    {
+        // Cyan -> Green
+        color = lerp(float3(0, 1, 1), float3(0, 1, 0), blend);
+    }
+    else if (index == 2.0)
+    {
+        // Green -> Yellow
+        color = lerp(float3(0, 1, 0), float3(1, 1, 0), blend);
+    }
+    else
+    {
+        // Yellow -> Red
+        color = lerp(float3(1, 1, 0), float3(1, 0, 0), blend);
+    }
+
+    return color;
+}
+
+[shader("compute")]
+[numthreads(8, 8, 1)]
+void PathTracing(uint3 threadId: SV_DispatchThreadID)
+{
+    RWTexture2D<float4> outputTexture = ResourceDescriptorHeap[parameters.OutputTextureIndex];
+    float3 previousColor = parameters.SampleCount > 1 ? outputTexture[threadId.xy].rgb : float3(0.0, 0.0, 0.0);
+
+    GlobalShaderData globalShaderData = InitGlobalShaderData();
+    uint32_t randomSeed = initRand(threadId.x * parameters.FrameIndex, threadId.y * parameters.FrameIndex, 16);
+
+    float2 uv = (float2(threadId.xy) + 0.5) / parameters.OutputTextureSize;
     float2 textureCoordinatesJitter = float2(nextRand(randomSeed), nextRand(randomSeed)) * 0.0005;
 
-    float4 targetClipSpace = float4((input.TextureCoordinates.xy + textureCoordinatesJitter) * 2.0 - 1.0, 1.0, 1.0);
+    float4 targetClipSpace = float4(uv.x * 2.0 - 1.0, 1 - uv.y * 2.0, 1.0, 1.0);
     float4 targetViewSpace = mul(targetClipSpace, globalShaderData.InverseProjectionMatrix);
     targetViewSpace.xyz /= targetViewSpace.w;
 
@@ -444,8 +432,11 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
 
     if (hitCount > 0)
     {
-        return float4(radiance, 1.0);
+        //return float4(HeatmapColor(float(hitCount) / parameters.PathTraceLength), 1);
+        outputTexture[threadId.xy] = float4(radiance + previousColor, 1.0);
     }
-
-    return float4(0, 0, 0, 0);
+    else
+    {
+        outputTexture[threadId.xy] = float4(0, 0, 0, 0);
+    }
 }

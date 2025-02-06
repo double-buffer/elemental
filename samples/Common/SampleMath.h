@@ -584,6 +584,7 @@ ElemVector3 SampleTransformPointV3(ElemVector3 point, SampleMatrix4x4 m)
 
 
 #ifdef ElemAPI
+typedef ElemVector2 float2;
 typedef ElemVector3 float3;
 typedef ElemVector4 float4;
 typedef SampleMatrix4x4 float4x4;
