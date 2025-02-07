@@ -18,6 +18,7 @@ typedef ElemToolsDataSpan ElemDataSpan;
 #define min fmin
 #include <sys/time.h>
 #include <time.h>
+#include <stdarg.h>
 #else
 #include <windows.h>
 #endif
