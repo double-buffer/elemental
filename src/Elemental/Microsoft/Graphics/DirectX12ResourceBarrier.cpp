@@ -45,7 +45,7 @@ D3D12_BARRIER_ACCESS ConvertToDirectX12BarrierAccess(ElemGraphicsResourceBarrier
             return D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE;
 
         case ElemGraphicsResourceBarrierAccessType_Write:
-            return D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+            return isAccelerationStructure ? D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_WRITE : D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
 
         case ElemGraphicsResourceBarrierAccessType_Copy:
             return D3D12_BARRIER_ACCESS_COPY_DEST;
@@ -124,8 +124,8 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
             directX12BufferBarrier->Size = graphicsResourceData->Width;
             directX12BufferBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync, false);
             directX12BufferBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync, false);
-            directX12BufferBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess, graphicsResourceData->Type == ElemGraphicsResourceType_RaytracingAccelerationStructure);
-            directX12BufferBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess, graphicsResourceData->Type == ElemGraphicsResourceType_RaytracingAccelerationStructure);
+            directX12BufferBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess, graphicsResourceData->DirectX12Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
+            directX12BufferBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess, graphicsResourceData->DirectX12Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
         }
     }
 

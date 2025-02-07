@@ -1476,10 +1476,6 @@ ElemRaytracingAllocationInfo VulkanGetRaytracingBlasAllocationInfo(ElemGraphicsD
     VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 	vkGetAccelerationStructureBuildSizesKHR(graphicsDeviceData->Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_OR_DEVICE_KHR, &geometryInfo, triangleCountList.Pointer, &sizeInfo);
 
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "BLAS Size: %d", sizeInfo.accelerationStructureSize);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", sizeInfo.buildScratchSize);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", sizeInfo.updateScratchSize);
-
     return 
     {
         .Alignment = 256,
@@ -1501,10 +1497,6 @@ ElemRaytracingAllocationInfo VulkanGetRaytracingTlasAllocationInfo(ElemGraphicsD
 
     VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 	vkGetAccelerationStructureBuildSizesKHR(graphicsDeviceData->Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_OR_DEVICE_KHR, &geometryInfo, &parameters->InstanceCount, &sizeInfo);
-
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "TLAS Size: %d", sizeInfo.accelerationStructureSize);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Scratch Size: %d", sizeInfo.buildScratchSize);
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Update Size: %d", sizeInfo.updateScratchSize);
 
     return 
     {

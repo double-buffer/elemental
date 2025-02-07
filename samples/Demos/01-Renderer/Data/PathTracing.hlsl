@@ -355,15 +355,15 @@ float3 HeatmapColor(float value)
 
 [shader("compute")]
 [numthreads(8, 8, 1)]
-void PathTracing(uint3 threadId: SV_DispatchThreadID)
+void PathTracing(uint2 threadId: SV_DispatchThreadID)
 {
     RWTexture2D<float4> outputTexture = ResourceDescriptorHeap[parameters.OutputTextureIndex];
-    float3 previousColor = parameters.SampleCount > 1 ? outputTexture[threadId.xy].rgb : float3(0.0, 0.0, 0.0);
+    float3 previousColor = parameters.SampleCount > 1 ? outputTexture[threadId].rgb : float3(0.0, 0.0, 0.0);
 
     GlobalShaderData globalShaderData = InitGlobalShaderData();
     uint32_t randomSeed = initRand(threadId.x * parameters.FrameIndex, threadId.y * parameters.FrameIndex, 16);
 
-    float2 uv = (float2(threadId.xy) + 0.5) / parameters.OutputTextureSize;
+    float2 uv = (threadId + 0.5) / parameters.OutputTextureSize;
     float2 textureCoordinatesJitter = float2(nextRand(randomSeed), nextRand(randomSeed)) * 0.0005;
 
     float4 targetClipSpace = float4(uv.x * 2.0 - 1.0, 1 - uv.y * 2.0, 1.0, 1.0);
@@ -433,10 +433,10 @@ void PathTracing(uint3 threadId: SV_DispatchThreadID)
     if (hitCount > 0)
     {
         //return float4(HeatmapColor(float(hitCount) / parameters.PathTraceLength), 1);
-        outputTexture[threadId.xy] = float4(radiance + previousColor, 1.0);
+        outputTexture[threadId] = float4(radiance + previousColor, 1.0);
     }
     else
     {
-        outputTexture[threadId.xy] = float4(0, 0, 0, 0);
+        outputTexture[threadId] = float4(0, 0, 0, 0);
     }
 }

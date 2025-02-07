@@ -1,7 +1,7 @@
 struct ShaderParameters
 {
     uint32_t RenderTextureIndex;
-    uint32_t SampleCount;
+    uint32_t SamplerIndex;
 };
 
 [[vk::push_constant]]
@@ -55,43 +55,13 @@ void MeshMain(in uint groupThreadId : SV_GroupThreadID, out vertices VertexOutpu
     }
 }
 
-float3 ApplyExposure(float3 color, float exposure)
-{
-    color.rgb *= exp2(exposure);
-    return color;
-}
-
-float3 ToneMapACESFitted(float3 color)
-{
-    color = (color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14);
-    return saturate(color);
-}
-
-float3 AdjustSaturation(float3 color, float saturationAdjust)
-{
-    float lum = dot(color, float3(0.299, 0.587, 0.114));
-    float3 grey = float3(lum, lum, lum);
-    color = lerp(grey, color, saturationAdjust);
-
-    return color;
-}
-
 [shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
-    float exposure = -6.0;
-    float saturationAdjust = 0.85;
+    SamplerState textureSampler = SamplerDescriptorHeap[parameters.SamplerIndex];
 
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[parameters.RenderTextureIndex];
-    float4 sourceColor = renderTexture.Load(int3(input.Position.xy, 0));
+    float4 output = renderTexture.SampleLevel(textureSampler, input.TextureCoordinates, 0);
 
-    //return sourceColor;
-
-    float3 color = sourceColor.rgb / parameters.SampleCount;
-
-    color = ApplyExposure(color, exposure);
-    color = ToneMapACESFitted(color);
-    color = AdjustSaturation(color, saturationAdjust);
-
-    return float4(color, sourceColor.a);
+    return output;
 }

@@ -225,7 +225,7 @@ float TraceShadowRay(GlobalShaderData globalShaderData, float3 origin, float3 di
 
     RayDesc ray;
 	ray.Origin = origin;
-	ray.TMin = 0.01;
+	ray.TMin = 0.001;
 	ray.TMax = 10000.0;
 	ray.Direction = direction;
 
@@ -318,7 +318,7 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
 
         float nDotL = max(dot(worldNormal, lightDirection), 0.0) * float3(100, 90, 80) * 1.5;
         //float3 ambient = float3(0.25, 0.5, 1.0) * 10; //float3(0.5, 0.5, 0.5);
-        float3 ambient = float3(0.5, 0.5, 0.7) * 10;
+        float3 ambient = float3(0.5, 0.5, 0.7) * 20;
 
         //float3 outputColor = material.EmissiveFactor + albedo.rgb * (nDotL + ambient);
         float3 outputColor = albedo.rgb * (nDotL * shadowContribution + ambient);

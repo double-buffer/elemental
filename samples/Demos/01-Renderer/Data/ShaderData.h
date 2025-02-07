@@ -22,6 +22,28 @@ typedef struct
     float2 OutputTextureSize;
 } RaytracingShaderParameters;
 
+typedef struct 
+{
+    uint32_t TextBufferIndex;
+    uint32_t Draw2DCommandsBufferIndex;
+    uint32_t CommandCount;
+    uint32_t Reserved1;
+    float2 RenderTargetSize;
+} DrawTextShaderParameters;
+
+typedef enum
+{
+    Draw2DCommandType_Text
+} Draw2DCommandType;
+
+typedef struct
+{
+    uint32_t Type;
+    uint32_t CommandDataOffset;
+    float PositionX;
+    float PositionY;
+} Draw2DCommand;
+
 typedef struct
 {
     float4x4 ViewProjMatrix;

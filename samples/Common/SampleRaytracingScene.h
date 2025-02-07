@@ -108,6 +108,7 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
                                                                          });
     }
 
+    // TODO: Do we really need this?
     ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasStorage.WriteDescriptor, NULL);
     ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasScratchBuffer.WriteDescriptor, NULL);
 
