@@ -42,6 +42,10 @@ typedef struct
     uint32_t CommandDataOffset;
     float PositionX;
     float PositionY;
+    float ColorRed;
+    float ColorGreen;
+    float ColorBlue;
+    float ColorAlpha;
 } Draw2DCommand;
 
 typedef struct

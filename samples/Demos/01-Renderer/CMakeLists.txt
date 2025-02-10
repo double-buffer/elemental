@@ -2,9 +2,10 @@ set(SAMPLE_NAME Renderer)
 
 # TODO: Download assets etc.
 
-add_executable(${SAMPLE_NAME} main.c Data)
+add_executable(${SAMPLE_NAME} UnityBuild.c Data)
 target_link_libraries(${SAMPLE_NAME} PRIVATE SampleCommon)
 target_link_libraries(${SAMPLE_NAME} PRIVATE ElementalInterface)
+target_link_libraries(${SAMPLE_NAME} PRIVATE sample_external_dependencies)
 add_dependencies(${SAMPLE_NAME} SampleSharedData)
 
 # TODO: Allow passing parameters per data file

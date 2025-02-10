@@ -7,21 +7,11 @@
 #include "SampleGpuMemory.h"
 #include "SampleGpuScene.h"
 #include "SampleRaytracingScene.h"
+#include "SampleShader.h"
+
+#include "DebugUI.h"
 
 #include "Data/ShaderData.h"
-
-typedef struct
-{
-    ElemPipelineState DrawTextPipeline;
-    SampleGpuBuffer TextBuffer;
-    uint8_t* TextBufferData;
-    uint32_t MaxTextBufferCount;
-    uint32_t TextBufferCount;
-    SampleGpuBuffer Draw2DCommandsBuffer;
-    Draw2DCommand* Draw2DCommands;
-    uint32_t Draw2DCommandCount;
-    uint32_t MaxDraw2DCommandCount;
-} GpuDrawTextData;
 
 // TODO: Group common variables into separate structs
 typedef struct
@@ -45,17 +35,13 @@ typedef struct
     ElemGraphicsResourceDescriptor RenderTargetTextureReadDescriptor;
     ElemGraphicsResourceDescriptor RenderTargetTextureWriteDescriptor;
     
-    ElemGraphicsHeap UIRenderTargetHeap;
-    ElemGraphicsResource UIRenderTargetTexture;
-    ElemGraphicsResourceDescriptor UIRenderTargetTextureReadDescriptor;
-
     ElemGraphicsHeap DepthBufferHeap;
     ElemGraphicsResource DepthBuffer;
     
-    ElemPipelineState GraphicsPipeline;
-    ElemPipelineState PathTracingGraphicsPipeline; // TODO: Rename
-    ElemPipelineState ToneMapGraphicsPipeline;
-    ElemPipelineState DrawRenderTargetGraphicsPipeline;
+    SampleShader GraphicsPipeline;
+    SampleShader PathTracingGraphicsPipeline; // TODO: Rename
+    SampleShader ToneMapGraphicsPipeline;
+    SampleShader DrawRenderTargetGraphicsPipeline;
 
     ShaderParameters ShaderParameters;
     SampleInputsApplication InputsApplication;
@@ -73,7 +59,7 @@ typedef struct
     bool UsePathTracingAccumulation;
     uint32_t PathTraceLength;
 
-    GpuDrawTextData GpuDrawTextData;
+    DebugUIData DebugUIData;
 } ApplicationPayload;
 
 typedef struct
@@ -111,25 +97,6 @@ void CreateRenderTarget(ApplicationPayload* applicationPayload, uint32_t width, 
     applicationPayload->RenderTargetTextureWriteDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->RenderTargetTexture, ElemGraphicsResourceDescriptorUsage_Write, NULL);
 }
 
-void CreateUIRenderTarget(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
-{
-    if (applicationPayload->UIRenderTargetTexture != ELEM_HANDLE_NULL)
-    {
-        ElemFreeGraphicsResourceDescriptor(applicationPayload->UIRenderTargetTextureReadDescriptor, NULL);
-        ElemFreeGraphicsResource(applicationPayload->UIRenderTargetTexture, NULL);
-    }
-
-    printf("Creating UI render texture...\n");
-
-    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_R32G32B32A32_FLOAT, ElemGraphicsResourceUsage_RenderTarget,
-                                                                            &(ElemGraphicsResourceInfoOptions) { 
-                                                                                .DebugName = "UIRenderTarget" 
-                                                                            });
-
-    applicationPayload->UIRenderTargetTexture = ElemCreateGraphicsResource(applicationPayload->UIRenderTargetHeap, 0, &resourceInfo);
-    applicationPayload->UIRenderTargetTextureReadDescriptor = ElemCreateGraphicsResourceDescriptor(applicationPayload->UIRenderTargetTexture, ElemGraphicsResourceDescriptorUsage_Read, NULL);
-}
-
 void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
 {
     if (applicationPayload->DepthBuffer != ELEM_HANDLE_NULL)
@@ -164,85 +131,6 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
     ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderGlobalParameters) });
 }
 
-void InitDrawGpuText(ApplicationPayload* applicationPayload, const ElemSwapChainInfo* swapChainInfo, GpuDrawTextData* drawTextData)
-{
-    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "DrawText.shader": "DrawText_vulkan.shader", true);
-    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
-
-    drawTextData->DrawTextPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
-        .DebugName = "DrawText PSO",
-        .ShaderLibrary = shaderLibrary,
-        .MeshShaderFunction = "MeshMain",
-        .PixelShaderFunction = "PixelMain",
-        .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
-        { 
-            .Format = ElemGraphicsFormat_R32G32B32A32_FLOAT,
-        }}, .Length = 1 },
-    });
-
-    ElemFreeShaderLibrary(shaderLibrary);
-
-    drawTextData->MaxTextBufferCount = 1024;
-    drawTextData->TextBufferData = (uint8_t*)malloc(drawTextData->MaxTextBufferCount);
-    drawTextData->TextBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, drawTextData->MaxTextBufferCount, ElemGraphicsResourceUsage_Read, "DrawTextBuffer");
-    drawTextData->TextBufferCount = 0;
-
-    drawTextData->MaxDraw2DCommandCount = 1024;
-    drawTextData->Draw2DCommands = (Draw2DCommand*)malloc(drawTextData->MaxDraw2DCommandCount);
-    drawTextData->Draw2DCommandsBuffer = SampleCreateGpuBuffer(&applicationPayload->GpuMemoryUpload, drawTextData->MaxDraw2DCommandCount, ElemGraphicsResourceUsage_Read, "Draw2DCommandsBuffer");
-    drawTextData->Draw2DCommandCount = 0;
-}
-
-void PushGpuText(GpuDrawTextData* drawTextData, uint32_t x, uint32_t y, const char* format, ...)
-{
-    va_list arguments;
-    va_start(arguments, format); 
-
-    char tmp[255];
-    vsnprintf(tmp, 255, format, arguments);
-
-    va_end(arguments);
-
-    uint32_t length = strlen(tmp);
-    *((uint32_t*)&drawTextData->TextBufferData[drawTextData->TextBufferCount]) = length;
-    strncpy((char*)&drawTextData->TextBufferData[drawTextData->TextBufferCount + 4], tmp, length);
-
-    Draw2DCommand command = 
-    {
-        .Type = Draw2DCommandType_Text,
-        .CommandDataOffset = drawTextData->TextBufferCount,
-        .PositionX = x,
-        .PositionY = y
-    };
-
-    drawTextData->Draw2DCommands[drawTextData->Draw2DCommandCount++] = command;
-    drawTextData->TextBufferCount += SampleAlignValue(length + 4, sizeof(uint32_t));
-}
-
-void RenderGpuText(ElemCommandList commandList, ElemVector2 renderTargetSize, GpuDrawTextData* drawTextData)
-{
-    ElemUploadGraphicsBufferData(drawTextData->TextBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)drawTextData->TextBufferData, .Length = drawTextData->TextBufferCount });
-
-    ElemUploadGraphicsBufferData(drawTextData->Draw2DCommandsBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)drawTextData->Draw2DCommands, .Length = drawTextData->Draw2DCommandCount * sizeof(Draw2DCommand) });
-
-    // TODO: change that
-    ElemBindPipelineState(commandList, drawTextData->DrawTextPipeline); 
-
-    DrawTextShaderParameters parameters = 
-    {
-        .TextBufferIndex = drawTextData->TextBuffer.ReadDescriptor,
-        .Draw2DCommandsBufferIndex = drawTextData->Draw2DCommandsBuffer.ReadDescriptor,
-        .CommandCount = drawTextData->Draw2DCommandCount,
-        .RenderTargetSize = renderTargetSize,
-    };
-
-    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(RaytracingShaderParameters) });
-
-    ElemDispatchMesh(commandList, 1, 1, 1);
-    drawTextData->TextBufferCount = 0;
-    drawTextData->Draw2DCommandCount = 0;
-}
-
 void InitSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
@@ -258,7 +146,6 @@ void InitSample(void* payload)
 
     // TODO: For now we create a separate heap to avoid memory management
     applicationPayload->RenderTargetHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(128), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
-    applicationPayload->UIRenderTargetHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(128), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
     applicationPayload->DepthBufferHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
 
     // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
@@ -273,7 +160,6 @@ void InitSample(void* payload)
 
     // TODO: Do we need the scene data after that?
     CreateRenderTarget(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    CreateUIRenderTarget(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
     SampleLoadScene(applicationPayload->ScenePath, &applicationPayload->TestSceneData);
 
@@ -287,12 +173,8 @@ void InitSample(void* payload)
 
     applicationPayload->ShaderGlobalParameters.TextureSampler = ElemCreateGraphicsSampler(applicationPayload->GraphicsDevice, &samplerInfo);
 
-    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
-    ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
-
-    applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    applicationPayload->GraphicsPipeline = SampleCompileGraphicsShader(applicationPayload->GraphicsDevice, "RenderMesh.shader", &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "RenderMesh PSO",
-        .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         //.CullMode = ElemGraphicsCullMode_None, // TODO: We need to deactivate cull only for transparent objects!
@@ -304,25 +186,13 @@ void InitSample(void* payload)
         }
     });
 
-    ElemFreeShaderLibrary(shaderLibrary);
-
-    shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "PathTracing.shader": "PathTracing_vulkan.shader", true);
-    shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
-
-    applicationPayload->PathTracingGraphicsPipeline = ElemCompileComputePipelineState(applicationPayload->GraphicsDevice, &(ElemComputePipelineStateParameters) {
+    applicationPayload->PathTracingGraphicsPipeline = SampleCompileComputeShader(applicationPayload->GraphicsDevice, "PathTracing.shader", &(ElemComputePipelineStateParameters) {
         .DebugName = "PathTracing PSO",
-        .ShaderLibrary = shaderLibrary,
         .ComputeShaderFunction = "PathTracing"
     });
 
-    ElemFreeShaderLibrary(shaderLibrary);
-
-    shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "Tonemap.shader": "Tonemap_vulkan.shader", true);
-    shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
-
-    applicationPayload->ToneMapGraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    applicationPayload->ToneMapGraphicsPipeline = SampleCompileGraphicsShader(applicationPayload->GraphicsDevice, "Tonemap.shader", &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "Tonemap PSO",
-        .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
@@ -334,14 +204,8 @@ void InitSample(void* payload)
         }}, .Length = 1 },
     });
 
-    ElemFreeShaderLibrary(shaderLibrary);
-
-    shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "DrawRenderTarget.shader": "DrawRenderTarget_vulkan.shader", true);
-    shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
-
-    applicationPayload->DrawRenderTargetGraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
+    applicationPayload->DrawRenderTargetGraphicsPipeline = SampleCompileGraphicsShader(applicationPayload->GraphicsDevice, "DrawRenderTarget.shader", &(ElemGraphicsPipelineStateParameters) {
         .DebugName = "DrawRenderTarget PSO",
-        .ShaderLibrary = shaderLibrary,
         .MeshShaderFunction = "MeshMain",
         .PixelShaderFunction = "PixelMain",
         .RenderTargets = { .Items = (ElemGraphicsPipelineStateRenderTarget[]) {
@@ -353,9 +217,7 @@ void InitSample(void* payload)
         }}, .Length = 1 },
     });
 
-    ElemFreeShaderLibrary(shaderLibrary);
-
-    InitDrawGpuText(applicationPayload, &swapChainInfo, &applicationPayload->GpuDrawTextData);
+    InitDebugUI(applicationPayload->GraphicsDevice, swapChainInfo.Width, swapChainInfo.Height, swapChainInfo.UIScale, &applicationPayload->DebugUIData);
 
     SampleInputsApplicationInit(&applicationPayload->InputsApplication);
     SampleInputsCameraInit(&applicationPayload->InputsCamera);
@@ -393,9 +255,9 @@ void FreeSample(void* payload)
 
     SampleFreeGpuBuffer(&applicationPayload->ShaderGlobalParametersBuffer);
 
-    ElemFreePipelineState(applicationPayload->GraphicsPipeline);
-    ElemFreePipelineState(applicationPayload->PathTracingGraphicsPipeline);
-    ElemFreePipelineState(applicationPayload->ToneMapGraphicsPipeline);
+    SampleFreeShader(&applicationPayload->GraphicsPipeline);
+    SampleFreeShader(&applicationPayload->PathTracingGraphicsPipeline);
+    SampleFreeShader(&applicationPayload->ToneMapGraphicsPipeline);
 
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
@@ -421,6 +283,12 @@ void FreeSample(void* payload)
 uint32_t test = 0;
 SampleFrameMeasurement globalFrameMeasurement;
 
+void UpdateDebugUIStatistics(DebugUIData* debugUIData, const SampleFrameMeasurement* frameMeasurement)
+{
+    debugUIData->Statistics.Fps = frameMeasurement->Fps;
+    debugUIData->Statistics.CpuFrameTimeMS = frameMeasurement->FrameTimeInSeconds * 1000.0f;
+}
+
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     test++;
@@ -430,7 +298,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     {
         CreateDepthBuffer(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
         CreateRenderTarget(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
-        CreateUIRenderTarget(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
+
+        ResizeDebugUI(&applicationPayload->DebugUIData, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
     }
 
     if (updateParameters->SizeChanged || applicationPayload->InputsCamera.State.HasChanged || applicationPayload->InputsCamera.State.Action || !applicationPayload->UsePathTracingAccumulation)
@@ -438,10 +307,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         applicationPayload->RenderTargetSampleCount = 0;
     }
     
-    PushGpuText(&applicationPayload->GpuDrawTextData, 10, 10, "FPS: %u - Cpu: %.2fms - Gpu: %.2f ms", globalFrameMeasurement.Fps, globalFrameMeasurement.FrameTimeInSeconds * 1000.0);
-    PushGpuText(&applicationPayload->GpuDrawTextData, 10, 26, "This is a test");
-    PushGpuText(&applicationPayload->GpuDrawTextData, 10, 50, "This is a test 2 youhouuuu");
-
+    UpdateDebugUIStatistics(&applicationPayload->DebugUIData, &globalFrameMeasurement);
+    
     ElemInputStream inputStream = ElemGetInputStream();
 
     SampleInputsApplicationUpdate(inputStream, &applicationPayload->InputsApplication, updateParameters->DeltaTimeInSeconds);
@@ -517,11 +384,11 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
 
         applicationPayload->RenderTargetSampleCount = 1;
-        ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
+        ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline.PipelineState); 
 
         // TODO: Construct a list of tasks on the cpu for now and do only one dispatch mesh with the total of tasks
         // Be carreful with the limit per dimension of 65000
-        ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
+        ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline.PipelineState); 
         ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
 
         for (uint32_t i = 0; i < applicationPayload->GpuSceneData.MeshPrimitiveInstanceCount; i++)
@@ -540,7 +407,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureWriteDescriptor, NULL);
 
         applicationPayload->RenderTargetSampleCount++;
-        ElemBindPipelineState(commandList, applicationPayload->PathTracingGraphicsPipeline); 
+        ElemBindPipelineState(commandList, applicationPayload->PathTracingGraphicsPipeline.PipelineState); 
     
         RaytracingShaderParameters parameters = 
         {
@@ -561,23 +428,10 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
     }
 
-    ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
-        .RenderTargets = 
-        {
-            .Items = (ElemRenderPassRenderTarget[]) { 
-            {
-                .RenderTarget = applicationPayload->UIRenderTargetTexture,
-                .LoadAction = ElemRenderPassLoadAction_Clear
-            }},
-            .Length = 1
-        }
-    });
-        
-    RenderGpuText(commandList, (ElemVector2){ updateParameters->SwapChainInfo.Width / 2.0f, updateParameters->SwapChainInfo.Height / 2.0f }, &applicationPayload->GpuDrawTextData);
-    ElemEndRenderPass(commandList);
+    RenderDebugUI(commandList, &applicationPayload->DebugUIData); 
 
     ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureReadDescriptor, NULL);
-    ElemGraphicsResourceBarrier(commandList, applicationPayload->UIRenderTargetTextureReadDescriptor, NULL);
+    ElemGraphicsResourceBarrier(commandList, applicationPayload->DebugUIData.UIRenderTargetTextureReadDescriptor, NULL);
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
@@ -598,18 +452,18 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         .SampleCount = applicationPayload->RenderTargetSampleCount
     };
 
-    ElemBindPipelineState(commandList, applicationPayload->ToneMapGraphicsPipeline); 
+    ElemBindPipelineState(commandList, applicationPayload->ToneMapGraphicsPipeline.PipelineState); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(ToneMapShaderParameters) });
     ElemDispatchMesh(commandList, 1, 1, 1);
 
     // TODO: Change the parameter type
     parameters =  (ToneMapShaderParameters)
     {
-        .SourceTexture = applicationPayload->UIRenderTargetTextureReadDescriptor,
+        .SourceTexture = applicationPayload->DebugUIData.UIRenderTargetTextureReadDescriptor,
         .SampleCount = applicationPayload->ShaderGlobalParameters.TextureSampler
     };
 
-    ElemBindPipelineState(commandList, applicationPayload->DrawRenderTargetGraphicsPipeline); 
+    ElemBindPipelineState(commandList, applicationPayload->DrawRenderTargetGraphicsPipeline.PipelineState); 
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(ToneMapShaderParameters) });
     ElemDispatchMesh(commandList, 1, 1, 1);
 

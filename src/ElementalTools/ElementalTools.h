@@ -36,6 +36,8 @@
 #define UseToolsLoader
 #endif
 
+// TODO: IMPORTANT!!! Rename All Elem prefix to ElemTools
+
 //------------------------------------------------------------------------
 // Module: Elemental Tools
 //------------------------------------------------------------------------

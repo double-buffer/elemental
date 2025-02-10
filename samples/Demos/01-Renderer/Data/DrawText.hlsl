@@ -205,7 +205,7 @@ float4 PixelMain(const VertexOutput input) : SV_Target0
             finalPixel += DrawTextCharacter(textBuffer, command.CommandDataOffset, drawLocalPosition, float3(0.0, 0.0, 0.0));
 
             drawLocalPosition = uint2(pixelPosition.x - command.PositionX, pixelPosition.y - command.PositionY);
-            finalPixel += DrawTextCharacter(textBuffer, command.CommandDataOffset, drawLocalPosition, float3(1.0, 1.0, 1.0));
+            finalPixel += DrawTextCharacter(textBuffer, command.CommandDataOffset, drawLocalPosition, float3(command.ColorRed, command.ColorGreen, command.ColorBlue));
         }
     }
 
