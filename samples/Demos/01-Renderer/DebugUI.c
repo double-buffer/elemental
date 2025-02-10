@@ -98,7 +98,7 @@ void RenderDebugUI(ElemCommandList commandList, DebugUIData* debugUIData)
         CLAY_TEXT(CLAY_STRING("FPS: "), defaultTextStyle);
 
         char tmp[255];
-        itoa(debugUIData->Statistics.Fps, tmp, 10);
+        snprintf(tmp, 255, "%d", debugUIData->Statistics.Fps);
 
         Clay_String cs = { .length = strlen(tmp), .chars = tmp };
         CLAY_TEXT(cs, goodTextStyle);
