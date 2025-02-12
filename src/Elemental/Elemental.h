@@ -332,6 +332,8 @@ typedef int32_t ElemGraphicsResourceDescriptor;
  */
 typedef int32_t ElemGraphicsSampler;
 
+typedef ElemHandle ElemGraphicsTimestamp;
+
 /**
  * Handle that represents a shader library.
  */
@@ -1001,6 +1003,12 @@ typedef struct
 
 typedef struct
 {
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsTimestampOptions;
+
+typedef struct
+{
     ElemGraphicsFormat Format;
     ElemGraphicsBlendOperation BlendOperation;
     ElemGraphicsBlendFactor SourceBlendFactor;
@@ -1327,6 +1335,11 @@ ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(E
 // TODO: Compaction!
 ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
 ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);
+
+ElemAPI ElemGraphicsTimestamp ElemCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+ElemAPI void ElemFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemAPI uint64_t ElemGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+ElemAPI void ElemInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

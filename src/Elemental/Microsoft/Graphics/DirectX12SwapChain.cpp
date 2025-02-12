@@ -106,6 +106,7 @@ uint64_t lastVsyncCounter;
 
 void CheckDirectX12AvailableSwapChain(ElemHandle handle)
 {
+    // BUG: We sometimes have in dx12 random frame drop. Maybe it could happens when the refresh rate is not 120hz but 119.99hz????
     auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemAssert(handle != ELEM_HANDLE_NULL);
 
