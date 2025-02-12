@@ -22,6 +22,5 @@ typedef struct
 
 void ElemArtInit(ElemGraphicsDevice graphicsDevice, ElemArtData* elemArtData);
 void ElemArtPushText(ElemArtData* elemArtData, uint32_t x, uint32_t y, const char* text, uint32_t length, float red, float green, float blue, float alpha);
-void ElemArtPushTextOld(ElemArtData* elemArtData, uint32_t x, uint32_t y, const char* format, ...);
 void ElemArtRender(ElemCommandList commandList, ElemVector2 renderTargetSize, ElemArtData* elemArtData);
 

@@ -29,6 +29,12 @@ void SampleCreateGpuTextures(ElemCommandList commandList, const SampleSceneData*
         SampleTextureData* textureData = &sceneData->Textures[i];
         SampleGpuTexture* texture = &gpuSceneData->Textures[i];
 
+        if (textureData->TextureHeader.Width == 0 || textureData->TextureHeader.Height == 0)
+        {
+            printf("No texture data!\n");
+            continue;
+        }
+
         ElemGraphicsFormat format = !textureData->IsNormalTexture ? ElemGraphicsFormat_BC7_SRGB : ElemGraphicsFormat_BC7;
         *texture = SampleCreateGpuTexture(gpuMemory, textureData->TextureHeader.Width, textureData->TextureHeader.Height, textureData->TextureHeader.MipCount, format, textureData->Path);
 

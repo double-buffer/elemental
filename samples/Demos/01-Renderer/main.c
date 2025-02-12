@@ -285,12 +285,20 @@ SampleFrameMeasurement globalFrameMeasurement;
 
 void UpdateDebugUIStatistics(DebugUIData* debugUIData, const SampleFrameMeasurement* frameMeasurement)
 {
-    debugUIData->Statistics.Fps = frameMeasurement->Fps;
-    debugUIData->Statistics.CpuFrameTimeMS = frameMeasurement->FrameTimeInSeconds * 1000.0f;
+    // TODO: Fill correct monitor refresh rate
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Fps", .Value = frameMeasurement->Fps, .ExpectedValue = 120, .ExpectedDifferenceGoodRange = 0.99f, .Type = DebugUIStatisticType_Integer });
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Cpu", .Value = frameMeasurement->FrameTimeInSeconds * 1000.0f, .ExpectedValue = 1000.0f / 120.0f, .ExpectedDifferenceGoodRange = 1.01f, .Type = DebugUIStatisticType_Milliseconds });
+
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Gpu", .Value = 0.6f, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Rendering", .Value = 0.3f, .Level = 1, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Culling", .Value = 0.1f, .Level = 2, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "RenderMesh", .Value = 0.15f, .Level = 2, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Tonemap", .Value = 0.1f, .Level = 1, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
+    SampleStartFrameMeasurement();
     test++;
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     
@@ -483,14 +491,13 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemPresentSwapChain(applicationPayload->SwapChain);
     SampleFrameMeasurement frameMeasurement = SampleEndFrameMeasurement();
+    globalFrameMeasurement = frameMeasurement;
 
     if (frameMeasurement.HasNewData)
     {
-        globalFrameMeasurement = frameMeasurement;
         SampleSetWindowTitle(applicationPayload->Window, "Renderer", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
     }
     
-    SampleStartFrameMeasurement();
 }
 
 int main(int argc, const char* argv[]) 

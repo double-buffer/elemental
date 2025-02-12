@@ -54,6 +54,12 @@ void InitDebugUI(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t hei
     debugUIData->UIRenderTargetHeap = ElemCreateGraphicsHeap(graphicsDevice, SampleMegaBytesToBytes(128), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
     debugUIData->Scale = scale;
 
+    debugUIData->Statistics.Items = (DebugUIStatisticItem*)malloc(1000 * sizeof(DebugUIStatisticItem));
+    debugUIData->Statistics.Count = 0;
+
+    debugUIData->TextCache = (char*)malloc(SampleMegaBytesToBytes(16));
+    debugUIData->TextCacheIndex = 0;
+
     uint64_t totalMemorySize = Clay_MinMemorySize();
     debugUIData->ClayArena = Clay_CreateArenaWithCapacityAndMemory(totalMemorySize, malloc(totalMemorySize));
 
@@ -86,30 +92,136 @@ void ResizeDebugUI(DebugUIData* debugUIData, uint32_t width, uint32_t height)
     Clay_SetLayoutDimensions((Clay_Dimensions) { width, height });
 }
 
+Clay_Color COLOR_DEFAULT = { 255, 255, 255, 255};
+Clay_Color COLOR_GOOD = { 0, 255, 0, 255};
+Clay_Color COLOR_WARNING = { 255, 255, 0, 255};
+Clay_Color COLOR_BAD = { 255, 0, 0, 255};
+
+void RenderStatisticItem(DebugUIData* debugUIData, const DebugUIStatisticItem* item, float parentValue)
+{
+    Clay_String clayString = { .length = strlen(item->Label), .chars = item->Label };
+    CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = COLOR_DEFAULT }));
+
+    CLAY_TEXT(CLAY_STRING(": "), CLAY_TEXT_CONFIG({ .textColor = COLOR_DEFAULT }));
+ 
+    Clay_Color valueColor = COLOR_DEFAULT;
+
+    if (item->ExpectedValue > 0)
+    {
+        float valueDifferencePercent = item->Value / item->ExpectedValue;
+        valueColor = COLOR_GOOD;
+
+        float expectedDifferenceGoodRange = item->ExpectedDifferenceGoodRange;
+
+        if (expectedDifferenceGoodRange == 0.0f)
+        {
+            expectedDifferenceGoodRange = 0.8f;
+        }
+
+        if (expectedDifferenceGoodRange < 1.0f)
+        {
+            if (valueDifferencePercent < 0.5f)
+            {
+                valueColor = COLOR_BAD;
+            }
+            else if (valueDifferencePercent < expectedDifferenceGoodRange)
+            {
+                valueColor = COLOR_WARNING;
+            }
+        }
+        else
+        {
+            if (valueDifferencePercent > 1.5f)
+            {
+                valueColor = COLOR_BAD;
+            }
+            else if (valueDifferencePercent > expectedDifferenceGoodRange)
+            {
+                valueColor = COLOR_WARNING;
+            }
+        }
+    }
+
+    char* tmp = &debugUIData->TextCache[debugUIData->TextCacheIndex];
+
+    if (item->Type == DebugUIStatisticType_Integer)
+    {
+        snprintf(tmp, 255, "%d", (uint32_t)item->Value);
+    }
+    else if (item->Type == DebugUIStatisticType_Milliseconds)
+    {
+        snprintf(tmp, 255, "%.2f ms", item->Value);
+    }
+
+    clayString = (Clay_String){ .length = strlen(tmp), .chars = tmp };
+    CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = valueColor, .hashStringContents = true }));
+    debugUIData->TextCacheIndex += strlen(tmp);
+
+    if (parentValue > 0.0f && item->Level > 0)
+    {
+        float percentage = item->Value / parentValue * 100.0f;
+
+        char* tmp = &debugUIData->TextCache[debugUIData->TextCacheIndex];
+        snprintf(tmp, 255, " (%.2f %%)", percentage);
+
+        clayString = (Clay_String){ .length = strlen(tmp), .chars = tmp };
+        CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = valueColor, .hashStringContents = true }));
+        debugUIData->TextCacheIndex += strlen(tmp);
+    }
+}
+
 void RenderDebugUI(ElemCommandList commandList, DebugUIData* debugUIData)
 {
     Clay_BeginLayout();
 
-    Clay_TextElementConfig* defaultTextStyle = CLAY_TEXT_CONFIG({ .textColor = { 255, 255, 255, 255 } });
-    Clay_TextElementConfig* goodTextStyle = CLAY_TEXT_CONFIG({ .textColor = { 0, 255, 0, 255} });
-
-    CLAY({ .layout = { .padding = CLAY_PADDING_ALL(100) } }) 
+    CLAY({ .layout = { .padding = CLAY_PADDING_ALL(10), .layoutDirection = CLAY_TOP_TO_BOTTOM } }) 
     {
-        CLAY_TEXT(CLAY_STRING("FPS: "), defaultTextStyle);
+        CLAY() 
+        {
+            for (uint32_t i = 0; i < debugUIData->Statistics.Count; i++)
+            {
+                DebugUIStatisticItem* item = &debugUIData->Statistics.Items[i];
 
-        char tmp[255];
-        snprintf(tmp, 255, "%d", debugUIData->Statistics.Fps);
+                if (item->Group != DebugUIStatisticGroup_General)
+                {
+                    continue;
+                }
 
-        Clay_String cs = { .length = strlen(tmp), .chars = tmp };
-        CLAY_TEXT(cs, goodTextStyle);
+                if (i > 0)
+                {
+                    CLAY_TEXT(CLAY_STRING(" - "), CLAY_TEXT_CONFIG({ .textColor = COLOR_DEFAULT }));
+                }
+
+                RenderStatisticItem(debugUIData, item, 0.0f);
+            }
+        }
+
+        CLAY({ .layout = { .padding = { 0, 0, 16, 0 }, .layoutDirection = CLAY_TOP_TO_BOTTOM } }) 
+        {
+            float parentValues[16];
+
+            for (uint32_t i = 0; i < debugUIData->Statistics.Count; i++)
+            {
+                DebugUIStatisticItem* item = &debugUIData->Statistics.Items[i];
+
+                if (item->Group != DebugUIStatisticGroup_GpuPipeline)
+                {
+                    continue;
+                }
+
+                parentValues[item->Level] = item->Value;
+
+                CLAY({ .layout = { .padding = { item->Level * 16, 0, 0, 0 } } }) 
+                {
+                    RenderStatisticItem(debugUIData, item, item->Level > 0 ? parentValues[item->Level - 1] : 0.0f);
+                }
+            }
+        }
     }
 
-    // All clay layouts are declared between Clay_BeginLayout and Clay_EndLayout
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();
 
     ClayProcessRenderCommands(&renderCommands, &debugUIData->ElemArtData);
-
-    ElemArtPushTextOld(&debugUIData->ElemArtData, 10, 10, "FPS: %u - Cpu: %.2f ms - Gpu: %.2f ms", debugUIData->Statistics.Fps, debugUIData->Statistics.CpuFrameTimeMS);
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
@@ -125,4 +237,12 @@ void RenderDebugUI(ElemCommandList commandList, DebugUIData* debugUIData)
         
     ElemArtRender(commandList, (ElemVector2){ debugUIData->Width / debugUIData->Scale, debugUIData->Height / debugUIData->Scale }, &debugUIData->ElemArtData);
     ElemEndRenderPass(commandList);
+
+    debugUIData->TextCacheIndex = 0;
+    debugUIData->Statistics.Count = 0;
+}
+
+void PushDebugUIStatisticItem(DebugUIData* debugUIData, DebugUIStatisticItem item)
+{
+    debugUIData->Statistics.Items[debugUIData->Statistics.Count++] = item;
 }

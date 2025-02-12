@@ -265,7 +265,17 @@ ReadOnlySpan<ElemSceneMaterial> LoadGltfMaterials(MemoryArena memoryArena, const
 
             if (gltfMaterialData->base_color_texture.texture)
             {
-                material->AlbedoTexturePath = SystemDuplicateBuffer<char>(memoryArena, gltfMaterialData->base_color_texture.texture->image->uri).Pointer;
+                auto finalTexturePath = ReadOnlySpan<char>(gltfMaterialData->base_color_texture.texture->image->uri);
+                auto subStringResult = SystemFindSubString(finalTexturePath, "%20");
+
+                if (subStringResult != -1)
+                {
+                    auto temp = SystemConcatBuffers(stackMemoryArena, finalTexturePath.Slice(0, subStringResult), ReadOnlySpan<char>(" "));
+                    finalTexturePath = SystemConcatBuffers(stackMemoryArena, ReadOnlySpan<char>(temp), finalTexturePath.Slice(subStringResult + 3));
+                    printf("Found space: %s\n", finalTexturePath.Pointer);
+                }
+  
+                material->AlbedoTexturePath = SystemDuplicateBuffer<char>(memoryArena, finalTexturePath).Pointer;
             }
 
             material->AlbedoFactor = 

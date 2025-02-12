@@ -49,36 +49,6 @@ void ElemArtPushText(ElemArtData* elemArtData, uint32_t x, uint32_t y, const cha
     elemArtData->TextBufferCount += SampleAlignValue(length + 4, sizeof(uint32_t));
 }
 
-void ElemArtPushTextOld(ElemArtData* elemArtData, uint32_t x, uint32_t y, const char* format, ...)
-{
-    va_list arguments;
-    va_start(arguments, format); 
-
-    char tmp[255];
-    vsnprintf(tmp, 255, format, arguments);
-
-    va_end(arguments);
-
-    uint32_t length = strlen(tmp);
-    *((uint32_t*)&elemArtData->TextBufferData[elemArtData->TextBufferCount]) = length;
-    strncpy((char*)&elemArtData->TextBufferData[elemArtData->TextBufferCount + 4], tmp, length);
-
-    Draw2DCommand command = 
-    {
-        .Type = Draw2DCommandType_Text,
-        .CommandDataOffset = elemArtData->TextBufferCount,
-        .PositionX = x,
-        .PositionY = y,
-        .ColorRed = 1,
-        .ColorGreen = 1,
-        .ColorBlue = 1,
-        .ColorAlpha = 1,
-    };
-
-    elemArtData->Draw2DCommands[elemArtData->Draw2DCommandCount++] = command;
-    elemArtData->TextBufferCount += SampleAlignValue(length + 4, sizeof(uint32_t));
-}
-
 void ElemArtRender(ElemCommandList commandList, ElemVector2 renderTargetSize, ElemArtData* elemArtData)
 {
     ElemUploadGraphicsBufferData(elemArtData->TextBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)elemArtData->TextBufferData, .Length = elemArtData->TextBufferCount });

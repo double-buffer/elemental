@@ -8,7 +8,7 @@
 #define SystemLogErrorMessage(category, format, ...) printf(format __VA_OPT__(,) __VA_ARGS__)
 #endif
 
-#define MEMORYARENA_DEFAULT_SIZE 64 * 1024 * 1024
+#define MEMORYARENA_DEFAULT_SIZE 128 * 1024 * 1024
 #define MEMORYARENA_DEFAULT_ALIGNMENT 8
 
 struct MemoryArenaPageInfo
