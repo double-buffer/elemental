@@ -41,7 +41,9 @@ void RefreshWin32MonitorInfos(ElemWindow window)
 
                 if (SUCCEEDED(output->FindClosestMatchingMode(&currentMode, &currentMode, nullptr))) 
                 {
+                    // BUG: Investigate this: We are running at 119.99hz
                     uint32_t refreshRate = SystemRoundUp((float)currentMode.RefreshRate.Numerator / currentMode.RefreshRate.Denominator);
+                    //uint32_t refreshRate = (uint32_t)((float)currentMode.RefreshRate.Numerator / currentMode.RefreshRate.Denominator);
                     windowData->Output = output;
                     windowData->MonitorRefreshRate = refreshRate;
                 }

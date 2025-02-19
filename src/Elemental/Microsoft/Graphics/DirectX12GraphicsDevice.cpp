@@ -1,23 +1,10 @@
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12Config.h"
+#include "DirectX12Resource.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
-
-struct DirectX12DescriptorHeapFreeListItem
-{
-    uint32_t Next;
-};
-
-struct DirectX12DescriptorHeapStorage
-{
-    ComPtr<ID3D12DescriptorHeap> DescriptorHeap;
-    Span<DirectX12DescriptorHeapFreeListItem> Items;
-    uint32_t DescriptorHandleSize;
-    uint32_t CurrentIndex;
-    uint32_t FreeListIndex;
-};
 
 MemoryArena DirectX12MemoryArena;
 bool DirectX12DebugLayerEnabled = false;
@@ -229,7 +216,7 @@ DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> gra
 
     auto descriptorStorage = SystemPushStruct<DirectX12DescriptorHeapStorage>(memoryArena);
     descriptorStorage->DescriptorHeap = descriptorHeap;
-    descriptorStorage->Items = SystemPushArray<DirectX12DescriptorHeapFreeListItem>(memoryArena, length);
+    descriptorStorage->Items = SystemPushArray<DirectX12FreeListItem>(memoryArena, length);
     descriptorStorage->DescriptorHandleSize = graphicsDevice->GetDescriptorHandleIncrementSize(type);
     descriptorStorage->CurrentIndex = 0;
     descriptorStorage->FreeListIndex = UINT32_MAX;
@@ -301,6 +288,82 @@ D3D12_CPU_DESCRIPTOR_HANDLE ConvertDirectX12DescriptorIndexToHandle(DirectX12Des
     handle.ptr += index * descriptorHeap.Storage->DescriptorHandleSize;
 
     return handle;
+}
+
+DirectX12QueryHeap CreateDirectX12QueryHeap(ComPtr<ID3D12Device10> graphicsDevice, MemoryArena memoryArena, D3D12_QUERY_HEAP_TYPE type, uint32_t length)
+{
+    D3D12_QUERY_HEAP_DESC heapDesc = {};
+	heapDesc.Count = length;
+	heapDesc.NodeMask = 0;
+	heapDesc.Type = type;
+
+	ComPtr<ID3D12QueryHeap> queryHeap;
+	AssertIfFailed(graphicsDevice->CreateQueryHeap(&heapDesc, IID_PPV_ARGS(queryHeap.ReleaseAndGetAddressOf())));
+
+    auto queryHeapReadbackBuffer = CreateDirectX12Buffer(graphicsDevice, D3D12_HEAP_TYPE_READBACK, sizeof(uint64_t) * DIRECTX12_MAX_QUERYHEAP_ITEMS, L"QueryHeapReadbackBuffer");
+
+    void* cpuPointer = nullptr;
+    D3D12_RANGE readRange = { 0, 0 };
+    queryHeapReadbackBuffer->Map(0, &readRange, &cpuPointer);
+
+    auto descriptorStorage = SystemPushStruct<DirectX12QueryHeapStorage>(memoryArena);
+    descriptorStorage->QueryHeap = queryHeap;
+    descriptorStorage->QueryHeapReadbackBuffer = queryHeapReadbackBuffer;
+    descriptorStorage->ReadbackCpuPointer = cpuPointer;
+    descriptorStorage->Type = type;
+    descriptorStorage->Items = SystemPushArray<DirectX12FreeListItem>(memoryArena, length);
+    descriptorStorage->CurrentIndex = 0;
+    descriptorStorage->InitializationIndex = 0;
+    descriptorStorage->FreeListIndex = UINT32_MAX;
+
+    return
+    {
+        .Storage = descriptorStorage
+    };
+}
+
+void FreeDirectX12QueryHeap(DirectX12QueryHeap queryHeap)
+{
+    SystemAssert(queryHeap.Storage);
+    queryHeap.Storage->QueryHeap.Reset();
+
+    queryHeap.Storage->QueryHeapReadbackBuffer.Reset();
+}
+
+uint32_t CreateDirectX12QueryHeapIndex(DirectX12QueryHeap queryHeap)
+{            
+    SystemAssert(queryHeap.Storage);
+
+    auto storage = queryHeap.Storage;
+    auto index = UINT32_MAX;
+
+    do
+    {
+        if (storage->FreeListIndex == UINT32_MAX)
+        {
+            index = UINT32_MAX;
+            break;
+        }
+        
+        index = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, index, storage->Items[storage->FreeListIndex].Next));
+
+    if (index == UINT32_MAX)
+    {
+        index = SystemAtomicAdd(storage->CurrentIndex, 1);
+    }
+
+    return index;
+}
+
+void FreeDirectX12QueryHeapIndex(DirectX12QueryHeap queryHeap, uint32_t index)
+{
+    auto storage = queryHeap.Storage;
+    
+    do
+    {
+        storage->Items[index].Next = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, storage->FreeListIndex, index));
 }
 
 ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> graphicsDevice)
@@ -440,6 +503,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto dsvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
+    auto queryHeap = CreateDirectX12QueryHeap(device, memoryArena, D3D12_QUERY_HEAP_TYPE_TIMESTAMP, DIRECTX12_MAX_QUERYHEAP_ITEMS);
 
     // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<ComPtr<ID3D12Resource>>*>(DirectX12MemoryArena, MAX_UPLOAD_BUFFERS);
@@ -452,7 +516,8 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
         .RTVDescriptorHeap = rtvDescriptorHeap,
         .DSVDescriptorHeap = dsvDescriptorHeap,
         .MemoryArena = memoryArena,
-        .UploadBufferPools = uploadBuffers
+        .UploadBufferPools = uploadBuffers,
+        .QueryHeap = queryHeap
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
@@ -499,6 +564,8 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     FreeDirectX12DescriptorHeap(graphicsDeviceData->SamplerDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->RTVDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->DSVDescriptorHeap);
+
+    FreeDirectX12QueryHeap(graphicsDeviceData->QueryHeap);
 
     graphicsDeviceData->Device.Reset();
     graphicsDeviceData->RootSignature.Reset();

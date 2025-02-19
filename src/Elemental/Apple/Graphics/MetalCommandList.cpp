@@ -333,3 +333,19 @@ bool MetalIsFenceCompleted(ElemFence fence)
 
     return fence.FenceValue <= commandQueueToWaitDataFull->LastCompletedFenceValue;
 }
+
+ElemGraphicsTimestamp MetalCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice)
+{
+}
+
+void MetalFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options)
+{
+}
+
+ElemGraphicsTimestampValue MetalGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp)
+{
+}
+
+void MetalInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp)
+{
+}

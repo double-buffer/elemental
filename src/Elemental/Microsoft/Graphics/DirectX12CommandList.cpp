@@ -7,6 +7,7 @@
 
 SystemDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull> directX12CommandQueuePool;
 SystemDataPool<DirectX12CommandListData, DirectX12CommandListDataFull> directX12CommandListPool;
+SystemDataPool<DirectX12GraphicsTimestampData, SystemDataPoolDefaultFull> directX12TimestampPool;
 
 thread_local CommandAllocatorDevicePool<ID3D12CommandAllocator*, ID3D12GraphicsCommandList10*> threadDirectX12DeviceCommandPools[DIRECTX12_MAX_DEVICES];
 thread_local bool threadDirectX12CommandBufferCommitted = true;
@@ -21,6 +22,8 @@ void InitDirectX12CommandListMemory()
     {
         directX12CommandQueuePool = SystemCreateDataPool<DirectX12CommandQueueData, DirectX12CommandQueueDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDQUEUES);
         directX12CommandListPool = SystemCreateDataPool<DirectX12CommandListData, DirectX12CommandListDataFull>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
+
+        directX12TimestampPool = SystemCreateDataPool<DirectX12GraphicsTimestampData, SystemDataPoolDefaultFull>(DirectX12MemoryArena, DIRECTX12_MAX_QUERYHEAP_ITEMS);
         
         directX12GlobalFenceEvent = CreateEvent(nullptr, false, false, nullptr);
     }
@@ -44,6 +47,11 @@ DirectX12CommandListData* GetDirectX12CommandListData(ElemCommandList commandLis
 DirectX12CommandListDataFull* GetDirectX12CommandListDataFull(ElemCommandList commandList)
 {
     return SystemGetDataPoolItemFull(directX12CommandListPool, commandList);
+}
+
+DirectX12GraphicsTimestampData* GetDirectX12GraphicsTimestampData(ElemGraphicsTimestamp timestamp)
+{
+    return SystemGetDataPoolItem(directX12TimestampPool, timestamp);
 }
 
 ElemFence CreateDirectX12CommandQueueFence(ElemCommandQueue commandQueue)
@@ -96,6 +104,9 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
         commandQueue->SetName(SystemConvertUtf8ToWideChar(stackMemoryArena, options->DebugName).Pointer);
     }
 
+    uint64_t timestampFrequency;
+	AssertIfFailed(commandQueue->GetTimestampFrequency(&timestampFrequency));
+
     // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     auto commandAllocators = SystemPushArray<ComPtr<ID3D12CommandAllocator>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS);
     auto commandLists = SystemPushArray<ComPtr<ID3D12GraphicsCommandList10>>(DirectX12MemoryArena, DIRECTX12_MAX_COMMANDLISTS * DIRECTX12_MAX_COMMANDLISTS);
@@ -105,6 +116,7 @@ ElemCommandQueue DirectX12CreateCommandQueue(ElemGraphicsDevice graphicsDevice, 
         .Type = commandQueueDesc.Type,
         .CommandAllocatorQueueType = commandAllocatorQueueType,
         .GraphicsDevice = graphicsDevice,
+        .CommandQueueFrequency = timestampFrequency
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandQueuePool, handle, {
@@ -245,8 +257,10 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
         .CommandListPoolItem = commandListPoolItem,
         .GraphicsDevice = commandQueueData->GraphicsDevice,
+        .CommandQueue = commandQueue,
         .ResourceBarrierPool = resourceBarrierPool,
-        .UploadBufferCount = 0
+        .UploadBufferCount = 0,
+        .MinResolveQueryIndex = UINT32_MAX
     }); 
 
     SystemAddDataPoolItemFull(directX12CommandListPool, handle, {
@@ -260,6 +274,23 @@ ElemCommandList DirectX12GetCommandList(ElemCommandQueue commandQueue, const Ele
 void DirectX12CommitCommandList(ElemCommandList commandList)
 {    
     auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+    
+    // TODO: Insert resolve query data if needed
+
+    if (commandListData->NeedResolveQueryData)
+    {
+        auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        commandListData->DeviceObject->ResolveQueryData(graphicsDeviceData->QueryHeap.Storage->QueryHeap.Get(), 
+                                                        D3D12_QUERY_TYPE_TIMESTAMP, 
+                                                        commandListData->MinResolveQueryIndex, 
+                                                        commandListData->MaxResolveQueryIndex + 1 - commandListData->MinResolveQueryIndex, 
+                                                        graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Get(), 
+                                                        0);
+    }
+
     AssertIfFailed(commandListData->DeviceObject->Close());
     
     FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
@@ -387,4 +418,89 @@ bool DirectX12IsFenceCompleted(ElemFence fence)
     }
 
     return fence.FenceValue <= commandQueueToWaitDataFull->LastCompletedFenceValue;
+}
+
+ElemGraphicsTimestamp DirectX12CreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice)
+{
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto index = CreateDirectX12QueryHeapIndex(graphicsDeviceData->QueryHeap);
+
+    return SystemAddDataPoolItem(directX12TimestampPool, {
+        .GraphicsDevice = graphicsDevice,
+        .QueryHeapIndex = index,
+        .Value = 0,
+        .QueueFrequency = 0
+    });
+}
+
+void DirectX12FreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options)
+{
+    auto timestampData = GetDirectX12GraphicsTimestampData(timestamp);
+    SystemAssert(timestampData);
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(timestampData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    FreeDirectX12QueryHeapIndex(graphicsDeviceData->QueryHeap, timestampData->QueryHeapIndex);
+}
+
+ElemGraphicsTimestampValue DirectX12GetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp)
+{
+    auto timestampData = GetDirectX12GraphicsTimestampData(timestamp);
+    SystemAssert(timestampData);
+
+    // TODO: For the copy, use a range instead of each copy?
+
+    if (timestampData->NeedUpdate)
+    {
+        auto stackMemoryArena = SystemGetStackMemoryArena();
+        auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(timestampData->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        auto downloadedData = SystemPushArray<uint64_t>(stackMemoryArena, 1);
+        memcpy(downloadedData.Pointer, (uint64_t*)graphicsDeviceData->QueryHeap.Storage->ReadbackCpuPointer + timestampData->QueryHeapIndex, sizeof(uint64_t));
+
+        timestampData->Value = downloadedData[0];
+        timestampData->NeedUpdate = false;
+    }
+
+    return { .Value = timestampData->Value, .FrequencyInSeconds = timestampData->QueueFrequency };
+}
+
+void DirectX12InsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp)
+{
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto commandQueueData = GetDirectX12CommandQueueData(commandListData->CommandQueue);
+    SystemAssert(commandQueueData);
+
+    auto timestampData = GetDirectX12GraphicsTimestampData(timestamp);
+    SystemAssert(timestampData);
+
+    auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(timestampData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    timestampData->QueueFrequency = commandQueueData->CommandQueueFrequency;
+    timestampData->NeedUpdate = true;
+    commandListData->NeedResolveQueryData = true;
+    
+    auto queryType = D3D12_QUERY_TYPE_TIMESTAMP;
+
+    if (graphicsDeviceData->QueryHeap.Storage->InitializationIndex < graphicsDeviceData->QueryHeap.Storage->CurrentIndex)
+    {
+        for (uint32_t i = graphicsDeviceData->QueryHeap.Storage->InitializationIndex; i < graphicsDeviceData->QueryHeap.Storage->CurrentIndex; i++)
+        {
+	        commandListData->DeviceObject->EndQuery(graphicsDeviceData->QueryHeap.Storage->QueryHeap.Get(), queryType, i);
+        }
+
+        graphicsDeviceData->QueryHeap.Storage->InitializationIndex = graphicsDeviceData->QueryHeap.Storage->CurrentIndex;
+    }
+
+    commandListData->MinResolveQueryIndex = SystemMin(timestampData->QueryHeapIndex, commandListData->MinResolveQueryIndex);
+    commandListData->MaxResolveQueryIndex = SystemMax(timestampData->QueryHeapIndex, commandListData->MaxResolveQueryIndex);
+
+	commandListData->DeviceObject->EndQuery(graphicsDeviceData->QueryHeap.Storage->QueryHeap.Get(), queryType, timestampData->QueryHeapIndex);
 }

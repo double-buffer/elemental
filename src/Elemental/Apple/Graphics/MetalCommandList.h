@@ -73,3 +73,8 @@ void MetalCommitCommandList(ElemCommandList commandList);
 ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void MetalWaitForFenceOnCpu(ElemFence fence);
 bool MetalIsFenceCompleted(ElemFence fence);
+
+ElemGraphicsTimestamp MetalCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+void MetalFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemGraphicsTimestampValue MetalGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+void MetalInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);

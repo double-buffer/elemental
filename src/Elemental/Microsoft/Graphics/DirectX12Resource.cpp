@@ -876,7 +876,7 @@ ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource buffer, co
 	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
 }
 
-ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphicsDevice, uint64_t sizeInBytes)
+ComPtr<ID3D12Resource> CreateDirectX12Buffer(ComPtr<ID3D12Device10> graphicsDevice, D3D12_HEAP_TYPE heapType, uint64_t sizeInBytes, const wchar_t* debugName)
 {
     D3D12_RESOURCE_DESC bufferDescription =
     {
@@ -896,7 +896,7 @@ ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphi
         .Flags = D3D12_RESOURCE_FLAG_NONE
     };
     
-    D3D12_HEAP_PROPERTIES heapProperties = { .Type = D3D12_HEAP_TYPE_UPLOAD };
+    D3D12_HEAP_PROPERTIES heapProperties = { .Type = heapType };
     
     ComPtr<ID3D12Resource> resource;
     AssertIfFailed(graphicsDevice->CreateCommittedResource1(&heapProperties, 
@@ -907,7 +907,7 @@ ComPtr<ID3D12Resource> CreateDirectX12UploadBuffer(ComPtr<ID3D12Device10> graphi
                                                             nullptr, 
                                                             IID_PPV_ARGS(resource.GetAddressOf())));
 
-    resource->SetName(L"ElementalUploadBuffer");
+    resource->SetName(debugName);
 
     return resource;
 }
@@ -947,7 +947,7 @@ UploadBufferMemory<ComPtr<ID3D12Resource>> GetDirectX12UploadBuffer(ElemGraphics
             uploadBuffer.PoolItem->Buffer.Reset();
         }
 
-        uploadBuffer.PoolItem->Buffer = CreateDirectX12UploadBuffer(graphicsDeviceData->Device, uploadBuffer.PoolItem->SizeInBytes);
+        uploadBuffer.PoolItem->Buffer = CreateDirectX12Buffer(graphicsDeviceData->Device, D3D12_HEAP_TYPE_UPLOAD, uploadBuffer.PoolItem->SizeInBytes, L"ElementalUploadBuffer");
 
 	    D3D12_RANGE readRange = { 0, 0 };
 	    uploadBuffer.PoolItem->Buffer->Map(0, &readRange, (void**)&uploadBuffer.PoolItem->CpuPointer);

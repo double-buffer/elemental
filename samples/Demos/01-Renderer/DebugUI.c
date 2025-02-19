@@ -113,13 +113,13 @@ void RenderStatisticItem(DebugUIData* debugUIData, const DebugUIStatisticItem* i
 
         float expectedDifferenceGoodRange = item->ExpectedDifferenceGoodRange;
 
-        if (expectedDifferenceGoodRange == 0.0f)
+        if (item->Type == DebugUIStatisticType_Integer)
         {
-            expectedDifferenceGoodRange = 0.8f;
-        }
+            if (expectedDifferenceGoodRange == 0.0f)
+            {
+                expectedDifferenceGoodRange = 0.8f;
+            }
 
-        if (expectedDifferenceGoodRange < 1.0f)
-        {
             if (valueDifferencePercent < 0.5f)
             {
                 valueColor = COLOR_BAD;
@@ -131,13 +131,18 @@ void RenderStatisticItem(DebugUIData* debugUIData, const DebugUIStatisticItem* i
         }
         else
         {
-            if (valueDifferencePercent > 1.5f)
+            if (expectedDifferenceGoodRange == 0.0f)
             {
-                valueColor = COLOR_BAD;
+                expectedDifferenceGoodRange = 0.6f;
             }
-            else if (valueDifferencePercent > expectedDifferenceGoodRange)
+
+            if (valueDifferencePercent > expectedDifferenceGoodRange)
             {
                 valueColor = COLOR_WARNING;
+            }
+            else if (valueDifferencePercent > 0.8f)
+            {
+                valueColor = COLOR_BAD;
             }
         }
     }
@@ -165,7 +170,7 @@ void RenderStatisticItem(DebugUIData* debugUIData, const DebugUIStatisticItem* i
         snprintf(tmp, 255, " (%.2f %%)", percentage);
 
         clayString = (Clay_String){ .length = strlen(tmp), .chars = tmp };
-        CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = valueColor, .hashStringContents = true }));
+        CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = COLOR_DEFAULT, .hashStringContents = true }));
         debugUIData->TextCacheIndex += strlen(tmp);
     }
 }

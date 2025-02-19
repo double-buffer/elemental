@@ -489,3 +489,19 @@ bool VulkanIsFenceCompleted(ElemFence fence)
 
     return fence.FenceValue <= commandQueueToWaitData->LastCompletedFenceValue;
 }
+
+ElemGraphicsTimestamp VulkanCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice)
+{
+}
+
+void VulkanFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options)
+{
+}
+
+ElemGraphicsTimestampValue VulkanGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp)
+{
+}
+
+void VulkanInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp)
+{
+}

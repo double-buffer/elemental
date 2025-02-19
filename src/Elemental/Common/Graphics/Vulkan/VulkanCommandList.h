@@ -71,3 +71,8 @@ void VulkanCommitCommandList(ElemCommandList commandList);
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void VulkanWaitForFenceOnCpu(ElemFence fence);
 bool VulkanIsFenceCompleted(ElemFence fence);
+
+ElemGraphicsTimestamp VulkanCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+void VulkanFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemGraphicsTimestampValue VulkanGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+void VulkanInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);

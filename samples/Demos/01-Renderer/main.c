@@ -14,6 +14,35 @@
 #include "Data/ShaderData.h"
 
 // TODO: Group common variables into separate structs
+
+typedef struct
+{
+    const char* Label;
+    uint32_t Level;
+    ElemGraphicsTimestamp StartGpuTimestamp;
+    ElemGraphicsTimestamp EndGpuTimestamp;
+    float Value;
+    bool IsActive;
+} GpuTimestamp;
+
+typedef struct
+{
+    union
+    {
+        GpuTimestamp RawData[32];
+        
+        struct
+        {
+            GpuTimestamp GpuTimestamp;
+            GpuTimestamp RenderingTimestamp;
+            GpuTimestamp PathtracingTimestamp;
+            GpuTimestamp UITimestamp;
+            GpuTimestamp TonemapTimestamp;
+        };
+    };
+    uint32_t Count;
+} GpuTimestampData;
+
 typedef struct
 {
     SampleAppSettings AppSettings;
@@ -60,6 +89,7 @@ typedef struct
     uint32_t PathTraceLength;
 
     DebugUIData DebugUIData;
+    GpuTimestampData GpuTimestampData;
 } ApplicationPayload;
 
 typedef struct
@@ -230,7 +260,7 @@ void InitSample(void* payload)
 
     applicationPayload->RenderTargetSampleCount = 1;
     applicationPayload->UsePathTracingAccumulation = true;
-    applicationPayload->PathTraceLength = 4;
+    applicationPayload->PathTraceLength = 3;
 
     SampleStartFrameMeasurement();
 
@@ -241,6 +271,48 @@ void InitSample(void* payload)
         applicationPayload->InputsCamera.State = ((SavedState*)savedStateData.Items)->CameraState;
         applicationPayload->InputsCamera.State.ProjectionMatrix = (SampleMatrix4x4){};
     }
+
+    applicationPayload->GpuTimestampData.Count = (uint32_t)(&applicationPayload->GpuTimestampData.TonemapTimestamp - &applicationPayload->GpuTimestampData.RawData[0]) + 1;
+
+    // TODO: Refactor that
+    applicationPayload->GpuTimestampData.GpuTimestamp = (GpuTimestamp)
+    {
+        .Label = "Gpu",
+        .StartGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice),
+        .EndGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice) 
+    };
+
+    applicationPayload->GpuTimestampData.RenderingTimestamp = (GpuTimestamp)
+    {
+        .Label = "Rendering",
+        .Level = 1,
+        .StartGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice),
+        .EndGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice) 
+    };
+
+    applicationPayload->GpuTimestampData.PathtracingTimestamp = (GpuTimestamp)
+    {
+        .Label = "Pathtracing",
+        .Level = 1,
+        .StartGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice),
+        .EndGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice) 
+    };
+
+    applicationPayload->GpuTimestampData.UITimestamp = (GpuTimestamp)
+    {
+        .Label = "UI Rendering",
+        .Level = 1,
+        .StartGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice),
+        .EndGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice) 
+    };
+
+    applicationPayload->GpuTimestampData.TonemapTimestamp = (GpuTimestamp)
+    {
+        .Label = "Tonemap",
+        .Level = 1,
+        .StartGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice),
+        .EndGpuTimestamp = ElemCreateGraphicsTimestamp(applicationPayload->GraphicsDevice) 
+    };
 }
 
 void FreeSample(void* payload)
@@ -265,6 +337,7 @@ void FreeSample(void* payload)
     ElemFreeGraphicsSampler(applicationPayload->ShaderGlobalParameters.TextureSampler, NULL);
     ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
     ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
+
     ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTargetTextureReadDescriptor, NULL);
     ElemFreeGraphicsResourceDescriptor(applicationPayload->RenderTargetTextureWriteDescriptor, NULL);
     ElemFreeGraphicsResource(applicationPayload->RenderTargetTexture, NULL);
@@ -283,17 +356,40 @@ void FreeSample(void* payload)
 uint32_t test = 0;
 SampleFrameMeasurement globalFrameMeasurement;
 
-void UpdateDebugUIStatistics(DebugUIData* debugUIData, const SampleFrameMeasurement* frameMeasurement)
+void UpdateGpuTimestampValue(GpuTimestamp* gpuTimestamp)
+{ 
+    ElemGraphicsTimestampValue startGpuTimestampValue = ElemGetGraphicsTimestampValue(gpuTimestamp->StartGpuTimestamp);
+
+    if (startGpuTimestampValue.FrequencyInSeconds > 0)
+    {
+        ElemGraphicsTimestampValue endGpuTimestampValue = ElemGetGraphicsTimestampValue(gpuTimestamp->EndGpuTimestamp);
+        float rawValue = ((float)(endGpuTimestampValue.Value - startGpuTimestampValue.Value) / startGpuTimestampValue.FrequencyInSeconds) * 1000.0f;
+
+        gpuTimestamp->Value = gpuTimestamp->Value * 0.95f + rawValue * 0.05f;
+    }
+}
+
+void UpdateDebugUIStatistics(DebugUIData* debugUIData, const SampleFrameMeasurement* frameMeasurement, GpuTimestampData* gpuTimestampData)
 {
     // TODO: Fill correct monitor refresh rate
     PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Fps", .Value = frameMeasurement->Fps, .ExpectedValue = 120, .ExpectedDifferenceGoodRange = 0.99f, .Type = DebugUIStatisticType_Integer });
-    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Cpu", .Value = frameMeasurement->FrameTimeInSeconds * 1000.0f, .ExpectedValue = 1000.0f / 120.0f, .ExpectedDifferenceGoodRange = 1.01f, .Type = DebugUIStatisticType_Milliseconds });
+    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Cpu", .Value = frameMeasurement->FrameTimeInSeconds * 1000.0f, .ExpectedValue = 1000.0f / 120.0f, .Type = DebugUIStatisticType_Milliseconds });
 
-    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Gpu", .Value = 0.6f, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
-    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Rendering", .Value = 0.3f, .Level = 1, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
-    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Culling", .Value = 0.1f, .Level = 2, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
-    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "RenderMesh", .Value = 0.15f, .Level = 2, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
-    PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = "Tonemap", .Value = 0.1f, .Level = 1, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
+    for (uint32_t i = 0; i < gpuTimestampData->Count; i++)
+    {
+        GpuTimestamp* timestamp = &gpuTimestampData->RawData[i];
+
+        if (!timestamp->IsActive)
+        {
+            continue;
+        }
+
+        // TODO: For the colors, we need to see if the parents is bad and then if the percentage is high higlight in child
+        UpdateGpuTimestampValue(timestamp);
+        PushDebugUIStatisticItem(debugUIData, (DebugUIStatisticItem) { .Label = timestamp->Label, .Value = timestamp->Value, .Level = timestamp->Level, .ExpectedValue = 1000.0f / 120.0f, .Type = DebugUIStatisticType_Milliseconds, .Group = DebugUIStatisticGroup_GpuPipeline });
+
+        timestamp->IsActive = false;
+    }
 }
 
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
@@ -315,7 +411,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         applicationPayload->RenderTargetSampleCount = 0;
     }
     
-    UpdateDebugUIStatistics(&applicationPayload->DebugUIData, &globalFrameMeasurement);
+    UpdateDebugUIStatistics(&applicationPayload->DebugUIData, &globalFrameMeasurement, &applicationPayload->GpuTimestampData);
     
     ElemInputStream inputStream = ElemGetInputStream();
 
@@ -372,8 +468,16 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 
+    // TODO: Refactor that
+    ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.GpuTimestamp.StartGpuTimestamp);
+    applicationPayload->GpuTimestampData.GpuTimestamp.IsActive = true;
+
     if (!applicationPayload->UsePathTracing)
     {
+        // TODO: Refactor that
+        ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.RenderingTimestamp.StartGpuTimestamp);
+        applicationPayload->GpuTimestampData.RenderingTimestamp.IsActive = true;
+
         ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
             .RenderTargets = 
             {
@@ -409,9 +513,14 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     
         ElemEndRenderPass(commandList);
+        ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.RenderingTimestamp.EndGpuTimestamp);
     }
     else
     {
+        // TODO: Refactor that
+        ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.PathtracingTimestamp.StartGpuTimestamp);
+        applicationPayload->GpuTimestampData.PathtracingTimestamp.IsActive = true;
+
         ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureWriteDescriptor, NULL);
 
         applicationPayload->RenderTargetSampleCount++;
@@ -434,12 +543,23 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
         uint32_t threadSize = 8;
         ElemDispatchCompute(commandList, (updateParameters->SwapChainInfo.Width + (threadSize - 1)) / threadSize, (updateParameters->SwapChainInfo.Height + (threadSize - 1)) / threadSize, 1);
+        ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.PathtracingTimestamp.EndGpuTimestamp);
     }
 
+    // TODO: Refactor that
+    ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.UITimestamp.StartGpuTimestamp);
+    applicationPayload->GpuTimestampData.UITimestamp.IsActive = true;
+
     RenderDebugUI(commandList, &applicationPayload->DebugUIData); 
+    
+    ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.UITimestamp.EndGpuTimestamp);
 
     ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureReadDescriptor, NULL);
     ElemGraphicsResourceBarrier(commandList, applicationPayload->DebugUIData.UIRenderTargetTextureReadDescriptor, NULL);
+
+    // TODO: Refactor that
+    ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.TonemapTimestamp.StartGpuTimestamp);
+    applicationPayload->GpuTimestampData.TonemapTimestamp.IsActive = true;
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
         .RenderTargets = 
@@ -477,6 +597,8 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemEndRenderPass(commandList);
     
+    ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.TonemapTimestamp.EndGpuTimestamp);
+    ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.GpuTimestamp.EndGpuTimestamp);
     ElemCommitCommandList(commandList);
 
     ElemExecuteCommandListOptions executeOptions = {};
@@ -497,7 +619,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     {
         SampleSetWindowTitle(applicationPayload->Window, "Renderer", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
     }
-    
 }
 
 int main(int argc, const char* argv[]) 

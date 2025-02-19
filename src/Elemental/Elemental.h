@@ -307,6 +307,8 @@ typedef ElemHandle ElemCommandQueue;
  */
 typedef ElemHandle ElemCommandList;
 
+typedef ElemHandle ElemGraphicsTimestamp;
+
 /**
  * Handle that represents a swap chain.
  */
@@ -331,8 +333,6 @@ typedef int32_t ElemGraphicsResourceDescriptor;
  * Handle that represents a graphics resource descriptor.
  */
 typedef int32_t ElemGraphicsSampler;
-
-typedef ElemHandle ElemGraphicsTimestamp;
 
 /**
  * Handle that represents a shader library.
@@ -771,6 +771,18 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
 
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsTimestampOptions;
+
+typedef struct
+{
+    uint64_t Value;
+    uint64_t FrequencyInSeconds;
+} ElemGraphicsTimestampValue;
+
 /**
  * Options for configuring a swap chain.
  */
@@ -1000,12 +1012,6 @@ typedef struct
     ElemDataSpan SourceMemoryData;
     // TODO: Allow specifying texture rowSizeInBytes?
 } ElemCopyDataToGraphicsResourceParameters;
-
-typedef struct
-{
-    // Fences that the execution should wait on before starting.
-    ElemFenceSpan FencesToWait;
-} ElemFreeGraphicsTimestampOptions;
 
 typedef struct
 {
@@ -1256,6 +1262,11 @@ ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCom
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 ElemAPI bool ElemIsFenceCompleted(ElemFence fence);
 
+ElemAPI ElemGraphicsTimestamp ElemCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+ElemAPI void ElemFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemAPI ElemGraphicsTimestampValue ElemGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+ElemAPI void ElemInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);
+
 /**
  * Creates a swap chain for a window, allowing rendered frames to be presented to the screen.
  * @param commandQueue The command queue associated with rendering commands for the swap chain.
@@ -1335,11 +1346,6 @@ ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(E
 // TODO: Compaction!
 ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
 ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);
-
-ElemAPI ElemGraphicsTimestamp ElemCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
-ElemAPI void ElemFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
-ElemAPI uint64_t ElemGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
-ElemAPI void ElemInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

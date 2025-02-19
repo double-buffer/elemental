@@ -49,6 +49,10 @@ typedef struct ElementalFunctions
     ElemFence (*ElemExecuteCommandLists)(ElemCommandQueue, ElemCommandListSpan, ElemExecuteCommandListOptions const *);
     void (*ElemWaitForFenceOnCpu)(ElemFence);
     bool (*ElemIsFenceCompleted)(ElemFence);
+    ElemGraphicsTimestamp (*ElemCreateGraphicsTimestamp)(ElemGraphicsDevice);
+    void (*ElemFreeGraphicsTimestamp)(ElemGraphicsTimestamp, ElemFreeGraphicsTimestampOptions const *);
+    ElemGraphicsTimestampValue (*ElemGetGraphicsTimestampValue)(ElemGraphicsTimestamp);
+    void (*ElemInsertGraphicsTimestamp)(ElemCommandList, ElemGraphicsTimestamp);
     ElemSwapChain (*ElemCreateSwapChain)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, ElemSwapChainOptions const *);
     void (*ElemFreeSwapChain)(ElemSwapChain);
     ElemSwapChainInfo (*ElemGetSwapChainInfo)(ElemSwapChain);
@@ -174,6 +178,10 @@ static bool LoadElementalFunctionPointers(void)
     listElementalFunctions.ElemExecuteCommandLists = (ElemFence (*)(ElemCommandQueue, ElemCommandListSpan, ElemExecuteCommandListOptions const *))GetElementalFunctionPointer("ElemExecuteCommandLists");
     listElementalFunctions.ElemWaitForFenceOnCpu = (void (*)(ElemFence))GetElementalFunctionPointer("ElemWaitForFenceOnCpu");
     listElementalFunctions.ElemIsFenceCompleted = (bool (*)(ElemFence))GetElementalFunctionPointer("ElemIsFenceCompleted");
+    listElementalFunctions.ElemCreateGraphicsTimestamp = (ElemGraphicsTimestamp (*)(ElemGraphicsDevice))GetElementalFunctionPointer("ElemCreateGraphicsTimestamp");
+    listElementalFunctions.ElemFreeGraphicsTimestamp = (void (*)(ElemGraphicsTimestamp, ElemFreeGraphicsTimestampOptions const *))GetElementalFunctionPointer("ElemFreeGraphicsTimestamp");
+    listElementalFunctions.ElemGetGraphicsTimestampValue = (ElemGraphicsTimestampValue (*)(ElemGraphicsTimestamp))GetElementalFunctionPointer("ElemGetGraphicsTimestampValue");
+    listElementalFunctions.ElemInsertGraphicsTimestamp = (void (*)(ElemCommandList, ElemGraphicsTimestamp))GetElementalFunctionPointer("ElemInsertGraphicsTimestamp");
     listElementalFunctions.ElemCreateSwapChain = (ElemSwapChain (*)(ElemCommandQueue, ElemWindow, ElemSwapChainUpdateHandlerPtr, ElemSwapChainOptions const *))GetElementalFunctionPointer("ElemCreateSwapChain");
     listElementalFunctions.ElemFreeSwapChain = (void (*)(ElemSwapChain))GetElementalFunctionPointer("ElemFreeSwapChain");
     listElementalFunctions.ElemGetSwapChainInfo = (ElemSwapChainInfo (*)(ElemSwapChain))GetElementalFunctionPointer("ElemGetSwapChainInfo");
@@ -936,6 +944,102 @@ static inline bool ElemIsFenceCompleted(ElemFence fence)
     }
 
     return listElementalFunctions.ElemIsFenceCompleted(fence);
+}
+
+static inline ElemGraphicsTimestamp ElemCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsTimestamp result = {};
+        #else
+        ElemGraphicsTimestamp result = (ElemGraphicsTimestamp){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemCreateGraphicsTimestamp) 
+    {
+        assert(listElementalFunctions.ElemCreateGraphicsTimestamp);
+
+        #ifdef __cplusplus
+        ElemGraphicsTimestamp result = {};
+        #else
+        ElemGraphicsTimestamp result = (ElemGraphicsTimestamp){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemCreateGraphicsTimestamp(graphicsDevice);
+}
+
+static inline void ElemFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, ElemFreeGraphicsTimestampOptions const * options)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemFreeGraphicsTimestamp) 
+    {
+        assert(listElementalFunctions.ElemFreeGraphicsTimestamp);
+        return;
+    }
+
+    listElementalFunctions.ElemFreeGraphicsTimestamp(timestamp, options);
+}
+
+static inline ElemGraphicsTimestampValue ElemGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+
+        #ifdef __cplusplus
+        ElemGraphicsTimestampValue result = {};
+        #else
+        ElemGraphicsTimestampValue result = (ElemGraphicsTimestampValue){0};
+        #endif
+
+        return result;
+    }
+
+    if (!listElementalFunctions.ElemGetGraphicsTimestampValue) 
+    {
+        assert(listElementalFunctions.ElemGetGraphicsTimestampValue);
+
+        #ifdef __cplusplus
+        ElemGraphicsTimestampValue result = {};
+        #else
+        ElemGraphicsTimestampValue result = (ElemGraphicsTimestampValue){0};
+        #endif
+
+        return result;
+    }
+
+    return listElementalFunctions.ElemGetGraphicsTimestampValue(timestamp);
+}
+
+static inline void ElemInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp)
+{
+    if (!LoadElementalFunctionPointers()) 
+    {
+        assert(libraryElemental);
+        return;
+    }
+
+    if (!listElementalFunctions.ElemInsertGraphicsTimestamp) 
+    {
+        assert(listElementalFunctions.ElemInsertGraphicsTimestamp);
+        return;
+    }
+
+    listElementalFunctions.ElemInsertGraphicsTimestamp(commandList, timestamp);
 }
 
 static inline ElemSwapChain ElemCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow window, ElemSwapChainUpdateHandlerPtr updateHandler, ElemSwapChainOptions const * options)

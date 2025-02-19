@@ -51,3 +51,23 @@ ElemAPI bool ElemIsFenceCompleted(ElemFence fence)
 {
     DispatchReturnGraphicsFunction(IsFenceCompleted, fence);
 }
+
+ElemAPI ElemGraphicsTimestamp ElemCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice)
+{
+    DispatchReturnGraphicsFunction(CreateGraphicsTimestamp, graphicsDevice);
+}
+
+ElemAPI void ElemFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options)
+{
+    DispatchGraphicsFunction(FreeGraphicsTimestamp, timestamp, options);
+}
+
+ElemAPI ElemGraphicsTimestampValue ElemGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp)
+{
+    DispatchReturnGraphicsFunction(GetGraphicsTimestampValue, timestamp);
+}
+
+ElemAPI void ElemInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp)
+{
+    DispatchGraphicsFunction(InsertGraphicsTimestamp, commandList, timestamp);
+}
