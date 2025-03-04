@@ -13,7 +13,7 @@
 SystemDataPool<VulkanGraphicsHeapData, SystemDataPoolDefaultFull> vulkanGraphicsHeapPool;
 SystemDataPool<VulkanGraphicsResourceData, VulkanGraphicsResourceDataFull> vulkanGraphicsResourcePool;
 
-thread_local UploadBufferDevicePool<VulkanUploadBuffer> threadVulkanUploadBufferPools[VULKAN_MAX_DEVICES];
+thread_local UploadBufferDevicePool<VulkanGraphicsBufferCpu> threadVulkanUploadBufferPools[VULKAN_MAX_DEVICES];
 
 // TODO: IMPORTANT: This descriptor infos should be linked to the graphics device like the resource desc heaps
 Span<ElemGraphicsResourceDescriptorInfo> vulkanResourceDescriptorInfos;
@@ -849,6 +849,13 @@ void VulkanUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset
 
     memcpy(cpuPointer, data.Items, data.Length);
 
+    VkMappedMemoryRange range = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE };
+    range.memory = graphicsHeapData->DeviceObject;
+    range.offset = resourceDataFull->GraphicsHeapOffset + offset;
+    range.size = VK_WHOLE_SIZE;
+
+//    AssertIfFailed(vkFlushMappedMemoryRanges(graphicsDeviceData->Device, 1, &range));
+
     vkUnmapMemory(graphicsDeviceData->Device, graphicsHeapData->DeviceObject);
 }
 
@@ -911,11 +918,8 @@ ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource buffer, const
 	return { .Items = downloadedData.Pointer, .Length = (uint32_t)downloadedData.Length };
 }
 
-VulkanUploadBuffer CreateVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes)
+VulkanGraphicsBufferCpu CreateVulkanGraphicsBufferCpu(ElemGraphicsDevice graphicsDevice, ElemGraphicsHeapType heapType, uint64_t sizeInBytes, const char* debugName)
 {
-    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create Vulkan UploadBuffer with : %d", sizeInBytes);
-    SystemAssert(graphicsDevice);
-
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
 
@@ -926,6 +930,11 @@ VulkanUploadBuffer CreateVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, u
     createInfo.size = sizeInBytes;
     createInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
+    if (heapType == ElemGraphicsHeapType_Readback)
+    {
+        createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+
     VkBuffer buffer;
     AssertIfFailed(vkCreateBuffer(graphicsDeviceData->Device, &createInfo, nullptr, &buffer));
 
@@ -934,7 +943,7 @@ VulkanUploadBuffer CreateVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, u
         VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
         nameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
         nameInfo.objectHandle = (uint64_t)buffer;
-        nameInfo.pObjectName = "ElementalUploadBuffer";
+        nameInfo.pObjectName = debugName;
 
         AssertIfFailed(vkSetDebugUtilsObjectNameEXT(graphicsDeviceData->Device, &nameInfo)); 
     }
@@ -942,6 +951,15 @@ VulkanUploadBuffer CreateVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, u
     VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     allocateInfo.allocationSize = sizeInBytes;
     allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->UploadMemoryTypeIndex;
+
+    if (heapType == ElemGraphicsHeapType_GpuUpload)
+    {
+        allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->GpuUploadMemoryTypeIndex;
+    }
+    else if (heapType == ElemGraphicsHeapType_Readback)
+    {
+        allocateInfo.memoryTypeIndex = graphicsDeviceDataFull->ReadBackMemoryTypeIndex;
+    }
 
     VkDeviceMemory deviceMemory;
     AssertIfFailed(vkAllocateMemory(graphicsDeviceData->Device, &allocateInfo, nullptr, &deviceMemory));
@@ -954,7 +972,7 @@ VulkanUploadBuffer CreateVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, u
     };
 }
 
-UploadBufferMemory<VulkanUploadBuffer> GetVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
+UploadBufferMemory<VulkanGraphicsBufferCpu> GetVulkanUploadBuffer(ElemGraphicsDevice graphicsDevice, uint64_t alignment, uint64_t sizeInBytes)
 {
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
     SystemAssert(graphicsDeviceData);
@@ -993,7 +1011,7 @@ UploadBufferMemory<VulkanUploadBuffer> GetVulkanUploadBuffer(ElemGraphicsDevice 
             uploadBuffer.PoolItem->Buffer = {};
         }
 
-        uploadBuffer.PoolItem->Buffer = CreateVulkanUploadBuffer(graphicsDevice, uploadBuffer.PoolItem->SizeInBytes);
+        uploadBuffer.PoolItem->Buffer = CreateVulkanGraphicsBufferCpu(graphicsDevice, (ElemGraphicsHeapType)0, uploadBuffer.PoolItem->SizeInBytes, "ElementalUploadBuffer");
         uploadBuffer.PoolItem->IsResetNeeded = false;
     }
 
@@ -1310,6 +1328,7 @@ void VulkanFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descrip
     vulkanResourceDescriptorInfos[descriptor].Resource = ELEM_HANDLE_NULL;
 }
 
+// TODO: We should rename this function and put it in GraphicsDevice because it is becoming a general function
 void VulkanProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -1322,6 +1341,9 @@ void VulkanProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice)
 
     graphicsDeviceData->UploadBufferGeneration++;
     
+    // TODO: This is a test
+    //vkResetQueryPool(graphicsDeviceData->Device, graphicsDeviceData->QueryHeap.Storage->QueryHeap, 0, graphicsDeviceData->QueryHeap.Storage->CurrentIndex); 
+
     for (uint32_t i = 0; i < graphicsDeviceData->UploadBufferPools.Length; i++)
     {
         auto bufferPool = graphicsDeviceData->UploadBufferPools[i];

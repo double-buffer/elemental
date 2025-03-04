@@ -121,7 +121,7 @@ void InitSample(void* payload)
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .WindowState = applicationPayload->AppSettings.PreferFullScreen ? ElemWindowState_FullScreen : ElemWindowState_Normal });
 
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = !applicationPayload->AppSettings.DisableDiagnostics, .EnableGpuValidation = false, .EnableDebugBarrierInfo = false, .PreferVulkan = applicationPayload->AppSettings.PreferVulkan });
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = applicationPayload->AppSettings.GpuDebug, .EnableGpuValidation = false, .EnableDebugBarrierInfo = false, .PreferVulkan = applicationPayload->AppSettings.PreferVulkan });
     
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 

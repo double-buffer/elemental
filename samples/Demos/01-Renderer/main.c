@@ -158,7 +158,35 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
         //applicationPayload->ShaderGlobalParameters.Action = !applicationPayload->ShaderGlobalParameters.Action;
     }
 
+    // BUG: We have a sync issue on vulkan when the validation layer is active but not when it is disabled
+    // This also happens in metal IOS
     ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderGlobalParameters) });
+}
+
+void UpdateShaderGlobalParameters2(ElemCommandList commandList, ApplicationPayload* applicationPayload, const SampleInputsCameraState* cameraState)
+{
+    applicationPayload->ShaderGlobalParameters.ViewProjMatrix = cameraState->ViewProjMatrix;
+    applicationPayload->ShaderGlobalParameters.InverseViewMatrix = cameraState->InverseViewMatrix;
+    applicationPayload->ShaderGlobalParameters.InverseProjectionMatrix = cameraState->InverseProjectionMatrix;
+    applicationPayload->ShaderGlobalParameters.MaterialBufferIndex = applicationPayload->GpuSceneData.MaterialBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.MeshInstanceBufferIndex = applicationPayload->GpuSceneData.MeshInstanceBuffer.ReadDescriptor;
+    applicationPayload->ShaderGlobalParameters.MeshPrimitiveInstanceBufferIndex = applicationPayload->GpuSceneData.MeshPrimitiveInstanceBuffer.ReadDescriptor;
+
+    if (cameraState->Action)
+    {
+        //applicationPayload->ShaderGlobalParameters.Action = !applicationPayload->ShaderGlobalParameters.Action;
+    }
+
+    ElemCopyDataToGraphicsResourceParameters copyParameters =
+    {
+        .Resource = applicationPayload->ShaderGlobalParametersBuffer.Buffer,
+        .SourceType = ElemCopyDataSourceType_Memory,
+        .SourceMemoryData = { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderGlobalParameters) } 
+    };
+
+    ElemCopyDataToGraphicsResource(commandList, &copyParameters);
+
+    //ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderGlobalParameters) });
 }
 
 void InitSample(void* payload)
@@ -166,7 +194,13 @@ void InitSample(void* payload)
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
     applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .WindowState = applicationPayload->AppSettings.PreferFullScreen ? ElemWindowState_FullScreen : ElemWindowState_Normal });
 
-    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = !applicationPayload->AppSettings.DisableDiagnostics, .EnableGpuValidation = false, .EnableDebugBarrierInfo = false, .PreferVulkan = applicationPayload->AppSettings.PreferVulkan });
+    ElemSetGraphicsOptions(&(ElemGraphicsOptions) { 
+        .EnableDebugLayer = applicationPayload->AppSettings.GpuDebug, 
+        .EnableGpuValidation = false, 
+        .EnableDebugBarrierInfo = false, 
+        .EnableDebugStablePowerState = true,
+        .PreferVulkan = applicationPayload->AppSettings.PreferVulkan 
+    });
     
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
 
@@ -465,6 +499,14 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         ElemCommitCommandList(loadDataCommandList);    // TODO: Measure scene loading time 
         loadDataFence = ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
     }
+
+    /*
+    ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
+    UpdateShaderGlobalParameters2(loadDataCommandList, applicationPayload, inputsCameraState);
+    ElemCommitCommandList(loadDataCommandList);    // TODO: Measure scene loading time 
+    loadDataFence = ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
+    */
+
 
     ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
 

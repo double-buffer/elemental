@@ -10,6 +10,7 @@ MemoryArena DirectX12MemoryArena;
 bool DirectX12DebugLayerEnabled = false;
 bool directX12DebugGpuValidationEnabled = false;
 bool DirectX12DebugBarrierInfoEnabled = false;
+bool DirectX12DebugStablePowerStateEnabled = false;
 ComPtr<IDXGIFactory6> DxgiFactory; 
 ComPtr<IDXGIInfoQueue> DxgiInfoQueue;
 
@@ -30,6 +31,10 @@ void InitDirectX12()
     ComPtr<ID3D12SDKConfiguration1> directX12SdkConfiguration;
     AssertIfFailed(D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(directX12SdkConfiguration.GetAddressOf())));
 
+    // TODO: The specs say that DXGI_ERROR_ALREADY_EXISTS can be returned if a device exists and the driver for that device is not capable of supporting independent devices. 
+    // Would that failure happen even during an attempt to CreateDevice() with a NULL device pointer when checking support for feature levels (where it would otherwise return S_FALSE), 
+    // and should a well-behaved program have logic there to possibly try again with D3D12_DEVICE_FACTORY_FLAG_ALLOW_RETURNING_EXISTING_DEVICE? Or would that failure not 
+    // be returned when checking for feature level support and instead only be returned when actually trying to create a device?
     AssertIfFailed(directX12SdkConfiguration->CreateDeviceFactory(D3D12SDK_VERSION, applicationPath.Pointer, IID_PPV_ARGS(directX12DeviceFactory.GetAddressOf())));
 
     auto dxgiCreateFactoryFlags = 0u;
@@ -410,6 +415,11 @@ void DirectX12SetGraphicsOptions(const ElemGraphicsOptions* options)
     {
         DirectX12DebugBarrierInfoEnabled = options->EnableDebugBarrierInfo;
     }
+
+    if (options->EnableDebugStablePowerState)
+    {
+        DirectX12DebugStablePowerStateEnabled = options->EnableDebugStablePowerState;
+    }
 }
 
 ElemGraphicsDeviceInfoSpan DirectX12GetAvailableGraphicsDevices()
@@ -493,8 +503,11 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
         }
     }
 
-    // TODO: Don't enable it by default
-    //AssertIfFailed(device->SetStablePowerState(true));
+    if (DirectX12DebugStablePowerStateEnabled)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Enabling GPU stable power state. It is recommended to use this for testing only.");
+        AssertIfFailed(device->SetStablePowerState(true));
+    }
 
     auto memoryArena = SystemAllocateMemoryArena();
 

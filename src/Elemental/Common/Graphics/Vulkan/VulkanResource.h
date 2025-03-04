@@ -36,7 +36,7 @@ struct VulkanGraphicsResourceDataFull
     uint64_t GraphicsHeapOffset;
 };
 
-struct VulkanUploadBuffer
+struct VulkanGraphicsBufferCpu
 {
     VkBuffer Buffer;
     VkDeviceMemory DeviceMemory;
@@ -67,6 +67,7 @@ ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap,
 void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemGraphicsResourceInfo VulkanGetGraphicsResourceInfo(ElemGraphicsResource resource);
 
+VulkanGraphicsBufferCpu CreateVulkanGraphicsBufferCpu(ElemGraphicsDevice graphicsDevice, ElemGraphicsHeapType heapType, uint64_t sizeInBytes, const char* debugName);
 void VulkanUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data);
 ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options);
 void VulkanCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);

@@ -7,6 +7,7 @@
 
 SystemDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull> vulkanCommandQueuePool;
 SystemDataPool<VulkanCommandListData, VulkanCommandListDataFull> vulkanCommandListPool;
+SystemDataPool<VulkanGraphicsTimestampData, SystemDataPoolDefaultFull> vulkanTimestampPool;
 
 thread_local CommandAllocatorDevicePool<VkCommandPool, VkCommandBuffer> threadVulkanDeviceCommandPools[VULKAN_MAX_DEVICES];
 thread_local bool threadVulkanCommandBufferCommitted = true;
@@ -17,6 +18,8 @@ void InitVulkanCommandListMemory()
     {
         vulkanCommandQueuePool = SystemCreateDataPool<VulkanCommandQueueData, VulkanCommandQueueDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDQUEUES);
         vulkanCommandListPool = SystemCreateDataPool<VulkanCommandListData, VulkanCommandListDataFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDLISTS);
+
+        vulkanTimestampPool = SystemCreateDataPool<VulkanGraphicsTimestampData, SystemDataPoolDefaultFull>(VulkanGraphicsMemoryArena, VULKAN_MAX_QUERYHEAP_ITEMS);
     }
 }
 
@@ -38,6 +41,11 @@ VulkanCommandListData* GetVulkanCommandListData(ElemCommandList commandList)
 VulkanCommandListDataFull* GetVulkanCommandListDataFull(ElemCommandList commandList)
 {
     return SystemGetDataPoolItemFull(vulkanCommandListPool, commandList);
+}
+
+VulkanGraphicsTimestampData* GetVulkanGraphicsTimestampData(ElemGraphicsTimestamp timestamp)
+{
+    return SystemGetDataPoolItem(vulkanTimestampPool, timestamp);
 }
 
 ElemFence CreateVulkanCommandQueueFence(ElemCommandQueue commandQueue)
@@ -128,6 +136,11 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
         AssertIfFailed(vkSetDebugUtilsObjectNameEXT(graphicsDeviceData->Device, &nameInfo)); 
     } 
 
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(graphicsDeviceDataFull->PhysicalDevice, &properties);
+
+    auto queueFrequency = (uint64_t)properties.limits.timestampPeriod * 1000000000;
+
     auto commandAllocators = SystemPushArray<VkCommandPool>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDLISTS);
     auto commandLists = SystemPushArray<VkCommandBuffer>(VulkanGraphicsMemoryArena, VULKAN_MAX_COMMANDLISTS * VULKAN_MAX_COMMANDLISTS);
 
@@ -140,6 +153,7 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
         .FenceValue = 0,
         .PresentSemaphore = presentSemaphore,
         .LastCompletedFenceValue = 0,
+        .CommandQueueFrequency = queueFrequency
     }); 
 
     SystemAddDataPoolItemFull(vulkanCommandQueuePool, handle, {
@@ -217,6 +231,7 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
                                                                 graphicsDeviceData->CommandAllocationGeneration, 
                                                                 commandQueueData->CommandAllocatorQueueType);
 
+    SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "CommandAllocator %d Fence: %d", commandAllocatorPoolItem->CommandAllocator, commandAllocatorPoolItem->Fence.FenceValue);
     if (commandAllocatorPoolItem->IsResetNeeded)
     {
         if (commandAllocatorPoolItem->CommandAllocator)
@@ -230,6 +245,7 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
         }
         else 
         {
+            SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Create Command Pool");
             auto commandQueueDataFull = GetVulkanCommandQueueDataFull(commandQueue);
             SystemAssert(commandQueueDataFull);
 
@@ -290,7 +306,8 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
         .CommandAllocatorPoolItem = commandAllocatorPoolItem,
         .CommandListPoolItem = commandListPoolItem,
         .ResourceBarrierPool = resourceBarrierPool,
-        .UploadBufferCount = 0
+        .UploadBufferCount = 0,
+        .MinResolveQueryIndex = UINT32_MAX
     }); 
 
     SystemAddDataPoolItemFull(vulkanCommandListPool, handle, {
@@ -301,6 +318,35 @@ ElemCommandList VulkanGetCommandList(ElemCommandQueue commandQueue, const ElemCo
     return handle;
 }
 
+void CreateVulkanGraphicsBufferBarrier(VkCommandBuffer commandBuffer, VkBuffer buffer, bool beforeCopy)
+{
+    VkBufferMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
+    barrier.buffer = buffer;
+    barrier.size = VK_WHOLE_SIZE; 
+
+    if (beforeCopy)
+    {
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_NONE;
+        barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    }
+    else
+    {
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    }
+    
+    VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    dependencyInfo.bufferMemoryBarrierCount = 1;
+    dependencyInfo.pBufferMemoryBarriers = &barrier;
+
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+}
+
 void VulkanCommitCommandList(ElemCommandList commandList)
 {
     SystemAssert(commandList != ELEM_HANDLE_NULL);
@@ -308,8 +354,42 @@ void VulkanCommitCommandList(ElemCommandList commandList)
     auto commandListData = GetVulkanCommandListData(commandList);
     SystemAssert(commandListData);
     
-    FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
+    if (commandListData->NeedResolveQueryData)
+    {
+        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandListData->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+ 
+        auto index = commandListData->MinResolveQueryIndex;
+        auto count = commandListData->MaxResolveQueryIndex + 1 - commandListData->MinResolveQueryIndex; 
 
+        //CreateVulkanGraphicsBufferBarrier(commandListData->DeviceObject, graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Buffer, true);
+
+        /*
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "CopyQueryResults");
+        vkCmdCopyQueryPoolResults(commandListData->DeviceObject, 
+                                  graphicsDeviceData->QueryHeap.Storage->QueryHeap, 
+                                  index, 
+                                  count, 
+                                  graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Buffer, 
+                                  index * sizeof(uint64_t), 
+                                  sizeof(uint64_t), 
+                                  VK_QUERY_RESULT_64_BIT);// | VK_QUERY_RESULT_WAIT_BIT);*/
+
+        //CreateVulkanGraphicsBufferBarrier(commandListData->DeviceObject, graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Buffer, false);
+
+        /*
+        SystemAssert(vkGetQueryPoolResults(graphicsDeviceData->Device,
+                              graphicsDeviceData->QueryHeap.Storage->QueryHeap,
+                              index,
+                              count,
+                              count * sizeof(uint64_t),
+                              graphicsDeviceData->QueryHeap.Storage->QueryHeapRawData.Pointer + index * sizeof(uint64_t),
+                              sizeof(uint64_t), VK_QUERY_RESULT_64_BIT));*/
+
+        //vkResetQueryPool(graphicsDeviceData->Device, graphicsDeviceData->QueryHeap.Storage->QueryHeap, index, count); 
+    }
+
+    FreeResourceBarrierPool(commandListData->ResourceBarrierPool);
     AssertIfFailed(vkEndCommandBuffer(commandListData->DeviceObject));
     
     commandListData->IsCommitted = true;
@@ -376,6 +456,9 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
     {
         uint32_t signalCount = 1u;
 
+        // TODO: Here we signal the present semaphore. We should do the same for the wait semaphore that we set during the acquire
+        // It is the same logic
+        // For both signalpresent and waitacquire, we need to have one per frame in flight
         if (commandQueueData->SignalPresentSemaphore)
         {
             signalCount = 2u;
@@ -429,7 +512,7 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
 
         SystemRemoveDataPoolItem(vulkanCommandListPool, commandLists.Items[i]);
     }
-
+    
     return fence;
 }
 
@@ -492,16 +575,73 @@ bool VulkanIsFenceCompleted(ElemFence fence)
 
 ElemGraphicsTimestamp VulkanCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice)
 {
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    auto index = CreateVulkanQueryHeapIndex(graphicsDeviceData->QueryHeap);
+
+    return SystemAddDataPoolItem(vulkanTimestampPool, {
+        .GraphicsDevice = graphicsDevice,
+        .QueryHeapIndex = index,
+        .Value = 0,
+        .QueueFrequency = 0
+    });
 }
 
 void VulkanFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options)
 {
+    auto timestampData = GetVulkanGraphicsTimestampData(timestamp);
+    SystemAssert(timestampData);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(timestampData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    FreeVulkanQueryHeapIndex(graphicsDeviceData->QueryHeap, timestampData->QueryHeapIndex);
 }
 
 ElemGraphicsTimestampValue VulkanGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp)
 {
+    auto timestampData = GetVulkanGraphicsTimestampData(timestamp);
+    SystemAssert(timestampData);
+
+    if (timestampData->NeedUpdate)
+    {
+        auto stackMemoryArena = SystemGetStackMemoryArena();
+
+        auto graphicsDeviceData = GetVulkanGraphicsDeviceData(timestampData->GraphicsDevice);
+        SystemAssert(graphicsDeviceData);
+
+        auto downloadedData = SystemPushArray<uint64_t>(stackMemoryArena, 1);
+        //memcpy(downloadedData.Pointer, (uint64_t*)graphicsDeviceData->QueryHeap.Storage->ReadbackCpuPointer + timestampData->QueryHeapIndex, sizeof(uint64_t));
+
+        timestampData->Value = 1;//downloadedData[0];
+        SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Timestamp %d: %u", timestamp, timestampData->Value);
+        timestampData->NeedUpdate = false;
+    }
+
+    return { .Value = timestampData->Value, .FrequencyInSeconds = timestampData->QueueFrequency };
 }
 
 void VulkanInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp)
 {
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto commandQueueData = GetVulkanCommandQueueData(commandListData->CommandQueue);
+    SystemAssert(commandQueueData);
+
+    auto timestampData = GetVulkanGraphicsTimestampData(timestamp);
+    SystemAssert(timestampData);
+
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(timestampData->GraphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    timestampData->QueueFrequency = commandQueueData->CommandQueueFrequency;
+    timestampData->NeedUpdate = true;
+    commandListData->NeedResolveQueryData = true;
+
+    commandListData->MinResolveQueryIndex = SystemMin(timestampData->QueryHeapIndex, commandListData->MinResolveQueryIndex);
+    commandListData->MaxResolveQueryIndex = SystemMax(timestampData->QueryHeapIndex, commandListData->MaxResolveQueryIndex);
+
+    //vkCmdWriteTimestamp(commandListData->DeviceObject, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, graphicsDeviceData->QueryHeap.Storage->QueryHeap, timestampData->QueryHeapIndex);
 }

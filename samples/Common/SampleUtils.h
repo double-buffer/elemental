@@ -479,7 +479,7 @@ typedef struct
 {
     bool PreferVulkan;
     bool PreferFullScreen;
-    bool DisableDiagnostics;
+    bool GpuDebug;
 } SampleAppSettings;
 
 SampleAppSettings SampleParseAppSettings(int argc, const char* argv[])
@@ -498,9 +498,9 @@ SampleAppSettings SampleParseAppSettings(int argc, const char* argv[])
             appSettings.PreferFullScreen = true;
         }
 
-        if (strcmp(argv[i], "--disable-diagnostics") == 0)
+        if (strcmp(argv[i], "--gpu-debug") == 0)
         {
-            appSettings.DisableDiagnostics = true;
+            appSettings.GpuDebug = true;
         }
     }
     

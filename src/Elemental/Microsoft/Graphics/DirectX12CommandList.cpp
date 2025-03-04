@@ -276,8 +276,6 @@ void DirectX12CommitCommandList(ElemCommandList commandList)
     auto commandListData = GetDirectX12CommandListData(commandList);
     SystemAssert(commandListData);
     
-    // TODO: Insert resolve query data if needed
-
     if (commandListData->NeedResolveQueryData)
     {
         auto graphicsDeviceData = GetDirectX12GraphicsDeviceData(commandListData->GraphicsDevice);
@@ -288,7 +286,7 @@ void DirectX12CommitCommandList(ElemCommandList commandList)
                                                         commandListData->MinResolveQueryIndex, 
                                                         commandListData->MaxResolveQueryIndex + 1 - commandListData->MinResolveQueryIndex, 
                                                         graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Get(), 
-                                                        0);
+                                                        commandListData->MinResolveQueryIndex * sizeof(uint64_t));
     }
 
     AssertIfFailed(commandListData->DeviceObject->Close());
@@ -493,7 +491,9 @@ void DirectX12InsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsT
     {
         for (uint32_t i = graphicsDeviceData->QueryHeap.Storage->InitializationIndex; i < graphicsDeviceData->QueryHeap.Storage->CurrentIndex; i++)
         {
-	        commandListData->DeviceObject->EndQuery(graphicsDeviceData->QueryHeap.Storage->QueryHeap.Get(), queryType, i);
+            commandListData->DeviceObject->EndQuery(graphicsDeviceData->QueryHeap.Storage->QueryHeap.Get(), queryType, i);
+            commandListData->MinResolveQueryIndex = SystemMin(i, commandListData->MinResolveQueryIndex);
+            commandListData->MaxResolveQueryIndex = SystemMax(i, commandListData->MaxResolveQueryIndex);
         }
 
         graphicsDeviceData->QueryHeap.Storage->InitializationIndex = graphicsDeviceData->QueryHeap.Storage->CurrentIndex;

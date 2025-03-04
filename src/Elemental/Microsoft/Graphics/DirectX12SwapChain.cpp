@@ -18,6 +18,8 @@ SystemDataPool<DirectX12SwapChainData, DirectX12SwapChainDataFull> directX12Swap
 // TODO: In the near future we should switch to composition swap chains. https://learn.microsoft.com/en-us/windows/win32/comp_swapchain/comp-swapchain-examples
 // Currently they are not compatible with DX12. 
 
+// TODO: Frame pacing code to check: https://github.com/doitsujin/dxvk/compare/master...netborg-afps:dxvk:low-latency-framepacing
+
 void InitDirectX12SwapChainMemory()
 {
     if (!directX12SwapChainPool.Storage)

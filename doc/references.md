@@ -17,3 +17,6 @@ https://github.com/h3r2tic/tony-mc-mapface/blob/main/shader/tony_mc_mapface.hlsl
 # Math
 https://iquilezles.org/articles/noacos/
 https://www.youtube.com/watch?v=UerwiSuIOSY&list=PLz57o2kz4mTyWxczpb8lq6hEvCEniPdsN&index=23&t=1252s
+
+# AI
+https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ

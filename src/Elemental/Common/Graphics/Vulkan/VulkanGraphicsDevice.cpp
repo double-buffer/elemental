@@ -5,25 +5,6 @@
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-struct VulkanDescriptorSet
-{
-    VkDescriptorPool DescriptorPool;
-    VkDescriptorSet DescriptorSet;
-};
-
-struct VulkanDescriptorHeapFreeListItem
-{
-    uint32_t Next;
-};
-
-struct VulkanDescriptorHeapStorage
-{
-    const VulkanDescriptorSet* DescriptorSet;
-    Span<VulkanDescriptorHeapFreeListItem> Items;
-    uint32_t CurrentIndex;
-    uint32_t FreeListIndex;
-};
-
 MemoryArena VulkanGraphicsMemoryArena;
 SystemDataPool<VulkanGraphicsDeviceData, VulkanGraphicsDeviceDataFull> vulkanGraphicsDevicePool;
 
@@ -178,7 +159,7 @@ void InitVulkan()
     if (VulkanDebugLayerEnabled && isSdkInstalled)
     {
         VkDebugReportCallbackCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
-        debugCreateInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
+        debugCreateInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
         debugCreateInfo.pfnCallback = VulkanDebugReportCallback;
 
         AssertIfFailed(vkCreateDebugReportCallbackEXT(VulkanInstance, &debugCreateInfo, 0, &vulkanDebugCallback));
@@ -291,7 +272,7 @@ VulkanDescriptorHeap CreateVulkanDescriptorHeap(MemoryArena memoryArena, VkDevic
 
     auto descriptorStorage = SystemPushStruct<VulkanDescriptorHeapStorage>(memoryArena);
     descriptorStorage->DescriptorSet = descriptorSet;
-    descriptorStorage->Items = SystemPushArray<VulkanDescriptorHeapFreeListItem>(memoryArena, length);
+    descriptorStorage->Items = SystemPushArray<VulkanFreeListItem>(memoryArena, length);
     descriptorStorage->CurrentIndex = 0;
     descriptorStorage->FreeListIndex = UINT32_MAX;
 
@@ -341,6 +322,85 @@ void FreeVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap, uint32_t ha
     {
         storage->Items[handle].Next = storage->FreeListIndex;
     } while (!SystemAtomicCompareExchange(storage->FreeListIndex, storage->FreeListIndex, handle));
+}
+
+VulkanQueryHeap CreateVulkanQueryHeap(ElemGraphicsDevice graphicsDevice, MemoryArena memoryArena, VkQueryType type, uint32_t length)
+{
+    auto graphicsDeviceData = GetVulkanGraphicsDeviceData(graphicsDevice);
+    SystemAssert(graphicsDeviceData);
+
+    VkQueryPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+    createInfo.queryType = type;
+    createInfo.queryCount = length;
+
+    VkQueryPool queryPool;
+    AssertIfFailed(vkCreateQueryPool(graphicsDeviceData->Device, &createInfo, nullptr, &queryPool));
+    vkResetQueryPool(graphicsDeviceData->Device, queryPool, 0, length);
+
+    auto queryHeapReadbackBuffer = CreateVulkanGraphicsBufferCpu(graphicsDevice, ElemGraphicsHeapType_Readback, sizeof(uint64_t) * VULKAN_MAX_QUERYHEAP_ITEMS, "QueryHeapReadbackBuffer");
+
+    uint8_t* cpuPointer = nullptr;
+    AssertIfFailed(vkMapMemory(graphicsDeviceData->Device, queryHeapReadbackBuffer.DeviceMemory, 0, VK_WHOLE_SIZE, 0, (void**)&cpuPointer));
+
+    auto descriptorStorage = SystemPushStruct<VulkanQueryHeapStorage>(memoryArena);
+    descriptorStorage->QueryHeap = queryPool;
+    descriptorStorage->QueryHeapReadbackBuffer = queryHeapReadbackBuffer;
+    descriptorStorage->ReadbackCpuPointer = cpuPointer;
+    descriptorStorage->Type = type;
+    descriptorStorage->Items = SystemPushArray<VulkanFreeListItem>(memoryArena, length);
+    descriptorStorage->CurrentIndex = 0;
+    descriptorStorage->InitializationIndex = 0;
+    descriptorStorage->FreeListIndex = UINT32_MAX;
+
+    return
+    {
+        .Storage = descriptorStorage
+    };
+}
+
+void FreeVulkanQueryHeap(VkDevice device, VulkanQueryHeap queryHeap)
+{
+    SystemAssert(queryHeap.Storage);
+
+    vkDestroyQueryPool(device, queryHeap.Storage->QueryHeap, nullptr);
+    vkDestroyBuffer(device, queryHeap.Storage->QueryHeapReadbackBuffer.Buffer, nullptr);
+    vkFreeMemory(device, queryHeap.Storage->QueryHeapReadbackBuffer.DeviceMemory, nullptr);
+}
+
+uint32_t CreateVulkanQueryHeapIndex(VulkanQueryHeap queryHeap)
+{            
+    SystemAssert(queryHeap.Storage);
+
+    auto storage = queryHeap.Storage;
+    auto index = UINT32_MAX;
+
+    do
+    {
+        if (storage->FreeListIndex == UINT32_MAX)
+        {
+            index = UINT32_MAX;
+            break;
+        }
+        
+        index = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, index, storage->Items[storage->FreeListIndex].Next));
+
+    if (index == UINT32_MAX)
+    {
+        index = SystemAtomicAdd(storage->CurrentIndex, 1);
+    }
+
+    return index;
+}
+
+void FreeVulkanQueryHeapIndex(VulkanQueryHeap queryHeap, uint32_t index)
+{
+    auto storage = queryHeap.Storage;
+    
+    do
+    {
+        storage->Items[index].Next = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, storage->FreeListIndex, index));
 }
 
 bool VulkanCheckGraphicsDeviceCompatibility(VkPhysicalDevice device)
@@ -745,7 +805,8 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     graphicsDeviceData->SamplerDescriptorHeap = CreateVulkanDescriptorHeap(memoryArena, graphicsDeviceData->Device, graphicsDeviceDataFull->SamplerDescriptorSetLayout, VULKAN_MAX_SAMPLERS);
 
     // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
-    graphicsDeviceData->UploadBufferPools = SystemPushArray<UploadBufferDevicePool<VulkanUploadBuffer>*>(VulkanGraphicsMemoryArena, MAX_UPLOAD_BUFFERS);
+    graphicsDeviceData->UploadBufferPools = SystemPushArray<UploadBufferDevicePool<VulkanGraphicsBufferCpu>*>(VulkanGraphicsMemoryArena, MAX_UPLOAD_BUFFERS);
+    graphicsDeviceData->QueryHeap = CreateVulkanQueryHeap(handle, memoryArena, VK_QUERY_TYPE_TIMESTAMP, VULKAN_MAX_QUERYHEAP_ITEMS);
 
     return handle;
 }
@@ -786,6 +847,7 @@ void VulkanFreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
 
     FreeVulkanDescriptorHeap(graphicsDeviceData->Device, graphicsDeviceData->ResourceDescriptorHeap);
     FreeVulkanDescriptorHeap(graphicsDeviceData->Device, graphicsDeviceData->SamplerDescriptorHeap);
+    FreeVulkanQueryHeap(graphicsDeviceData->Device, graphicsDeviceData->QueryHeap);
 
     vkDestroyDescriptorSetLayout(graphicsDeviceData->Device, graphicsDeviceDataFull->ResourceDescriptorSetLayout, nullptr);
     vkDestroyDescriptorSetLayout(graphicsDeviceData->Device, graphicsDeviceDataFull->SamplerDescriptorSetLayout, nullptr);

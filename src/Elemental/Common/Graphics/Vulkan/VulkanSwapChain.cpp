@@ -120,7 +120,6 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
     VkSwapchainKHR swapChain;
     AssertIfFailed(vkCreateSwapchainKHR(graphicsDeviceData->Device, swapChainCreateInfo, nullptr, &swapChain));
 
-
     return swapChain;
 }
 
@@ -192,6 +191,9 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(swapChainData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
+    // HACK: To Debug
+    //vkDeviceWaitIdle(graphicsDeviceData->Device);
+
     if (swapChainData->PresentId > swapChainData->FrameLatency)
     {
         // TODO: This is only needed on win32? Normally on wayland even if use an update handle
@@ -230,9 +232,12 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
         sizeChanged = true;
     }
 
-    AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, VK_NULL_HANDLE, swapChainData->BackBufferAcquireFence, &swapChainData->CurrentImageIndex));
-    vkWaitForFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFence, true, UINT64_MAX);
-    vkResetFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFence);
+    AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, swapChainData->BackBufferAcquireSemaphores[swapChainData->CurrentImageIndex], VK_NULL_HANDLE, &swapChainData->CurrentImageIndex));
+    /*
+    AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, VK_NULL_HANDLE, swapChainData->BackBufferAcquireFences[swapChainData->CurrentImageIndex], &swapChainData->CurrentImageIndex));
+    vkWaitForFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFences[swapChainData->CurrentImageIndex], true, UINT64_MAX);
+    vkResetFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFences[swapChainData->CurrentImageIndex]);
+*/
 
     swapChainData->PresentCalled = false;
     auto backBuffer = swapChainData->BackBufferTextures[swapChainData->CurrentImageIndex];
@@ -405,10 +410,6 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
 
     auto swapChain = CreateVulkanSwapChainObject(commandQueueData->GraphicsDevice, windowSurface, &swapChainCreateInfo, nullptr);
 
-    VkFence acquireFence;
-    VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    AssertIfFailed(vkCreateFence(graphicsDeviceData->Device, &fenceCreateInfo, 0, &acquireFence ));
-
     uint64_t creationTimestamp = 0;
     // TODO: Put that in a system function
     //QueryPerformanceCounter(&creationTimestamp);
@@ -419,7 +420,6 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .GraphicsDevice = commandQueueData->GraphicsDevice,
         .CommandQueue = commandQueue,
         .Window = window,
-        .BackBufferAcquireFence = acquireFence,
         .UpdateHandler = updateHandler,
         .UpdatePayload = updatePayload,
         .CreationTimestamp = creationTimestamp,
@@ -439,7 +439,14 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
         .CreateInfo = swapChainCreateInfo
     });
 
+    auto swapChainData = GetVulkanSwapChainData(handle);
     CreateVulkanSwapChainBackBuffers(handle, width, height);
+    
+    for (uint32_t i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
+    {
+        VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        AssertIfFailed(vkCreateSemaphore(graphicsDeviceData->Device, &semaphoreCreateInfo, nullptr, &swapChainData->BackBufferAcquireSemaphores[i]));
+    }
 
     #ifdef _WIN32
     AddWin32RunLoopHandler(CheckVulkanAvailableSwapChain, handle);
@@ -470,14 +477,13 @@ void VulkanFreeSwapChain(ElemSwapChain swapChain)
     auto fence = CreateVulkanCommandQueueFence(swapChainData->CommandQueue);
     ElemWaitForFenceOnCpu(fence);
 
-    vkDestroyFence(graphicsDeviceData->Device, swapChainData->BackBufferAcquireFence, nullptr);
-
-    for (int i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
+    for (uint32_t i = 0; i < VULKAN_MAX_SWAPCHAIN_BUFFERS; i++)
     {
         auto textureData = GetVulkanGraphicsResourceData(swapChainData->BackBufferTextures[i]);
         SystemAssert(textureData);
 
         VulkanFreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
+        vkDestroySemaphore(graphicsDeviceData->Device, swapChainData->BackBufferAcquireSemaphores[i], nullptr);
     }
 
     vkDestroySwapchainKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, nullptr);
