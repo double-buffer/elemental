@@ -165,7 +165,7 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         // TODO: Update checks
         if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
             deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
-            deviceOptions5.RaytracingTier == D3D12_RAYTRACING_TIER_1_1 &&
+            deviceOptions5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1 &&
             deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
             shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8 && 
             deviceOptions16.GPUUploadHeapSupported)
