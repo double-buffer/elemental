@@ -79,7 +79,7 @@ float3 AdjustSaturation(float3 color, float saturationAdjust)
 [shader("pixel")]
 float4 PixelMain(const VertexOutput input) : SV_Target0
 {
-    float exposure = -6.0;
+    float exposure = -5.5;
     float saturationAdjust = 0.85;
 
     Texture2D<float4> renderTexture = ResourceDescriptorHeap[parameters.RenderTextureIndex];

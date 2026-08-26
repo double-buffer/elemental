@@ -159,7 +159,6 @@ void UpdateShaderGlobalParameters(ApplicationPayload* applicationPayload, const 
     }
 
     // BUG: We have a sync issue on vulkan when the validation layer is active but not when it is disabled
-    // This also happens in metal IOS
     ElemUploadGraphicsBufferData(applicationPayload->ShaderGlobalParametersBuffer.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderGlobalParameters, .Length = sizeof(ShaderGlobalParameters) });
 }
 
@@ -455,7 +454,7 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     // TODO: We shold move this into the application update function (we can pass the window if needed)
     if (applicationPayload->InputsApplication.State.ExitApplication)
     {
-        ElemExitApplication(0);
+        //ElemExitApplication(0);
     }
 
     if (applicationPayload->InputsApplication.State.ShowCursor)
