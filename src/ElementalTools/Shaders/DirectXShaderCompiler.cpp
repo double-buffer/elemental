@@ -64,18 +64,20 @@ DxilShaderKind GetVersionShaderType(uint32_t programVersion)
     return (DxilShaderKind)((programVersion & 0xffff0000) >> 16);
 }
 
-ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind) 
+ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind, ElemToolsGraphicsApi targetGraphicsApi) 
 {
+    auto shaderModelVersion = targetGraphicsApi == ElemToolsGraphicsApi_Metal ? "6_6" : "6_9";
+
     switch (shaderKind)
     {
         case DxilShaderKind::Compute:
-            return "cs_6_9";
+            return targetGraphicsApi == ElemToolsGraphicsApi_Metal ? "cs_6_6" : "cs_6_9";
 
         case DxilShaderKind::Mesh:
-            return "ms_6_9";
+            return targetGraphicsApi == ElemToolsGraphicsApi_Metal ? "ms_6_6" : "ms_6_9";
 
         case DxilShaderKind::Pixel:
-            return "ps_6_9";
+            return targetGraphicsApi == ElemToolsGraphicsApi_Metal ? "ps_6_6" : "ps_6_9";
 
         default:
             return "";
@@ -272,7 +274,8 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
 
             if (shaderType != ShaderType_Unknown)
             {
-                auto dxilCompileResult = CompileDirectXShader(shaderCode, GetShaderTypeTarget(dxilShaderType), targetGraphicsApi, functionDescription.Name, options);
+                auto shaderTarget = GetShaderTypeTarget(dxilShaderType, targetGraphicsApi);
+                auto dxilCompileResult = CompileDirectXShader(shaderCode, shaderTarget, targetGraphicsApi, functionDescription.Name, options);
    
                 auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
 
@@ -284,7 +287,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
                 ComPtr<IDxcBlob> shaderByteCodeComPtr;
                 AssertIfFailed(dxilCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCodeComPtr), nullptr));
 
-                auto shaderReflection = GetDirectXShaderReflection(dxcUtils, shaderCode, GetShaderTypeTarget(dxilShaderType), functionDescription.Name, options);
+                auto shaderReflection = GetDirectXShaderReflection(dxcUtils, shaderCode, shaderTarget, functionDescription.Name, options);
 
                 uint32_t threadCountX, threadCountY, threadCountZ;
                 shaderReflection->GetThreadGroupSize(&threadCountX, &threadCountY, &threadCountZ);
