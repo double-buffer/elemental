@@ -78,7 +78,7 @@ ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(Elem
 
     if (resourceInfo.Type == ElemGraphicsResourceType_Buffer && (resourceInfo.Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Raytracing acceleration structure storage buffers cannot have graphics resource descriptors.");
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Raytracing acceleration structure storage buffers do not expose graphics resource descriptors.");
         return -1;
     }
 
