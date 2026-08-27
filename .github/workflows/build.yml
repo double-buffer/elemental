@@ -10,31 +10,31 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ 
+    runs-on: ${{
       (inputs.platform == 'osx' && 'macos-latest') ||
       (inputs.platform == 'linux' && 'ubuntu-latest') ||
       (inputs.platform == 'win' && 'windows-latest')
       }}
 
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
 
     - name: Setup Dependencies (Windows)
       if: inputs.platform == 'win'
-      uses: TheMrMilchmann/setup-msvc-dev@v3
+      uses: TheMrMilchmann/setup-msvc-dev@v4
       with:
         arch: ${{ inputs.architecture }}
 
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
       run: |
-        sudo apt-get update 
-        sudo apt-get install libwayland-dev wayland-protocols libudev-dev libdecor-0-dev
+        sudo apt-get update
+        sudo apt-get install -y libwayland-dev wayland-protocols libudev-dev libdecor-0-dev
 
     - name: Setup Ninja
-      uses: seanmiddleditch/gha-setup-ninja@master
+      uses: seanmiddleditch/gha-setup-ninja@v6
 
     - name: Configure Build
       run: cmake --preset release
@@ -43,7 +43,7 @@ jobs:
 
     - name: Build
       run: cmake --build --preset release
-          
+
     - name: Install
       run: cmake --install ./build-release --prefix ./install-release
 
@@ -55,13 +55,14 @@ jobs:
     - name: Archive Elemental
       if: inputs.platform != 'win'
       working-directory: ./install-release
-      run: tar -czvf ./elemental.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./Elemental/
+      run: tar -czf ./elemental.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./Elemental/
 
     - name: Upload Elemental Binaries
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v7
       with:
         name: elemental.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/elemental.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+        compression-level: 0
 
     - name: Archive ElementalTools (Windows)
       if: inputs.platform == 'win'
@@ -71,13 +72,14 @@ jobs:
     - name: Archive Elemental Tools
       if: inputs.platform != 'win'
       working-directory: ./install-release
-      run: tar -czvf ./elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./ElementalTools/
+      run: tar -czf ./elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./ElementalTools/
 
     - name: Upload Elemental Tools Binaries
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v7
       with:
         name: elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/elemental-tools.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+        compression-level: 0
 
     - name: Archive Tests (Windows)
       if: inputs.platform == 'win'
@@ -87,13 +89,14 @@ jobs:
     - name: Archive Tests
       if: inputs.platform != 'win'
       working-directory: ./install-release
-      run: tar -czvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
+      run: tar -czf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
     - name: Upload Tests Binaries
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v7
       with:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/tests.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+        compression-level: 0
 
     - name: Archive Samples (Windows)
       if: inputs.platform == 'win'
@@ -103,10 +106,11 @@ jobs:
     - name: Archive Samples
       if: inputs.platform != 'win'
       working-directory: ./install-release
-      run: tar -czvf ./samples.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./samples/
+      run: tar -czf ./samples.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./samples/
 
     - name: Upload Samples Binaries
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v7
       with:
         name: samples.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./install-release/samples.${{ inputs.platform }}-${{ inputs.architecture }}.${{ inputs.platform == 'win' && 'zip' || 'tar' }}
+        compression-level: 0
