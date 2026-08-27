@@ -67,7 +67,7 @@ VkAccessFlags2 ConvertToVulkanBarrierAccess(ElemGraphicsResourceBarrierAccessTyp
 VkImageLayout ConvertToVulkanBarrierLayout(ElemGraphicsResourceBarrierLayoutType layoutType)
 {
     // TODO: Recheck the correct layouts
-    // Maybe we can pass more info to the function to compute more precides layouts (or in the common code)
+    // Maybe we can pass more info to the function to compute more precides accesses (or in the common code)
     // It would be better for common layout to specialize that base on the current queue type???
 
     switch (layoutType) 
@@ -111,28 +111,64 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
     VkDependencyInfo dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
     dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-    if (barriersInfo.BufferBarriers.Length > 0)
+    uint32_t vulkanBufferBarrierCount = 0;
+    bool hasAccelerationStructureBarrier = false;
+
+    for (uint32_t i = 0; i < barriersInfo.BufferBarriers.Length; i++)
     {
-        auto vulkanBufferBarriers = SystemPushArray<VkBufferMemoryBarrier2>(stackMemoryArena, barriersInfo.BufferBarriers.Length);
+        if (barriersInfo.BufferBarriers[i].Type == ElemGraphicsResourceType_RaytracingAccelerationStructure)
+        {
+            hasAccelerationStructureBarrier = true;
+        }
+        else
+        {
+            vulkanBufferBarrierCount++;
+        }
+    }
+
+    Span<VkBufferMemoryBarrier2> vulkanBufferBarriers;
+
+    if (vulkanBufferBarrierCount > 0)
+    {
+        vulkanBufferBarriers = SystemPushArray<VkBufferMemoryBarrier2>(stackMemoryArena, vulkanBufferBarrierCount);
         dependencyInfo.pBufferMemoryBarriers = vulkanBufferBarriers.Pointer;
         dependencyInfo.bufferMemoryBarrierCount = vulkanBufferBarriers.Length;
+    }
 
-        for (uint32_t i = 0; i < barriersInfo.BufferBarriers.Length; i++)
+    VkMemoryBarrier2 accelerationStructureMemoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+
+    if (hasAccelerationStructureBarrier)
+    {
+        dependencyInfo.pMemoryBarriers = &accelerationStructureMemoryBarrier;
+        dependencyInfo.memoryBarrierCount = 1;
+    }
+
+    uint32_t currentVulkanBufferBarrierIndex = 0;
+
+    for (uint32_t i = 0; i < barriersInfo.BufferBarriers.Length; i++)
+    {
+        auto barrier = barriersInfo.BufferBarriers[i];
+
+        if (barrier.Type == ElemGraphicsResourceType_RaytracingAccelerationStructure)
         {
-            auto barrier = barriersInfo.BufferBarriers[i];
-            auto vulkanBufferBarrier = &vulkanBufferBarriers[i];
-
-            auto graphicsResourceData = GetVulkanGraphicsResourceData(barrier.Resource);
-            SystemAssert(graphicsResourceData);
-
-            vulkanBufferBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-            vulkanBufferBarrier->buffer = graphicsResourceData->BufferDeviceObject;
-            vulkanBufferBarrier->size = graphicsResourceData->Width;
-            vulkanBufferBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync, false);
-            vulkanBufferBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync, false);
-            vulkanBufferBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess, graphicsResourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
-            vulkanBufferBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess, graphicsResourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
+            accelerationStructureMemoryBarrier.srcStageMask |= ConvertToVulkanBarrierSync(barrier.BeforeSync, false);
+            accelerationStructureMemoryBarrier.dstStageMask |= ConvertToVulkanBarrierSync(barrier.AfterSync, false);
+            accelerationStructureMemoryBarrier.srcAccessMask |= ConvertToVulkanBarrierAccess(barrier.BeforeAccess, true);
+            accelerationStructureMemoryBarrier.dstAccessMask |= ConvertToVulkanBarrierAccess(barrier.AfterAccess, true);
+            continue;
         }
+
+        auto vulkanBufferBarrier = &vulkanBufferBarriers[currentVulkanBufferBarrierIndex++];
+        auto graphicsResourceData = GetVulkanGraphicsResourceData(barrier.Resource);
+        SystemAssert(graphicsResourceData);
+
+        vulkanBufferBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+        vulkanBufferBarrier->buffer = graphicsResourceData->BufferDeviceObject;
+        vulkanBufferBarrier->size = graphicsResourceData->Width;
+        vulkanBufferBarrier->srcStageMask = ConvertToVulkanBarrierSync(barrier.BeforeSync, false);
+        vulkanBufferBarrier->dstStageMask = ConvertToVulkanBarrierSync(barrier.AfterSync, false);
+        vulkanBufferBarrier->srcAccessMask = ConvertToVulkanBarrierAccess(barrier.BeforeAccess, graphicsResourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
+        vulkanBufferBarrier->dstAccessMask = ConvertToVulkanBarrierAccess(barrier.AfterAccess, graphicsResourceData->Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure);
     }
 
     if (barriersInfo.TextureBarriers.Length > 0)
@@ -174,4 +210,24 @@ void VulkanGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsReso
     SystemAssert(commandListData);
 
     EnqueueBarrier(commandListData->ResourceBarrierPool, descriptor, options);
+}
+
+void VulkanGraphicsResourceBarrierResource(ElemCommandList commandList, ElemGraphicsResource resource, ElemGraphicsResourceBarrierAccessType accessType)
+{
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetVulkanCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto resourceInfo = VulkanGetGraphicsResourceInfo(resource);
+
+    ResourceBarrierItem resourceBarrier =
+    {
+        .Type = resourceInfo.Type,
+        .Resource = resource,
+        .AfterAccess = accessType
+    };
+
+    EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
 }
