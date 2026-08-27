@@ -6,8 +6,10 @@
 
 #define GRAPHICS_MAX_RESOURCEBARRIERPOOL 128
 
-// TODO: Check that it takes a lot of memory
-#define GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES 128
+// HACK: Temporary headroom while raytracing still tracks one logical BLAS resource
+// per barrier. Bistro has hundreds of BLAS and exceeds the old 128-entry status
+// table. This should go away with the renderer-level/global synchronization model.
+#define GRAPHICS_MAX_RESOURCEBARRIER_RESOURCES 4096
 
 struct ResourceBarrierResourceStatus
 {
