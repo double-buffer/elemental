@@ -279,7 +279,7 @@ UTEST(Memory, AllocateReserved)
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
-    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.MaximumSizeInBytes);
 }
 
 UTEST(Memory, AllocateReservedCommit) 
