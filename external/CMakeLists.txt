@@ -50,7 +50,7 @@ if(LINUX)
     add_custom_command(
         OUTPUT ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
         COMMAND wayland-scanner client-header ${UNSTABLE_PROTOCOLS_DIR}/relative-pointer/relative-pointer-unstable-v1.xml ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h
-        COMMAND wayland-scanner code ${UNSTABLE_PROTOCOLS_DIR}/relative-pointer/relative-pointer-unstable-v1.xml ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
+        COMMAND wayland-scanner private-code ${UNSTABLE_PROTOCOLS_DIR}/relative-pointer/relative-pointer-unstable-v1.xml ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
         DEPENDS ${UNSTABLE_PROTOCOLS_DIR}/relative-pointer/relative-pointer-unstable-v1.xml
         COMMENT "Generating relative-pointer protocol files"
     )
@@ -59,16 +59,16 @@ if(LINUX)
     add_custom_command(
         OUTPUT ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
         COMMAND wayland-scanner client-header ${UNSTABLE_PROTOCOLS_DIR}/pointer-constraints/pointer-constraints-unstable-v1.xml ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h
-        COMMAND wayland-scanner code ${UNSTABLE_PROTOCOLS_DIR}/pointer-constraints/pointer-constraints-unstable-v1.xml ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
+        COMMAND wayland-scanner private-code ${UNSTABLE_PROTOCOLS_DIR}/pointer-constraints/pointer-constraints-unstable-v1.xml ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
         DEPENDS ${UNSTABLE_PROTOCOLS_DIR}/pointer-constraints/pointer-constraints-unstable-v1.xml
         COMMENT "Generating pointer-constraints protocol files"
     )
 
     add_custom_target(generate-protocol-files ALL
-        DEPENDS 
-        ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h 
+        DEPENDS
+        ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.h
         ${GENERATED_DIR}/relative-pointer-unstable-v1-client-protocol.c
-        ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h 
+        ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.h
         ${GENERATED_DIR}/pointer-constraints-unstable-v1-client-protocol.c
         ${GENERATED_DIR}/xdg-shell-client-protocol.h
         ${GENERATED_DIR}/xdg-shell-protocol.c
@@ -77,7 +77,7 @@ if(LINUX)
     target_include_directories(Wayland INTERFACE ${GENERATED_DIR})
     add_dependencies(Wayland generate-protocol-files)
 endif()
-    
+
 #=======================================================================
 # Direct3D12 Runtime
 #=======================================================================
