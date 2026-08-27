@@ -282,9 +282,9 @@ void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12
 uint32_t ConvertDirectX12DescriptorHandleToIndex(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle)
 {
     auto storage = descriptorHeap.Storage;
-    auto heapStart = descriptorHeap.Storage->DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    auto heapStart = storage->DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
-    return (handle.ptr - heapStart.ptr) / descriptorHeap.Storage->DescriptorHandleSize;
+    return (handle.ptr - heapStart.ptr) / storage->DescriptorHandleSize;
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE ConvertDirectX12DescriptorIndexToHandle(DirectX12DescriptorHeap descriptorHeap, uint32_t index)
@@ -330,7 +330,7 @@ DirectX12QueryHeap CreateDirectX12QueryHeap(ComPtr<ID3D12Device10> graphicsDevic
 void FreeDirectX12QueryHeap(DirectX12QueryHeap queryHeap)
 {
     SystemAssert(queryHeap.Storage);
-    descriptorHeap.Storage->DescriptorHeap.Reset();
+    queryHeap.Storage->QueryHeap.Reset();
 
     queryHeap.Storage->QueryHeapReadbackBuffer.Reset();
 }
