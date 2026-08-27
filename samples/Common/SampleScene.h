@@ -3,11 +3,21 @@
 #include "SampleMath.h"
 #include <stdint.h>
 
+// TODO: Put the loader and the writer here too
+
+// TODO: Rename *Header by data when we have refactored the sceneloader
 typedef enum
 {
     SampleSceneNodeType_Unknown = 0,
     SampleSceneNodeType_Mesh = 1
 } SampleSceneNodeType;
+
+typedef enum
+{
+    SampleSceneMaterialTransparentMode_None,
+    SampleSceneMaterialTransparentMode_Alpha,
+    SampleSceneMaterialTransparentMode_Blend,
+} SampleSceneMaterialTransparentMode;
 
 typedef struct
 {
@@ -15,6 +25,7 @@ typedef struct
     uint32_t MeshCount;
     uint32_t NodeCount;
     uint32_t MaterialCount;
+    uint32_t TextureCount;
 } SampleSceneHeader;
 
 typedef struct
@@ -22,8 +33,19 @@ typedef struct
     char Name[50];
     char AlbedoTexturePath[255];
     char NormalTexturePath[255];
+    int32_t AlbedoTextureId;
+    int32_t NormalTextureId;
     ElemVector4 AlbedoFactor;
+    ElemVector3 EmissiveFactor;
+    SampleSceneMaterialTransparentMode TransparentMode;
+    float AlphaCutoff;
 } SampleSceneMaterialHeader;
+
+typedef struct
+{
+    char Path[255];
+    bool IsNormalTexture;
+} SampleSceneTextureData;
 
 typedef struct
 {
@@ -40,19 +62,20 @@ typedef struct
 {
     char Name[50];
     // TODO: Vertex size, etc.
+    uint32_t VertexSizeInBytes;
     uint32_t MeshPrimitiveCount;
     uint32_t MeshBufferOffset;
     uint32_t MeshBufferSizeInBytes;
 } SampleMeshHeader;
 
-// TODO: Rename to mesh primitive?
 typedef struct
 {
+    uint32_t MeshletOffset;
     uint32_t MeshletCount;
     uint32_t VertexBufferOffset;
-    uint32_t MeshletOffset;
-    uint32_t MeshletVertexIndexOffset;
-    uint32_t MeshletTriangleIndexOffset;
+    uint32_t VertexCount;
+    uint32_t IndexBufferOffset;
+    uint32_t IndexCount;
     int32_t MaterialId;
 } SampleMeshPrimitiveHeader;
 

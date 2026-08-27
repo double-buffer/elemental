@@ -159,12 +159,6 @@ add_library(xxHash INTERFACE)
 target_include_directories(xxHash INTERFACE ./xxHash/)
 
 #=======================================================================
-# ImGui
-#=======================================================================
-add_subdirectory(./cimgui)
-#set(IMGUI_STATIC "yes")
-
-#=======================================================================
 # Volk
 #=======================================================================
 add_library(volk INTERFACE)
@@ -199,3 +193,15 @@ endif()
 #=======================================================================
 add_library(utest INTERFACE)
 target_include_directories(utest INTERFACE ./utest/)
+
+#=======================================================================
+# Clay
+#=======================================================================
+add_library(clay INTERFACE)
+target_include_directories(clay INTERFACE ./clay/)
+
+#=======================================================================
+# Samples External Dependencies
+#=======================================================================
+add_library(sample_external_dependencies INTERFACE)
+target_link_libraries(sample_external_dependencies INTERFACE clay)

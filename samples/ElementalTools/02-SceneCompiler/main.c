@@ -2,7 +2,7 @@
 #include "SampleUtils.h"
 #include "SampleScene.h"
 
-// TODO: Restore MeshBuilder to use for hello mesh?
+// TODO: Write a texture cache so that we have in the scene a collection of texture that are referenced by materials
 
 bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
 {
@@ -17,12 +17,16 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
     strncpy(meshHeader.Name, mesh.Name, 50);
 
     fwrite(&meshHeader, sizeof(SampleMeshHeader), 1, file);
-    uint32_t meshPrimitiveHeadersOffset = ftell(file);
-    
-    SampleMeshPrimitiveHeader* meshPrimitiveHeaders = (SampleMeshPrimitiveHeader*)malloc(sizeof(SampleMeshPrimitiveHeader) * mesh.MeshPrimitives.Length);
-    fwrite(meshPrimitiveHeaders, sizeof(SampleMeshPrimitiveHeader), mesh.MeshPrimitives.Length, file);
 
-    meshHeader.MeshBufferOffset = ftell(file);
+    SampleMeshPrimitiveHeader* meshPrimitiveHeaders = (SampleMeshPrimitiveHeader*)malloc(sizeof(SampleMeshPrimitiveHeader) * mesh.MeshPrimitives.Length);
+    ElemBuildMeshletResult* buildMeshletResults = (ElemBuildMeshletResult*)malloc(sizeof(ElemBuildMeshletResult) * mesh.MeshPrimitives.Length);
+
+    uint32_t vertexBufferSizeInBytes = 0u;
+    uint32_t indexBufferSizeInBytes = 0u;
+    uint32_t meshletCount = 0u;
+    uint32_t meshletVertexIndexCount = 0u;
+    uint32_t meshletTriangleIndexCount = 0u;
+    uint32_t vertexSizeInBytes = 0u;
 
     for (uint32_t i = 0; i < mesh.MeshPrimitives.Length; i++)
     {
@@ -38,34 +42,145 @@ bool WriteMeshData(FILE* file, ElemSceneMesh mesh)
             return false; 
         }
 
+        buildMeshletResults[i] = result;
+
+        vertexBufferSizeInBytes += result.VertexBuffer.Data.Length;
+        indexBufferSizeInBytes += result.IndexBuffer.Length * sizeof(uint32_t);
+
+        meshletCount += result.Meshlets.Length;
+        meshletVertexIndexCount += result.MeshletVertexIndexBuffer.Length;
+        meshletTriangleIndexCount += result.MeshletTriangleIndexBuffer.Length;
+        vertexSizeInBytes = result.VertexBuffer.VertexSize;
+    }
+
+    meshHeader.VertexSizeInBytes = vertexSizeInBytes;
+    meshHeader.MeshBufferOffset = ftell(file);
+
+    uint32_t meshPrimitivesOffset = 0;
+    uint32_t meshVertexBufferOffset = meshPrimitivesOffset + mesh.MeshPrimitives.Length * sizeof(SampleMeshPrimitiveHeader);
+    uint32_t meshIndexBufferOffset = meshVertexBufferOffset + vertexBufferSizeInBytes;
+
+    uint32_t meshletBufferOffset = meshIndexBufferOffset + indexBufferSizeInBytes;
+    uint32_t meshletVertexIndexBufferOffset = meshletBufferOffset + meshletCount * sizeof(ElemMeshlet);
+    uint32_t meshletTriangleIndexBufferOffset = meshletVertexIndexBufferOffset + meshletVertexIndexCount * sizeof(uint32_t);
+
+    meshHeader.MeshBufferSizeInBytes = meshletTriangleIndexBufferOffset + meshletTriangleIndexCount * sizeof(uint32_t);
+
+    uint32_t currentPrimitivesOffset = 0u;
+    uint32_t currentVertexBufferOffset = 0u;
+    uint32_t currentIndexBufferOffset = 0u;
+    uint32_t currentMeshletBufferOffset = 0u;
+    uint32_t currentMeshletVertexIndexBufferOffset = 0u;
+    uint32_t currentMeshletTriangleIndexBufferOffset = 0u;
+
+    for (uint32_t i = 0; i < mesh.MeshPrimitives.Length; i++)
+    {
+        ElemSceneMeshPrimitive* meshPrimitive = &mesh.MeshPrimitives.Items[i];
+
+        ElemBuildMeshletResult result = buildMeshletResults[i];
+
         SampleMeshPrimitiveHeader* meshPrimitiveHeader = &meshPrimitiveHeaders[i];
         meshPrimitiveHeader->MaterialId = meshPrimitive->MaterialId;
         meshPrimitiveHeader->MeshletCount = result.Meshlets.Length;
+        // TODO: Other properties?
 
-        meshPrimitiveHeader->VertexBufferOffset = ftell(file) - meshHeader.MeshBufferOffset;
+        uint32_t vertexBufferOffset = meshVertexBufferOffset + currentVertexBufferOffset;
+        fseek(file, vertexBufferOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.VertexBuffer.Data.Items, sizeof(uint8_t), result.VertexBuffer.Data.Length, file);
 
-        meshPrimitiveHeader->MeshletOffset = ftell(file) - meshHeader.MeshBufferOffset;
-        fwrite(result.Meshlets.Items, sizeof(ElemMeshlet), result.Meshlets.Length, file);
+        meshPrimitiveHeader->VertexBufferOffset = vertexBufferOffset;
+        meshPrimitiveHeader->VertexCount = result.VertexBuffer.Data.Length / result.VertexBuffer.VertexSize;
 
-        meshPrimitiveHeader->MeshletVertexIndexOffset = ftell(file) - meshHeader.MeshBufferOffset;
+        currentVertexBufferOffset += result.VertexBuffer.Data.Length;
+        
+        uint32_t indexBufferOffset = meshIndexBufferOffset + currentIndexBufferOffset;
+        fseek(file, indexBufferOffset + meshHeader.MeshBufferOffset, SEEK_SET);
+        fwrite(result.IndexBuffer.Items, sizeof(uint32_t), result.IndexBuffer.Length, file);
+
+        meshPrimitiveHeader->IndexBufferOffset = indexBufferOffset;
+        meshPrimitiveHeader->IndexCount = result.IndexBuffer.Length;
+        currentIndexBufferOffset += result.IndexBuffer.Length * sizeof(uint32_t);
+
+        uint32_t meshletVertexIndexOffset = meshletVertexIndexBufferOffset + currentMeshletVertexIndexBufferOffset;
+        fseek(file, meshletVertexIndexOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.MeshletVertexIndexBuffer.Items, sizeof(uint32_t), result.MeshletVertexIndexBuffer.Length, file);
+        currentMeshletVertexIndexBufferOffset += result.MeshletVertexIndexBuffer.Length * sizeof(uint32_t);
 
-        meshPrimitiveHeader->MeshletTriangleIndexOffset = ftell(file) - meshHeader.MeshBufferOffset;
+        uint32_t meshletTriangleIndexOffset = meshletTriangleIndexBufferOffset + currentMeshletTriangleIndexBufferOffset;
+        fseek(file, meshletTriangleIndexOffset + meshHeader.MeshBufferOffset, SEEK_SET);
         fwrite(result.MeshletTriangleIndexBuffer.Items, sizeof(uint32_t), result.MeshletTriangleIndexBuffer.Length, file);
-    }
+        currentMeshletTriangleIndexBufferOffset += result.MeshletTriangleIndexBuffer.Length * sizeof(uint32_t);
 
-    meshHeader.MeshBufferSizeInBytes = ftell(file) - meshHeader.MeshBufferOffset;
+        for (uint32_t j = 0; j < result.Meshlets.Length; j++)
+        {
+            ElemMeshlet* meshlet = &result.Meshlets.Items[j];
+            meshlet->VertexIndexOffset = meshletVertexIndexOffset + meshlet->VertexIndexOffset * sizeof(uint32_t);
+            meshlet->TriangleOffset = meshletTriangleIndexOffset + meshlet->TriangleOffset * sizeof(uint32_t);
+        }
+
+        meshPrimitiveHeader->MeshletOffset = meshletBufferOffset + currentMeshletBufferOffset;
+        fseek(file, meshPrimitiveHeader->MeshletOffset + meshHeader.MeshBufferOffset, SEEK_SET);
+        fwrite(result.Meshlets.Items, sizeof(ElemMeshlet), result.Meshlets.Length, file);
+        currentMeshletBufferOffset += result.Meshlets.Length * sizeof(ElemMeshlet);
+        
+        uint32_t primitivesOffset = meshPrimitivesOffset + currentPrimitivesOffset;
+        fseek(file, primitivesOffset + meshHeader.MeshBufferOffset, SEEK_SET);
+        fwrite(meshPrimitiveHeader, sizeof(SampleMeshPrimitiveHeader), 1, file);
+        currentPrimitivesOffset += sizeof(SampleMeshPrimitiveHeader);
+    }
 
     fseek(file, meshHeaderOffset, SEEK_SET);
     fwrite(&meshHeader, sizeof(SampleMeshHeader), 1, file);
     
-    fseek(file, meshPrimitiveHeadersOffset, SEEK_SET);
-    fwrite(meshPrimitiveHeaders, sizeof(SampleMeshPrimitiveHeader), mesh.MeshPrimitives.Length, file);
-
     fseek(file, 0, SEEK_END);
     
+    free(buildMeshletResults);
+
     return true;
+}
+
+#define MAX_TEXTURE_COUNT 2048
+
+typedef struct
+{
+    SampleSceneTextureData* Textures;
+    uint32_t TextureCount;
+} TextureCache;
+
+TextureCache* InitTextureCache()
+{
+    // TODO: Free data
+    TextureCache* pointer = (TextureCache*)malloc(sizeof(TextureCache));
+    pointer->Textures = (SampleSceneTextureData*)malloc(sizeof(SampleSceneTextureData) * MAX_TEXTURE_COUNT);
+    pointer->TextureCount = 0;
+
+    return pointer;
+}
+
+uint32_t GetOrCreateTextureEntry(TextureCache* textureCache, const char* path, bool isNormalTexture)
+{
+    for (uint32_t i = 0; i < textureCache->TextureCount; i++)
+    {
+        SampleSceneTextureData* cacheItem = &textureCache->Textures[i];
+
+        if (strstr(cacheItem->Path, path))
+        {
+            return i;
+        }
+    }
+
+    if (textureCache->TextureCount == MAX_TEXTURE_COUNT)
+    {
+        printf("Texture cache at max!!!\n");
+    }
+
+    uint32_t result = textureCache->TextureCount++;
+    textureCache->Textures[result] = (SampleSceneTextureData) {};
+    strcpy(textureCache->Textures[result].Path, path);
+
+    textureCache->Textures[result].IsNormalTexture = isNormalTexture;
+
+    return result;
 }
 
 bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInputPath)
@@ -85,32 +200,53 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInpu
     // TODO: Get rid of malloc?
     SampleDataBlockEntry* meshDataOffsets = (SampleDataBlockEntry*)malloc(sizeof(SampleDataBlockEntry) * scene.Meshes.Length);
     fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
-    
+
+    // TODO: Change that. For now we use that simple implementation
+    TextureCache* textureCache = InitTextureCache(); 
+
+    SampleSceneMaterialHeader* materialHeaders = (SampleSceneMaterialHeader*)malloc(sizeof(SampleSceneMaterialHeader) * scene.Materials.Length);
+
     for (uint32_t i = 0; i < scene.Materials.Length; i++)
     {
         ElemSceneMaterial* material = &scene.Materials.Items[i];
 
-        SampleSceneMaterialHeader materialHeader =
+        SampleSceneMaterialHeader* materialHeader = &materialHeaders[i];
+
+        *materialHeader = (SampleSceneMaterialHeader)
         {
-            .AlbedoFactor = material->AlbedoFactor
+            .AlbedoFactor = material->AlbedoFactor,
+            .EmissiveFactor = material->EmissiveFactor,
+            .AlbedoTextureId = -1,
+            .NormalTextureId = -1,
+            .TransparentMode = (SampleSceneMaterialTransparentMode)material->TransparentMode,
+            .AlphaCutoff = material->AlphaCutoff
         };
 
-        strncpy(materialHeader.Name, material->Name, 50);
+        strncpy(materialHeader->Name, material->Name, 50);
 
         // TODO: Here we need to compute a list of unique textures and add them to a list
         // so we don't need to compute that unique list at runtime
         if (material->AlbedoTexturePath)
         {
-            GetRelativeResourcePath(sceneInputPath, material->AlbedoTexturePath, ".texture", materialHeader.AlbedoTexturePath, 255);
+            char texturePath[255];
+            GetRelativeResourcePath(sceneInputPath, material->AlbedoTexturePath, ".texture", texturePath, 255);
+
+            materialHeader->AlbedoTextureId = GetOrCreateTextureEntry(textureCache, texturePath, false);
         }
         
         if (material->NormalTexturePath)
         {
-            GetRelativeResourcePath(sceneInputPath, material->NormalTexturePath, ".texture", materialHeader.NormalTexturePath, 255);
-        }
+            char texturePath[255];
+            GetRelativeResourcePath(sceneInputPath, material->NormalTexturePath, ".texture", texturePath, 255);
 
-        fwrite(&materialHeader, sizeof(SampleSceneMaterialHeader), 1, file);
+            materialHeader->NormalTextureId = GetOrCreateTextureEntry(textureCache, texturePath, true);
+        }
     }
+
+    sceneHeader.TextureCount = textureCache->TextureCount;
+    fwrite(textureCache->Textures, sizeof(SampleSceneTextureData), textureCache->TextureCount, file);
+
+    fwrite(materialHeaders, sizeof(SampleSceneMaterialHeader), scene.Materials.Length, file);
 
     for (uint32_t i = 0; i < scene.Nodes.Length; i++)
     {
@@ -148,6 +284,8 @@ bool WriteSceneData(FILE* file, ElemLoadSceneResult scene, const char* sceneInpu
     fseek(file, sizeof(sceneHeader), SEEK_SET);
     fwrite(meshDataOffsets, sizeof(SampleDataBlockEntry), scene.Meshes.Length, file);
 
+    fseek(file, 0, SEEK_SET);
+    fwrite(&sceneHeader, sizeof(SampleSceneHeader), 1, file);
     return true;
 }
 
@@ -209,12 +347,12 @@ int main(int argc, const char* argv[])
     ElemLoadSceneOptions loadSceneOptions = {};
 
     // HACK: For now we hardcode options
-    if (strstr(inputPath, "sponza"))
+    if (strstr(inputPath, "sponza.gltf"))
+    {
+    }
+    else if (strstr(inputPath, "sponza.obj"))
     {
         loadSceneOptions.Scaling = 0.01f;
-    }
-    else if (strstr(inputPath, "Sponza.gltf"))
-    {
         //loadSceneOptions.CoordinateSystem = ElemSceneCoordinateSystem_RightHanded;
     }
     else if (strstr(inputPath, "bistro"))
@@ -225,6 +363,7 @@ int main(int argc, const char* argv[])
     // TODO: Scaling should be passed as a parameter
     ElemLoadSceneResult scene = ElemLoadScene(inputPath, &loadSceneOptions);
     
+    printf("Scene Loaded: Meshes Count=%d, Material Count=%d, Nodes Count=%d\n", scene.Meshes.Length, scene.Materials.Length, scene.Nodes.Length);
     DisplayOutputMessages("LoadScene", scene.Messages);
 
     if (scene.HasErrors)

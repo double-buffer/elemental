@@ -191,7 +191,7 @@ ElemShaderLibrary TestOpenShader(ElemGraphicsDevice graphicsDevice, const char* 
 ElemPipelineState TestOpenComputeShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* function);
 ElemPipelineState TestOpenMeshShader(ElemGraphicsDevice graphicsDevice, const char* shader, const char* meshShaderFunction, const char* pixelShaderFunction, const ElemGraphicsPipelineStateParameters* baseParameters);
 
-TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_GpuUpload);
+TestGpuBuffer TestCreateGpuBuffer(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsHeapType heapType = ElemGraphicsHeapType_GpuUpload, ElemGraphicsResourceUsage additionalUsage = ElemGraphicsResourceUsage_Read);
 void TestFreeGpuBuffer(TestGpuBuffer gpuBuffer);
 
 TestGpuTexture TestCreateGpuTexture(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage);

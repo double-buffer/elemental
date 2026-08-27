@@ -232,6 +232,32 @@ ReadOnlySpan<ElemSceneMaterial> LoadGltfMaterials(MemoryArena memoryArena, const
         {
             material->Name = SystemConcatBuffers<char>(memoryArena, "Material_", SystemConvertNumberToString(stackMemoryArena, i)).Pointer;
         }
+        
+        material->TransparentMode = ElemSceneMaterialTransparentMode_None;
+
+        if (gltfMaterial->alpha_mode == cgltf_alpha_mode_mask)
+        {
+            material->TransparentMode = ElemSceneMaterialTransparentMode_Alpha;
+            material->AlphaCutoff = gltfMaterial->alpha_cutoff;
+        }
+        else if (gltfMaterial->alpha_mode == cgltf_alpha_mode_blend)
+        {
+            material->TransparentMode = ElemSceneMaterialTransparentMode_Blend;
+        }
+
+        material->EmissiveFactor =
+        {
+            .X = gltfMaterial->emissive_factor[0],
+            .Y = gltfMaterial->emissive_factor[1],
+            .Z = gltfMaterial->emissive_factor[2]
+        };
+
+        if (gltfMaterial->has_emissive_strength)
+        {
+            material->EmissiveFactor.X *= gltfMaterial->emissive_strength.emissive_strength;
+            material->EmissiveFactor.Y *= gltfMaterial->emissive_strength.emissive_strength;
+            material->EmissiveFactor.Z *= gltfMaterial->emissive_strength.emissive_strength;
+        }
 
         if (gltfMaterial->has_pbr_metallic_roughness)
         {
@@ -239,7 +265,17 @@ ReadOnlySpan<ElemSceneMaterial> LoadGltfMaterials(MemoryArena memoryArena, const
 
             if (gltfMaterialData->base_color_texture.texture)
             {
-                material->AlbedoTexturePath = SystemDuplicateBuffer<char>(memoryArena, gltfMaterialData->base_color_texture.texture->image->uri).Pointer;
+                auto finalTexturePath = ReadOnlySpan<char>(gltfMaterialData->base_color_texture.texture->image->uri);
+                auto subStringResult = SystemFindSubString(finalTexturePath, "%20");
+
+                if (subStringResult != -1)
+                {
+                    auto temp = SystemConcatBuffers(stackMemoryArena, finalTexturePath.Slice(0, subStringResult), ReadOnlySpan<char>(" "));
+                    finalTexturePath = SystemConcatBuffers(stackMemoryArena, ReadOnlySpan<char>(temp), finalTexturePath.Slice(subStringResult + 3));
+                    printf("Found space: %s\n", finalTexturePath.Pointer);
+                }
+  
+                material->AlbedoTexturePath = SystemDuplicateBuffer<char>(memoryArena, finalTexturePath).Pointer;
             }
 
             material->AlbedoFactor = 

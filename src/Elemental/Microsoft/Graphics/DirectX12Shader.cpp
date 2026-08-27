@@ -245,7 +245,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
     {
         auto renderTargetParameters = parameters->RenderTargets.Items[i];
     
-        renderTargets.RTFormats[i] = ConvertToDirectX12TextureFormat(renderTargetParameters.Format);
+        renderTargets.RTFormats[i] = ConvertToDirectX12Format(renderTargetParameters.Format);
 
         blendState.RenderTarget[i] =
         {
@@ -265,7 +265,7 @@ ComPtr<ID3D12PipelineState> CreateDirectX12OldPSO(ElemGraphicsDevice graphicsDev
 
     if (CheckDepthStencilFormat(parameters->DepthStencil.Format))
     {
-        depthFormat = ConvertToDirectX12TextureFormat(parameters->DepthStencil.Format);
+        depthFormat = ConvertToDirectX12Format(parameters->DepthStencil.Format);
         depthStencilState.DepthEnable = true;
 
         if (!parameters->DepthStencil.DepthDisableWrite)

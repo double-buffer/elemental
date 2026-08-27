@@ -178,7 +178,7 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
  * @param path A ReadOnlySpan<char> representing the path of the file from which bytes are to be read.
  * @param data A Span<uint8_t> where the read data will be stored.
  */
-void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, Span<uint8_t> data);
+void SystemPlatformFileReadBytes(ReadOnlySpan<char> path, uint64_t offset, Span<uint8_t> data);
 
 /**
  * Deletes a file.

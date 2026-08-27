@@ -1,10 +1,10 @@
 //--------------------------------------------------------------------------------
 // Elemental Library
-// Version: 1.0.0-dev5
+// Version: 1.0.0-dev6
 //
 // MIT License
 //
-// Copyright (c) 2023-2024 Double Buffer SRL
+// Copyright (c) 2023-2025 Double Buffer SRL
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@
 #define UseLoader
 #endif
 
-#define ELEM_VERSION_LABEL "1.0.0-dev5"
+#define ELEM_VERSION_LABEL "1.0.0-dev6"
 
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
@@ -290,6 +290,8 @@ ElemAPI ElemWindowCursorPosition ElemGetWindowCursorPosition(ElemWindow window);
 // ##Module_Graphics##
 //--------------------------------------------------------------------------------
 
+// TODO: IMPORTANT!!!!! Review each offset parameters and make them uint64_t!!!
+
  /**
  * Handle that represents a graphics device.
  */
@@ -305,7 +307,7 @@ typedef ElemHandle ElemCommandQueue;
  */
 typedef ElemHandle ElemCommandList;
 
-typedef ElemHandle ElemIOCommandQueue;
+typedef ElemHandle ElemGraphicsTimestamp;
 
 /**
  * Handle that represents a swap chain.
@@ -375,8 +377,9 @@ typedef enum
 {
     // Default format.
     ElemSwapChainFormat_Default = 0,
+    ElemSwapChainFormat_DefaultNoSrgb = 1,
     // High dynamic range format.
-    ElemSwapChainFormat_HighDynamicRange = 1
+    ElemSwapChainFormat_HighDynamicRange = 2
 } ElemSwapChainFormat;
 
 typedef enum
@@ -384,6 +387,7 @@ typedef enum
     ElemGraphicsHeapType_Gpu = 0,
     // TODO: Still not convinced about that one. should we let GPU be gpu upload by default?
     // TODO: This may cause a bug in vulkan with textures (flickering)
+    // TODO: Also, in metal, Accelstruct needs to be in private memory even if it is unified memory
     ElemGraphicsHeapType_GpuUpload = 1, 
     ElemGraphicsHeapType_Readback = 2
 } ElemGraphicsHeapType;
@@ -397,7 +401,9 @@ typedef enum
     ElemGraphicsFormat_B8G8R8A8_SRGB,
     ElemGraphicsFormat_B8G8R8A8,
     ElemGraphicsFormat_R16G16B16A16_FLOAT,
+    ElemGraphicsFormat_R32G32B32_FLOAT,
     ElemGraphicsFormat_R32G32B32A32_FLOAT,
+    ElemGraphicsFormat_R32_UINT, // TODO: Do we need this one ?
     ElemGraphicsFormat_D32_FLOAT, 
     ElemGraphicsFormat_BC7,
     ElemGraphicsFormat_BC7_SRGB 
@@ -406,7 +412,8 @@ typedef enum
 typedef enum
 {
     ElemGraphicsResourceType_Buffer,
-    ElemGraphicsResourceType_Texture2D // TODO: Do we keep the distinction for 2D? Maybe just Texture is enough
+    ElemGraphicsResourceType_Texture2D, // TODO: Do we keep the distinction for 2D? Maybe just Texture is enough
+    ElemGraphicsResourceType_RaytracingAccelerationStructure
 } ElemGraphicsResourceType;
 
 typedef enum
@@ -414,7 +421,8 @@ typedef enum
     ElemGraphicsResourceUsage_Read = 0x00,
     ElemGraphicsResourceUsage_Write = 0x01,
     ElemGraphicsResourceUsage_RenderTarget = 0x02,
-    ElemGraphicsResourceUsage_DepthStencil = 0x04
+    ElemGraphicsResourceUsage_DepthStencil = 0x04,
+    ElemGraphicsResourceUsage_RaytracingAccelerationStructure = 0x08
 } ElemGraphicsResourceUsage;
 
 typedef enum
@@ -437,6 +445,37 @@ typedef enum
     ElemGraphicsSamplerAddressMode_ClampToEdgeMirror = 3,
     ElemGraphicsSamplerAddressMode_ClampToBorderColor = 4
 } ElemGraphicsSamplerAddressMode;
+
+typedef enum
+{
+    ElemRaytracingBuildFlags_None = 0x00,
+    ElemRaytracingBuildFlags_AllowUpdate = 0x01,
+    ElemRaytracingBuildFlags_AllowCompaction = 0x02,
+    ElemRaytracingBuildFlags_PreferFastTrace = 0x04,
+    ElemRaytracingBuildFlags_PreferFastBuild = 0x08,
+    ElemRaytracingBuildFlags_MinimizeMemory = 0x10
+} ElemRaytracingBuildFlags;
+
+typedef enum
+{
+    ElemRaytracingTlasInstanceFlags_None = 0x00,
+    ElemRaytracingTlasInstanceFlags_DisableTriangleCulling = 0x01,
+    ElemRaytracingTlasInstanceFlags_FlipTriangleFaces = 0x02,
+    ElemRaytracingTlasInstanceFlags_NonOpaque = 0x04,
+} ElemRaytracingTlasInstanceFlags;
+
+typedef enum
+{
+    ElemRaytracingVertexFormat_Float16,
+    ElemRaytracingVertexFormat_Float32
+} ElemRaytracingVertexFormat;
+
+typedef enum
+{
+    ElemRaytracingIndexFormat_UInt16,
+    ElemRaytracingIndexFormat_UInt32
+} ElemRaytracingIndexFormat;
+
 
 typedef enum
 {
@@ -492,6 +531,8 @@ typedef enum
     ElemGraphicsResourceBarrierSyncType_None,
     ElemGraphicsResourceBarrierSyncType_Compute,
     ElemGraphicsResourceBarrierSyncType_RenderTarget,
+    ElemGraphicsResourceBarrierSyncType_Copy,
+    ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure,
 } ElemGraphicsResourceBarrierSyncType;
 
 typedef enum
@@ -499,6 +540,7 @@ typedef enum
     ElemGraphicsResourceBarrierAccessType_NoAccess,
     ElemGraphicsResourceBarrierAccessType_Read,
     ElemGraphicsResourceBarrierAccessType_Write,
+    ElemGraphicsResourceBarrierAccessType_Copy,
     ElemGraphicsResourceBarrierAccessType_RenderTarget,
     ElemGraphicsResourceBarrierAccessType_DepthStencilWrite,
 } ElemGraphicsResourceBarrierAccessType;
@@ -578,6 +620,11 @@ typedef struct
 typedef struct
 {
     float X, Y, Z;
+} ElemVector2;
+
+typedef struct
+{
+    float X, Y, Z;
 } ElemVector3;
 
 typedef union
@@ -593,6 +640,12 @@ typedef union
         ElemVector3 XYZ;
     }; 
 } ElemVector4;
+
+typedef union
+{
+    float Elements[4][3];
+    ElemVector3 Rows[4];
+} ElemMatrix4x3;
 
 typedef struct
 {
@@ -611,6 +664,7 @@ typedef struct
     bool EnableGpuValidation;
     // Enable debug logging of barriers.
     bool EnableDebugBarrierInfo;
+    bool EnableDebugStablePowerState;
     // Prefer using Vulkan API if set to true.
     bool PreferVulkan;
 } ElemGraphicsOptions;
@@ -718,6 +772,18 @@ typedef struct
     ElemFenceSpan FencesToWait;
 } ElemExecuteCommandListOptions;
 
+typedef struct
+{
+    // Fences that the execution should wait on before starting.
+    ElemFenceSpan FencesToWait;
+} ElemFreeGraphicsTimestampOptions;
+
+typedef struct
+{
+    uint64_t Value;
+    uint64_t FrequencyInSeconds;
+} ElemGraphicsTimestampValue;
+
 /**
  * Options for configuring a swap chain.
  */
@@ -765,6 +831,7 @@ typedef struct
     double NextPresentTimestampInSeconds;
     // True if the size of the swapchain has changed from the previous update.
     bool SizeChanged;
+    uint64_t FrameIndex;
 } ElemSwapChainUpdateParameters;
 
 /**
@@ -783,7 +850,81 @@ typedef struct
     const char* DebugName;
 } ElemGraphicsResourceInfoOptions;
 
-// TODO: Mip Levels
+typedef struct
+{
+    uint64_t Alignment;
+    uint64_t SizeInBytes;
+} ElemGraphicsResourceAllocationInfo;
+
+typedef struct
+{
+    ElemRaytracingVertexFormat VertexFormat;
+    ElemGraphicsResource VertexBuffer;
+    uint32_t VertexBufferOffset;
+    uint32_t VertexCount;
+    uint32_t VertexSizeInBytes;
+    ElemRaytracingIndexFormat IndexFormat;
+    ElemGraphicsResource IndexBuffer;
+    uint32_t IndexBufferOffset;
+    uint32_t IndexCount;
+    bool IsTransparent;
+} ElemRaytracingBlasGeometry;
+
+typedef struct
+{
+    ElemRaytracingBlasGeometry* Items;
+    uint32_t Length;
+} ElemRaytracingBlasGeometrySpan;
+
+typedef struct
+{
+    ElemRaytracingBuildFlags BuildFlags;
+    ElemRaytracingBlasGeometrySpan GeometryList;
+} ElemRaytracingBlasParameters; 
+
+typedef struct
+{
+    ElemRaytracingBuildFlags BuildFlags;
+    ElemGraphicsResource InstanceBuffer;
+    uint32_t InstanceBufferOffset;
+    uint32_t InstanceCount;
+} ElemRaytracingTlasParameters; 
+
+typedef struct
+{
+    ElemMatrix4x3 TransformMatrix;
+    uint32_t InstanceId;
+    uint32_t InstanceMask;
+    ElemRaytracingTlasInstanceFlags InstanceFlags;
+    ElemGraphicsResource BlasResource;
+} ElemRaytracingTlasInstance;
+
+typedef struct
+{
+    ElemRaytracingTlasInstance* Items;
+    uint32_t Length;
+} ElemRaytracingTlasInstanceSpan;
+
+typedef struct
+{
+    uint64_t Alignment;
+    uint64_t SizeInBytes;
+    uint64_t ScratchSizeInBytes;
+    uint64_t UpdateScratchSizeInBytes;
+} ElemRaytracingAllocationInfo;
+
+typedef struct
+{
+    uint64_t StorageOffset;
+    uint64_t StorageSizeInBytes;
+    const char* DebugName;
+} ElemRaytracingAccelerationStructureOptions;
+
+typedef struct
+{
+    uint64_t ScratchOffset;
+} ElemRaytracingBuildOptions;
+
 // TODO: Clear values
 typedef struct
 {
@@ -807,6 +948,8 @@ typedef struct
 // TODO: Here, we could add options to support StructuredBuffer (we need a different stride for that)
 typedef struct
 {
+    // TODO: IMPORTANT!: Add a buffer offset this is super important to allow sub allocating within a buffer to avoid
+    // alignment cost
     uint32_t TextureMipIndex;
 } ElemGraphicsResourceDescriptorOptions;
 
@@ -864,7 +1007,7 @@ typedef struct
     uint32_t BufferOffset;
     uint32_t TextureMipLevel;
     ElemCopyDataSourceType SourceType;
-    uint32_t SourceFilePath;
+    const char* SourceFilePath;
     uint32_t SourceFileOffset;
     uint32_t SourceFileSizeInBytes;
     ElemDataSpan SourceMemoryData;
@@ -1120,6 +1263,11 @@ ElemAPI ElemFence ElemExecuteCommandLists(ElemCommandQueue commandQueue, ElemCom
 ElemAPI void ElemWaitForFenceOnCpu(ElemFence fence);
 ElemAPI bool ElemIsFenceCompleted(ElemFence fence);
 
+ElemAPI ElemGraphicsTimestamp ElemCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+ElemAPI void ElemFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemAPI ElemGraphicsTimestampValue ElemGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+ElemAPI void ElemInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);
+
 /**
  * Creates a swap chain for a window, allowing rendered frames to be presented to the screen.
  * @param commandQueue The command queue associated with rendering commands for the swap chain.
@@ -1161,27 +1309,44 @@ ElemAPI ElemGraphicsHeap ElemCreateGraphicsHeap(ElemGraphicsDevice graphicsDevic
 ElemAPI void ElemFreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
 
 // TODO: uint64_t for sizeInBytes?
+// TODO: We will have a create GraphicsResource function for each type of resources and a corresponding get size and alignment function
+// TODO: To refactor after the acceleration structure is done, this one will be the POC
 ElemAPI ElemGraphicsResourceInfo ElemCreateGraphicsBufferResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemCreateTexture2DResourceInfo(ElemGraphicsDevice graphicsDevice, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, ElemGraphicsResourceUsage usage, const ElemGraphicsResourceInfoOptions* options);
+
+// ElemGetGraphicsBufferAllocationInfo()
+// ElemCreateGraphicsBufferResource()
+// ElemGetTexture2DAllocationInfo()
+// ElemCreateTexture2DResource()
 
 ElemAPI ElemGraphicsResource ElemCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, uint64_t graphicsHeapOffset, const ElemGraphicsResourceInfo* resourceInfo);
 ElemAPI void ElemFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResource resource);
+ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
 // TODO: uint64_t for offset?
-ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
-ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data);
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options);
 ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
 ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo(ElemGraphicsResourceDescriptor descriptor);
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options);
 
-ElemAPI void ElemProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
-
 ElemAPI ElemGraphicsSampler ElemCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
 ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
 ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
+
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters);
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters);
+ElemAPI ElemGraphicsResourceAllocationInfo ElemGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount);
+ElemAPI ElemDataSpan ElemEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances);
+ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
+
+// TODO: Add options to be able to pass source accel struct
+// TODO: Compaction!
+ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
+ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);
 
 /**
  * Creates a shader library from provided binary data, allowing shaders to be loaded and used by graphics pipeline states.

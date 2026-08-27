@@ -16,6 +16,7 @@ struct VulkanGraphicsResourceData
 {
     VkBuffer BufferDeviceObject;
     VkImage TextureDeviceObject;
+    VkAccelerationStructureKHR AccelerationStructureDeviceObject;
     ElemGraphicsResourceType Type;
     VkImageView RenderTargetImageView;
     VkImageView DepthStencilImageView;
@@ -35,7 +36,7 @@ struct VulkanGraphicsResourceDataFull
     uint64_t GraphicsHeapOffset;
 };
 
-struct VulkanUploadBuffer
+struct VulkanGraphicsBufferCpu
 {
     VkBuffer Buffer;
     VkDeviceMemory DeviceMemory;
@@ -66,8 +67,9 @@ ElemGraphicsResource VulkanCreateGraphicsResource(ElemGraphicsHeap graphicsHeap,
 void VulkanFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemGraphicsResourceInfo VulkanGetGraphicsResourceInfo(ElemGraphicsResource resource);
 
-void VulkanUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
-ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+VulkanGraphicsBufferCpu CreateVulkanGraphicsBufferCpu(ElemGraphicsDevice graphicsDevice, ElemGraphicsHeapType heapType, uint64_t sizeInBytes, const char* debugName);
+void VulkanUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data);
+ElemDataSpan VulkanDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options);
 void VulkanCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemGraphicsResourceDescriptor VulkanCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
@@ -81,3 +83,13 @@ void VulkanGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsReso
 ElemGraphicsSampler VulkanCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
 ElemGraphicsSamplerInfo VulkanGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
 void VulkanFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
+
+ElemRaytracingAllocationInfo VulkanGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters);
+ElemRaytracingAllocationInfo VulkanGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters);
+
+ElemGraphicsResourceAllocationInfo VulkanGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount);
+ElemDataSpan VulkanEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances);
+
+ElemGraphicsResource VulkanCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
+void VulkanBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
+void VulkanBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);

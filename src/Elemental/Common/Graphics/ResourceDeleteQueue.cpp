@@ -76,17 +76,19 @@ void ProcessResourceDeleteQueue()
                 if (entry->Type == ResourceDeleteType_Resource)
                 {
                     ElemFreeGraphicsResource(entry->Resource, nullptr);
+                    entry->Resource = ELEM_HANDLE_NULL;
                 }
                 else if (entry->Type == ResourceDeleteType_Descriptor)
                 {
                     ElemFreeGraphicsResourceDescriptor(entry->Resource, nullptr);
+                    entry->Resource = -1;
                 }
                 else if (entry->Type == ResourceDeleteType_Sampler)
                 {
                     ElemFreeGraphicsSampler(entry->Resource, nullptr);
+                    entry->Resource = -1;
                 }
 
-                entry->Resource = ELEM_HANDLE_NULL;
                 entry->NextEntry = GraphicsResourceDeleteQueueFreeListIndex;
                 GraphicsResourceDeleteQueueFreeListIndex = i;
             }

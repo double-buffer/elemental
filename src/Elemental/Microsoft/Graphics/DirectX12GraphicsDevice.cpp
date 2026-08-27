@@ -1,28 +1,16 @@
 #include "DirectX12GraphicsDevice.h"
 #include "DirectX12Config.h"
+#include "DirectX12Resource.h"
 #include "SystemDataPool.h"
 #include "SystemFunctions.h"
 #include "SystemLogging.h"
 #include "SystemMemory.h"
 
-struct DirectX12DescriptorHeapFreeListItem
-{
-    uint32_t Next;
-};
-
-struct DirectX12DescriptorHeapStorage
-{
-    ComPtr<ID3D12DescriptorHeap> DescriptorHeap;
-    Span<DirectX12DescriptorHeapFreeListItem> Items;
-    uint32_t DescriptorHandleSize;
-    uint32_t CurrentIndex;
-    uint32_t FreeListIndex;
-};
-
 MemoryArena DirectX12MemoryArena;
 bool DirectX12DebugLayerEnabled = false;
 bool directX12DebugGpuValidationEnabled = false;
 bool DirectX12DebugBarrierInfoEnabled = false;
+bool DirectX12DebugStablePowerStateEnabled = false;
 ComPtr<IDXGIFactory6> DxgiFactory; 
 ComPtr<IDXGIInfoQueue> DxgiInfoQueue;
 
@@ -38,10 +26,16 @@ ComPtr<ID3D12DeviceFactory> directX12DeviceFactory;
 void InitDirectX12()
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
-
+    auto applicationPath = SystemGetExecutableFolderPath(stackMemoryArena);
+    
     ComPtr<ID3D12SDKConfiguration1> directX12SdkConfiguration;
     AssertIfFailed(D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(directX12SdkConfiguration.GetAddressOf())));
-    AssertIfFailed(directX12SdkConfiguration->CreateDeviceFactory(D3D12SDK_VERSION, D3D12SDK_PATH, IID_PPV_ARGS(directX12DeviceFactory.GetAddressOf())));
+
+    // TODO: The specs say that DXGI_ERROR_ALREADY_EXISTS can be returned if a device exists and the driver for that device is not capable of supporting independent devices. 
+    // Would that failure happen even during an attempt to CreateDevice() with a NULL device pointer when checking support for feature levels (where it would otherwise return S_FALSE), 
+    // and should a well-behaved program have logic there to possibly try again with D3D12_DEVICE_FACTORY_FLAG_ALLOW_RETURNING_EXISTING_DEVICE? Or would that failure not 
+    // be returned when checking for feature level support and instead only be returned when actually trying to create a device?
+    AssertIfFailed(directX12SdkConfiguration->CreateDeviceFactory(D3D12SDK_VERSION, applicationPath.Pointer, IID_PPV_ARGS(directX12DeviceFactory.GetAddressOf())));
 
     auto dxgiCreateFactoryFlags = 0u;
 
@@ -85,9 +79,6 @@ void InitDirectX12()
     }
 
     AssertIfFailed(CreateDXGIFactory2(dxgiCreateFactoryFlags, IID_PPV_ARGS(DxgiFactory.GetAddressOf())));
-
-    // HACK: Remove this when DXIL signing is fully open source!
-    AssertIfFailed(directX12DeviceFactory->EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, nullptr));
 }
 
 DirectX12GraphicsDeviceData* GetDirectX12GraphicsDeviceData(ElemGraphicsDevice graphicsDevice)
@@ -158,6 +149,9 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         D3D12_FEATURE_DATA_D3D12_OPTIONS deviceOptions = {};
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &deviceOptions, sizeof(deviceOptions)));
 
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 deviceOptions5 = {};
+        AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &deviceOptions5, sizeof(deviceOptions5)));
+
         D3D12_FEATURE_DATA_D3D12_OPTIONS7 deviceOptions7 = {};
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &deviceOptions7, sizeof(deviceOptions7)));
 
@@ -171,6 +165,7 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         // TODO: Update checks
         if (deviceOptions.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_2 && 
             deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
+            deviceOptions5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1 &&
             deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
             shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8 && 
             deviceOptions16.GPUUploadHeapSupported)
@@ -226,7 +221,7 @@ DirectX12DescriptorHeap CreateDirectX12DescriptorHeap(ComPtr<ID3D12Device10> gra
 
     auto descriptorStorage = SystemPushStruct<DirectX12DescriptorHeapStorage>(memoryArena);
     descriptorStorage->DescriptorHeap = descriptorHeap;
-    descriptorStorage->Items = SystemPushArray<DirectX12DescriptorHeapFreeListItem>(memoryArena, length);
+    descriptorStorage->Items = SystemPushArray<DirectX12FreeListItem>(memoryArena, length);
     descriptorStorage->DescriptorHandleSize = graphicsDevice->GetDescriptorHandleIncrementSize(type);
     descriptorStorage->CurrentIndex = 0;
     descriptorStorage->FreeListIndex = UINT32_MAX;
@@ -300,6 +295,82 @@ D3D12_CPU_DESCRIPTOR_HANDLE ConvertDirectX12DescriptorIndexToHandle(DirectX12Des
     return handle;
 }
 
+DirectX12QueryHeap CreateDirectX12QueryHeap(ComPtr<ID3D12Device10> graphicsDevice, MemoryArena memoryArena, D3D12_QUERY_HEAP_TYPE type, uint32_t length)
+{
+    D3D12_QUERY_HEAP_DESC heapDesc = {};
+	heapDesc.Count = length;
+	heapDesc.NodeMask = 0;
+	heapDesc.Type = type;
+
+	ComPtr<ID3D12QueryHeap> queryHeap;
+	AssertIfFailed(graphicsDevice->CreateQueryHeap(&heapDesc, IID_PPV_ARGS(queryHeap.ReleaseAndGetAddressOf())));
+
+    auto queryHeapReadbackBuffer = CreateDirectX12Buffer(graphicsDevice, D3D12_HEAP_TYPE_READBACK, sizeof(uint64_t) * DIRECTX12_MAX_QUERYHEAP_ITEMS, L"QueryHeapReadbackBuffer");
+
+    void* cpuPointer = nullptr;
+    D3D12_RANGE readRange = { 0, 0 };
+    queryHeapReadbackBuffer->Map(0, &readRange, &cpuPointer);
+
+    auto descriptorStorage = SystemPushStruct<DirectX12QueryHeapStorage>(memoryArena);
+    descriptorStorage->QueryHeap = queryHeap;
+    descriptorStorage->QueryHeapReadbackBuffer = queryHeapReadbackBuffer;
+    descriptorStorage->ReadbackCpuPointer = cpuPointer;
+    descriptorStorage->Type = type;
+    descriptorStorage->Items = SystemPushArray<DirectX12FreeListItem>(memoryArena, length);
+    descriptorStorage->CurrentIndex = 0;
+    descriptorStorage->InitializationIndex = 0;
+    descriptorStorage->FreeListIndex = UINT32_MAX;
+
+    return
+    {
+        .Storage = descriptorStorage
+    };
+}
+
+void FreeDirectX12QueryHeap(DirectX12QueryHeap queryHeap)
+{
+    SystemAssert(queryHeap.Storage);
+    queryHeap.Storage->QueryHeap.Reset();
+
+    queryHeap.Storage->QueryHeapReadbackBuffer.Reset();
+}
+
+uint32_t CreateDirectX12QueryHeapIndex(DirectX12QueryHeap queryHeap)
+{            
+    SystemAssert(queryHeap.Storage);
+
+    auto storage = queryHeap.Storage;
+    auto index = UINT32_MAX;
+
+    do
+    {
+        if (storage->FreeListIndex == UINT32_MAX)
+        {
+            index = UINT32_MAX;
+            break;
+        }
+        
+        index = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, index, storage->Items[storage->FreeListIndex].Next));
+
+    if (index == UINT32_MAX)
+    {
+        index = SystemAtomicAdd(storage->CurrentIndex, 1);
+    }
+
+    return index;
+}
+
+void FreeDirectX12QueryHeapIndex(DirectX12QueryHeap queryHeap, uint32_t index)
+{
+    auto storage = queryHeap.Storage;
+    
+    do
+    {
+        storage->Items[index].Next = storage->FreeListIndex;
+    } while (!SystemAtomicCompareExchange(storage->FreeListIndex, storage->FreeListIndex, index));
+}
+
 ComPtr<ID3D12RootSignature> CreateDirectX12RootSignature(ComPtr<ID3D12Device10> graphicsDevice)
 {
     D3D12_ROOT_PARAMETER1 rootParameters[1];
@@ -343,6 +414,11 @@ void DirectX12SetGraphicsOptions(const ElemGraphicsOptions* options)
     if (options->EnableDebugBarrierInfo)
     {
         DirectX12DebugBarrierInfoEnabled = options->EnableDebugBarrierInfo;
+    }
+
+    if (options->EnableDebugStablePowerState)
+    {
+        DirectX12DebugStablePowerStateEnabled = options->EnableDebugStablePowerState;
     }
 }
 
@@ -427,8 +503,11 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
         }
     }
 
-    // TODO: Don't enable it by default
-    //AssertIfFailed(device->SetStablePowerState(true));
+    if (DirectX12DebugStablePowerStateEnabled)
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Enabling GPU stable power state. It is recommended to use this for testing only.");
+        AssertIfFailed(device->SetStablePowerState(true));
+    }
 
     auto memoryArena = SystemAllocateMemoryArena();
 
@@ -437,6 +516,7 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
     auto rtvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto dsvDescriptorHeap = CreateDirectX12DescriptorHeap(device, memoryArena, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DIRECTX12_MAX_RTVS);
     auto rootSignature = CreateDirectX12RootSignature(device);
+    auto queryHeap = CreateDirectX12QueryHeap(device, memoryArena, D3D12_QUERY_HEAP_TYPE_TIMESTAMP, DIRECTX12_MAX_QUERYHEAP_ITEMS);
 
     // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<ComPtr<ID3D12Resource>>*>(DirectX12MemoryArena, MAX_UPLOAD_BUFFERS);
@@ -449,7 +529,8 @@ ElemGraphicsDevice DirectX12CreateGraphicsDevice(const ElemGraphicsDeviceOptions
         .RTVDescriptorHeap = rtvDescriptorHeap,
         .DSVDescriptorHeap = dsvDescriptorHeap,
         .MemoryArena = memoryArena,
-        .UploadBufferPools = uploadBuffers
+        .UploadBufferPools = uploadBuffers,
+        .QueryHeap = queryHeap
     }); 
 
     SystemAddDataPoolItemFull(directX12GraphicsDevicePool, handle, {
@@ -496,6 +577,8 @@ void DirectX12FreeGraphicsDevice(ElemGraphicsDevice graphicsDevice)
     FreeDirectX12DescriptorHeap(graphicsDeviceData->SamplerDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->RTVDescriptorHeap);
     FreeDirectX12DescriptorHeap(graphicsDeviceData->DSVDescriptorHeap);
+
+    FreeDirectX12QueryHeap(graphicsDeviceData->QueryHeap);
 
     graphicsDeviceData->Device.Reset();
     graphicsDeviceData->RootSignature.Reset();

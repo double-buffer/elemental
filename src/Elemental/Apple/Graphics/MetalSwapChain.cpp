@@ -141,6 +141,8 @@ ElemSwapChain MetalCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow win
     metalLayer->setDrawableSize(CGSizeMake(width, height));
     metalLayer->setFramebufferOnly(true);
 
+    // TODO: Implement NoSrgb format
+
     auto handle = SystemAddDataPoolItem(metalSwapChainPool, {
         .DeviceObject = metalLayer,
         .Window = window,
@@ -291,7 +293,7 @@ void MetalDisplayLinkHandler::metalDisplayLinkNeedsUpdate(CA::MetalDisplayLink* 
         }
 
         // TODO: Can we do something better than juste creating/destroying each time? 
-        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ELEM_HANDLE_NULL, ElemGraphicsResourceUsage_RenderTarget, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
+        auto backBufferTexture = CreateMetalGraphicsResourceFromResource(swapChainData->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ELEM_HANDLE_NULL, 0, 0, ElemGraphicsResourceUsage_RenderTarget, NS::RetainPtr(swapChainData->BackBufferDrawable->texture()), true);
 
         ElemSwapChainUpdateParameters updateParameters = 
         {

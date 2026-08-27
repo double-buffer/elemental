@@ -197,28 +197,28 @@ class CustomView: NSView {
     }
 
     override func touchesBegan(with event: NSEvent) {
-        let touches = event.touches(matchingPhase: .began, in: self)
+        let touches = event.touches(matching: .began, in: self)
         for touch in touches {
             touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesMoved(with event: NSEvent) {
-        let touches = event.touches(matchingPhase: .moved, in: self)
+        let touches = event.touches(matching: .moved, in: self)
         for touch in touches {
             touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesEnded(with event: NSEvent) {
-        let touches = event.touches(matchingPhase: .ended, in: self)
+        let touches = event.touches(matching: .ended, in: self)
         for touch in touches {
             touchEventManager.sendTouchEvent(touch) 
         }
     }
     
     override func touchesCancelled(with event: NSEvent) {
-        let touches = event.touches(matchingPhase: .cancelled, in: self)
+        let touches = event.touches(matching: .cancelled, in: self)
         for touch in touches {
             touchEventManager.sendTouchEvent(touch) 
         }

@@ -395,6 +395,9 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     // TODO: This need to be checked. We don't know how many max threads will use this. Maybe we can allocate for MAX_CONC_THREADS variable of param (that can be overriden)
     auto uploadBuffers = SystemPushArray<UploadBufferDevicePool<NS::SharedPtr<MTL::Buffer>>*>(MetalGraphicsMemoryArena, MAX_UPLOAD_BUFFERS);
 
+    // HACK: Find a better solution
+    auto  metalBlasList = SystemPushArray<ElemGraphicsResource>(MetalGraphicsMemoryArena, 1024);
+
     auto handle = SystemAddDataPoolItem(metalGraphicsDevicePool, {
         .Device = device,
         .ResourceArgumentBuffer = resourceArgumentBuffer,
@@ -404,7 +407,8 @@ ElemGraphicsDevice MetalCreateGraphicsDevice(const ElemGraphicsDeviceOptions* op
     }); 
 
     SystemAddDataPoolItemFull(metalGraphicsDevicePool, handle, {
-        .ResidencySet = residencySet
+        .ResidencySet = residencySet,
+        .BlasList = metalBlasList
     });
 
     return handle;

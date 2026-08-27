@@ -1,10 +1,10 @@
 //--------------------------------------------------------------------------------
 // Elemental Tools Library
-// Version: 1.0.0-dev5
+// Version: 1.0.0-dev6
 //
 // MIT License
 //
-// Copyright (c) 2023-2024 Double Buffer SRL
+// Copyright (c) 2023-2025 Double Buffer SRL
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,8 @@
 #define ElemToolsAPI static
 #define UseToolsLoader
 #endif
+
+// TODO: IMPORTANT!!! Rename All Elem prefix to ElemTools
 
 //------------------------------------------------------------------------
 // Module: Elemental Tools
@@ -120,6 +122,7 @@ typedef struct
     uint32_t Length;
 } ElemToolsMessageSpan;
 
+// TODO: Get Rid of those if we make Elemental Tools dependant of elemental?
 typedef struct
 {
     float X, Y;
@@ -145,6 +148,12 @@ typedef union
 
 typedef union
 {
+    float m[4][3];
+    ElemToolsVector3 Rows[4];
+} ElemToolsMatrix4x3;
+
+typedef union
+{
     float m[4][4];
     ElemToolsVector4 Rows[4];
 } ElemToolsMatrix4x4;
@@ -158,7 +167,7 @@ typedef struct
 typedef struct
 {
     ElemToolsDataSpan Data;
-    uint32_t VertexSize;
+    uint32_t VertexSize; // TODO: Rename that to VertexSizeInBytes
     uint32_t VertexCount;
     // TODO: Add vertex description structure
 } ElemVertexBuffer;
@@ -262,6 +271,13 @@ typedef enum
 
 typedef enum
 {
+    ElemSceneMaterialTransparentMode_None,
+    ElemSceneMaterialTransparentMode_Alpha,
+    ElemSceneMaterialTransparentMode_Blend,
+} ElemSceneMaterialTransparentMode;
+
+typedef enum
+{
     ElemSceneNodeType_Unknown = 0,
     ElemSceneNodeType_Mesh = 1
 } ElemSceneNodeType;
@@ -314,6 +330,9 @@ typedef struct
     const char* AlbedoTexturePath;
     const char* NormalTexturePath;
     ElemToolsVector4 AlbedoFactor;
+    ElemToolsVector3 EmissiveFactor;
+    ElemSceneMaterialTransparentMode TransparentMode;
+    float AlphaCutoff;
 } ElemSceneMaterial;
 
 typedef struct
@@ -387,6 +406,7 @@ typedef struct
     uint8_t MeshletMaxVertexCount;
     uint8_t MeshletMaxTriangleCount;
     ElemVertexBuffer VertexBuffer;
+    ElemUInt32Span IndexBuffer;
     ElemMeshletSpan Meshlets;
     ElemUInt32Span MeshletVertexIndexBuffer;
     ElemUInt32Span MeshletTriangleIndexBuffer;

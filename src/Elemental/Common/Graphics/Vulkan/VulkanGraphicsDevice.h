@@ -12,13 +12,45 @@
 #endif
 #include "volk.h"
 
-struct VulkanDescriptorHeapStorage;
+struct VulkanDescriptorSet
+{
+    VkDescriptorPool DescriptorPool;
+    VkDescriptorSet DescriptorSet;
+};
 
-struct VulkanDescriptorSet;
+struct VulkanFreeListItem
+{
+    uint32_t Next;
+};
+
+struct VulkanDescriptorHeapStorage
+{
+    const VulkanDescriptorSet* DescriptorSet;
+    Span<VulkanFreeListItem> Items;
+    uint32_t CurrentIndex;
+    uint32_t FreeListIndex;
+};
 
 struct VulkanDescriptorHeap
 {
     VulkanDescriptorHeapStorage* Storage;
+};
+
+struct VulkanQueryHeapStorage
+{
+    VkQueryPool QueryHeap;
+    VulkanGraphicsBufferCpu QueryHeapReadbackBuffer;
+    VkQueryType Type;
+    void* ReadbackCpuPointer;
+    Span<VulkanFreeListItem> Items;
+    uint32_t CurrentIndex;
+    uint32_t InitializationIndex;
+    uint32_t FreeListIndex;
+};
+
+struct VulkanQueryHeap
+{
+    VulkanQueryHeapStorage* Storage;
 };
 
 struct VulkanGraphicsDeviceData
@@ -30,8 +62,9 @@ struct VulkanGraphicsDeviceData
     uint64_t UploadBufferGeneration;
     VulkanDescriptorHeap ResourceDescriptorHeap;
     VulkanDescriptorHeap SamplerDescriptorHeap;
-    Span<UploadBufferDevicePool<VulkanUploadBuffer>*> UploadBufferPools;
+    Span<UploadBufferDevicePool<VulkanGraphicsBufferCpu>*> UploadBufferPools;
     uint32_t CurrentUploadBufferPoolIndex;
+    VulkanQueryHeap QueryHeap;
 };
 
 struct VulkanGraphicsDeviceDataFull
@@ -67,6 +100,9 @@ void VulkanSetGraphicsOptions(const ElemGraphicsOptions* options);
 
 uint32_t CreateVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap);
 void FreeVulkanDescriptorHandle(VulkanDescriptorHeap descriptorHeap, uint32_t handle);
+
+uint32_t CreateVulkanQueryHeapIndex(VulkanQueryHeap queryHeap);
+void FreeVulkanQueryHeapIndex(VulkanQueryHeap queryHeap, uint32_t index);
 
 ElemGraphicsDeviceInfoSpan VulkanGetAvailableGraphicsDevices();
 ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* options);

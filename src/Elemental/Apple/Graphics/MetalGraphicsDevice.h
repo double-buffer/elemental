@@ -25,6 +25,8 @@ struct MetalGraphicsDeviceData
 struct MetalGraphicsDeviceDataFull
 {
     NS::SharedPtr<MTL::ResidencySet> ResidencySet;
+    Span<ElemGraphicsResource> BlasList;
+    uint32_t BlasCount;
 };
 
 extern MemoryArena MetalGraphicsMemoryArena;

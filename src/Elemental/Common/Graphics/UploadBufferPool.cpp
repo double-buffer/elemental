@@ -80,6 +80,8 @@ void UpdateUploadBufferPoolItemFence(UploadBufferPoolItem<T>* uploadBufferPoolIt
 template<typename T>
 Span<UploadBufferPoolItem<T>*> GetUploadBufferPoolItemsToDelete(MemoryArena memoryArena, UploadBufferDevicePool<T>* uploadBufferPool, uint64_t generation)
 {
+    // TODO: We need to delete the resources on another thread because it is expensive 
+
     auto result = SystemPushArray<UploadBufferPoolItem<T>*>(memoryArena, MAX_UPLOAD_BUFFERS);
     auto resultCount = 0u;
 

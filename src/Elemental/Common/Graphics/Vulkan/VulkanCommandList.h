@@ -26,6 +26,7 @@ struct VulkanCommandQueueData
     VkSemaphore PresentSemaphore;
     bool SignalPresentSemaphore;
     uint64_t LastCompletedFenceValue;
+    uint64_t CommandQueueFrequency;
 };
 
 struct VulkanCommandQueueDataFull
@@ -46,13 +47,25 @@ struct VulkanCommandListData
     CommandListPoolItem<VkCommandBuffer>* CommandListPoolItem;
     VulkanPipelineStateType PipelineStateType;
     ResourceBarrierPool ResourceBarrierPool;
-    UploadBufferPoolItem<VulkanUploadBuffer>* UploadBufferPoolItems[MAX_UPLOAD_BUFFERS];
+    UploadBufferPoolItem<VulkanGraphicsBufferCpu>* UploadBufferPoolItems[MAX_UPLOAD_BUFFERS];
     uint32_t UploadBufferCount;
+    bool NeedResolveQueryData;
+    uint32_t MinResolveQueryIndex;
+    uint32_t MaxResolveQueryIndex;
 };
 
 struct VulkanCommandListDataFull
 {
     ElemBeginRenderPassParameters CurrentRenderPassParameters;
+};
+
+struct VulkanGraphicsTimestampData
+{
+    ElemGraphicsDevice GraphicsDevice;
+    uint32_t QueryHeapIndex;
+    uint64_t Value;
+    uint64_t QueueFrequency;
+    bool NeedUpdate;
 };
 
 VulkanCommandQueueData* GetVulkanCommandQueueData(ElemCommandQueue commandQueue);
@@ -71,3 +84,8 @@ void VulkanCommitCommandList(ElemCommandList commandList);
 ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void VulkanWaitForFenceOnCpu(ElemFence fence);
 bool VulkanIsFenceCompleted(ElemFence fence);
+
+ElemGraphicsTimestamp VulkanCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+void VulkanFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemGraphicsTimestampValue VulkanGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+void VulkanInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);

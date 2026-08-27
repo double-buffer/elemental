@@ -14,19 +14,19 @@ typedef struct
 {
     ElemGraphicsResource Buffer;
     ElemGraphicsResourceDescriptor ReadDescriptor;
+    ElemGraphicsResourceDescriptor WriteDescriptor;
 } SampleGpuBuffer;
 
 typedef struct
 {
     ElemGraphicsResource Texture;
     ElemGraphicsResourceDescriptor ReadDescriptor;
+    ElemGraphicsResourceDescriptor WriteDescriptor;
 } SampleGpuTexture;
 
-SampleGpuMemory SampleCreateGpuMemory(ElemGraphicsDevice graphicsDevice, uint32_t sizeInBytes)
+SampleGpuMemory SampleCreateGpuMemory(ElemGraphicsDevice graphicsDevice, ElemGraphicsHeapType heapType, uint32_t sizeInBytes)
 {
-    // TODO: For now we need to put the heap as GpuUpload but it should be Gpu when we use IOQueues
-    // TODO: Having GPU Upload is still annoying 😞
-    ElemGraphicsHeap graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
+    ElemGraphicsHeap graphicsHeap = ElemCreateGraphicsHeap(graphicsDevice, sizeInBytes, &(ElemGraphicsHeapOptions) { .HeapType = heapType });
 
     return (SampleGpuMemory)
     {
@@ -42,10 +42,9 @@ void SampleFreeGpuMemory(SampleGpuMemory* gpuMemory)
     gpuMemory->GraphicsHeap = ELEM_HANDLE_NULL;
 }
 
-SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, const char* debugName)
+SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeInBytes, ElemGraphicsResourceUsage usage, const char* debugName)
 {
-    // TODO: Alignment should be used with the offset before adding the size of the resource!
-    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, ElemGraphicsResourceUsage_Read, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
+    ElemGraphicsResourceInfo bufferDescription = ElemCreateGraphicsBufferResourceInfo(gpuMemory->GraphicsDevice, sizeInBytes, usage, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
 
     gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, bufferDescription.Alignment);
     ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
@@ -53,17 +52,24 @@ SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeI
 
     ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
 
-    return (SampleGpuBuffer)
+    SampleGpuBuffer result = (SampleGpuBuffer)
     {
         .Buffer = buffer,
-        .ReadDescriptor = readDescriptor
+        .ReadDescriptor = readDescriptor,
     };
+
+    if ((usage & ElemGraphicsResourceUsage_Read) || (usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
+    {
+        result.WriteDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, NULL);
+    }
+
+    return result;
 }
 
-// TODO: To remove when IOQueues
+// TODO: To Remove
 SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, const void* dataPointer, uint32_t sizeInBytes, const char* debugName)
 {
-    SampleGpuBuffer result = SampleCreateGpuBuffer(gpuMemory, sizeInBytes, debugName);
+    SampleGpuBuffer result = SampleCreateGpuBuffer(gpuMemory, sizeInBytes, ElemGraphicsResourceUsage_Read, debugName);
     ElemUploadGraphicsBufferData(result.Buffer, 0, (ElemDataSpan) { .Items = (uint8_t*)dataPointer, .Length = sizeInBytes });
 
     return (SampleGpuBuffer)
@@ -82,6 +88,15 @@ void SampleFreeGpuBuffer(SampleGpuBuffer* gpuBuffer)
     gpuBuffer->Buffer = ELEM_HANDLE_NULL;
 }
 
+void SampleFreeGpuBufferWithFence(SampleGpuBuffer* gpuBuffer, ElemFence fence)
+{
+    ElemFreeGraphicsResourceDescriptor(gpuBuffer->ReadDescriptor, &(ElemFreeGraphicsResourceDescriptorOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
+    gpuBuffer->ReadDescriptor = ELEM_HANDLE_NULL;
+
+    ElemFreeGraphicsResource(gpuBuffer->Buffer, &(ElemFreeGraphicsResourceOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
+    gpuBuffer->Buffer = ELEM_HANDLE_NULL;
+}
+
 SampleGpuTexture SampleCreateGpuTexture(SampleGpuMemory* gpuMemory, uint32_t width, uint32_t height, uint32_t mipLevels, ElemGraphicsFormat format, const char* debugName)
 {
     ElemGraphicsResourceInfo textureDescription = ElemCreateTexture2DResourceInfo(gpuMemory->GraphicsDevice, width, height, mipLevels, format, ElemGraphicsResourceUsage_Read, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
@@ -95,7 +110,27 @@ SampleGpuTexture SampleCreateGpuTexture(SampleGpuMemory* gpuMemory, uint32_t wid
     return (SampleGpuTexture)
     {
         .Texture = texture,
-        .ReadDescriptor = readDescriptor
+        .ReadDescriptor = readDescriptor,
+        .WriteDescriptor = -1
+    };
+}
+
+SampleGpuTexture SampleCreateGpuRenderTarget(SampleGpuMemory* gpuMemory, uint32_t width, uint32_t height, ElemGraphicsFormat format, const char* debugName)
+{
+    ElemGraphicsResourceInfo textureDescription = ElemCreateTexture2DResourceInfo(gpuMemory->GraphicsDevice, width, height, 1, format, ElemGraphicsResourceUsage_Write, &(ElemGraphicsResourceInfoOptions) { .DebugName = debugName });
+
+    gpuMemory->CurrentHeapOffset = SampleAlignValue(gpuMemory->CurrentHeapOffset, textureDescription.Alignment);
+    ElemGraphicsResource texture = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &textureDescription);
+    gpuMemory->CurrentHeapOffset += textureDescription.SizeInBytes;
+
+    ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    ElemGraphicsResourceDescriptor writeDescriptor = ElemCreateGraphicsResourceDescriptor(texture, ElemGraphicsResourceDescriptorUsage_Write, NULL);
+
+    return (SampleGpuTexture)
+    {
+        .Texture = texture,
+        .ReadDescriptor = readDescriptor,
+        .WriteDescriptor = writeDescriptor
     };
 }
 
@@ -105,6 +140,12 @@ void SampleFreeGpuTexture(SampleGpuTexture* gpuTexture)
 
     ElemFreeGraphicsResourceDescriptor(gpuTexture->ReadDescriptor, NULL);
     gpuTexture->ReadDescriptor = ELEM_HANDLE_NULL;
+
+    if (gpuTexture->WriteDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(gpuTexture->WriteDescriptor, NULL);
+        gpuTexture->WriteDescriptor = ELEM_HANDLE_NULL;
+    }
 
     ElemFreeGraphicsResource(gpuTexture->Texture, NULL);
     gpuTexture->Texture = ELEM_HANDLE_NULL;

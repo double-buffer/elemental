@@ -18,6 +18,7 @@ struct DirectX12CommandQueueData
     D3D12_COMMAND_LIST_TYPE Type;
     CommandAllocatorQueueType CommandAllocatorQueueType;
     ElemGraphicsDevice GraphicsDevice;
+    uint64_t CommandQueueFrequency;
 };
 
 struct DirectX12CommandQueueDataFull
@@ -38,15 +39,28 @@ struct DirectX12CommandListData
     CommandListPoolItem<ID3D12GraphicsCommandList10*>* CommandListPoolItem;
     DirectX12PipelineStateType PipelineStateType;
     ElemGraphicsDevice GraphicsDevice;
+    ElemCommandQueue CommandQueue;
     bool IsCommitted;
     ResourceBarrierPool ResourceBarrierPool;
     UploadBufferPoolItem<ComPtr<ID3D12Resource>>* UploadBufferPoolItems[MAX_UPLOAD_BUFFERS];
     uint32_t UploadBufferCount;
+    bool NeedResolveQueryData;
+    uint32_t MinResolveQueryIndex;
+    uint32_t MaxResolveQueryIndex;
 };
 
 struct DirectX12CommandListDataFull
 {
     ElemBeginRenderPassParameters CurrentRenderPassParameters;
+};
+
+struct DirectX12GraphicsTimestampData
+{
+    ElemGraphicsDevice GraphicsDevice;
+    uint32_t QueryHeapIndex;
+    uint64_t Value;
+    uint64_t QueueFrequency;
+    bool NeedUpdate;
 };
 
 ElemFence CreateDirectX12CommandQueueFence(ElemCommandQueue commandQueue);
@@ -64,3 +78,8 @@ void DirectX12CommitCommandList(ElemCommandList commandList);
 ElemFence DirectX12ExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void DirectX12WaitForFenceOnCpu(ElemFence fence);
 bool DirectX12IsFenceCompleted(ElemFence fence);
+
+ElemGraphicsTimestamp DirectX12CreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+void DirectX12FreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemGraphicsTimestampValue DirectX12GetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+void DirectX12InsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);

@@ -111,7 +111,7 @@ void MeshMain(in uint groupId: SV_GroupID,
         float4x4 worldViewProjectionMatrix = mul(worldMatrix, mul(viewMatrix, projectionMatrix));
         float4x4 inverseTransposeWorldMatrix = worldMatrix;
 
-        uint vertexIndex = meshBuffer.Load<uint>(parameters.MeshletVertexIndexOffset + (meshlet.VertexIndexOffset + groupThreadId) * sizeof(uint));
+        uint vertexIndex = meshBuffer.Load<uint>(meshlet.VertexIndexOffset + groupThreadId * sizeof(uint));
         Vertex vertex = meshBuffer.Load<Vertex>(parameters.VertexBufferOffset + vertexIndex * sizeof(Vertex));
 
         vertices[groupThreadId].Position = mul(float4(vertex.Position, 1.0), worldViewProjectionMatrix);
@@ -121,7 +121,7 @@ void MeshMain(in uint groupId: SV_GroupID,
 
     if (groupThreadId < meshlet.TriangleCount)
     {
-        uint triangleIndex = meshBuffer.Load<uint>(parameters.MeshletTriangleIndexOffset + (meshlet.TriangleOffset + groupThreadId) * sizeof(uint));
+        uint triangleIndex = meshBuffer.Load<uint>(meshlet.TriangleOffset + groupThreadId * sizeof(uint));
         indices[groupThreadId] = unpack_u8u32(triangleIndex).xyz;
     }
 }

@@ -39,7 +39,9 @@ struct DirectX12GraphicsResourceData
     uint32_t Width;
     uint32_t Height;
     uint32_t MipLevels;
+    uint32_t SubResourceOffset;
     void* CpuDataPointer;
+    // TODO: Do something better than booleans here
     bool IsPresentTexture;
 };
 
@@ -54,9 +56,10 @@ DirectX12GraphicsHeapDataFull* GetDirectX12GraphicsHeapDataFull(ElemGraphicsHeap
 DirectX12GraphicsResourceData* GetDirectX12GraphicsResourceData(ElemGraphicsResource resource);
 DirectX12GraphicsResourceDataFull* GetDirectX12GraphicsResourceDataFull(ElemGraphicsResource resource);
 
-ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture);
-DXGI_FORMAT ConvertToDirectX12TextureFormat(ElemGraphicsFormat format);
+ElemGraphicsResource CreateDirectX12GraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap heap, ComPtr<ID3D12Resource> resource, bool isPresentTexture, bool convertToSrgb = true);
+DXGI_FORMAT ConvertToDirectX12Format(ElemGraphicsFormat format);
 bool CheckDirectX12DepthStencilFormat(ElemGraphicsFormat format);
+ComPtr<ID3D12Resource> CreateDirectX12Buffer(ComPtr<ID3D12Device10> graphicsDevice, D3D12_HEAP_TYPE heapType, uint64_t sizeInBytes, const wchar_t* debugName);
 
 ElemGraphicsHeap DirectX12CreateGraphicsHeap(ElemGraphicsDevice graphicsDevice, uint64_t sizeInBytes, const ElemGraphicsHeapOptions* options);
 void DirectX12FreeGraphicsHeap(ElemGraphicsHeap graphicsHeap);
@@ -68,8 +71,8 @@ ElemGraphicsResource DirectX12CreateGraphicsResource(ElemGraphicsHeap graphicsHe
 void DirectX12FreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemGraphicsResourceInfo DirectX12GetGraphicsResourceInfo(ElemGraphicsResource resource);
 
-void DirectX12UploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
-ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+void DirectX12UploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data);
+ElemDataSpan DirectX12DownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options);
 void DirectX12CopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemGraphicsResourceDescriptor DirectX12CreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
@@ -83,3 +86,13 @@ void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsR
 ElemGraphicsSampler DirectX12CreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
 ElemGraphicsSamplerInfo DirectX12GetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
 void DirectX12FreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
+
+ElemRaytracingAllocationInfo DirectX12GetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters);
+ElemRaytracingAllocationInfo DirectX12GetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters);
+ElemGraphicsResourceAllocationInfo DirectX12GetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount);
+ElemDataSpan DirectX12EncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances);
+
+ElemGraphicsResource DirectX12CreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
+
+void DirectX12BuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
+void DirectX12BuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);

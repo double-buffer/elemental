@@ -18,6 +18,8 @@ SystemDataPool<DirectX12SwapChainData, DirectX12SwapChainDataFull> directX12Swap
 // TODO: In the near future we should switch to composition swap chains. https://learn.microsoft.com/en-us/windows/win32/comp_swapchain/comp-swapchain-examples
 // Currently they are not compatible with DX12. 
 
+// TODO: Frame pacing code to check: https://github.com/doitsujin/dxvk/compare/master...netborg-afps:dxvk:low-latency-framepacing
+
 void InitDirectX12SwapChainMemory()
 {
     if (!directX12SwapChainPool.Storage)
@@ -51,7 +53,14 @@ void CreateDirectX12SwapChainRenderTargetViews(ElemSwapChain swapChain)
         ComPtr<ID3D12Resource> backBuffer;
         AssertIfFailed(swapChainData->DeviceObject->GetBuffer(i, IID_PPV_ARGS(backBuffer.GetAddressOf())));
 
-        swapChainData->BackBufferTextures[i] = CreateDirectX12GraphicsResourceFromResource(swapChainDataFull->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ELEM_HANDLE_NULL, backBuffer, true);
+        auto srgb = false;
+
+        if (swapChainDataFull->SwapChainFormat == ElemSwapChainFormat_Default)
+        {
+            srgb = true;
+        }
+
+        swapChainData->BackBufferTextures[i] = CreateDirectX12GraphicsResourceFromResource(swapChainDataFull->GraphicsDevice, ElemGraphicsResourceType_Texture2D, ELEM_HANDLE_NULL, backBuffer, true, srgb);
     }
 }
 
@@ -99,6 +108,7 @@ uint64_t lastVsyncCounter;
 
 void CheckDirectX12AvailableSwapChain(ElemHandle handle)
 {
+    // BUG: We sometimes have in dx12 random frame drop. Maybe it could happens when the refresh rate is not 120hz but 119.99hz????
     auto stackMemoryArena = SystemGetStackMemoryArena();
     SystemAssert(handle != ELEM_HANDLE_NULL);
 
@@ -285,6 +295,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
     auto height = windowRenderSize.Height;
     //auto format = DXGI_FORMAT_B8G8R8A8_UNORM; // TODO: Enumerate compatible formats first
     auto format = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO: Enumerate compatible formats first
+    auto swapChainFormat = ElemSwapChainFormat_Default;
     auto frameLatency = 1u;
 
     auto targetFPS = windowData->MonitorRefreshRate;
@@ -292,6 +303,8 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
  
     if (options)
     {
+        swapChainFormat = options->Format;
+
         if (options->Format == ElemSwapChainFormat_HighDynamicRange)
         {
             format = DXGI_FORMAT_R10G10B10A2_UNORM;
@@ -378,6 +391,7 @@ ElemSwapChain DirectX12CreateSwapChain(ElemCommandQueue commandQueue, ElemWindow
 
     SystemAddDataPoolItemFull(directX12SwapChainPool, handle, {
         .GraphicsDevice = commandQueueData->GraphicsDevice,
+        .SwapChainFormat = swapChainFormat
     });
 
     CreateDirectX12SwapChainRenderTargetViews(handle);

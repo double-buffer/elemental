@@ -46,6 +46,7 @@ MetalCommandListDataFull* GetMetalCommandListDataFull(ElemCommandList commandLis
 void ResetMetalCommandEncoder(ElemCommandList commandList)
 {
     auto commandListData = GetMetalCommandListData(commandList);
+
     SystemAssert(commandListData);
 
     auto commandQueueData = GetMetalCommandQueueData(commandListData->CommandQueue);
@@ -228,7 +229,7 @@ ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLis
             auto commandQueueToWaitDataFull = GetMetalCommandQueueDataFull(fenceToWait.CommandQueue);
             SystemAssert(commandQueueToWaitDataFull);
 
-            auto commandBuffer = NS::TransferPtr(commandQueueToWaitData->DeviceObject->commandBufferWithUnretainedReferences());
+            auto commandBuffer = NS::RetainPtr(commandQueueToWaitData->DeviceObject->commandBufferWithUnretainedReferences());
             commandBuffer->encodeWait(commandQueueToWaitData->QueueEvent.get(), fenceToWait.FenceValue);
             commandBuffer->commit();
 
@@ -331,4 +332,20 @@ bool MetalIsFenceCompleted(ElemFence fence)
     }
 
     return fence.FenceValue <= commandQueueToWaitDataFull->LastCompletedFenceValue;
+}
+
+ElemGraphicsTimestamp MetalCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice)
+{
+}
+
+void MetalFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options)
+{
+}
+
+ElemGraphicsTimestampValue MetalGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp)
+{
+}
+
+void MetalInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp)
+{
 }

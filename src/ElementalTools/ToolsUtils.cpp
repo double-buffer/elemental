@@ -10,7 +10,7 @@ ElemToolsDataSpan DefaultFileHandler(const char* path)
 {
     if (SystemFileExists(path))
     {
-        auto data = SystemFileReadBytes(FileIOMemoryArena, path);
+        auto data = SystemFileReadBytes(FileIOMemoryArena, 0, 0, path);
         return { .Items = data.Pointer, .Length = (uint32_t)data.Length };
     }
 

@@ -5,7 +5,7 @@
 
 typedef ElemHandle ResourceBarrierPool;
 
-#define GRAPHICS_MAX_RESOURCEBARRIER 64
+#define GRAPHICS_MAX_RESOURCEBARRIER 128
 
 struct ResourceBarrierItem
 {

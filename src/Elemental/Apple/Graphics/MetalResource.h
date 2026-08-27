@@ -19,6 +19,7 @@ struct MetalResourceData
 {
     NS::SharedPtr<MTL::Resource> DeviceObject;
     ElemGraphicsHeap GraphicsHeap;
+    uint64_t HeapOffset;
     ElemGraphicsResourceType Type;
     uint32_t Width;
     uint32_t Height;
@@ -26,6 +27,8 @@ struct MetalResourceData
     ElemGraphicsFormat Format;
     ElemGraphicsResourceUsage Usage;
     bool IsPresentTexture;
+    uint32_t BlasIndex;
+    MTL::Buffer* AccelerationStructureHeader;
 };
 
 struct MetalResourceDataFull
@@ -57,8 +60,8 @@ ElemGraphicsResource MetalCreateGraphicsResource(ElemGraphicsHeap graphicsHeap, 
 void MetalFreeGraphicsResource(ElemGraphicsResource resource, const ElemFreeGraphicsResourceOptions* options);
 ElemGraphicsResourceInfo MetalGetGraphicsResourceInfo(ElemGraphicsResource resource);
 
-void MetalUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data);
-ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options);
+void MetalUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data);
+ElemDataSpan MetalDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options);
 void MetalCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters);
 
 ElemGraphicsResourceDescriptor MetalCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options);
@@ -67,8 +70,18 @@ void MetalFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descript
 
 void MetalProcessGraphicsResourceDeleteQueue(ElemGraphicsDevice graphicsDevice);
 
-ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);
+ElemGraphicsResource CreateMetalGraphicsResourceFromResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResourceType type, ElemGraphicsHeap graphicsHeap, uint64_t heapOffset, uint64_t sizeInBytes, ElemGraphicsResourceUsage usage, NS::SharedPtr<MTL::Resource> resource, bool isPresentTexture);
 
 ElemGraphicsSampler MetalCreateGraphicsSampler(ElemGraphicsDevice graphicsDevice, const ElemGraphicsSamplerInfo* samplerInfo);
 ElemGraphicsSamplerInfo MetalGetGraphicsSamplerInfo(ElemGraphicsSampler sampler);
 void MetalFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options);
+
+ElemRaytracingAllocationInfo MetalGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters);
+ElemRaytracingAllocationInfo MetalGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters);
+
+ElemGraphicsResourceAllocationInfo MetalGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount);
+ElemDataSpan MetalEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances);
+
+ElemGraphicsResource MetalCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options);
+void MetalBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options);
+void MetalBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options);

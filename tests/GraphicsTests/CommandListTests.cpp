@@ -144,3 +144,51 @@ UTEST(CommandList, ExecuteCommandListWaitForFence)
         ASSERT_EQ_MSG(intData[i], elementCount - i - 1, "Compute shader data is invalid.");
     }
 }
+
+UTEST(CommandList, InsertTimestamp) 
+{
+    // Arrange
+    auto graphicsDevice = ElemCreateGraphicsDevice(nullptr);
+    auto commandQueue = ElemCreateCommandQueue(graphicsDevice, ElemCommandQueueType_Graphics, nullptr);
+    auto gpuBuffer = TestCreateGpuBuffer(graphicsDevice, 100 * sizeof(uint32_t));
+    auto writeBufferDataPipelineState = TestOpenComputeShader(graphicsDevice, "CommandListTests.shader", "TestWriteBufferData");
+
+    auto timestamp1 = ElemCreateGraphicsTimestamp(graphicsDevice);
+    auto timestamp2 = ElemCreateGraphicsTimestamp(graphicsDevice);
+    auto timestamp3 = ElemCreateGraphicsTimestamp(graphicsDevice);
+
+    // Act
+    auto commandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemInsertGraphicsTimestamp(commandList, timestamp1);
+    TestDispatchCompute(commandList, writeBufferDataPipelineState, 10, 1, 1, { gpuBuffer.WriteDescriptor, 0, 10 });
+    ElemInsertGraphicsTimestamp(commandList, timestamp2);
+    ElemCommitCommandList(commandList);
+    ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    commandList = ElemGetCommandList(commandQueue, nullptr);
+    ElemInsertGraphicsTimestamp(commandList, timestamp3);
+    ElemCommitCommandList(commandList);
+    auto fence = ElemExecuteCommandList(commandQueue, commandList, nullptr);
+
+    // Assert
+    ElemWaitForFenceOnCpu(fence);
+
+    auto timestampValue1 = ElemGetGraphicsTimestampValue(timestamp1);
+    auto timestampValue2 = ElemGetGraphicsTimestampValue(timestamp2);
+    auto timestampValue3 = ElemGetGraphicsTimestampValue(timestamp3);
+
+    ElemFreeGraphicsTimestamp(timestamp1, nullptr);
+    ElemFreeGraphicsTimestamp(timestamp2, nullptr);
+    ElemFreeGraphicsTimestamp(timestamp3, nullptr);
+    TestFreeGpuBuffer(gpuBuffer);
+    ElemFreePipelineState(writeBufferDataPipelineState);
+    ElemFreeCommandQueue(commandQueue);
+    ElemFreeGraphicsDevice(graphicsDevice);
+
+    ASSERT_LOG_NOERROR();
+    
+    ASSERT_NE_MSG(timestampValue1.FrequencyInSeconds, 0u, "Timestamp1 frequency should not be equal to 0.");
+    ASSERT_NE_MSG(timestampValue2.FrequencyInSeconds, 0u, "Timestamp2 frequency should not be equal to 0.");
+    ASSERT_GT_MSG(timestampValue2.Value, timestampValue1.Value, "Timestamp2 value should be greater than timestamp1 value.");
+    ASSERT_GT_MSG(timestampValue3.Value, timestampValue2.Value, "Timestamp3 value should be greater than timestamp2 value.");
+}

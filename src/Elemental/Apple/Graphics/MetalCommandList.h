@@ -8,7 +8,8 @@ enum MetalCommandEncoderType
     MetalCommandEncoderType_None = 0,
     MetalCommandEncoderType_Render = 1,
     MetalCommandEncoderType_Compute = 2,
-    MetalCommandEncoderType_Copy = 3
+    MetalCommandEncoderType_Copy = 3,
+    MetalCommandEncoderType_AccelerationStructure = 4
 };
 
 enum MetalResourceBarrierType
@@ -72,3 +73,8 @@ void MetalCommitCommandList(ElemCommandList commandList);
 ElemFence MetalExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandListSpan commandLists, const ElemExecuteCommandListOptions* options);
 void MetalWaitForFenceOnCpu(ElemFence fence);
 bool MetalIsFenceCompleted(ElemFence fence);
+
+ElemGraphicsTimestamp MetalCreateGraphicsTimestamp(ElemGraphicsDevice graphicsDevice);
+void MetalFreeGraphicsTimestamp(ElemGraphicsTimestamp timestamp, const ElemFreeGraphicsTimestampOptions* options);
+ElemGraphicsTimestampValue MetalGetGraphicsTimestampValue(ElemGraphicsTimestamp timestamp);
+void MetalInsertGraphicsTimestamp(ElemCommandList commandList, ElemGraphicsTimestamp timestamp);

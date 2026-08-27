@@ -28,6 +28,7 @@ struct DirectX12SwapChainData
 struct DirectX12SwapChainDataFull
 {
     ElemGraphicsDevice GraphicsDevice;
+    ElemSwapChainFormat SwapChainFormat;
 };
 
 DirectX12SwapChainData* GetDirectX12SwapChainData(ElemSwapChain swapChain);

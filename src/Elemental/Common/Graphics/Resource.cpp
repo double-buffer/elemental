@@ -1,5 +1,6 @@
 #include "Resource.h"
 #include "GraphicsCommon.h"
+#include "SystemFunctions.h"
 
 bool CheckDepthStencilFormat(ElemGraphicsFormat format)
 {
@@ -46,14 +47,14 @@ ElemAPI ElemGraphicsResourceInfo ElemGetGraphicsResourceInfo(ElemGraphicsResourc
     DispatchReturnGraphicsFunction(GetGraphicsResourceInfo, resource);
 }
 
-ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource resource, uint32_t offset, ElemDataSpan data)
+ElemAPI void ElemUploadGraphicsBufferData(ElemGraphicsResource buffer, uint32_t offset, ElemDataSpan data)
 {
-    DispatchGraphicsFunction(UploadGraphicsBufferData, resource, offset, data);
+    DispatchGraphicsFunction(UploadGraphicsBufferData, buffer, offset, data);
 }
 
-ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource resource, const ElemDownloadGraphicsBufferDataOptions* options)
+ElemAPI ElemDataSpan ElemDownloadGraphicsBufferData(ElemGraphicsResource buffer, const ElemDownloadGraphicsBufferDataOptions* options)
 {
-    DispatchReturnGraphicsFunction(DownloadGraphicsBufferData, resource, options);
+    DispatchReturnGraphicsFunction(DownloadGraphicsBufferData, buffer, options);
 }
 
 ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const ElemCopyDataToGraphicsResourceParameters* parameters)
@@ -99,4 +100,39 @@ ElemAPI ElemGraphicsSamplerInfo ElemGetGraphicsSamplerInfo(ElemGraphicsSampler s
 ElemAPI void ElemFreeGraphicsSampler(ElemGraphicsSampler sampler, const ElemFreeGraphicsSamplerOptions* options)
 {
     DispatchGraphicsFunction(FreeGraphicsSampler, sampler, options);
+}
+
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingBlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingBlasParameters* parameters)
+{
+    DispatchReturnGraphicsFunction(GetRaytracingBlasAllocationInfo, graphicsDevice, parameters);
+}
+
+ElemAPI ElemRaytracingAllocationInfo ElemGetRaytracingTlasAllocationInfo(ElemGraphicsDevice graphicsDevice, const ElemRaytracingTlasParameters* parameters)
+{
+    DispatchReturnGraphicsFunction(GetRaytracingTlasAllocationInfo, graphicsDevice, parameters);
+}
+
+ElemAPI ElemGraphicsResourceAllocationInfo ElemGetRaytracingTlasInstanceAllocationInfo(ElemGraphicsDevice graphicsDevice, uint32_t instanceCount)
+{
+    DispatchReturnGraphicsFunction(GetRaytracingTlasInstanceAllocationInfo, graphicsDevice, instanceCount);
+}
+
+ElemAPI ElemDataSpan ElemEncodeRaytracingTlasInstances(ElemRaytracingTlasInstanceSpan instances)
+{
+    DispatchReturnGraphicsFunction(EncodeRaytracingTlasInstances, instances);
+}
+
+ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(ElemGraphicsDevice graphicsDevice, ElemGraphicsResource storageBuffer, const ElemRaytracingAccelerationStructureOptions* options)
+{
+    DispatchReturnGraphicsFunction(CreateRaytracingAccelerationStructureResource, graphicsDevice, storageBuffer, options);
+}
+
+ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+    DispatchGraphicsFunction(BuildRaytracingBlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
+}
+
+ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
+{
+    DispatchGraphicsFunction(BuildRaytracingTlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
 }
