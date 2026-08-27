@@ -117,3 +117,27 @@ void MetalGraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResou
         commandQueueData->ResourceBarrierTypes |= MetalResourceBarrierType_Texture;
     }
 }
+
+void MetalGraphicsResourceBarrierResource(ElemCommandList commandList, ElemGraphicsResource resource, ElemGraphicsResourceBarrierAccessType accessType)
+{
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetMetalCommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto commandQueueData = GetMetalCommandQueueData(commandListData->CommandQueue);
+    SystemAssert(commandQueueData);
+
+    auto resourceInfo = MetalGetGraphicsResourceInfo(resource);
+
+    ResourceBarrierItem resourceBarrier =
+    {
+        .Type = resourceInfo.Type,
+        .Resource = resource,
+        .AfterAccess = accessType
+    };
+
+    EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
+    commandQueueData->ResourceBarrierTypes |= MetalResourceBarrierType_Buffer;
+}
