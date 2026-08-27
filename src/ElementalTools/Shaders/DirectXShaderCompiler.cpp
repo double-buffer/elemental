@@ -66,8 +66,6 @@ DxilShaderKind GetVersionShaderType(uint32_t programVersion)
 
 ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind, ElemToolsGraphicsApi targetGraphicsApi) 
 {
-    auto shaderModelVersion = targetGraphicsApi == ElemToolsGraphicsApi_Metal ? "6_6" : "6_9";
-
     switch (shaderKind)
     {
         case DxilShaderKind::Compute:
