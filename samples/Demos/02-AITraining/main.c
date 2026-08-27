@@ -1,4 +1,9 @@
 #include "Elemental.h"
+
+#ifndef ARRAYSIZE
+#define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
+#endif
+
 #include "NeuralNetV0.c"
 #include "NeuralNetV1.c"
 
