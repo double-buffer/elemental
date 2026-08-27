@@ -69,13 +69,13 @@ ReadOnlySpan<char> GetShaderTypeTarget(DxilShaderKind shaderKind)
     switch (shaderKind)
     {
         case DxilShaderKind::Compute:
-            return "cs_6_8";
+            return "cs_6_9";
 
         case DxilShaderKind::Mesh:
-            return "ms_6_8";
+            return "ms_6_9";
 
         case DxilShaderKind::Pixel:
-            return "ps_6_8";
+            return "ps_6_9";
 
         default:
             return "";
@@ -232,7 +232,7 @@ ElemShaderCompilationResult DirectXShaderCompilerCompileShader(MemoryArena memor
     auto compilationMessages = SystemPushArray<ElemToolsMessage>(memoryArena, 1024);
     auto compilationMessageIndex = 0u;
 
-    auto dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_8", ElemToolsGraphicsApi_DirectX12, "", options);
+    auto dxilCompileResult = CompileDirectXShader(shaderCode, "lib_6_9", ElemToolsGraphicsApi_DirectX12, "", options);
     auto hasErrors = ProcessDirectXShaderCompilerLogOutput(memoryArena, dxilCompileResult, targetGraphicsApi, compilationMessages, &compilationMessageIndex);
 
     auto outputShaderDataList = SystemPushArray<ShaderPart>(stackMemoryArena, 64);
