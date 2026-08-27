@@ -2,6 +2,15 @@
 #include "GraphicsCommon.h"
 #include "SystemFunctions.h"
 
+#ifdef _WIN32
+#include "Microsoft/Graphics/DirectX12ResourceBarrier.h"
+#include "Graphics/Vulkan/VulkanResourceBarrier.h"
+#elif defined(__APPLE__)
+#include "Apple/Graphics/MetalResourceBarrier.h"
+#elif defined(__linux__)
+#include "Graphics/Vulkan/VulkanResourceBarrier.h"
+#endif
+
 bool CheckDepthStencilFormat(ElemGraphicsFormat format)
 {
     if (format == ElemGraphicsFormat_D32_FLOAT)
@@ -129,10 +138,12 @@ ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(E
 
 ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    DispatchGraphicsFunction(GraphicsResourceBarrierResource, commandList, accelerationStructure, ElemGraphicsResourceBarrierAccessType_Write);
     DispatchGraphicsFunction(BuildRaytracingBlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
 }
 
 ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    DispatchGraphicsFunction(GraphicsResourceBarrierResource, commandList, accelerationStructure, ElemGraphicsResourceBarrierAccessType_Write);
     DispatchGraphicsFunction(BuildRaytracingTlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
 }
