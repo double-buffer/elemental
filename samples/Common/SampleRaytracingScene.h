@@ -120,6 +120,12 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
                                              &(ElemRaytracingBuildOptions) { .ScratchOffset = blasInfo->ScratchOffset });
     }
 
+    // TODO: This per-BLAS barrier loop is temporary and does not scale. Bistro already
+    // exceeds the barrier pool, and on DirectX 12 every BLAS here aliases the same
+    // GlobalBlasStorage ID3D12Resource, so emitting one resource barrier per logical BLAS
+    // is not the right synchronization model. Replace this with a renderer-level/global
+    // synchronization point between acceleration-structure build writes and subsequent
+    // acceleration-structure reads, mapped appropriately by each graphics backend.
     for (uint32_t i = 0; i < raytracingSceneData->BlasCount; i++)
     {
         ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasData[i].ReadDescriptor, NULL);
