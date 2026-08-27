@@ -13,6 +13,7 @@ typedef struct
     uint64_t ScratchSizeInBytes;
     ElemRaytracingBlasParameters BlasParameters;
     ElemGraphicsResource Blas;
+    ElemGraphicsResourceDescriptor ReadDescriptor;
 } SampleRaytracingBlasData;
 
 typedef struct
@@ -106,11 +107,8 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
                                                                             .StorageOffset = blasInfo->Offset,
                                                                             .StorageSizeInBytes = blasInfo->SizeInBytes
                                                                          });
+        blasInfo->ReadDescriptor = ElemCreateGraphicsResourceDescriptor(blasInfo->Blas, ElemGraphicsResourceDescriptorUsage_Read, NULL);
     }
-
-    // TODO: Do we really need this?
-    ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasStorage.WriteDescriptor, NULL);
-    ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasScratchBuffer.WriteDescriptor, NULL);
 
     for (uint32_t i = 0; i < raytracingSceneData->BlasCount; i++)
     {
@@ -121,8 +119,11 @@ void SampleCreateRaytracingBlas(ElemGraphicsDevice graphicsDevice, ElemCommandLi
                                              &blasInfo->BlasParameters, 
                                              &(ElemRaytracingBuildOptions) { .ScratchOffset = blasInfo->ScratchOffset });
     }
-        
-    ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasStorage.ReadDescriptor, NULL);
+
+    for (uint32_t i = 0; i < raytracingSceneData->BlasCount; i++)
+    {
+        ElemGraphicsResourceBarrier(commandList, raytracingSceneData->BlasData[i].ReadDescriptor, NULL);
+    }
 }
 
 void SampleCreateRaytracingTlas(ElemGraphicsDevice graphicsDevice, ElemCommandList commandList, const SampleSceneData* sceneData, const SampleGpuSceneData* gpuSceneData, SampleRaytracingSceneData* raytracingSceneData, SampleGpuMemory* gpuMemory, SampleGpuMemory* gpuMemoryUpload)
@@ -213,6 +214,7 @@ void SampleFreeRaytracingSceneData(SampleRaytracingSceneData* raytracingSceneDat
 
     for (uint32_t i = 0; i < raytracingSceneData->BlasCount; i++)
     {
+        ElemFreeGraphicsResourceDescriptor(raytracingSceneData->BlasData[i].ReadDescriptor, NULL);
         ElemFreeGraphicsResource(raytracingSceneData->BlasData[i].Blas, NULL);
     }
 
