@@ -1,6 +1,16 @@
 #include "Resource.h"
 #include "GraphicsCommon.h"
 #include "SystemFunctions.h"
+#include "SystemLogging.h"
+
+#ifdef _WIN32
+#include "Microsoft/Graphics/DirectX12ResourceBarrier.h"
+#include "Graphics/Vulkan/VulkanResourceBarrier.h"
+#elif defined(__APPLE__)
+#include "Apple/Graphics/MetalResourceBarrier.h"
+#elif defined(__linux__)
+#include "Graphics/Vulkan/VulkanResourceBarrier.h"
+#endif
 
 bool CheckDepthStencilFormat(ElemGraphicsFormat format)
 {
@@ -64,6 +74,20 @@ ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const E
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
+    auto resourceInfo = ElemGetGraphicsResourceInfo(resource);
+
+    if (resourceInfo.Type == ElemGraphicsResourceType_Buffer && (resourceInfo.Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
+    {
+        SystemLogWarningMessage(ElemLogMessageCategory_Graphics, "Raytracing acceleration structure storage buffers do not expose graphics resource descriptors.");
+        return -1;
+    }
+
+    if (resourceInfo.Type == ElemGraphicsResourceType_RaytracingAccelerationStructure && usage == ElemGraphicsResourceDescriptorUsage_Write)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Raytracing acceleration structures only support read graphics resource descriptors.");
+        return -1;
+    }
+
     DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, resource, usage, options);
 }
 
@@ -74,6 +98,11 @@ ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo
 
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
 {
+    if (descriptor == -1)
+    {
+        return;
+    }
+
     DispatchGraphicsFunction(FreeGraphicsResourceDescriptor, descriptor, options);
 }
 
@@ -129,10 +158,12 @@ ElemAPI ElemGraphicsResource ElemCreateRaytracingAccelerationStructureResource(E
 
 ElemAPI void ElemBuildRaytracingBlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingBlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    DispatchGraphicsFunction(GraphicsResourceBarrierResource, commandList, accelerationStructure, ElemGraphicsResourceBarrierAccessType_Write);
     DispatchGraphicsFunction(BuildRaytracingBlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
 }
 
 ElemAPI void ElemBuildRaytracingTlas(ElemCommandList commandList, ElemGraphicsResource accelerationStructure, ElemGraphicsResource scratchBuffer, const ElemRaytracingTlasParameters* parameters, const ElemRaytracingBuildOptions* options)
 {
+    DispatchGraphicsFunction(GraphicsResourceBarrierResource, commandList, accelerationStructure, ElemGraphicsResourceBarrierAccessType_Write);
     DispatchGraphicsFunction(BuildRaytracingTlas, commandList, accelerationStructure, scratchBuffer, parameters, options);
 }

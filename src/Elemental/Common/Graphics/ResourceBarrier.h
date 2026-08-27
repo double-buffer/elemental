@@ -5,7 +5,10 @@
 
 typedef ElemHandle ResourceBarrierPool;
 
-#define GRAPHICS_MAX_RESOURCEBARRIER 128
+// HACK: Temporary headroom for scenes with many BLAS while the raytracing
+// synchronization model still enqueues one barrier per acceleration structure.
+// Replace this with the planned renderer-level/global synchronization point.
+#define GRAPHICS_MAX_RESOURCEBARRIER 4096
 
 struct ResourceBarrierItem
 {

@@ -6,3 +6,4 @@
 void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraphicsResourceBarrierSyncType currentStage);
 
 void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsResourceDescriptor descriptor, const ElemGraphicsResourceBarrierOptions* options);
+void DirectX12GraphicsResourceBarrierResource(ElemCommandList commandList, ElemGraphicsResource resource, ElemGraphicsResourceBarrierAccessType accessType);

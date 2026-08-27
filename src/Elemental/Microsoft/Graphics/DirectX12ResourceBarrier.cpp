@@ -121,7 +121,13 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
             SystemAssert(graphicsResourceData);
 
             directX12BufferBarrier->pResource = graphicsResourceData->DeviceObject.Get();
-            directX12BufferBarrier->Size = graphicsResourceData->Width;
+
+            // D3D12 enhanced buffer barriers are resource-wide: Offset must be 0
+            // and Size must be UINT64_MAX or the full native buffer size. This is
+            // especially important for acceleration-structure handles that alias a
+            // range inside a shared storage buffer.
+            directX12BufferBarrier->Offset = 0;
+            directX12BufferBarrier->Size = UINT64_MAX;
             directX12BufferBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync, false);
             directX12BufferBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync, false);
             directX12BufferBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess, graphicsResourceData->DirectX12Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -171,4 +177,24 @@ void DirectX12GraphicsResourceBarrier(ElemCommandList commandList, ElemGraphicsR
     SystemAssert(commandListData);
 
     EnqueueBarrier(commandListData->ResourceBarrierPool, descriptor, options);
+}
+
+void DirectX12GraphicsResourceBarrierResource(ElemCommandList commandList, ElemGraphicsResource resource, ElemGraphicsResourceBarrierAccessType accessType)
+{
+    SystemAssert(commandList != ELEM_HANDLE_NULL);
+    SystemAssert(resource != ELEM_HANDLE_NULL);
+
+    auto commandListData = GetDirectX12CommandListData(commandList);
+    SystemAssert(commandListData);
+
+    auto resourceInfo = DirectX12GetGraphicsResourceInfo(resource);
+
+    ResourceBarrierItem resourceBarrier =
+    {
+        .Type = resourceInfo.Type,
+        .Resource = resource,
+        .AfterAccess = accessType
+    };
+
+    EnqueueBarrier(commandListData->ResourceBarrierPool, &resourceBarrier);
 }

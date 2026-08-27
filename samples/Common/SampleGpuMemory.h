@@ -50,20 +50,27 @@ SampleGpuBuffer SampleCreateGpuBuffer(SampleGpuMemory* gpuMemory, uint32_t sizeI
     ElemGraphicsResource buffer = ElemCreateGraphicsResource(gpuMemory->GraphicsHeap, gpuMemory->CurrentHeapOffset, &bufferDescription);
     gpuMemory->CurrentHeapOffset += bufferDescription.SizeInBytes;
 
-    ElemGraphicsResourceDescriptor readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+    ElemGraphicsResourceDescriptor readDescriptor = -1;
+    ElemGraphicsResourceDescriptor writeDescriptor = -1;
 
-    SampleGpuBuffer result = (SampleGpuBuffer)
+    // Acceleration-structure storage buffers are backing memory only. The actual
+    // acceleration-structure resource gets its own read descriptor.
+    if (!(usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
+    {
+        readDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Read, NULL);
+
+        if (usage & ElemGraphicsResourceUsage_Write)
+        {
+            writeDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, NULL);
+        }
+    }
+
+    return (SampleGpuBuffer)
     {
         .Buffer = buffer,
         .ReadDescriptor = readDescriptor,
+        .WriteDescriptor = writeDescriptor,
     };
-
-    if ((usage & ElemGraphicsResourceUsage_Read) || (usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
-    {
-        result.WriteDescriptor = ElemCreateGraphicsResourceDescriptor(buffer, ElemGraphicsResourceDescriptorUsage_Write, NULL);
-    }
-
-    return result;
 }
 
 // TODO: To Remove
@@ -75,14 +82,24 @@ SampleGpuBuffer SampleCreateGpuBufferAndUploadData(SampleGpuMemory* gpuMemory, c
     return (SampleGpuBuffer)
     {
         .Buffer = result.Buffer,
-        .ReadDescriptor = result.ReadDescriptor
+        .ReadDescriptor = result.ReadDescriptor,
+        .WriteDescriptor = -1
     };
 }
 
 void SampleFreeGpuBuffer(SampleGpuBuffer* gpuBuffer)
 {
-    ElemFreeGraphicsResourceDescriptor(gpuBuffer->ReadDescriptor, NULL);
-    gpuBuffer->ReadDescriptor = ELEM_HANDLE_NULL;
+    if (gpuBuffer->ReadDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(gpuBuffer->ReadDescriptor, NULL);
+        gpuBuffer->ReadDescriptor = -1;
+    }
+
+    if (gpuBuffer->WriteDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(gpuBuffer->WriteDescriptor, NULL);
+        gpuBuffer->WriteDescriptor = -1;
+    }
 
     ElemFreeGraphicsResource(gpuBuffer->Buffer, NULL);
     gpuBuffer->Buffer = ELEM_HANDLE_NULL;
@@ -90,8 +107,17 @@ void SampleFreeGpuBuffer(SampleGpuBuffer* gpuBuffer)
 
 void SampleFreeGpuBufferWithFence(SampleGpuBuffer* gpuBuffer, ElemFence fence)
 {
-    ElemFreeGraphicsResourceDescriptor(gpuBuffer->ReadDescriptor, &(ElemFreeGraphicsResourceDescriptorOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
-    gpuBuffer->ReadDescriptor = ELEM_HANDLE_NULL;
+    if (gpuBuffer->ReadDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(gpuBuffer->ReadDescriptor, &(ElemFreeGraphicsResourceDescriptorOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
+        gpuBuffer->ReadDescriptor = -1;
+    }
+
+    if (gpuBuffer->WriteDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(gpuBuffer->WriteDescriptor, &(ElemFreeGraphicsResourceDescriptorOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
+        gpuBuffer->WriteDescriptor = -1;
+    }
 
     ElemFreeGraphicsResource(gpuBuffer->Buffer, &(ElemFreeGraphicsResourceOptions){ .FencesToWait = { .Items = &fence, .Length = 1 }});
     gpuBuffer->Buffer = ELEM_HANDLE_NULL;
