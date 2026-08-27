@@ -121,8 +121,13 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
             SystemAssert(graphicsResourceData);
 
             directX12BufferBarrier->pResource = graphicsResourceData->DeviceObject.Get();
-            directX12BufferBarrier->Offset = graphicsResourceData->SubResourceOffset;
-            directX12BufferBarrier->Size = graphicsResourceData->Width;
+
+            // D3D12 enhanced buffer barriers are resource-wide: Offset must be 0
+            // and Size must be UINT64_MAX or the full native buffer size. This is
+            // especially important for acceleration-structure handles that alias a
+            // range inside a shared storage buffer.
+            directX12BufferBarrier->Offset = 0;
+            directX12BufferBarrier->Size = UINT64_MAX;
             directX12BufferBarrier->SyncBefore = ConvertToDirectX12BarrierSync(barrier.BeforeSync, false);
             directX12BufferBarrier->SyncAfter = ConvertToDirectX12BarrierSync(barrier.AfterSync, false);
             directX12BufferBarrier->AccessBefore = ConvertToDirectX12BarrierAccess(barrier.BeforeAccess, graphicsResourceData->DirectX12Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
