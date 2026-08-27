@@ -11,6 +11,8 @@ void HandleClayErrors(Clay_ErrorData errorData) {
     printf("CLAY: %s\n", errorData.errorText.chars);
     switch(errorData.errorType) {
         // etc
+        default:
+            break;
     }
 }
 
@@ -42,6 +44,8 @@ void ClayProcessRenderCommands(const Clay_RenderCommandArray* renderCommands, El
                                     renderCommand->renderData.text.textColor.a);
                 break;
             }
+            default:
+                break;
         }
     }
 }
