@@ -9,22 +9,24 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/build.yml
-    name: 'build'
+    name: build
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
       architecture: ${{ matrix.architecture }}
-    
+
   run_tests:
     strategy:
+      fail-fast: false
       matrix:
         include: ${{ fromJSON(vars.Platforms) }}
     uses: ./.github/workflows/run-tests.yml
-    needs: [ build ]
-    name: 'run-tests'
+    needs: [build]
+    name: run-tests
     secrets: inherit
     with:
       platform: ${{ matrix.platform }}
@@ -34,11 +36,12 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     name: CI Build Check
-    needs: [ run_tests ]
+    needs: [build, run_tests]
     steps:
-      - run: exit 1
+      - name: Check build and test results
         if: >-
           ${{
-               contains(needs.*.result, 'failure')
-            || contains(needs.*.result, 'cancelled')
+               needs.build.result != 'success'
+            || needs.run_tests.result != 'success'
           }}
+        run: exit 1
