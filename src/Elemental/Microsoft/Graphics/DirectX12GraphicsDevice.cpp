@@ -159,7 +159,7 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &deviceOptions16, sizeof(deviceOptions16)));
 
         D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = {};
-        shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_8;
+        shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_9;
         AssertIfFailed(graphicsDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)));
 
         // TODO: Update checks
@@ -167,7 +167,7 @@ bool DirectX12CheckGraphicsDeviceCompatibility(ComPtr<ID3D12Device10> graphicsDe
             deviceOptions.ResourceBindingTier == D3D12_RESOURCE_BINDING_TIER_3 && 
             deviceOptions5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1 &&
             deviceOptions7.MeshShaderTier == D3D12_MESH_SHADER_TIER_1 &&
-            shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_8 && 
+            shaderModel.HighestShaderModel == D3D_SHADER_MODEL_6_9 && 
             deviceOptions16.GPUUploadHeapSupported)
         {
             return true;
@@ -282,9 +282,9 @@ void FreeDirectX12DescriptorHandle(DirectX12DescriptorHeap descriptorHeap, D3D12
 uint32_t ConvertDirectX12DescriptorHandleToIndex(DirectX12DescriptorHeap descriptorHeap, D3D12_CPU_DESCRIPTOR_HANDLE handle)
 {
     auto storage = descriptorHeap.Storage;
-    auto heapStart = storage->DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    auto heapStart = descriptorHeap.Storage->DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
-    return (handle.ptr - heapStart.ptr) / storage->DescriptorHandleSize;
+    return (handle.ptr - heapStart.ptr) / descriptorHeap.Storage->DescriptorHandleSize;
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE ConvertDirectX12DescriptorIndexToHandle(DirectX12DescriptorHeap descriptorHeap, uint32_t index)
@@ -330,7 +330,7 @@ DirectX12QueryHeap CreateDirectX12QueryHeap(ComPtr<ID3D12Device10> graphicsDevic
 void FreeDirectX12QueryHeap(DirectX12QueryHeap queryHeap)
 {
     SystemAssert(queryHeap.Storage);
-    queryHeap.Storage->QueryHeap.Reset();
+    descriptorHeap.Storage->DescriptorHeap.Reset();
 
     queryHeap.Storage->QueryHeapReadbackBuffer.Reset();
 }
