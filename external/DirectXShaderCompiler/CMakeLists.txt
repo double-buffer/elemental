@@ -1,4 +1,4 @@
-set(DXC_VERSION_CUSTOM "v2025-01-07")
+set(DXC_VERSION_CUSTOM "v2026-08-27")
 
 add_library(dxc INTERFACE)
 
