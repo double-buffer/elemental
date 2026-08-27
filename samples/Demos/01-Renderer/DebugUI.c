@@ -11,6 +11,8 @@ void HandleClayErrors(Clay_ErrorData errorData) {
     printf("CLAY: %s\n", errorData.errorText.chars);
     switch(errorData.errorType) {
         // etc
+        default:
+            break;
     }
 }
 
@@ -42,6 +44,8 @@ void ClayProcessRenderCommands(const Clay_RenderCommandArray* renderCommands, El
                                     renderCommand->renderData.text.textColor.a);
                 break;
             }
+            default:
+                break;
         }
     }
 }
@@ -159,7 +163,7 @@ void RenderStatisticItem(DebugUIData* debugUIData, const DebugUIStatisticItem* i
     }
 
     clayString = (Clay_String){ .length = strlen(tmp), .chars = tmp };
-    CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = valueColor, .hashStringContents = true }));
+    CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = valueColor }));
     debugUIData->TextCacheIndex += strlen(tmp);
 
     if (parentValue > 0.0f && item->Level > 0)
@@ -170,7 +174,7 @@ void RenderStatisticItem(DebugUIData* debugUIData, const DebugUIStatisticItem* i
         snprintf(tmp, 255, " (%.2f %%)", percentage);
 
         clayString = (Clay_String){ .length = strlen(tmp), .chars = tmp };
-        CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = COLOR_DEFAULT, .hashStringContents = true }));
+        CLAY_TEXT(clayString, CLAY_TEXT_CONFIG({ .textColor = COLOR_DEFAULT }));
         debugUIData->TextCacheIndex += strlen(tmp);
     }
 }

@@ -9,7 +9,7 @@
         {
             "name": "default",
             "displayName": "Default Config",
-            "description": "Build for the current platform using ninja",
+            "description": "Build for the current platform using Ninja",
             "generator": "Ninja",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
@@ -18,13 +18,8 @@
         },
         {
             "name": "test",
-            "displayName": "Test config",
-            "description": "Build for the current platform using ninja",
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "TEST_BUILD": "ON"
-            },
+            "inherits": "default",
+            "displayName": "Test Config",
             "binaryDir": "${sourceDir}/build-test"
         },
         {
@@ -52,8 +47,8 @@
         {
             "name": "xcode",
             "inherits": "default",
-            "displayName": "MacOS XCode Build",
-            "description": "Build MacOS with Xcode",
+            "displayName": "macOS Xcode Build",
+            "description": "Build macOS with Xcode",
             "generator": "Xcode",
             "binaryDir": "${sourceDir}/build-xcode"
         }

@@ -10,15 +10,15 @@ on:
 
 jobs:
   run_tests:
-    runs-on: ${{ 
-      ((inputs.platform == 'osx') && 'macos-14') ||
+    runs-on: ${{
+      (inputs.platform == 'osx' && 'macos-14') ||
       (inputs.platform == 'linux' && 'ubuntu-latest') ||
       (inputs.platform == 'win' && 'windows-latest')
       }}
 
     steps:
     - name: Download Test Binaries
-      uses: actions/download-artifact@master
+      uses: actions/download-artifact@v8
       with:
         name: tests.${{ inputs.platform }}-${{ inputs.architecture }}
         path: ./
@@ -26,8 +26,8 @@ jobs:
     - name: Setup Dependencies (Linux)
       if: inputs.platform == 'linux'
       run: |
-        sudo apt-get update 
-        sudo apt-get install libwayland-dev wayland-protocols libudev-dev libdecor-0-dev
+        sudo apt-get update
+        sudo apt-get install -y libwayland-dev wayland-protocols libudev-dev libdecor-0-dev
 
     - name: Extract Tests Archive (Windows)
       if: inputs.platform == 'win'
@@ -35,7 +35,7 @@ jobs:
 
     - name: Extract Tests Archive
       if: inputs.platform != 'win'
-      run: tar -xvf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
+      run: tar -xf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
     - name: Run System Functions Tests
       if: inputs.platform != 'osx'
@@ -44,7 +44,7 @@ jobs:
     - name: Run System Functions Tests (MacOS)
       if: inputs.platform == 'osx'
       run: ./tests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
-    
+
     - name: Run Application Tests
       if: inputs.platform != 'osx'
       run: ./tests/ApplicationTests/ApplicationTests
@@ -52,7 +52,7 @@ jobs:
     - name: Run Application Tests (MacOS)
       if: inputs.platform == 'osx'
       run: ./tests/ApplicationTests.app/Contents/MacOS/ApplicationTests
-    
+
     - name: Run Tools Tests
       if: inputs.platform != 'osx'
       run: ./tests/ToolsTests/ToolsTests
@@ -61,7 +61,4 @@ jobs:
       if: inputs.platform == 'osx'
       run: ./tests/ToolsTests.app/Contents/MacOS/ToolsTests
 
-      #- name: Run Graphics Tests (MacOS)
-        #if: inputs.platform == 'osx'
-        #run: ./tests/GraphicsTests.app/Contents/MacOS/GraphicsTests
-
+    # GraphicsTests require a GPU-backed runner and are run manually for now.
