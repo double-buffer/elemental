@@ -1,6 +1,7 @@
 #include "Resource.h"
 #include "GraphicsCommon.h"
 #include "SystemFunctions.h"
+#include "SystemLogging.h"
 
 #ifdef _WIN32
 #include "Microsoft/Graphics/DirectX12ResourceBarrier.h"
@@ -73,6 +74,20 @@ ElemAPI void ElemCopyDataToGraphicsResource(ElemCommandList commandList, const E
 
 ElemAPI ElemGraphicsResourceDescriptor ElemCreateGraphicsResourceDescriptor(ElemGraphicsResource resource, ElemGraphicsResourceDescriptorUsage usage, const ElemGraphicsResourceDescriptorOptions* options)
 {
+    auto resourceInfo = ElemGetGraphicsResourceInfo(resource);
+
+    if (resourceInfo.Type == ElemGraphicsResourceType_Buffer && (resourceInfo.Usage & ElemGraphicsResourceUsage_RaytracingAccelerationStructure))
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Raytracing acceleration structure storage buffers cannot have graphics resource descriptors.");
+        return -1;
+    }
+
+    if (resourceInfo.Type == ElemGraphicsResourceType_RaytracingAccelerationStructure && usage == ElemGraphicsResourceDescriptorUsage_Write)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Graphics, "Raytracing acceleration structures only support read graphics resource descriptors.");
+        return -1;
+    }
+
     DispatchReturnGraphicsFunction(CreateGraphicsResourceDescriptor, resource, usage, options);
 }
 
@@ -83,6 +98,11 @@ ElemAPI ElemGraphicsResourceDescriptorInfo ElemGetGraphicsResourceDescriptorInfo
 
 ElemAPI void ElemFreeGraphicsResourceDescriptor(ElemGraphicsResourceDescriptor descriptor, const ElemFreeGraphicsResourceDescriptorOptions* options)
 {
+    if (descriptor == -1)
+    {
+        return;
+    }
+
     DispatchGraphicsFunction(FreeGraphicsResourceDescriptor, descriptor, options);
 }
 
