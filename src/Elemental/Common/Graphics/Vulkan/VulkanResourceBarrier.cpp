@@ -102,8 +102,9 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
     SystemAssert(commandListData);
     
     auto barriersInfo = GenerateBarrierCommands(stackMemoryArena, commandListData->ResourceBarrierPool, currentStage, VulkanDebugBarrierInfoEnabled);
+    auto needsRaytracingBuildBarrier = currentStage == ElemGraphicsResourceBarrierSyncType_BuildRaytracingAccelerationStructure;
 
-    if (barriersInfo.BufferBarriers.Length == 0 && barriersInfo.TextureBarriers.Length == 0)
+    if (barriersInfo.BufferBarriers.Length == 0 && barriersInfo.TextureBarriers.Length == 0 && !needsRaytracingBuildBarrier)
     {
         return;
     }
@@ -112,7 +113,7 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
     dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     uint32_t vulkanBufferBarrierCount = 0;
-    bool hasAccelerationStructureBarrier = false;
+    bool hasAccelerationStructureBarrier = needsRaytracingBuildBarrier;
 
     for (uint32_t i = 0; i < barriersInfo.BufferBarriers.Length; i++)
     {
@@ -136,6 +137,23 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
     }
 
     VkMemoryBarrier2 accelerationStructureMemoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+
+    if (needsRaytracingBuildBarrier)
+    {
+        // Acceleration-structure builds implicitly read geometry/instance buffers and write
+        // acceleration-structure/scratch memory. Until the common barrier model records those
+        // command accesses explicitly, use one coarse phase barrier here so uploads and previous
+        // builds are visible to the next build. This intentionally favors correctness over
+        // per-resource precision and can be replaced by the planned renderer-level sync model.
+        accelerationStructureMemoryBarrier.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT |
+                                                          VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+        accelerationStructureMemoryBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+        accelerationStructureMemoryBarrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT |
+                                                           VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+        accelerationStructureMemoryBarrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT |
+                                                           VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR |
+                                                           VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+    }
 
     if (hasAccelerationStructureBarrier)
     {
