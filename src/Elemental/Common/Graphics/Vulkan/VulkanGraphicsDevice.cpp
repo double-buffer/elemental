@@ -121,7 +121,7 @@ void InitVulkan()
             validationFeatures.enabledValidationFeatureCount = currentEnabledValidationFeaturesIndex;
             validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures.Pointer;
 
-            createInfo.pNext = nullptr;
+            createInfo.pNext = &validationFeatures;
 
             AssertIfFailed(vkCreateInstance(&createInfo, nullptr, &VulkanInstance));
             instanceCreated = true;
