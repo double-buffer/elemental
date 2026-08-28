@@ -364,10 +364,10 @@ void VulkanCommitCommandList(ElemCommandList commandList)
         vkCmdCopyQueryPoolResults(commandListData->DeviceObject, 
                                   graphicsDeviceData->QueryHeap.Storage->QueryHeap, 
                                   index, 
-                                  count, 
+                                  count,
                                   graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Buffer, 
                                   index * sizeof(uint64_t), 
-                                  sizeof(uint64_t), 
+                                  sizeof(uint64_t),
                                   VK_QUERY_RESULT_64_BIT);// | VK_QUERY_RESULT_WAIT_BIT);*/
 
         //CreateVulkanGraphicsBufferBarrier(commandListData->DeviceObject, graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Buffer, false);
@@ -542,25 +542,15 @@ void VulkanWaitForFenceOnCpu(ElemFence fence)
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandQueueToWaitData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    if (fence.FenceValue > commandQueueToWaitData->LastCompletedFenceValue) 
-    {
-        uint64_t semaphoreValue;
-        vkGetSemaphoreCounterValue(graphicsDeviceData->Device, commandQueueToWaitData->Fence, &semaphoreValue);
-
-        commandQueueToWaitData->LastCompletedFenceValue = SystemMax(commandQueueToWaitData->LastCompletedFenceValue, semaphoreValue);
-    }
-
     if (fence.FenceValue > commandQueueToWaitData->LastCompletedFenceValue)
     {
-        // TODO: Activate it in a special debug mode
-        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for fence on CPU...");
-
         VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
         waitInfo.semaphoreCount = 1;
         waitInfo.pSemaphores = &commandQueueToWaitData->Fence;
         waitInfo.pValues = &fence.FenceValue;
 
         AssertIfFailed(vkWaitSemaphores(graphicsDeviceData->Device, &waitInfo, UINT64_MAX));
+        commandQueueToWaitData->LastCompletedFenceValue = fence.FenceValue;
     }
 }
 
