@@ -196,7 +196,7 @@ void InitSample(void* payload)
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { 
         .EnableDebugLayer = applicationPayload->AppSettings.GpuDebug, 
         .EnableGpuValidation = false, 
-        .EnableDebugBarrierInfo = false, 
+        .EnableDebugBarrierInfo = false,
         .EnableDebugStablePowerState = true,
         .PreferVulkan = applicationPayload->AppSettings.PreferVulkan 
     });
@@ -264,6 +264,9 @@ void InitSample(void* payload)
             .BlendOperation = ElemGraphicsBlendOperation_Add,
             .SourceBlendFactor = ElemGraphicsBlendFactor_SourceAlpha,
             .DestinationBlendFactor = ElemGraphicsBlendFactor_InverseSourceAlpha,
+            .BlendOperationAlpha = ElemGraphicsBlendOperation_Add,
+            .SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero,
+            .DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One,
         }}, .Length = 1 },
     });
 
@@ -277,6 +280,9 @@ void InitSample(void* payload)
             .BlendOperation = ElemGraphicsBlendOperation_Add,
             .SourceBlendFactor = ElemGraphicsBlendFactor_SourceAlpha,
             .DestinationBlendFactor = ElemGraphicsBlendFactor_InverseSourceAlpha,
+            .BlendOperationAlpha = ElemGraphicsBlendOperation_Add,
+            .SourceBlendFactorAlpha = ElemGraphicsBlendFactor_Zero,
+            .DestinationBlendFactorAlpha = ElemGraphicsBlendFactor_One,
         }}, .Length = 1 },
     });
 
@@ -597,7 +603,6 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     ElemGraphicsResourceBarrier(commandList, applicationPayload->RenderTargetTextureReadDescriptor, NULL);
     ElemGraphicsResourceBarrier(commandList, applicationPayload->DebugUIData.UIRenderTargetTextureReadDescriptor, NULL);
-
     // TODO: Refactor that
     ElemInsertGraphicsTimestamp(commandList, applicationPayload->GpuTimestampData.TonemapTimestamp.StartGpuTimestamp);
     applicationPayload->GpuTimestampData.TonemapTimestamp.IsActive = true;
