@@ -140,11 +140,11 @@ void InsertVulkanResourceBarriersIfNeeded(ElemCommandList commandList, ElemGraph
 
     if (needsRaytracingBuildBarrier)
     {
-        // Acceleration-structure builds implicitly read geometry/instance buffers and write
-        // acceleration-structure/scratch memory. Until the common barrier model records those
-        // command accesses explicitly, use one coarse phase barrier here so uploads and previous
-        // builds are visible to the next build. This intentionally favors correctness over
-        // per-resource precision and can be replaced by the planned renderer-level sync model.
+        // HACK: Acceleration-structure builds implicitly read geometry/instance buffers and
+        // write acceleration-structure/scratch memory. Until the common barrier model records
+        // those command accesses explicitly, use one coarse phase barrier here so uploads and
+        // previous builds are visible to the next build. Replace this with the planned
+        // renderer-level/global synchronization model rather than growing per-BLAS tracking.
         accelerationStructureMemoryBarrier.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT |
                                                           VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
         accelerationStructureMemoryBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
