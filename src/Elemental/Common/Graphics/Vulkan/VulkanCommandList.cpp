@@ -434,7 +434,7 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         if (hasAcquireSemaphore)
         {
             auto acquireSemaphoreIndex = fencesToWaitCount;
-            submitStageMasks[acquireSemaphoreIndex] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            submitStageMasks[acquireSemaphoreIndex] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
             waitSemaphores[acquireSemaphoreIndex] = commandQueueData->AcquireSemaphore;
             waitSemaphoreValues[acquireSemaphoreIndex] = 0;
         }
