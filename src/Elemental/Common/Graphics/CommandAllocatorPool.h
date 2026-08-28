@@ -10,7 +10,7 @@ enum CommandAllocatorQueueType
     CommandAllocatorQueueType_Max = 3
 };
 
-#define MAX_COMMANDALLOCATOR 3u
+#define MAX_COMMANDALLOCATOR 8u
 #define MAX_COMMANDLIST 64u
 
 template<typename TCommandList>
