@@ -745,7 +745,7 @@ ElemGraphicsDevice VulkanCreateGraphicsDevice(const ElemGraphicsDeviceOptions* o
     meshFeatures.meshShader = true;
     meshFeatures.meshShaderQueries = true;
 
-    VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT mutableDescriptorFeatures = { VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT };
+    VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT mutableDescriptorFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT };
     mutableDescriptorFeatures.mutableDescriptorType = true;
 
     VkPhysicalDevicePresentIdFeaturesKHR presentIdFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR };
