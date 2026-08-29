@@ -62,8 +62,8 @@ else
 }
 
 $header = Get-Content -Path $HeaderPath -Raw
-$versionCommentPattern = '(?m)^// Version: .*$'
-$versionMacroPattern = '(?m)^#define ELEM_VERSION_LABEL ".*"$'
+$versionCommentPattern = '(?m)^// Version: [^\r\n]*(?=\r?$)'
+$versionMacroPattern = '(?m)^#define ELEM_VERSION_LABEL "[^"\r\n]*"(?=\r?$)'
 
 if ([Regex]::Matches($header, $versionCommentPattern).Count -ne 1)
 {
