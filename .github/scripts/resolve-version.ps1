@@ -39,13 +39,20 @@ if (![string]::IsNullOrWhiteSpace($stage) -and $stage -notmatch '^(dev|alpha|bet
     throw "Unsupported Elemental release stage: $stage"
 }
 
+$tags = @(& git tag --merged HEAD --list "v*")
+
+if ($LASTEXITCODE -ne 0)
+{
+    throw "Unable to inspect existing Elemental release tags."
+}
+
 $productVersion = "$major.$minor.$patch"
 $isPrerelease = ![string]::IsNullOrWhiteSpace($stage)
 
 if ($isPrerelease)
 {
     $buildNumbers = @(
-        & git tag --merged HEAD --list "v*" |
+        $tags |
             ForEach-Object {
                 if ($_ -match '^v\d+\.\d+\.\d+-(?:dev|alpha|beta|rc)\.(?<build>\d+)$')
                 {
@@ -53,11 +60,6 @@ if ($isPrerelease)
                 }
             }
     )
-
-    if ($LASTEXITCODE -ne 0)
-    {
-        throw "Unable to inspect existing Elemental release tags."
-    }
 
     $buildNumber = if ($buildNumbers.Count -eq 0)
     {
@@ -84,9 +86,8 @@ else
 }
 
 $tag = "v$version"
-& git rev-parse --verify --quiet "refs/tags/$tag" *> $null
 
-if ($LASTEXITCODE -eq 0)
+if ($tags -contains $tag)
 {
     throw "Release identity already exists: $tag"
 }
