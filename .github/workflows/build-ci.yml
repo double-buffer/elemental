@@ -1,12 +1,34 @@
 name: Build CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
 
 jobs:
+  validate_release:
+    runs-on: ubuntu-latest
+    name: validate-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve next release version
+        id: version
+        shell: pwsh
+        run: ./.github/scripts/resolve-version.ps1
+
+      - name: Generate release notes preview
+        if: steps.version.outputs.prerelease == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          & ./.github/scripts/release-notes.ps1 `
+              -Version "${{ steps.version.outputs.version }}" `
+              -Repository "${{ github.repository }}" `
+              -OutputPath (Join-Path $env:RUNNER_TEMP "release-notes.md")
+
   build:
     strategy:
       fail-fast: false
@@ -36,12 +58,13 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     name: CI Build Check
-    needs: [build, run_tests]
+    needs: [validate_release, build, run_tests]
     steps:
-      - name: Check build and test results
+      - name: Check build, test and release validation results
         if: >-
           ${{
-               needs.build.result != 'success'
+               needs.validate_release.result != 'success'
+            || needs.build.result != 'success'
             || needs.run_tests.result != 'success'
           }}
         run: exit 1

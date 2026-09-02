@@ -7,6 +7,10 @@ on:
       architecture:
         required: true
         type: string
+      build_number:
+        required: false
+        type: string
+        default: local
 
 jobs:
   build:
@@ -20,6 +24,10 @@ jobs:
     - uses: actions/checkout@v7
       with:
         submodules: recursive
+
+    - name: Apply build version
+      shell: pwsh
+      run: ./.github/scripts/apply-version.ps1 -BuildNumber "${{ inputs.build_number }}"
 
     - name: Setup Dependencies (Windows)
       if: inputs.platform == 'win'

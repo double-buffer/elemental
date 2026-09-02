@@ -1,0 +1,173 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        run: ./.github/scripts/resolve-version.ps1
+
+  build:
+    needs: [version]
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(vars.Platforms) }}
+    uses: ./.github/workflows/build.yml
+    name: build
+    secrets: inherit
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
+      build_number: ${{ needs.version.outputs.build_number }}
+
+  run_tests:
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(vars.Platforms) }}
+    uses: ./.github/workflows/run-tests.yml
+    name: run-tests
+    secrets: inherit
+    with:
+      platform: ${{ matrix.platform }}
+      architecture: ${{ matrix.architecture }}
+
+  release:
+    name: Publish release
+    needs: [version, build, run_tests]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "*"
+          path: ${{ runner.temp }}/artifacts
+          merge-multiple: true
+
+      - name: Generate release notes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notesPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          $version = "${{ needs.version.outputs.version }}"
+
+          if ("${{ needs.version.outputs.prerelease }}" -eq "true")
+          {
+              & ./.github/scripts/release-notes.ps1 `
+                  -Version $version `
+                  -Repository "${{ github.repository }}" `
+                  -OutputPath $notesPath
+          }
+          else
+          {
+              $stableNotesPath = ".github/release-notes/$version.md"
+
+              if (!(Test-Path -Path $stableNotesPath))
+              {
+                  throw "Stable release notes are missing: $stableNotesPath"
+              }
+
+              Copy-Item -Path $stableNotesPath -Destination $notesPath
+          }
+
+      - name: Verify release identity is unused
+        shell: pwsh
+        run: |
+          $tag = "${{ needs.version.outputs.tag }}"
+          $existingTag = (& git ls-remote --tags origin "refs/tags/$tag" | Out-String).Trim()
+
+          if (![string]::IsNullOrWhiteSpace($existingTag))
+          {
+              throw "Release identity already exists: $tag"
+          }
+
+      - name: Create tag and GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ needs.version.outputs.version }}"
+          $tag = "${{ needs.version.outputs.tag }}"
+          $artifactPath = Join-Path $env:RUNNER_TEMP "artifacts"
+          $notesPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
+
+          $assets = @(
+              Get-ChildItem -Path $artifactPath -File |
+                  Where-Object { $_.Name -match '^(elemental(?:-tools)?|samples)\.' } |
+                  Sort-Object Name
+          )
+
+          if ($assets.Count -eq 0)
+          {
+              throw "No release assets were found."
+          }
+
+          $arguments = @(
+              "release",
+              "create",
+              $tag
+          )
+
+          foreach ($asset in $assets)
+          {
+              $arguments += $asset.FullName
+          }
+
+          $arguments += @(
+              "--repo",
+              "${{ github.repository }}",
+              "--title",
+              "Elemental $version",
+              "--notes-file",
+              $notesPath,
+              "--target",
+              "${{ github.sha }}"
+          )
+
+          if ("${{ needs.version.outputs.prerelease }}" -eq "true")
+          {
+              $arguments += "--prerelease"
+          }
+
+          & gh @arguments
+
+          if ($LASTEXITCODE -ne 0)
+          {
+              exit $LASTEXITCODE
+          }
