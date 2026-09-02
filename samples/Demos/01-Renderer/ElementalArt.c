@@ -21,8 +21,8 @@ void ElemArtInit(ElemGraphicsDevice graphicsDevice, ElemArtData* elemArtData)
     elemArtData->TextBufferCount = 0;
 
     elemArtData->MaxDraw2DCommandCount = 1024;
-    elemArtData->Draw2DCommands = (Draw2DCommand*)malloc(elemArtData->MaxDraw2DCommandCount);
-    elemArtData->Draw2DCommandsBuffer = SampleCreateGpuBuffer(&elemArtData->GpuMemory, elemArtData->MaxDraw2DCommandCount, ElemGraphicsResourceUsage_Read, "Draw2DCommandsBuffer");
+    elemArtData->Draw2DCommands = (Draw2DCommand*)malloc(elemArtData->MaxDraw2DCommandCount * sizeof(Draw2DCommand));
+    elemArtData->Draw2DCommandsBuffer = SampleCreateGpuBuffer(&elemArtData->GpuMemory, elemArtData->MaxDraw2DCommandCount * sizeof(Draw2DCommand), ElemGraphicsResourceUsage_Read, "Draw2DCommandsBuffer");
     elemArtData->Draw2DCommandCount = 0;
 }
 
@@ -66,7 +66,7 @@ void ElemArtRender(ElemCommandList commandList, ElemVector2 renderTargetSize, El
         .RenderTargetSize = renderTargetSize,
     };
 
-    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(RaytracingShaderParameters) });
+    ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&parameters, .Length = sizeof(DrawTextShaderParameters) });
 
     ElemDispatchMesh(commandList, 1, 1, 1);
     elemArtData->TextBufferCount = 0;

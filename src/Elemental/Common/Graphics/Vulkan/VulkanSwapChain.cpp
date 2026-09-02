@@ -96,13 +96,21 @@ VkSwapchainKHR CreateVulkanSwapChainObject(ElemGraphicsDevice graphicsDevice, Vk
     
     SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Present Mode count: %d", presentModeCount);
 
-    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR compositeAlpha;
 
-    if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
+    if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+    {
+        compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    }
+    else if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
     {
         compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
     }
-    else if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+    else if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR)
+    {
+        compositeAlpha = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+    }
+    else
     {
         compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     }
@@ -191,6 +199,9 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(swapChainData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
+    auto commandQueueData = GetVulkanCommandQueueData(swapChainData->CommandQueue);
+    SystemAssert(commandQueueData);
+
     // HACK: To Debug
     //vkDeviceWaitIdle(graphicsDeviceData->Device);
 
@@ -232,12 +243,19 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
         sizeChanged = true;
     }
 
-    AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, swapChainData->BackBufferAcquireSemaphores[swapChainData->CurrentImageIndex], VK_NULL_HANDLE, &swapChainData->CurrentImageIndex));
-    /*
-    AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, VK_NULL_HANDLE, swapChainData->BackBufferAcquireFences[swapChainData->CurrentImageIndex], &swapChainData->CurrentImageIndex));
-    vkWaitForFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFences[swapChainData->CurrentImageIndex], true, UINT64_MAX);
-    vkResetFences(graphicsDeviceData->Device, 1, &swapChainData->BackBufferAcquireFences[swapChainData->CurrentImageIndex]);
-*/
+    auto frameIndex = swapChainData->CurrentFrameIndex;
+    auto acquireFence = swapChainData->BackBufferAcquireFences[frameIndex];
+
+    if (acquireFence.FenceValue > 0)
+    {
+        VulkanWaitForFenceOnCpu(acquireFence);
+    }
+
+    auto acquireSemaphore = swapChainData->BackBufferAcquireSemaphores[frameIndex];
+    AssertIfFailed(vkAcquireNextImageKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &swapChainData->CurrentImageIndex));
+
+    commandQueueData->AcquireSemaphore = acquireSemaphore;
+    commandQueueData->PresentSemaphore = swapChainData->BackBufferPresentSemaphores[swapChainData->CurrentImageIndex];
 
     swapChainData->PresentCalled = false;
     auto backBuffer = swapChainData->BackBufferTextures[swapChainData->CurrentImageIndex];
@@ -252,6 +270,7 @@ void CheckVulkanAvailableSwapChain(ElemHandle handle)
     };
     
     swapChainData->UpdateHandler(&updateParameters, swapChainData->UpdatePayload);
+    swapChainData->CurrentFrameIndex = (frameIndex + 1) % VULKAN_MAX_SWAPCHAIN_BUFFERS;
     ResetInputsFrame();
 /*
     if (!swapChainData->PresentCalled)
@@ -446,6 +465,7 @@ ElemSwapChain VulkanCreateSwapChain(ElemCommandQueue commandQueue, ElemWindow wi
     {
         VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
         AssertIfFailed(vkCreateSemaphore(graphicsDeviceData->Device, &semaphoreCreateInfo, nullptr, &swapChainData->BackBufferAcquireSemaphores[i]));
+        AssertIfFailed(vkCreateSemaphore(graphicsDeviceData->Device, &semaphoreCreateInfo, nullptr, &swapChainData->BackBufferPresentSemaphores[i]));
     }
 
     #ifdef _WIN32
@@ -484,6 +504,7 @@ void VulkanFreeSwapChain(ElemSwapChain swapChain)
 
         VulkanFreeGraphicsResource(swapChainData->BackBufferTextures[i], nullptr);
         vkDestroySemaphore(graphicsDeviceData->Device, swapChainData->BackBufferAcquireSemaphores[i], nullptr);
+        vkDestroySemaphore(graphicsDeviceData->Device, swapChainData->BackBufferPresentSemaphores[i], nullptr);
     }
 
     vkDestroySwapchainKHR(graphicsDeviceData->Device, swapChainData->DeviceObject, nullptr);
@@ -528,6 +549,7 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
     SystemAssert(commandQueueData);
 
     auto presentId = swapChainData->PresentId++;
+    auto presentSemaphore = swapChainData->BackBufferPresentSemaphores[swapChainData->CurrentImageIndex];
 
     VkPresentIdKHR presentIdInfo = { VK_STRUCTURE_TYPE_PRESENT_ID_KHR };
     presentIdInfo.swapchainCount = 1;
@@ -535,15 +557,21 @@ void VulkanPresentSwapChain(ElemSwapChain swapChain)
 
     VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &commandQueueData->PresentSemaphore;
+    presentInfo.pWaitSemaphores = &presentSemaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &swapChainData->DeviceObject;
     presentInfo.pImageIndices = &swapChainData->CurrentImageIndex;
     presentInfo.pNext = &presentIdInfo;
 
+    swapChainData->BackBufferAcquireFences[swapChainData->CurrentFrameIndex] =
+    {
+        .CommandQueue = swapChainData->CommandQueue,
+        .FenceValue = commandQueueData->FenceValue
+    };
+
     AssertIfFailed(vkQueuePresentKHR(commandQueueData->DeviceObject, &presentInfo));
+    swapChainData->PresentCalled = true;
     
     VulkanResetCommandAllocation(swapChainData->GraphicsDevice);
     VulkanProcessGraphicsResourceDeleteQueue(swapChainData->GraphicsDevice);
 }
-
