@@ -110,7 +110,8 @@ void InitVulkan()
             auto currentEnabledValidationFeaturesIndex = 0u;
 
             enabledValidationFeatures[currentEnabledValidationFeaturesIndex++] = VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT;
-            enabledValidationFeatures[currentEnabledValidationFeaturesIndex++] = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+
+            // TODO: Re-enable synchronization validation once submit-time validation no longer causes intermittent device loss.
 
             if (vulkanDebugGpuValidationEnabled)
             {

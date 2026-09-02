@@ -121,11 +121,6 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
     VkSemaphore fence;
     AssertIfFailed(vkCreateSemaphore(graphicsDeviceData->Device, &createInfo, NULL, &fence));
 
-    createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-
-    VkSemaphore presentSemaphore;
-    AssertIfFailed(vkCreateSemaphore(graphicsDeviceData->Device, &createInfo, NULL, &presentSemaphore));
-
     if (VulkanDebugLayerEnabled && options && options->DebugName)
     {
         VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
@@ -151,7 +146,8 @@ ElemCommandQueue VulkanCreateCommandQueue(ElemGraphicsDevice graphicsDevice, Ele
         .GraphicsDevice = graphicsDevice,
         .Fence = fence,
         .FenceValue = 0,
-        .PresentSemaphore = presentSemaphore,
+        .AcquireSemaphore = VK_NULL_HANDLE,
+        .PresentSemaphore = VK_NULL_HANDLE,
         .LastCompletedFenceValue = 0,
         .CommandQueueFrequency = queueFrequency
     }); 
@@ -190,7 +186,6 @@ void VulkanFreeCommandQueue(ElemCommandQueue commandQueue)
     }
     // TODO: Free allocators and command buffers
 
-    vkDestroySemaphore(graphicsDeviceData->Device, commandQueueData->PresentSemaphore, nullptr);
     vkDestroySemaphore(graphicsDeviceData->Device, commandQueueData->Fence, nullptr);
     
     auto graphicsIdUnpacked = UnpackSystemDataPoolHandle(commandQueueData->GraphicsDevice);
@@ -369,10 +364,10 @@ void VulkanCommitCommandList(ElemCommandList commandList)
         vkCmdCopyQueryPoolResults(commandListData->DeviceObject, 
                                   graphicsDeviceData->QueryHeap.Storage->QueryHeap, 
                                   index, 
-                                  count, 
+                                  count,
                                   graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Buffer, 
                                   index * sizeof(uint64_t), 
-                                  sizeof(uint64_t), 
+                                  sizeof(uint64_t),
                                   VK_QUERY_RESULT_64_BIT);// | VK_QUERY_RESULT_WAIT_BIT);*/
 
         //CreateVulkanGraphicsBufferBarrier(commandListData->DeviceObject, graphicsDeviceData->QueryHeap.Storage->QueryHeapReadbackBuffer.Buffer, false);
@@ -405,17 +400,21 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
     auto commandQueueData = GetVulkanCommandQueueData(commandQueue);
     SystemAssert(commandQueueData);
 
+    auto fencesToWaitCount = options ? options->FencesToWait.Length : 0;
+    auto hasAcquireSemaphore = commandQueueData->AcquireSemaphore != VK_NULL_HANDLE;
+    auto waitSemaphoreCount = fencesToWaitCount + (hasAcquireSemaphore ? 1 : 0);
+
     Span<VkPipelineStageFlags> submitStageMasks = {};
     Span<VkSemaphore> waitSemaphores = {};
     Span<uint64_t> waitSemaphoreValues = {};
 
-    if (options && options->FencesToWait.Length > 0)
+    if (waitSemaphoreCount > 0)
     {
-        submitStageMasks = SystemPushArray<VkPipelineStageFlags>(stackMemoryArena, options->FencesToWait.Length);
-        waitSemaphores = SystemPushArray<VkSemaphore>(stackMemoryArena, options->FencesToWait.Length);
-        waitSemaphoreValues = SystemPushArray<uint64_t>(stackMemoryArena, options->FencesToWait.Length);
+        submitStageMasks = SystemPushArray<VkPipelineStageFlags>(stackMemoryArena, waitSemaphoreCount);
+        waitSemaphores = SystemPushArray<VkSemaphore>(stackMemoryArena, waitSemaphoreCount);
+        waitSemaphoreValues = SystemPushArray<uint64_t>(stackMemoryArena, waitSemaphoreCount);
 
-        for (uint32_t i = 0; i < options->FencesToWait.Length; i++)
+        for (uint32_t i = 0; i < fencesToWaitCount; i++)
         {
             auto fenceToWait = options->FencesToWait.Items[i];
 
@@ -430,6 +429,14 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
             {
                 SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Waiting for fence before ExecuteCommandLists. (CommandQueue=%d, Value=%d)", fenceToWait.CommandQueue, fenceToWait.FenceValue);
             }
+        }
+
+        if (hasAcquireSemaphore)
+        {
+            auto acquireSemaphoreIndex = fencesToWaitCount;
+            submitStageMasks[acquireSemaphoreIndex] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            waitSemaphores[acquireSemaphoreIndex] = commandQueueData->AcquireSemaphore;
+            waitSemaphoreValues[acquireSemaphoreIndex] = 0;
         }
     }
 
@@ -455,20 +462,18 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
     if (!hasError)
     {
         uint32_t signalCount = 1u;
+        auto signalPresentSemaphore = commandQueueData->SignalPresentSemaphore;
 
-        // TODO: Here we signal the present semaphore. We should do the same for the wait semaphore that we set during the acquire
-        // It is the same logic
-        // For both signalpresent and waitacquire, we need to have one per frame in flight
-        if (commandQueueData->SignalPresentSemaphore)
+        if (signalPresentSemaphore)
         {
+            SystemAssert(commandQueueData->PresentSemaphore != VK_NULL_HANDLE);
             signalCount = 2u;
-            commandQueueData->SignalPresentSemaphore = false;
         }
 
         uint64_t signalValues[] = { fenceValue, 0u };
 
         VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
-        timelineInfo.waitSemaphoreValueCount = waitSemaphoreValues.Length;
+        timelineInfo.waitSemaphoreValueCount = waitSemaphores.Length;
         timelineInfo.pWaitSemaphoreValues = waitSemaphoreValues.Pointer;
         timelineInfo.signalSemaphoreValueCount = signalCount;
         timelineInfo.pSignalSemaphoreValues = signalValues;
@@ -486,6 +491,17 @@ ElemFence VulkanExecuteCommandLists(ElemCommandQueue commandQueue, ElemCommandLi
         submitInfo.pNext = &timelineInfo;
 
         AssertIfFailed(vkQueueSubmit(commandQueueData->DeviceObject, 1, &submitInfo, VK_NULL_HANDLE));
+
+        if (hasAcquireSemaphore)
+        {
+            commandQueueData->AcquireSemaphore = VK_NULL_HANDLE;
+        }
+
+        if (signalPresentSemaphore)
+        {
+            commandQueueData->SignalPresentSemaphore = false;
+            commandQueueData->PresentSemaphore = VK_NULL_HANDLE;
+        }
     }
 
     auto fence = ElemFence();
@@ -526,25 +542,15 @@ void VulkanWaitForFenceOnCpu(ElemFence fence)
     auto graphicsDeviceData = GetVulkanGraphicsDeviceData(commandQueueToWaitData->GraphicsDevice);
     SystemAssert(graphicsDeviceData);
 
-    if (fence.FenceValue > commandQueueToWaitData->LastCompletedFenceValue) 
-    {
-        uint64_t semaphoreValue;
-        vkGetSemaphoreCounterValue(graphicsDeviceData->Device, commandQueueToWaitData->Fence, &semaphoreValue);
-
-        commandQueueToWaitData->LastCompletedFenceValue = SystemMax(commandQueueToWaitData->LastCompletedFenceValue, semaphoreValue);
-    }
-
     if (fence.FenceValue > commandQueueToWaitData->LastCompletedFenceValue)
     {
-        // TODO: Activate it in a special debug mode
-        //SystemLogDebugMessage(ElemLogMessageCategory_Graphics, "Wait for fence on CPU...");
-
         VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
         waitInfo.semaphoreCount = 1;
         waitInfo.pSemaphores = &commandQueueToWaitData->Fence;
         waitInfo.pValues = &fence.FenceValue;
 
         AssertIfFailed(vkWaitSemaphores(graphicsDeviceData->Device, &waitInfo, UINT64_MAX));
+        commandQueueToWaitData->LastCompletedFenceValue = fence.FenceValue;
     }
 }
 

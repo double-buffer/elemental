@@ -23,6 +23,7 @@ struct VulkanCommandQueueData
     ElemGraphicsDevice GraphicsDevice;
     VkSemaphore Fence;
     uint64_t FenceValue;
+    VkSemaphore AcquireSemaphore;
     VkSemaphore PresentSemaphore;
     bool SignalPresentSemaphore;
     uint64_t LastCompletedFenceValue;

@@ -93,11 +93,13 @@ ElemHandle SystemAddDataPoolItem(SystemDataPool<T, TFull> dataPool, T data)
 
         index = SystemAtomicAdd(storage->CurrentIndex, 1);
 
-        SystemCommitMemory<SystemDataPoolStorageItem<T>>(storage->MemoryArena, storage->Data.Slice(index, 1000), true);
+        auto remainingItemCount = storage->Data.Length - index;
+        auto itemCountToCommit = remainingItemCount > 1000 ? 1000 : remainingItemCount;
+        SystemCommitMemory<SystemDataPoolStorageItem<T>>(storage->MemoryArena, storage->Data.Slice(index, itemCountToCommit), true);
         
         if (!IsTypeEmpty<TFull>())
         {
-            SystemCommitMemory<TFull>(storage->MemoryArena, storage->DataFull.Slice(index, 1000), true);
+            SystemCommitMemory<TFull>(storage->MemoryArena, storage->DataFull.Slice(index, itemCountToCommit), true);
         }
     }
 
