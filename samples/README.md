@@ -1,28 +1,53 @@
 # Elemental Samples
 
-List of available samples:
+The sample tree is split into three groups with different goals:
 
-Foundations:
-- [01 - Hello World](#01HelloWorld)
-- [02 - Hello Window](#02HelloWindow)
+- [`Elemental`](Elemental) contains small, progressive samples focused on the public runtime API.
+- [`Demos`](Demos) contains larger experiments used to stress Elemental and explore renderer or GPU-programming ideas.
+- [`ElementalTools`](ElementalTools) contains small command-line examples for offline asset and shader processing.
 
-Graphics:
-- [01 - Hello Triangle]
+The runtime samples are intentionally low level. They keep resources, queues, command lists, descriptors, barriers and pipelines visible instead of hiding them behind a sample framework.
 
-## <a name="0101HelloWorld"></a>01 - Hello World
+## Build
 
-[This sample](01-Foundations/01-HelloWorld/Program.cs) shows how to create a new native application and do some basic logic at each main loop iteration.
+From the repository root:
 
-![](screenshots/01-Foundations/01-HelloWorld.png)
+```bash
+cmake --preset default
+cmake --build --preset default
+```
 
-## <a name="0102HelloWindow"></a>02 - HelloWindow
+A single sample can also be built by target, for example:
 
-[This sample](01-Foundations/02-HelloWindow/Program.cs) shows how to create a new native window. It also displays the current available render width in the title bar.
+```bash
+cmake --build --preset default --target HelloTriangle
+```
 
-![](screenshots/01-Foundations/02-HelloWindow.png)
+Prebuilt sample packages are also published with Elemental development releases.
 
-## <a name="0101HelloTriangle"></a>02 - HelloWindow
+## Elemental
 
-[This sample](01-Foundations/02-HelloWindow/Program.cs) shows how to create a new native window. It also displays the current available render width in the title bar.
+These are the best place to start. Each sample introduces another part of the runtime API.
 
-![](screenshots/01-Foundations/02-HelloWindow.png)
+1. [`01-HelloTriangle`](Elemental/01-HelloTriangle) — create the basic graphics objects and draw a procedural triangle with a mesh shader.
+2. [`02-HelloInputs`](Elemental/02-HelloInputs) — consume Elemental's input stream from keyboard, mouse, gamepad and touch devices.
+3. [`03-HelloCompute`](Elemental/03-HelloCompute) — generate a Julia fractal with a compute shader, synchronize the texture and display it through the graphics pipeline.
+4. [`04-HelloMesh`](Elemental/04-HelloMesh) — load compiled mesh data, use meshlets and render a real mesh with a depth buffer.
+5. [`05-HelloRaytracing`](Elemental/05-HelloRaytracing) — build acceleration structures and use inline ray queries for interactive ray/path-tracing experiments.
+
+## Demos
+
+Demos are larger laboratories rather than minimal tutorials. They intentionally combine several systems and may contain active TODOs, experiments and temporary implementation choices.
+
+- [`01-Renderer`](Demos/01-Renderer) — Elemental's main renderer stress test, combining scene loading, mesh shaders, bindless resources, ray tracing, compute path tracing, GPU timings and a debug UI.
+- [`02-AITraining`](Demos/02-AITraining) — a small CPU-side neural-network/autodiff experiment used as a baseline for future GPU-compute exploration. It does **not** run neural-network training on the GPU yet.
+
+## ElementalTools
+
+These command-line samples demonstrate the offline side of the project.
+
+- [`01-ShaderCompiler`](ElementalTools/01-ShaderCompiler) — compile HLSL into an Elemental shader library for a target backend/platform.
+- [`02-SceneCompiler`](ElementalTools/02-SceneCompiler) — load a source scene, build meshlets and serialize the sample scene format.
+- [`03-TextureCompiler`](ElementalTools/03-TextureCompiler) — load a texture, generate mip levels and write BC7-compressed sample texture data.
+
+The `.scene` and `.texture` files produced by these samples are formats used by the sample code. They should not be treated as stable public Elemental asset formats.
