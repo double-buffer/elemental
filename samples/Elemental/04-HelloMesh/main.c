@@ -231,7 +231,7 @@ void GetFullPath(char* destination, const char* path, bool prefixData)
     strncpy(pointer, path, strlen(path));
 }
 
-ElemDataSpan ReadFile(const char* filename, bool prefixData)
+ElemDataSpan ReadSampleFile(const char* filename, bool prefixData)
 {
     char absolutePath[MAX_PATH];
     GetFullPath(absolutePath, filename, prefixData);
@@ -798,7 +798,7 @@ void UpdateGameState(GameState* gameState, InputActions* inputActions, float del
 
 bool LoadMesh(ApplicationPayload* applicationPayload, const char* path)
 {
-    ElemDataSpan meshFileData = ReadFile(path, true);
+    ElemDataSpan meshFileData = ReadSampleFile(path, true);
 
     if (!meshFileData.Items || meshFileData.Length < sizeof(MeshFileHeader))
     {
@@ -923,7 +923,7 @@ void InitSample(void* payload)
         return;
     }
 
-    ElemDataSpan shaderData = ReadFile(
+    ElemDataSpan shaderData = ReadSampleFile(
         !applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader" : "RenderMesh_vulkan.shader",
         true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
