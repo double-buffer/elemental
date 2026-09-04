@@ -1,21 +1,31 @@
+BasedOnStyle: LLVM
 Language: Cpp
+
+# Indentation and layout
 UseTab: Never
 IndentWidth: 4
-ColumnLimit: 200
-PointerAlignment: Left
-BreakBeforeBraces: Allman
-Cpp11BracedListStyle: false
-InsertBraces: true
-
 IndentCaseLabels: true
-AlignAfterOpenBracket: DontAlign
-AlignArrayOfStructures: None
-AlignEscapedNewlines: DontAlign
+ColumnLimit: 200
+
+# Braces and short statements
+BreakBeforeBraces: Allman
+InsertBraces: true
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
+
+# Alignment and lists
+AlignAfterOpenBracket: DontAlign
+AlignArrayOfStructures: None
+AlignEscapedNewlines: DontAlign
+Cpp11BracedListStyle: false
+BinPackArguments: false
+BinPackParameters: false
+
+# Pointer style
+PointerAlignment: Left
+
+# Line breaking
 PenaltyBreakAssignment: 15
 PenaltyBreakBeforeFirstCallParameter: 15
 PenaltyBreakOpenParenthesis: 15
-BinPackArguments: false
-BinPackParameters: false
