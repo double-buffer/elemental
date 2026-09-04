@@ -32,7 +32,7 @@ These are the best place to start. Each sample introduces another part of the ru
 1. [`01-HelloTriangle`](Elemental/01-HelloTriangle) — create the basic graphics objects and draw a procedural triangle with a mesh shader.
 2. [`02-HelloInputs`](Elemental/02-HelloInputs) — consume Elemental's input stream from keyboard, mouse, gamepad and touch devices.
 3. [`03-HelloCompute`](Elemental/03-HelloCompute) — generate a Julia fractal with a compute shader, synchronize the texture and display it through the graphics pipeline.
-4. [`04-HelloMesh`](Elemental/04-HelloMesh) — load compiled mesh data, use meshlets and render a real mesh with a depth buffer.
+4. [`04-HelloMesh`](Elemental/04-HelloMesh) — load a minimal compiled mesh buffer, use meshlets and render a real mesh with a depth buffer.
 5. [`05-HelloRaytracing`](Elemental/05-HelloRaytracing) — build acceleration structures and use inline ray queries for interactive ray/path-tracing experiments.
 
 ## Demos
@@ -47,7 +47,8 @@ Demos are larger laboratories rather than minimal tutorials. They intentionally 
 These command-line samples demonstrate the offline side of the project.
 
 - [`01-ShaderCompiler`](ElementalTools/01-ShaderCompiler) — compile HLSL into an Elemental shader library for a target backend/platform.
-- [`02-SceneCompiler`](ElementalTools/02-SceneCompiler) — load a source scene, build meshlets and serialize the sample scene format.
+- [`02-SceneCompiler`](ElementalTools/02-SceneCompiler) — load a source scene, build meshlets and serialize the richer sample scene format.
 - [`03-TextureCompiler`](ElementalTools/03-TextureCompiler) — load a texture, generate mip levels and write BC7-compressed sample texture data.
+- [`04-MeshCompiler`](ElementalTools/04-MeshCompiler) — build the deliberately minimal meshlet data used by HelloMesh.
 
-The `.scene` and `.texture` files produced by these samples are formats used by the sample code. They should not be treated as stable public Elemental asset formats.
+The `.scene`, `.mesh` and `.texture` files produced by these samples are formats used by the sample code. They should not be treated as stable public Elemental asset formats.
