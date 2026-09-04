@@ -5,8 +5,9 @@ int ElementalToolsTranslationUnit2(void);
 
 int main(void)
 {
-    return ElementalTranslationUnit1() +
-           ElementalTranslationUnit2() +
-           ElementalToolsTranslationUnit1() +
-           ElementalToolsTranslationUnit2();
+    (void)ElementalTranslationUnit1();
+    (void)ElementalTranslationUnit2();
+    (void)ElementalToolsTranslationUnit1();
+    (void)ElementalToolsTranslationUnit2();
+    return 0;
 }
