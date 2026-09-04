@@ -11,7 +11,7 @@ target_include_directories(ElementalTools PUBLIC .)
 
 target_precompile_headers(ElementalTools PRIVATE ${ELEM_PLATFORM_DIR}/PreCompiledHeader.h)
 
-target_link_libraries(ElementalTools PRIVATE common)
+target_link_libraries(ElementalTools PRIVATE foundations)
 target_link_libraries(ElementalTools PRIVATE external_dependencies)
 target_link_libraries(ElementalTools PRIVATE tools_external_dependencies)
 

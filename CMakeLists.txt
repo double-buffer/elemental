@@ -70,6 +70,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ResourceCompilation.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AppPackaging.cmake")
 
 add_subdirectory(external)
+add_subdirectory(src/Foundations)
 add_subdirectory(src/Elemental/Common)
 add_subdirectory(src/Elemental)
 

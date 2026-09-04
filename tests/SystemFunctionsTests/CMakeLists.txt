@@ -1,6 +1,6 @@
 add_executable(SystemFunctionsTests UnityBuild.cpp)
 
-target_link_libraries(SystemFunctionsTests PRIVATE common)
+target_link_libraries(SystemFunctionsTests PRIVATE foundations)
 target_link_libraries(SystemFunctionsTests PRIVATE external_dependencies)
 target_link_libraries(SystemFunctionsTests PRIVATE utest)
 target_link_libraries(SystemFunctionsTests PRIVATE ElementalInterface)

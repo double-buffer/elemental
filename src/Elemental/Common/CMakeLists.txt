@@ -1,3 +1,3 @@
-add_library(common INTERFACE)
+add_library(elemental_common INTERFACE)
 
-target_include_directories(common INTERFACE .)
+target_include_directories(elemental_common INTERFACE .)
