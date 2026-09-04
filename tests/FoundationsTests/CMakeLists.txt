@@ -1,0 +1,20 @@
+add_executable(FoundationsTests UnityBuild.cpp)
+
+target_link_libraries(FoundationsTests PRIVATE foundations)
+target_link_libraries(FoundationsTests PRIVATE external_dependencies)
+target_link_libraries(FoundationsTests PRIVATE utest)
+
+if(WIN32)
+    target_compile_options(FoundationsTests PRIVATE -EHs -MD)
+    target_compile_definitions(FoundationsTests PRIVATE UNICODE _UNICODE _WINDOWS _WIN32)
+    target_precompile_headers(FoundationsTests PRIVATE ../../src/Foundations/Microsoft/PreCompiledHeader.h)
+    target_link_libraries(FoundationsTests PRIVATE onecore)
+elseif(APPLE)
+    target_precompile_headers(FoundationsTests PRIVATE ../../src/Foundations/Apple/PreCompiledHeader.h)
+    target_compile_options(FoundationsTests PRIVATE -fms-extensions -fno-objc-arc)
+elseif(LINUX)
+    target_precompile_headers(FoundationsTests PRIVATE ../../src/Foundations/Linux/PreCompiledHeader.h)
+    target_compile_options(FoundationsTests PRIVATE -fms-extensions)
+endif()
+
+configure_project_package(FoundationsTests "tests")

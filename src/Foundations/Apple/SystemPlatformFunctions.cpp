@@ -2,10 +2,15 @@
 
 ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena memoryArena)
 {
-    auto path = (ReadOnlySpan<char>)NS::Bundle::mainBundle()->executablePath()->utf8String();
-    auto result = SystemPushArrayZero<char>(memoryArena, path.Length);
+    uint32_t pathSize = 0;
+    _NSGetExecutablePath(nullptr, &pathSize);
 
-    SystemCopyBuffer(result, path);
+    auto path = SystemPushArrayZero<char>(memoryArena, pathSize);
 
-    return result;
+    if (_NSGetExecutablePath(path.Pointer, &pathSize) != 0)
+    {
+        return ReadOnlySpan<char>();
+    }
+
+    return ReadOnlySpan<char>(path.Pointer);
 }
