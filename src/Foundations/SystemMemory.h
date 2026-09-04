@@ -107,6 +107,7 @@ void SystemFreeMemoryArena(MemoryArena memoryArena);
 
 /**
  * Clears the contents of a MemoryArena.
+ * This operation is not thread-safe and requires exclusive access to the arena.
  * @param memoryArena Pointer to the MemoryArena to be cleared.
  */
 void SystemClearMemoryArena(MemoryArena memoryArena);
@@ -132,13 +133,6 @@ StackMemoryArena SystemGetStackMemoryArena();
  * @return Pointer to the allocated memory block.
  */
 void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationState state = AllocationState_Committed);
-
-/**
- * Frees a block of memory in a MemoryArena.
- * @param memoryArena MemoryArena containing the block.
- * @param sizeInBytes Size of the memory block to free.
- */
-void SystemPopMemory(MemoryArena memoryArena, size_t sizeInBytes);
 
 /**
  * Commits a block of memory in a MemoryArena.
