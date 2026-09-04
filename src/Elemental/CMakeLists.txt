@@ -6,6 +6,8 @@ elseif(LINUX)
     set(ELEM_PLATFORM_DIR Linux)
 endif()
 
+add_subdirectory(Common)
+
 add_library(Elemental SHARED ${ELEM_PLATFORM_DIR}/UnityBuild.cpp)
 set_target_properties(Elemental PROPERTIES
     LANGUAGE CXX
@@ -13,7 +15,7 @@ set_target_properties(Elemental PROPERTIES
 )
 target_include_directories(Elemental PUBLIC .)
 target_precompile_headers(Elemental PRIVATE ${ELEM_PLATFORM_DIR}/PreCompiledHeader.h)
-target_link_libraries(Elemental PRIVATE elemental_common foundations external_dependencies)
+target_link_libraries(Elemental PRIVATE elemental_common external_dependencies)
 
 add_subdirectory(${ELEM_PLATFORM_DIR})
 copy_platform_dependencies(Elemental)

@@ -71,7 +71,6 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AppPackaging.cmake")
 
 add_subdirectory(external)
 add_subdirectory(src/Foundations)
-add_subdirectory(src/Elemental/Common)
 add_subdirectory(src/Elemental)
 
 if(NOT BUILD_FOR_IOS)
