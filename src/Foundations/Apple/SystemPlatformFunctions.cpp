@@ -1,5 +1,7 @@
 #include "SystemPlatformFunctions.h"
 
+#include <mach-o/dyld.h>
+
 ReadOnlySpan<char> SystemPlatformGetExecutablePath(MemoryArena memoryArena)
 {
     uint32_t pathSize = 0;
