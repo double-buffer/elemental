@@ -65,10 +65,9 @@ else()
     project(Elemental LANGUAGES C CXX)
 endif()
 
-file(GLOB UTILITY_FILES "${CMAKE_CURRENT_SOURCE_DIR}/utilities/cmake/*.cmake")
-foreach(UTILITY_FILE IN LISTS UTILITY_FILES)
-    include(${UTILITY_FILE})
-endforeach()
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ExternalPackages.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ResourceCompilation.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AppPackaging.cmake")
 
 add_subdirectory(external)
 add_subdirectory(src/Elemental/Common)
