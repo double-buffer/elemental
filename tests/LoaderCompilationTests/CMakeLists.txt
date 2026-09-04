@@ -3,7 +3,7 @@ if(BUILD_FOR_IOS)
 endif()
 
 add_executable(
-    LoaderTests
+    LoaderCompilationTests
     main.c
     ElementalTranslationUnit1.c
     ElementalTranslationUnit2.c
@@ -11,4 +11,4 @@ add_executable(
     ElementalToolsTranslationUnit2.c
 )
 
-target_link_libraries(LoaderTests PRIVATE ElementalInterface ElementalToolsInterface)
+target_link_libraries(LoaderCompilationTests PRIVATE ElementalInterface ElementalToolsInterface)
