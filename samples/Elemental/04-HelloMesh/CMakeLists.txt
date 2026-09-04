@@ -5,10 +5,6 @@ set(SAMPLE_NAME HelloMesh)
 add_executable(${SAMPLE_NAME} main.c Data)
 target_link_libraries(${SAMPLE_NAME} PRIVATE ElementalInterface)
 
-if(WIN32)
-    target_compile_definitions(${SAMPLE_NAME} PRIVATE UNICODE)
-endif()
-
 configure_resource_compilation(
     ${SAMPLE_NAME}
     resource_list
