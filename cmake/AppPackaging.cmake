@@ -14,13 +14,11 @@ function(configure_package_resources target_name output_folder resource_folder)
         file(RELATIVE_PATH relative_dir "${resource_root}" "${file_dir}")
 
         set(output_subdir "${output_folder}/${resource_folder}/${relative_dir}")
-        file(MAKE_DIRECTORY "${output_subdir}")
-
         set(output_file "${output_subdir}/${file_name}")
 
         add_custom_command(
             OUTPUT "${output_file}"
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}/${resource_folder}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_subdir}"
             COMMAND ${CMAKE_COMMAND} -E copy "${full_path}" "${output_file}"
             DEPENDS "${full_path}"
             COMMENT "Copying and checking resource file ${file_name}"
