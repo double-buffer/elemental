@@ -1,45 +1,22 @@
+# IDE and editor state
 .vs/
 .cache/
+xcuserdata/
 
 *.rsuser
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
-*.resolved
-*.obj
-*.mesh
-*.ini
-*.gltf
-*.bin
-*.tga
-*.png
-*.jpg
-*.dds
-*.mtl
 
-xcuserdata/
-packages/
-
-# Build results
+# Build and package output
 build*/
 install*/
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
-bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
+artifacts/
+
+# Swift local state
 .build/
 .swiftpm/
-external/shader-compilers/
+
+# OS metadata
 .DS_Store
-artifacts/
-*.db
