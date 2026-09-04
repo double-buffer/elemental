@@ -37,13 +37,13 @@ jobs:
       if: inputs.platform != 'win'
       run: tar -xf ./tests.${{ inputs.platform }}-${{ inputs.architecture }}.tar ./tests/
 
-    - name: Run System Functions Tests
+    - name: Run Foundations Tests
       if: inputs.platform != 'osx'
-      run: ./tests/SystemFunctionsTests/SystemFunctionsTests
+      run: ./tests/FoundationsTests/FoundationsTests
 
-    - name: Run System Functions Tests (MacOS)
+    - name: Run Foundations Tests (MacOS)
       if: inputs.platform == 'osx'
-      run: ./tests/SystemFunctionsTests.app/Contents/MacOS/SystemFunctionsTests
+      run: ./tests/FoundationsTests.app/Contents/MacOS/FoundationsTests
 
     - name: Run Application Tests
       if: inputs.platform != 'osx'
