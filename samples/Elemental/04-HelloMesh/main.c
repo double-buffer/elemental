@@ -205,7 +205,7 @@ void FreeSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    if (applicationPayload->LastExecutionFence != ELEM_HANDLE_NULL)
+    if (applicationPayload->LastExecutionFence.CommandQueue != ELEM_HANDLE_NULL)
     {
         ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
     }
