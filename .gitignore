@@ -9,6 +9,18 @@ xcuserdata/
 *.userosscache
 *.sln.docstates
 
+# Local sample/source data
+*.obj
+*.mesh
+*.gltf
+*.bin
+*.tga
+*.png
+*.jpg
+*.dds
+*.mtl
+*.ini
+
 # Build and package output
 build*/
 install*/
