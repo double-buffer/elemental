@@ -5,7 +5,6 @@
 #include "Elemental.h"
 
 #if defined(_WIN32)
-   #define UNICODE
    #include <windows.h>
 #else
    #include <dlfcn.h>
@@ -110,7 +109,7 @@ static bool LoadElementalLibrary(void)
     if (!libraryElemental) 
     {
         #if defined(_WIN32)
-            libraryElemental = LoadLibrary(L"Elemental.dll");
+            libraryElemental = LoadLibraryW(L"Elemental.dll");
         #elif __APPLE__
             libraryElemental = dlopen("Elemental.framework/Elemental", RTLD_LAZY);
 
@@ -131,7 +130,7 @@ static bool LoadElementalLibrary(void)
     return true;
 }
 
-void* GetElementalFunctionPointer(const char* functionName) 
+static void* GetElementalFunctionPointer(const char* functionName) 
 {
     if (!libraryElemental) 
     {
