@@ -14,9 +14,11 @@ A dedicated [`MeshCompiler`](../../ElementalTools/04-MeshCompiler) converts the 
 - creating and resizing a depth buffer;
 - configuring depth testing;
 - dispatching one mesh-shader workgroup per meshlet;
-- interactive model-viewer controls.
+- consuming Elemental input events for the model-viewer controls.
 
 The runtime sample deliberately has no scene graph, materials or texture model. Those concepts belong to larger samples such as the Renderer; they are not required to explain a mesh shader.
+
+`main.c` is intentionally self-contained for now: its file I/O, small math helpers, input bindings, timing and mesh-loading code live directly in the sample instead of being hidden behind `SampleCommon`. The progressive samples will be refined individually later; the current priority is a working sample plan whose mechanics can be read in one place.
 
 The current sample expects `kitten.mesh`. With a local `kitten.obj` or `kitten.gltf` in `Data`, the resource build invokes `MeshCompiler` and produces that file automatically.
 
@@ -28,14 +30,14 @@ The current sample expects `kitten.mesh`. With a local `kitten.obj` or `kitten.g
 | `A` / `D` | Rotate left / right |
 | `Q` / `E` | Roll |
 | `Z` / `X` | Zoom |
-| `Space` | Toggle meshlet visualization |
+| `Space` | Show meshlet visualization |
 | `F1` | Toggle cursor visibility |
 | `Escape` | Exit |
 | Mouse / touch / gamepad | Equivalent model-viewer controls |
 
 ## Key files
 
-- [`main.c`](main.c) — reads the mesh header, creates the GPU buffer and dispatches the mesh shader.
+- [`main.c`](main.c) — complete sample application: input handling, mesh-file loading, GPU resources and mesh dispatch.
 - [`Data/RenderMesh.hlsl`](Data/RenderMesh.hlsl) — reads the explicit mesh-buffer regions from the bindless buffer.
 - [`../../ElementalTools/04-MeshCompiler`](../../ElementalTools/04-MeshCompiler) — creates the minimal mesh data consumed here.
 
