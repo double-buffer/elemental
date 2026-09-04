@@ -3,18 +3,26 @@
 #include "SampleMath.h"
 #include "SampleInputsApplication.h"
 #include "SampleInputsModelViewer.h"
-#include "SampleSceneLoader.h"
-#include "SampleGpuMemory.h"
 
-// TODO: Like all samples, take the common code to put it in the sample when the code is
-// stabilized so that all the relevant sample code is in one file
-
-// TODO: Create a MeshCompiler project that use a more simple layout so that 
-// the mesh shader is simplier
+#define MESH_FILE_VERSION 1u
+#define MESH_VERTEX_SIZE_IN_BYTES (sizeof(float) * 12u)
+#define MESHLET_SIZE_IN_BYTES (sizeof(uint32_t) * 4u)
 
 typedef struct
 {
-    // TODO: Embed that into a buffer
+    char FileId[4];
+    uint32_t Version;
+    uint32_t MeshBufferSizeInBytes;
+    uint32_t VertexSizeInBytes;
+    uint32_t VertexBufferOffset;
+    uint32_t MeshletOffset;
+    uint32_t MeshletVertexIndexOffset;
+    uint32_t MeshletTriangleIndexOffset;
+    uint32_t MeshletCount;
+} MeshFileHeader;
+
+typedef struct
+{
     uint32_t MeshBuffer;
     uint32_t VertexBufferOffset;
     uint32_t MeshletOffset;
@@ -30,29 +38,95 @@ typedef struct
     uint32_t MeshletCount;
 } ShaderParameters;
 
-
-// TODO: Group common variables into separate structs
 typedef struct
 {
     SampleAppSettings AppSettings;
     ElemWindow Window;
     ElemGraphicsDevice GraphicsDevice;
     ElemCommandQueue CommandQueue;
-    uint32_t CurrentHeapOffset;
     ElemFence LastExecutionFence;
     ElemSwapChain SwapChain;
     ElemGraphicsHeap DepthBufferHeap;
     ElemGraphicsResource DepthBuffer;
+    ElemGraphicsHeap MeshBufferHeap;
+    ElemGraphicsResource MeshBuffer;
+    ElemGraphicsResourceDescriptor MeshBufferReadDescriptor;
     ElemPipelineState GraphicsPipeline;
     ShaderParameters ShaderParameters;
     SampleInputsApplication InputsApplication;
     SampleInputsModelViewer InputsModelViewer;
-    SampleSceneData TestSceneData;
-    SampleGpuMemory GpuMemory; // TODO: To remove
-    uint32_t* GpuMeshPrimitiveMeshletCountList;
 } ApplicationPayload;
-    
+
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload);
+
+bool LoadMesh(ApplicationPayload* applicationPayload, const char* path)
+{
+    ElemDataSpan meshFileData = SampleReadFile(path, true);
+
+    if (!meshFileData.Items || meshFileData.Length < sizeof(MeshFileHeader))
+    {
+        printf("Unable to read mesh: %s\n", path);
+        return false;
+    }
+
+    MeshFileHeader* header = (MeshFileHeader*)meshFileData.Items;
+    uint32_t meshPayloadSizeInBytes = meshFileData.Length - sizeof(MeshFileHeader);
+
+    bool validHeader =
+        memcmp(header->FileId, "MESH", 4) == 0 &&
+        header->Version == MESH_FILE_VERSION &&
+        header->MeshBufferSizeInBytes == meshPayloadSizeInBytes &&
+        header->VertexSizeInBytes == MESH_VERTEX_SIZE_IN_BYTES &&
+        header->VertexBufferOffset == 0 &&
+        header->MeshletOffset <= header->MeshletVertexIndexOffset &&
+        header->MeshletVertexIndexOffset <= header->MeshletTriangleIndexOffset &&
+        header->MeshletTriangleIndexOffset <= header->MeshBufferSizeInBytes &&
+        header->MeshletCount > 0 &&
+        header->MeshletOffset + header->MeshletCount * MESHLET_SIZE_IN_BYTES <= header->MeshletVertexIndexOffset;
+
+    if (!validHeader)
+    {
+        printf("Invalid or unsupported mesh file: %s\n", path);
+        free(meshFileData.Items);
+        return false;
+    }
+
+    ElemGraphicsResourceInfo meshBufferInfo = ElemCreateGraphicsBufferResourceInfo(
+        applicationPayload->GraphicsDevice,
+        header->MeshBufferSizeInBytes,
+        ElemGraphicsResourceUsage_Read,
+        &(ElemGraphicsResourceInfoOptions) { .DebugName = "MeshBuffer" });
+
+    applicationPayload->MeshBufferHeap = ElemCreateGraphicsHeap(
+        applicationPayload->GraphicsDevice,
+        meshBufferInfo.SizeInBytes,
+        &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_GpuUpload });
+
+    applicationPayload->MeshBuffer = ElemCreateGraphicsResource(applicationPayload->MeshBufferHeap, 0, &meshBufferInfo);
+    applicationPayload->MeshBufferReadDescriptor = ElemCreateGraphicsResourceDescriptor(
+        applicationPayload->MeshBuffer,
+        ElemGraphicsResourceDescriptorUsage_Read,
+        NULL);
+
+    ElemUploadGraphicsBufferData(
+        applicationPayload->MeshBuffer,
+        0,
+        (ElemDataSpan)
+        {
+            .Items = meshFileData.Items + sizeof(MeshFileHeader),
+            .Length = header->MeshBufferSizeInBytes
+        });
+
+    applicationPayload->ShaderParameters.MeshBuffer = applicationPayload->MeshBufferReadDescriptor;
+    applicationPayload->ShaderParameters.VertexBufferOffset = header->VertexBufferOffset;
+    applicationPayload->ShaderParameters.MeshletOffset = header->MeshletOffset;
+    applicationPayload->ShaderParameters.MeshletVertexIndexOffset = header->MeshletVertexIndexOffset;
+    applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = header->MeshletTriangleIndexOffset;
+    applicationPayload->ShaderParameters.MeshletCount = header->MeshletCount;
+
+    free(meshFileData.Items);
+    return true;
+}
 
 void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, uint32_t height)
 {
@@ -61,41 +135,16 @@ void CreateDepthBuffer(ApplicationPayload* applicationPayload, uint32_t width, u
         ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
     }
 
-    printf("Creating DepthBuffer...\n");
-
-    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(applicationPayload->GraphicsDevice, width, height, 1, ElemGraphicsFormat_D32_FLOAT, ElemGraphicsResourceUsage_DepthStencil,
-                                                                            &(ElemGraphicsResourceInfoOptions) { 
-                                                                                .DebugName = "DepthBuffer" 
-                                                                            });
+    ElemGraphicsResourceInfo resourceInfo = ElemCreateTexture2DResourceInfo(
+        applicationPayload->GraphicsDevice,
+        width,
+        height,
+        1,
+        ElemGraphicsFormat_D32_FLOAT,
+        ElemGraphicsResourceUsage_DepthStencil,
+        &(ElemGraphicsResourceInfoOptions) { .DebugName = "DepthBuffer" });
 
     applicationPayload->DepthBuffer = ElemCreateGraphicsResource(applicationPayload->DepthBufferHeap, 0, &resourceInfo);
-}
-
-void InitSceneGpuBuffers(ApplicationPayload* applicationPayload)
-{
-    SampleSceneData* sceneData = &applicationPayload->TestSceneData;
-
-    // TODO: Change the max value here
-    uint32_t* gpuMeshPrimitiveInstancesMeshletCountList = (uint32_t*)malloc(sizeof(uint32_t) * 20000);
-    uint32_t gpuMeshPrimitiveInstanceCount = 0u;
-
-    for (uint32_t i = 0; i < sceneData->NodeCount; i++)
-    {
-        SampleSceneNodeHeader* sceneNode = &sceneData->Nodes[i];
-
-        if (sceneNode->NodeType == SampleSceneNodeType_Mesh)
-        {
-            SampleMeshData* meshData = &sceneData->Meshes[sceneNode->ReferenceIndex];
-
-            for (uint32_t j = 0; j < meshData->MeshHeader.MeshPrimitiveCount; j++)
-            {
-                gpuMeshPrimitiveInstancesMeshletCountList[gpuMeshPrimitiveInstanceCount] = meshData->MeshPrimitives[j].MeshletCount;
-                gpuMeshPrimitiveInstanceCount++;
-            }
-        }
-    }
-    
-    applicationPayload->GpuMeshPrimitiveMeshletCountList = gpuMeshPrimitiveInstancesMeshletCountList;
 }
 
 void InitSample(void* payload)
@@ -104,37 +153,22 @@ void InitSample(void* payload)
     applicationPayload->Window = ElemCreateWindow(&(ElemWindowOptions) { .WindowState = applicationPayload->AppSettings.PreferFullScreen ? ElemWindowState_FullScreen : ElemWindowState_Normal });
 
     ElemSetGraphicsOptions(&(ElemGraphicsOptions) { .EnableDebugLayer = true, .EnableGpuValidation = false, .EnableDebugBarrierInfo = false, .PreferVulkan = applicationPayload->AppSettings.PreferVulkan });
-    
-    // TODO: Debug why the AMD integrated GPU is not create at all
-    ElemGraphicsDeviceInfoSpan devices = ElemGetAvailableGraphicsDevices();
-    
-    for (uint32_t i = 0; i < devices.Length; i++)
-    {
-        printf("Device: %s\n", devices.Items[i].DeviceName);
-    }
 
     applicationPayload->GraphicsDevice = ElemCreateGraphicsDevice(NULL);
-
-    applicationPayload->CommandQueue= ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
-    applicationPayload->SwapChain= ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .FrameLatency = 1, .UpdatePayload = payload });
+    applicationPayload->CommandQueue = ElemCreateCommandQueue(applicationPayload->GraphicsDevice, ElemCommandQueueType_Graphics, NULL);
+    applicationPayload->SwapChain = ElemCreateSwapChain(applicationPayload->CommandQueue, applicationPayload->Window, UpdateSwapChain, &(ElemSwapChainOptions) { .FrameLatency = 1, .UpdatePayload = payload });
     ElemSwapChainInfo swapChainInfo = ElemGetSwapChainInfo(applicationPayload->SwapChain);
 
-    // TODO: For now we create a separate heap to avoid memory management
     applicationPayload->DepthBufferHeap = ElemCreateGraphicsHeap(applicationPayload->GraphicsDevice, SampleMegaBytesToBytes(64), &(ElemGraphicsHeapOptions) { .HeapType = ElemGraphicsHeapType_Gpu });
-    applicationPayload->GpuMemory = SampleCreateGpuMemory(applicationPayload->GraphicsDevice, ElemGraphicsHeapType_GpuUpload, SampleMegaBytesToBytes(256));
-
     CreateDepthBuffer(applicationPayload, swapChainInfo.Width, swapChainInfo.Height);
-    SampleLoadScene("kitten.scene", &applicationPayload->TestSceneData);
-    //SampleLoadScene("buddha.scene", &applicationPayload->TestSceneData);
-    InitSceneGpuBuffers(applicationPayload);
-    
-    // BUG: In the first frame, there is a glitch because we don't wait for the fence of the load command list
-    ElemCommandList loadDataCommandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
-    //SampleLoadMeshData(loadDataCommandList, &applicationPayload->TestSceneData.Meshes[0], &applicationPayload->GpuMemory);
-    ElemCommitCommandList(loadDataCommandList);
-    ElemExecuteCommandList(applicationPayload->CommandQueue, loadDataCommandList, NULL);
 
-    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader": "RenderMesh_vulkan.shader", true);
+    if (!LoadMesh(applicationPayload, "kitten.mesh"))
+    {
+        ElemExitApplication(1);
+        return;
+    }
+
+    ElemDataSpan shaderData = SampleReadFile(!applicationPayload->AppSettings.PreferVulkan ? "RenderMesh.shader" : "RenderMesh_vulkan.shader", true);
     ElemShaderLibrary shaderLibrary = ElemCreateShaderLibrary(applicationPayload->GraphicsDevice, shaderData);
 
     applicationPayload->GraphicsPipeline = ElemCompileGraphicsPipelineState(applicationPayload->GraphicsDevice, &(ElemGraphicsPipelineStateParameters) {
@@ -150,13 +184,14 @@ void InitSample(void* payload)
         }
     });
 
+    free(shaderData.Items);
     ElemFreeShaderLibrary(shaderLibrary);
 
-    applicationPayload->ShaderParameters.RotationQuaternion = (SampleVector4){ .X = 0, .Y = 0, .Z = 0, .W = 1 };
+    applicationPayload->ShaderParameters.RotationQuaternion = (SampleVector4) { .X = 0, .Y = 0, .Z = 0, .W = 1 };
 
     SampleInputsApplicationInit(&applicationPayload->InputsApplication);
     SampleInputsModelViewerInit(&applicationPayload->InputsModelViewer);
-    
+
     if (applicationPayload->AppSettings.PreferFullScreen)
     {
         ElemHideWindowCursor(applicationPayload->Window);
@@ -170,18 +205,43 @@ void FreeSample(void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
 
-    ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
+    if (applicationPayload->LastExecutionFence != ELEM_HANDLE_NULL)
+    {
+        ElemWaitForFenceOnCpu(applicationPayload->LastExecutionFence);
+    }
 
-    SampleFreeScene(&applicationPayload->TestSceneData);
+    if (applicationPayload->GraphicsPipeline != ELEM_HANDLE_NULL)
+    {
+        ElemFreePipelineState(applicationPayload->GraphicsPipeline);
+    }
 
-    ElemFreePipelineState(applicationPayload->GraphicsPipeline);
+    if (applicationPayload->MeshBufferReadDescriptor != -1)
+    {
+        ElemFreeGraphicsResourceDescriptor(applicationPayload->MeshBufferReadDescriptor, NULL);
+    }
+
+    if (applicationPayload->MeshBuffer != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsResource(applicationPayload->MeshBuffer, NULL);
+    }
+
+    if (applicationPayload->MeshBufferHeap != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsHeap(applicationPayload->MeshBufferHeap);
+    }
+
     ElemFreeSwapChain(applicationPayload->SwapChain);
     ElemFreeCommandQueue(applicationPayload->CommandQueue);
- 
-    ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
-    ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
 
-    SampleFreeGpuMemory(&applicationPayload->GpuMemory);
+    if (applicationPayload->DepthBuffer != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsResource(applicationPayload->DepthBuffer, NULL);
+    }
+
+    if (applicationPayload->DepthBufferHeap != ELEM_HANDLE_NULL)
+    {
+        ElemFreeGraphicsHeap(applicationPayload->DepthBufferHeap);
+    }
 
     ElemFreeGraphicsDevice(applicationPayload->GraphicsDevice);
 }
@@ -189,7 +249,7 @@ void FreeSample(void* payload)
 void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void* payload)
 {
     ApplicationPayload* applicationPayload = (ApplicationPayload*)payload;
-    
+
     if (updateParameters->SizeChanged)
     {
         CreateDepthBuffer(applicationPayload, updateParameters->SwapChainInfo.Width, updateParameters->SwapChainInfo.Height);
@@ -207,37 +267,37 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
 
     if (applicationPayload->InputsApplication.State.ShowCursor)
     {
-        printf("Show cursor\n");
         ElemShowWindowCursor(applicationPayload->Window);
     }
     else if (applicationPayload->InputsApplication.State.HideCursor)
     {
-        printf("Hide cursor\n");
-        ElemHideWindowCursor(applicationPayload->Window); 
-    } 
+        ElemHideWindowCursor(applicationPayload->Window);
+    }
 
     SampleInputsModelViewerState* modelViewerState = &applicationPayload->InputsModelViewer.State;
 
     if (SampleMagnitudeSquaredV3(modelViewerState->RotationDelta))
     {
-        SampleVector4 rotationQuaternion = SampleMulQuat(SampleCreateQuaternion((ElemVector3){ 1, 0, 0 }, modelViewerState->RotationDelta.X), 
-                                                         SampleMulQuat(SampleCreateQuaternion((ElemVector3){ 0, 0, 1 }, modelViewerState->RotationDelta.Z),
-                                                                       SampleCreateQuaternion((ElemVector3){ 0, 1, 0 }, modelViewerState->RotationDelta.Y)));
+        SampleVector4 rotationQuaternion = SampleMulQuat(
+            SampleCreateQuaternion((ElemVector3) { 1, 0, 0 }, modelViewerState->RotationDelta.X),
+            SampleMulQuat(
+                SampleCreateQuaternion((ElemVector3) { 0, 0, 1 }, modelViewerState->RotationDelta.Z),
+                SampleCreateQuaternion((ElemVector3) { 0, 1, 0 }, modelViewerState->RotationDelta.Y)));
 
         applicationPayload->ShaderParameters.RotationQuaternion = SampleMulQuat(rotationQuaternion, applicationPayload->ShaderParameters.RotationQuaternion);
     }
 
     applicationPayload->ShaderParameters.AspectRatio = updateParameters->SwapChainInfo.AspectRatio;
-    float maxZoom = (applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f);
+    float maxZoom = applicationPayload->ShaderParameters.AspectRatio >= 0.75 ? 1.5f : 3.5f;
     applicationPayload->ShaderParameters.Zoom = fminf(maxZoom, modelViewerState->Zoom);
     applicationPayload->ShaderParameters.ShowMeshlets = modelViewerState->Action;
 
-    ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL); 
+    ElemCommandList commandList = ElemGetCommandList(applicationPayload->CommandQueue, NULL);
 
     ElemBeginRenderPass(commandList, &(ElemBeginRenderPassParameters) {
-        .RenderTargets = 
+        .RenderTargets =
         {
-            .Items = (ElemRenderPassRenderTarget[]) { 
+            .Items = (ElemRenderPassRenderTarget[]) {
             {
                 .RenderTarget = updateParameters->BackBufferRenderTarget,
                 .ClearColor = { 0.0f, 0.01f, 0.02f, 1.0f },
@@ -250,17 +310,9 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
         }
     });
 
-    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline); 
+    ElemBindPipelineState(commandList, applicationPayload->GraphicsPipeline);
     ElemPushPipelineStateConstants(commandList, 0, (ElemDataSpan) { .Items = (uint8_t*)&applicationPayload->ShaderParameters, .Length = sizeof(ShaderParameters) });
-
-    SampleMeshPrimitiveHeader* meshPrimitive = &applicationPayload->TestSceneData.Meshes[0].MeshPrimitives[0];
-
-    //applicationPayload->ShaderParameters.MeshBuffer = applicationPayload->TestSceneData.Meshes[0].MeshBuffer.ReadDescriptor;
-    applicationPayload->ShaderParameters.VertexBufferOffset = meshPrimitive->VertexBufferOffset;
-    applicationPayload->ShaderParameters.MeshletOffset = meshPrimitive->MeshletOffset;
-    //applicationPayload->ShaderParameters.MeshletVertexIndexOffset = meshPrimitive->MeshletVertexIndexOffset;
-    //applicationPayload->ShaderParameters.MeshletTriangleIndexOffset = meshPrimitive->MeshletTriangleIndexOffset;
-    ElemDispatchMesh(commandList, applicationPayload->GpuMeshPrimitiveMeshletCountList[0], 1, 1);
+    ElemDispatchMesh(commandList, applicationPayload->ShaderParameters.MeshletCount, 1, 1);
 
     ElemEndRenderPass(commandList);
 
@@ -274,15 +326,16 @@ void UpdateSwapChain(const ElemSwapChainUpdateParameters* updateParameters, void
     {
         SampleSetWindowTitle(applicationPayload->Window, "HelloMesh", applicationPayload->GraphicsDevice, frameMeasurement.FrameTimeInSeconds, frameMeasurement.Fps);
     }
-    
+
     SampleStartFrameMeasurement();
 }
 
-int main(int argc, const char* argv[]) 
+int main(int argc, const char* argv[])
 {
     ApplicationPayload payload =
     {
-        .AppSettings = SampleParseAppSettings(argc, argv)
+        .AppSettings = SampleParseAppSettings(argc, argv),
+        .MeshBufferReadDescriptor = -1
     };
 
     ElemConfigureLogHandler(ElemConsoleLogHandler);

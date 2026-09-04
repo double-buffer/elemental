@@ -100,6 +100,20 @@ function(configure_resources_for_compiler
 endfunction()
 
 function(configure_resource_compilation target_name result_var)
+    cmake_parse_arguments(RESOURCE "" "MESH_COMPILER;MESH_OUTPUT_EXTENSION" "" ${ARGN})
+
+    if(RESOURCE_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "Unknown resource compilation arguments: ${RESOURCE_UNPARSED_ARGUMENTS}")
+    endif()
+
+    if(NOT RESOURCE_MESH_COMPILER)
+        set(RESOURCE_MESH_COMPILER SceneCompiler)
+    endif()
+
+    if(NOT RESOURCE_MESH_OUTPUT_EXTENSION)
+        set(RESOURCE_MESH_OUTPUT_EXTENSION .scene)
+    endif()
+
     if(BUILD_FOR_IOS)
         set(SHADER_COMPILER_DEFAULT_OPTIONS "--target-platform iOS")
     else()
@@ -119,8 +133,8 @@ function(configure_resource_compilation target_name result_var)
 
     set(COMPILERS_LIST
         "HLSL|ShaderCompiler|.hlsl|.shader|${SHADER_COMPILER_DEFAULT_OPTIONS}"
-        "MESH|SceneCompiler|.obj|.scene|${MESH_COMPILER_DEFAULT_OPTIONS}"
-        "MESH|SceneCompiler|.gltf|.scene|${MESH_COMPILER_DEFAULT_OPTIONS}"
+        "MESH|${RESOURCE_MESH_COMPILER}|.obj|${RESOURCE_MESH_OUTPUT_EXTENSION}|${MESH_COMPILER_DEFAULT_OPTIONS}"
+        "MESH|${RESOURCE_MESH_COMPILER}|.gltf|${RESOURCE_MESH_OUTPUT_EXTENSION}|${MESH_COMPILER_DEFAULT_OPTIONS}"
         "TEXTURE|TextureCompiler|.tga|.texture|${TEXTURE_COMPILER_DEFAULT_OPTIONS}"
         "TEXTURE|TextureCompiler|.jpg|.texture|${TEXTURE_COMPILER_DEFAULT_OPTIONS}"
         "TEXTURE|TextureCompiler|.png|.texture|${TEXTURE_COMPILER_DEFAULT_OPTIONS}"

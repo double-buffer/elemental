@@ -1,21 +1,24 @@
 # Hello Mesh
 
-Hello Mesh moves from procedural geometry to compiled mesh data and meshlets.
+Hello Mesh moves from procedural geometry to a real mesh while keeping the data flow deliberately small and explicit.
 
-The sample loads a small scene, creates a depth buffer and dispatches a mesh shader using the meshlet data for the first mesh primitive. It is intentionally a focused mesh-rendering sample rather than a general scene renderer.
+A dedicated [`MeshCompiler`](../../ElementalTools/04-MeshCompiler) converts the first mesh primitive from an OBJ or glTF source into a minimal `.mesh` file. At runtime, the sample reads that file, uploads its contiguous payload into one GPU buffer and passes the buffer descriptor plus four offsets to the mesh shader.
 
 ## What it demonstrates
 
-- loading the sample `.scene` format;
-- using mesh and meshlet data produced by the Scene Compiler sample;
-- allocating GPU memory for scene data;
+- compiling a source mesh into meshlets with ElementalTools;
+- loading a deliberately minimal sample `.mesh` format;
+- creating one GPU-upload heap and one bindless mesh buffer;
+- uploading vertex, meshlet and meshlet-index data as one contiguous payload;
+- passing explicit buffer offsets to a mesh shader;
 - creating and resizing a depth buffer;
 - configuring depth testing;
-- passing mesh-buffer offsets to a mesh shader;
 - dispatching one mesh-shader workgroup per meshlet;
 - interactive model-viewer controls.
 
-The sample currently renders the first primitive from `kitten.scene`. The surrounding scene/GPU-memory helpers are shared sample code and are still evolving.
+The runtime sample deliberately has no scene graph, materials or texture model. Those concepts belong to larger samples such as the Renderer; they are not required to explain a mesh shader.
+
+The current sample expects `kitten.mesh`. With a local `kitten.obj` or `kitten.gltf` in `Data`, the resource build invokes `MeshCompiler` and produces that file automatically.
 
 ## Controls
 
@@ -32,9 +35,9 @@ The sample currently renders the first primitive from `kitten.scene`. The surrou
 
 ## Key files
 
-- [`main.c`](main.c) — scene loading, GPU resources, depth buffer and mesh dispatch.
-- [`Data/RenderMesh.hlsl`](Data/RenderMesh.hlsl) — meshlet-based mesh and pixel shaders.
-- [`../../ElementalTools/02-SceneCompiler`](../../ElementalTools/02-SceneCompiler) — creates the sample scene data consumed here.
+- [`main.c`](main.c) — reads the mesh header, creates the GPU buffer and dispatches the mesh shader.
+- [`Data/RenderMesh.hlsl`](Data/RenderMesh.hlsl) — reads the explicit mesh-buffer regions from the bindless buffer.
+- [`../../ElementalTools/04-MeshCompiler`](../../ElementalTools/04-MeshCompiler) — creates the minimal mesh data consumed here.
 
 ## Build
 
@@ -45,6 +48,6 @@ cmake --build --preset default --target HelloMesh
 Supported sample flags include `--vulkan`, `--fullscreen` and `--gpu-debug`.
 
 > [!NOTE]
-> This sample deliberately contains some shared helper code and temporary memory/scene-loading choices. It demonstrates the mesh-shader path; it is not intended to define a final renderer architecture.
+> The `.mesh` layout exists to keep this sample easy to understand. It is not a stable public Elemental asset format or a replacement for the richer sample scene pipeline.
 
 [Back to samples](../../README.md)
