@@ -159,11 +159,17 @@ ElemHandle SystemAddDataPoolItem(SystemDataPool<T, TFull> dataPool, T data)
     {
         auto remainingItemCount = storage->Data.Length - index;
         auto itemCountToCommit = remainingItemCount > 1000 ? 1000 : remainingItemCount;
-        SystemCommitMemory<SystemDataPoolStorageItem<T>>(storage->MemoryArena, storage->Data.Slice(index, itemCountToCommit), true);
-        
-        if (!IsTypeEmpty<TFull>())
+
+        if (!SystemCommitMemory<SystemDataPoolStorageItem<T>>(storage->MemoryArena, storage->Data.Slice(index, itemCountToCommit), true))
         {
-            SystemCommitMemory<TFull>(storage->MemoryArena, storage->DataFull.Slice(index, itemCountToCommit), true);
+            SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot commit Data Pool item storage.");
+            return ELEM_HANDLE_NULL;
+        }
+        
+        if (!IsTypeEmpty<TFull>() && !SystemCommitMemory<TFull>(storage->MemoryArena, storage->DataFull.Slice(index, itemCountToCommit), true))
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot commit Data Pool full item storage.");
+            return ELEM_HANDLE_NULL;
         }
     }
 
