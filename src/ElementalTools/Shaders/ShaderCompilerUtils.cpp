@@ -19,7 +19,9 @@ void WriteShaderData(Span<uint8_t> data, uint32_t* currentOffset, ReadOnlySpan<c
 {
     auto dataSpan = ReadOnlySpan<uint8_t>((uint8_t*)value.Pointer, value.Length);
     SystemCopyBuffer(data.Slice(*currentOffset), dataSpan);
-    *currentOffset += value.Length + 1;
+    *currentOffset += value.Length;
+    data[*currentOffset] = 0;
+    *currentOffset += 1;
 }
 
 template<typename T>
