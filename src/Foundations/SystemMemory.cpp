@@ -427,23 +427,28 @@ StackMemoryArena::~StackMemoryArena()
 }
 
 template<typename T>
-void SystemCommitMemory(MemoryArena memoryArena, ReadOnlySpan<T> buffer, bool clearMemory)
+bool SystemCommitMemory(MemoryArena memoryArena, ReadOnlySpan<T> buffer, bool clearMemory)
 {
     size_t sizeInBytes;
 
     if (!TryMultiplySize(sizeof(T), buffer.Length, &sizeInBytes))
     {
-        return;
+        return false;
     }
 
-    SystemCommitMemory(memoryArena, (void*)buffer.Pointer, sizeInBytes, clearMemory);
+    return SystemCommitMemory(memoryArena, (void*)buffer.Pointer, sizeInBytes, clearMemory);
 }
 
-void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes, bool clearMemory)
+bool SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes, bool clearMemory)
 {
-    if (memoryArena.Storage == nullptr || pointer == nullptr || sizeInBytes == 0)
+    if (sizeInBytes == 0)
     {
-        return;
+        return true;
+    }
+
+    if (memoryArena.Storage == nullptr || pointer == nullptr)
+    {
+        return false;
     }
 
     auto storage = memoryArena.Storage;
@@ -452,14 +457,14 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
 
     if (pointerAddress < dataStart)
     {
-        return;
+        return false;
     }
 
     auto offset = (size_t)(pointerAddress - dataStart);
 
     if (offset > storage->SizeInBytes || sizeInBytes > storage->SizeInBytes - offset)
     {
-        return;
+        return false;
     }
 
     auto needsSynchronization = !IsStackMemoryArena(memoryArena);
@@ -493,7 +498,7 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
             UnlockMemoryArenaCommitOperations(storage);
         }
 
-        return;
+        return true;
     }
 
     auto pageSizeInBytes = GetSystemPageSizeInBytes();
@@ -513,7 +518,7 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
                     UnlockMemoryArenaCommitOperations(storage);
                 }
 
-                return;
+                return false;
             }
             
             if (clearMemory)
@@ -538,6 +543,8 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
     {
         UnlockMemoryArenaCommitOperations(storage);
     }
+
+    return true;
 }
 
 void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes)
@@ -694,9 +701,14 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
         }
     }
 
-    if (state == AllocationState_Committed)
+    if (state == AllocationState_Committed && !SystemCommitMemory(workingMemoryArena, pointer, sizeInBytes))
     {
-        SystemCommitMemory(workingMemoryArena, pointer, sizeInBytes);
+        if (IsStackMemoryArena(workingMemoryArena))
+        {
+            storage->CurrentPointer -= sizeInBytes;
+        }
+
+        return nullptr;
     }
 
     return pointer;
