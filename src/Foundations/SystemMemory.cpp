@@ -44,7 +44,7 @@ struct PageSizeIndexes
 };
 
 thread_local MemoryArenaStorage* stackMemoryArenaStorage = nullptr;
-size_t systemPageSizeInBytes = 0;
+const size_t systemPageSizeInBytes = SystemPlatformGetPageSize();
 
 void PopStackMemory(MemoryArena memoryArena, size_t sizeInBytes);
 size_t ResizeToPageSizeMultiple(size_t sizeInBytes, size_t pageSizeInBytes);
@@ -103,11 +103,6 @@ bool IsPageCommitted(MemoryArenaStorage* storage, uint32_t pageIndex)
 
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
-    if (systemPageSizeInBytes == 0)
-    {
-        systemPageSizeInBytes = SystemPlatformGetPageSize();
-    }
-
     auto dataSizeInBytes = ResizeToPageSizeMultiple(sizeInBytes, systemPageSizeInBytes);
     auto pageInfosCount = dataSizeInBytes / systemPageSizeInBytes;
     auto pageCommitInfosCount = (pageInfosCount + 31) / 32;
@@ -171,7 +166,18 @@ bool IsStackMemoryArena(MemoryArena memoryArena)
 
 size_t GetMemoryArenaAllocatedBytes(MemoryArena memoryArena)
 {
-    return memoryArena.Storage->CurrentPointer - (uint8_t*)memoryArena.Storage - memoryArena.Storage->HeaderSizeInBytes;
+    uint8_t* currentPointer;
+
+    if (IsStackMemoryArena(memoryArena))
+    {
+        currentPointer = memoryArena.Storage->CurrentPointer;
+    }
+    else
+    {
+        SystemAtomicLoad(memoryArena.Storage->CurrentPointer, currentPointer);
+    }
+
+    return currentPointer - (uint8_t*)memoryArena.Storage - memoryArena.Storage->HeaderSizeInBytes;
 }
 
 AllocationInfos SystemGetAllocationInfos()
@@ -288,7 +294,7 @@ StackMemoryArena::~StackMemoryArena()
 template<typename T>
 void SystemCommitMemory(MemoryArena memoryArena, ReadOnlySpan<T> buffer, bool clearMemory)
 {
-    SystemCommitMemory(memoryArena, (uint8_t*)buffer.Pointer, sizeof(T) * buffer.Length, true);
+    SystemCommitMemory(memoryArena, (uint8_t*)buffer.Pointer, sizeof(T) * buffer.Length, clearMemory);
 }
 
 void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInBytes, bool clearMemory)
@@ -445,24 +451,45 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
 
     auto workingMemoryArena = GetStackWorkingMemoryArena(memoryArena);
     auto storage = workingMemoryArena.Storage;
-    auto allocatedSize = GetMemoryArenaAllocatedBytes(memoryArena);
-
-    if (allocatedSize + sizeInBytes > storage->SizeInBytes)
-    {
-        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot push to memory arena with: %d (Allocated size is: %d, Max size is: %d)", (uint32_t)sizeInBytes, (uint32_t)allocatedSize, (uint32_t)storage->SizeInBytes);
-        return nullptr;
-    }
-
     uint8_t* pointer;
 
     if (memoryArena.Storage == stackMemoryArenaStorage)
     {
+        auto allocatedSize = GetMemoryArenaAllocatedBytes(workingMemoryArena);
+
+        if (allocatedSize > storage->SizeInBytes || sizeInBytes > storage->SizeInBytes - allocatedSize)
+        {
+            SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot push to memory arena with: %d (Allocated size is: %d, Max size is: %d)", (uint32_t)sizeInBytes, (uint32_t)allocatedSize, (uint32_t)storage->SizeInBytes);
+            return nullptr;
+        }
+
         pointer = storage->CurrentPointer;
         storage->CurrentPointer += sizeInBytes;
     }
     else
     {
-        pointer = SystemAtomicAdd(storage->CurrentPointer, sizeInBytes);
+        auto dataStart = (uint8_t*)storage + storage->HeaderSizeInBytes;
+        SystemAtomicLoad(storage->CurrentPointer, pointer);
+
+        while (true)
+        {
+            auto allocatedSize = (size_t)(pointer - dataStart);
+
+            if (allocatedSize > storage->SizeInBytes || sizeInBytes > storage->SizeInBytes - allocatedSize)
+            {
+                SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot push to memory arena with: %d (Allocated size is: %d, Max size is: %d)", (uint32_t)sizeInBytes, (uint32_t)allocatedSize, (uint32_t)storage->SizeInBytes);
+                return nullptr;
+            }
+
+            auto nextPointer = pointer + sizeInBytes;
+
+            if (SystemAtomicCompareExchange(storage->CurrentPointer, pointer, nextPointer))
+            {
+                break;
+            }
+
+            SystemYieldThread();
+        }
     }
 
     if (state == AllocationState_Committed)
@@ -502,8 +529,13 @@ void PopStackMemory(MemoryArena memoryArena, size_t sizeInBytes)
 void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes)
 {
     auto result = SystemPushMemory(memoryArena, sizeInBytes);
-    SystemPlatformClearMemory(result, sizeInBytes);
 
+    if (result == nullptr)
+    {
+        return nullptr;
+    }
+
+    SystemPlatformClearMemory(result, sizeInBytes);
     return result;
 }
 
@@ -511,28 +543,28 @@ template<typename T>
 Span<T> SystemPushArray(MemoryArena memoryArena, size_t count, AllocationState state)
 {
     auto memory = SystemPushMemory(memoryArena, sizeof(T) * count, state);
-    return Span<T>((T*)memory, count);
+    return memory ? Span<T>((T*)memory, count) : Span<T>();
 }
 
 template<typename T>
 Span<T> SystemPushArrayZero(MemoryArena memoryArena, size_t count)
 {
     auto memory = SystemPushMemoryZero(memoryArena, sizeof(T) * count);
-    return Span<T>((T*)memory, count);
+    return memory ? Span<T>((T*)memory, count) : Span<T>();
 }
 
 template<>
 Span<char> SystemPushArrayZero<char>(MemoryArena memoryArena, size_t count)
 {
     auto memory = SystemPushMemoryZero(memoryArena, sizeof(char) * (count + 1));
-    return Span<char>((char*)memory, count);
+    return memory ? Span<char>((char*)memory, count) : Span<char>();
 }
 
 template<>
 Span<wchar_t> SystemPushArrayZero<wchar_t>(MemoryArena memoryArena, size_t count)
 {
     auto memory = SystemPushMemoryZero(memoryArena, sizeof(wchar_t) * (count + 1));
-    return Span<wchar_t>((wchar_t*)memory, count);
+    return memory ? Span<wchar_t>((wchar_t*)memory, count) : Span<wchar_t>();
 }
 
 template<typename T>
