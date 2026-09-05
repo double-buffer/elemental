@@ -1,5 +1,6 @@
 #include "SystemFunctions.h"
 #include "SystemMemory.h"
+#include "SystemPlatformFunctions.h"
 #include "utest.h"
 
 struct MemoryThreadParameter
@@ -15,6 +16,14 @@ struct MemoryConcurrentOverflowThreadParameter
     bool* Start;
     void** Results;
     int32_t ThreadId;
+};
+
+struct MemoryConcurrentCommitThreadParameter
+{
+    MemoryArena MemoryArena;
+    uint8_t* Pointer;
+    size_t SizeInBytes;
+    uint8_t Value;
 };
 
 void MemoryConcurrentAddFunction(void* parameter)
@@ -43,6 +52,17 @@ void MemoryConcurrentOverflowFunction(void* parameter)
     }
 
     threadParameter->Results[threadParameter->ThreadId] = SystemPushMemory(threadParameter->MemoryArena, 64, AllocationState_Reserved);
+}
+
+void MemoryConcurrentCommitFunction(void* parameter)
+{
+    auto threadParameter = (MemoryConcurrentCommitThreadParameter*)parameter;
+    SystemCommitMemory(threadParameter->MemoryArena, threadParameter->Pointer, threadParameter->SizeInBytes);
+
+    for (size_t i = 0; i < threadParameter->SizeInBytes; i++)
+    {
+        threadParameter->Pointer[i] = threadParameter->Value;
+    }
 }
 
 UTEST(Memory, Allocate) 
@@ -344,6 +364,44 @@ UTEST(Memory, ConcurrentPushDoesNotOverflow)
 
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ(capacityCount * allocationSizeInBytes, allocationInfos.AllocatedBytes);
+}
+
+UTEST(Memory, ConcurrentCommitSharedPage)
+{
+    // Arrange
+    const int32_t threadCount = 32;
+    const size_t rangeSizeInBytes = 64;
+    auto pageSizeInBytes = SystemPlatformGetPageSize();
+    auto memoryArena = SystemAllocateMemoryArena(pageSizeInBytes);
+    auto buffer = SystemPushArray<uint8_t>(memoryArena, pageSizeInBytes, AllocationState_Reserved);
+    auto committedBytesBefore = SystemGetMemoryArenaAllocationInfos(memoryArena).CommittedBytes;
+    SystemThread threads[threadCount];
+    MemoryConcurrentCommitThreadParameter threadParameters[threadCount];
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        threadParameters[i] = { memoryArena, buffer.Pointer + i * rangeSizeInBytes, rangeSizeInBytes, (uint8_t)(i + 1) };
+        threads[i] = SystemCreateThread(MemoryConcurrentCommitFunction, &threadParameters[i]);
+    }
+
+    // Act
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
+    }
+
+    // Assert
+    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ(committedBytesBefore + pageSizeInBytes, allocationInfos.CommittedBytes);
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        for (size_t j = 0; j < rangeSizeInBytes; j++)
+        {
+            ASSERT_EQ((uint8_t)(i + 1), buffer[i * rangeSizeInBytes + j]);
+        }
+    }
 }
 
 UTEST(Memory, AllocateReserved) 
