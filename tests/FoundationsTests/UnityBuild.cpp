@@ -8,6 +8,7 @@
 #include "IOTests.cpp"
 #include "LibraryProcessTests.cpp"
 #include "DictionaryTests.cpp"
+#include "DictionaryRobustnessTests.cpp"
 #include "DataPoolTests.cpp"
 #include "DataPoolRobustnessTests.cpp"
 
