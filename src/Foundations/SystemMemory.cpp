@@ -186,7 +186,7 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 
     if (!SystemPlatformCommitMemory(storage, headerSizeInBytes))
     {
-        SystemPlatformFreeMemory(storage, reservedSizeInBytes);
+        SystemPlatformFreeMemory(storage, reservedSizeInBytes, 0);
         return nullptr;
     }
 
@@ -308,7 +308,10 @@ void SystemFreeMemoryArena(MemoryArena memoryArena)
     size_t dataSizeInBytes;
     auto alignmentSucceeded = TryAlignSize(memoryArena.Storage->SizeInBytes, pageSizeInBytes, &dataSizeInBytes);
     SystemAssert(alignmentSucceeded);
-    SystemPlatformFreeMemory(memoryArena.Storage, memoryArena.Storage->HeaderSizeInBytes + dataSizeInBytes);
+
+    auto reservedSizeInBytes = memoryArena.Storage->HeaderSizeInBytes + dataSizeInBytes;
+    auto committedSizeInBytes = memoryArena.Storage->CommittedPagesCount * pageSizeInBytes;
+    SystemPlatformFreeMemory(memoryArena.Storage, reservedSizeInBytes, committedSizeInBytes);
 }
 
 void SystemClearMemoryArena(MemoryArena memoryArena)
