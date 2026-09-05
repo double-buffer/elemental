@@ -9,6 +9,7 @@
 #include "LibraryProcessTests.cpp"
 #include "DictionaryTests.cpp"
 #include "DataPoolTests.cpp"
+#include "DataPoolRobustnessTests.cpp"
 
 #ifndef _WIN32
 #include "PosixPlatformFunctions.cpp"
