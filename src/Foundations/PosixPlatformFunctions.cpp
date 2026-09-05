@@ -96,11 +96,12 @@ void* SystemPlatformReserveMemory(size_t sizeInBytes)
     return result;
 }
 
-void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
+void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes, size_t committedSizeInBytes)
 {
     if (munmap(pointer, sizeInBytes) == 0)
     {
         SystemAtomicSubstract(systemPlatformAllocationInfos.ReservedBytes, sizeInBytes);
+        SystemAtomicSubstract(systemPlatformAllocationInfos.CommittedBytes, committedSizeInBytes);
     }
 }
 
