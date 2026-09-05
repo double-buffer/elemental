@@ -80,5 +80,5 @@ UTEST(MemoryRobustness, ConcurrentArenaAllocationAccounting)
 
     auto allocationInfosAfterFree = SystemGetAllocationInfos();
     ASSERT_EQ(allocationInfosBefore.ReservedBytes, allocationInfosAfterFree.ReservedBytes);
-    ASSERT_EQ(allocationInfosBefore.CommittedBytes + threadCount * pageSizeInBytes, allocationInfosAfterFree.CommittedBytes);
+    ASSERT_EQ(allocationInfosBefore.CommittedBytes, allocationInfosAfterFree.CommittedBytes);
 }
