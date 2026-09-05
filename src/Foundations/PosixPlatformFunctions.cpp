@@ -1,4 +1,5 @@
 #include "SystemPlatformFunctions.h"
+#include "SystemFunctions.h"
 
 #ifdef ElemAPI
 #include "SystemLogging.h"
@@ -76,31 +77,53 @@ size_t SystemPlatformGetPageSize()
 
 SystemPlatformAllocationInfos SystemPlatformGetAllocationInfos()
 {
-    return systemPlatformAllocationInfos;
+    SystemPlatformAllocationInfos result = {};
+    SystemAtomicLoad(systemPlatformAllocationInfos.CommittedBytes, result.CommittedBytes);
+    SystemAtomicLoad(systemPlatformAllocationInfos.ReservedBytes, result.ReservedBytes);
+    return result;
 }
 
 void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
-    systemPlatformAllocationInfos.ReservedBytes += sizeInBytes;
-    return mmap(nullptr, sizeInBytes, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+    auto result = mmap(nullptr, sizeInBytes, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+
+    if (result == MAP_FAILED)
+    {
+        return nullptr;
+    }
+
+    SystemAtomicAdd(systemPlatformAllocationInfos.ReservedBytes, sizeInBytes);
+    return result;
 }
 
 void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
 {
-    systemPlatformAllocationInfos.ReservedBytes -= sizeInBytes;
-    munmap(pointer, sizeInBytes);
+    if (munmap(pointer, sizeInBytes) == 0)
+    {
+        SystemAtomicSubstract(systemPlatformAllocationInfos.ReservedBytes, sizeInBytes);
+    }
 }
 
-void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
+bool SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
 {
-    systemPlatformAllocationInfos.CommittedBytes += sizeInBytes;
-    mprotect(pointer, sizeInBytes, PROT_READ | PROT_WRITE);
+    if (mprotect(pointer, sizeInBytes, PROT_READ | PROT_WRITE) != 0)
+    {
+        return false;
+    }
+
+    SystemAtomicAdd(systemPlatformAllocationInfos.CommittedBytes, sizeInBytes);
+    return true;
 }
 
-void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
+bool SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
 {
-    systemPlatformAllocationInfos.CommittedBytes -= sizeInBytes;
-    mprotect(pointer, sizeInBytes, PROT_NONE);
+    if (mprotect(pointer, sizeInBytes, PROT_NONE) != 0)
+    {
+        return false;
+    }
+
+    SystemAtomicSubstract(systemPlatformAllocationInfos.CommittedBytes, sizeInBytes);
+    return true;
 }
 
 void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes)
@@ -144,7 +167,7 @@ void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t>
     
     if (write(fileHandle, data.Pointer, data.Length) < 0) 
     {
-        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error writing to file %s.", path.Pointer);
+        SystemLogErrorMessage(ElemLogMessageCategory_Application, "Error writing file %s.", path.Pointer);
     }
 
     close(fileHandle);
