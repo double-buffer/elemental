@@ -570,7 +570,7 @@ Span<T> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<T> source)
 template<>
 Span<char> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<char> source)
 {
-    auto result = SystemPushArrayZero<char>(memoryArena, source.Length + 1);
+    auto result = SystemPushArrayZero<char>(memoryArena, source.Length);
     SystemCopyBuffer(result, source);
     return result;
 }
