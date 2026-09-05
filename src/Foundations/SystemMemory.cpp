@@ -44,33 +44,40 @@ struct PageSizeIndexes
 };
 
 thread_local MemoryArenaStorage* stackMemoryArenaStorage = nullptr;
-const size_t systemPageSizeInBytes = SystemPlatformGetPageSize();
 
 void PopStackMemory(MemoryArena memoryArena, size_t sizeInBytes);
 size_t ResizeToPageSizeMultiple(size_t sizeInBytes, size_t pageSizeInBytes);
 
+size_t GetSystemPageSizeInBytes()
+{
+    static const size_t pageSizeInBytes = SystemPlatformGetPageSize();
+    return pageSizeInBytes;
+}
+
 PageSizeIndexes ComputePageSizeInfoIndexes(MemoryArenaStorage* storage, void* pointer, size_t sizeInBytes)
 {
+    auto pageSizeInBytes = GetSystemPageSizeInBytes();
     auto dataStart = (uint8_t*)storage + storage->HeaderSizeInBytes;
     auto offset = (uint8_t*)pointer - dataStart;
 
     PageSizeIndexes result = {};
-    result.StartIndex = offset / systemPageSizeInBytes;
-    result.EndIndex = ResizeToPageSizeMultiple(offset + sizeInBytes, systemPageSizeInBytes) / systemPageSizeInBytes;
+    result.StartIndex = offset / pageSizeInBytes;
+    result.EndIndex = ResizeToPageSizeMultiple(offset + sizeInBytes, pageSizeInBytes) / pageSizeInBytes;
     return result;
 }
 
 PageSizeIndexes ComputePageSizeLocalOffsets(MemoryArenaStorage* storage, size_t index, void* pointer, size_t sizeInBytes)
 {
+    auto pageSizeInBytes = GetSystemPageSizeInBytes();
     auto absoluteStart = (uint8_t*)pointer;
     auto absoluteEnd = (uint8_t*)pointer + sizeInBytes;
 
-    auto pageStart = (uint8_t*)storage + storage->HeaderSizeInBytes + index * systemPageSizeInBytes;
-    auto pageEnd = pageStart + systemPageSizeInBytes;
+    auto pageStart = (uint8_t*)storage + storage->HeaderSizeInBytes + index * pageSizeInBytes;
+    auto pageEnd = pageStart + pageSizeInBytes;
 
     PageSizeIndexes result = {};
     result.StartIndex = absoluteStart > pageStart ? absoluteStart - pageStart : 0;
-    result.EndIndex = absoluteEnd < pageEnd ? absoluteEnd - pageStart : systemPageSizeInBytes - 1;
+    result.EndIndex = absoluteEnd < pageEnd ? absoluteEnd - pageStart : pageSizeInBytes - 1;
 
     return result;
 }
@@ -113,11 +120,12 @@ void UnlockMemoryArenaCommitOperations(MemoryArenaStorage* storage)
 
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
-    auto dataSizeInBytes = ResizeToPageSizeMultiple(sizeInBytes, systemPageSizeInBytes);
-    auto pageInfosCount = dataSizeInBytes / systemPageSizeInBytes;
+    auto pageSizeInBytes = GetSystemPageSizeInBytes();
+    auto dataSizeInBytes = ResizeToPageSizeMultiple(sizeInBytes, pageSizeInBytes);
+    auto pageInfosCount = dataSizeInBytes / pageSizeInBytes;
     auto pageCommitInfosCount = (pageInfosCount + 31) / 32;
     auto headerMetadataSizeInBytes = sizeof(MemoryArenaStorage) + pageInfosCount * sizeof(MemoryArenaPageInfo) + pageCommitInfosCount * sizeof(MemoryArenaPageCommitInfo);
-    auto headerSizeInBytes = ResizeToPageSizeMultiple(headerMetadataSizeInBytes, systemPageSizeInBytes);
+    auto headerSizeInBytes = ResizeToPageSizeMultiple(headerMetadataSizeInBytes, pageSizeInBytes);
     auto reservedSizeInBytes = headerSizeInBytes + dataSizeInBytes;
 
     auto storage = (MemoryArenaStorage*)SystemPlatformReserveMemory(reservedSizeInBytes);
@@ -127,7 +135,7 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     storage->SizeInBytes = sizeInBytes;
     storage->HeaderSizeInBytes = headerSizeInBytes;
     storage->IsCommitOperationInProgres = false;
-    storage->CommittedPagesCount = headerSizeInBytes / systemPageSizeInBytes;
+    storage->CommittedPagesCount = headerSizeInBytes / pageSizeInBytes;
     storage->PagesInfos = (MemoryArenaPageInfo*)((uint8_t*)storage + sizeof(MemoryArenaStorage));
     storage->PagesCommitInfos = (MemoryArenaPageCommitInfo*)((uint8_t*)storage + sizeof(MemoryArenaStorage) + pageInfosCount * sizeof(MemoryArenaPageInfo));
     storage->StackExtraStorage = {};
@@ -137,7 +145,7 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     for (size_t i = 0; i < pageInfosCount; i++)
     {
         ClearPageCommitted(storage, (uint32_t)i);
-        storage->PagesInfos[i].MinCommittedOffset = systemPageSizeInBytes - 1;
+        storage->PagesInfos[i].MinCommittedOffset = pageSizeInBytes - 1;
         storage->PagesInfos[i].MaxCommittedOffset = 0;
     }
     
@@ -216,7 +224,8 @@ MemoryArena SystemAllocateMemoryArena(size_t sizeInBytes)
 
 void SystemFreeMemoryArena(MemoryArena memoryArena)
 {
-    auto dataSizeInBytes = ResizeToPageSizeMultiple(memoryArena.Storage->SizeInBytes, systemPageSizeInBytes);
+    auto pageSizeInBytes = GetSystemPageSizeInBytes();
+    auto dataSizeInBytes = ResizeToPageSizeMultiple(memoryArena.Storage->SizeInBytes, pageSizeInBytes);
     SystemPlatformFreeMemory(memoryArena.Storage, memoryArena.Storage->HeaderSizeInBytes + dataSizeInBytes);
 }
 
@@ -254,7 +263,7 @@ MemoryArenaAllocationInfos SystemGetMemoryArenaAllocationInfos(MemoryArena memor
 
     MemoryArenaAllocationInfos result = {};
     result.AllocatedBytes = GetMemoryArenaAllocatedBytes(memoryArena);
-    result.CommittedBytes = committedPagesCount * systemPageSizeInBytes;
+    result.CommittedBytes = committedPagesCount * GetSystemPageSizeInBytes();
     result.MaximumSizeInBytes = memoryArena.Storage->SizeInBytes;
 
     return result;
@@ -367,16 +376,18 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
         return;
     }
 
+    auto pageSizeInBytes = GetSystemPageSizeInBytes();
+
     for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
     {
         if (!IsPageCommitted(storage, (uint32_t)i))
         {
-            auto pagePointer = (uint8_t*)storage + storage->HeaderSizeInBytes + i * systemPageSizeInBytes;
-            SystemPlatformCommitMemory(pagePointer, systemPageSizeInBytes);
+            auto pagePointer = (uint8_t*)storage + storage->HeaderSizeInBytes + i * pageSizeInBytes;
+            SystemPlatformCommitMemory(pagePointer, pageSizeInBytes);
             
             if (clearMemory)
             {
-                SystemPlatformClearMemory(pagePointer, systemPageSizeInBytes);
+                SystemPlatformClearMemory(pagePointer, pageSizeInBytes);
             }
 
             SetPageCommitted(storage, (uint32_t)i);
@@ -447,17 +458,19 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
         return;
     }
 
+    auto pageSizeInBytes = GetSystemPageSizeInBytes();
+
     for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
     {
         auto pageInfos = &storage->PagesInfos[i];
 
         if (IsPageCommitted(storage, (uint32_t)i))
         {
-            auto pagePointer = (uint8_t*)storage + storage->HeaderSizeInBytes + i * systemPageSizeInBytes;
+            auto pagePointer = (uint8_t*)storage + storage->HeaderSizeInBytes + i * pageSizeInBytes;
 
             if ((int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
             {
-                SystemPlatformDecommitMemory(pagePointer, systemPageSizeInBytes);
+                SystemPlatformDecommitMemory(pagePointer, pageSizeInBytes);
                 ClearPageCommitted(storage, (uint32_t)i);
 
                 if (needsSynchronization)
@@ -621,6 +634,11 @@ void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source)
         return;
     }
 
+    if (source.Length == 0)
+    {
+        return;
+    }
+
     SystemPlatformCopyMemory(destination.Pointer, source.Pointer, source.Length * sizeof(T));
 }
 
@@ -628,6 +646,12 @@ template<typename T>
 Span<T> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<T> source)
 {
     auto result = SystemPushArray<T>(memoryArena, source.Length);
+
+    if (result.Pointer == nullptr)
+    {
+        return {};
+    }
+
     SystemCopyBuffer(result, source);
     return result;
 }
@@ -636,6 +660,12 @@ template<>
 Span<char> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<char> source)
 {
     auto result = SystemPushArrayZero<char>(memoryArena, source.Length);
+
+    if (result.Pointer == nullptr)
+    {
+        return {};
+    }
+
     SystemCopyBuffer(result, source);
     return result;
 }
@@ -644,6 +674,11 @@ template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2)
 {
     auto result = SystemPushArray<T>(memoryArena, buffer1.Length + buffer2.Length);
+
+    if (result.Pointer == nullptr)
+    {
+        return {};
+    }
 
     SystemCopyBuffer(result, buffer1);
     SystemCopyBuffer(result.Slice(buffer1.Length), buffer2);
@@ -656,6 +691,11 @@ Span<char> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<char> buffe
 {
     auto result = SystemPushArrayZero<char>(memoryArena, buffer1.Length + buffer2.Length);
 
+    if (result.Pointer == nullptr)
+    {
+        return {};
+    }
+
     SystemCopyBuffer(result, buffer1);
     SystemCopyBuffer(result.Slice(buffer1.Length), buffer2);
 
@@ -666,6 +706,11 @@ template<>
 Span<wchar_t> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<wchar_t> buffer1, ReadOnlySpan<wchar_t> buffer2)
 {
     auto result = SystemPushArrayZero<wchar_t>(memoryArena, buffer1.Length + buffer2.Length);
+
+    if (result.Pointer == nullptr)
+    {
+        return {};
+    }
 
     SystemCopyBuffer(result, buffer1);
     SystemCopyBuffer(result.Slice(buffer1.Length), buffer2);
