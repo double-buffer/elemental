@@ -40,6 +40,28 @@ UTEST(MemoryRobustness, PushSizeOverflowDoesNotAdvanceArena)
     ASSERT_EQ(0llu, SystemGetMemoryArenaAllocationInfos(memoryArena).AllocatedBytes);
 }
 
+UTEST(MemoryRobustness, CommitReportsInvalidRange)
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena(64);
+    auto allocation = SystemPushArray<uint8_t>(memoryArena, 64, AllocationState_Reserved);
+
+    // Act
+    auto validCommit = SystemCommitMemory(memoryArena, allocation, true);
+    auto invalidCommit = SystemCommitMemory(memoryArena, allocation.Pointer + allocation.Length, 8);
+
+    // Assert
+    ASSERT_TRUE(validCommit);
+    ASSERT_FALSE(invalidCommit);
+
+    for (size_t i = 0; i < allocation.Length; i++)
+    {
+        ASSERT_EQ(0, allocation[i]);
+    }
+
+    SystemFreeMemoryArena(memoryArena);
+}
+
 UTEST(MemoryRobustness, ConcurrentArenaAllocationAccounting)
 {
     // Arrange
