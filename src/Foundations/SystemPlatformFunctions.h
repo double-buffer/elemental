@@ -84,8 +84,9 @@ void* SystemPlatformReserveMemory(size_t sizeInBytes);
  *
  * @param pointer Start of the reserved range.
  * @param sizeInBytes Size of the reserved range in bytes.
+ * @param committedSizeInBytes Number of committed bytes still contained in the range.
  */
-void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes);
+void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes, size_t committedSizeInBytes);
 
 /**
  * Commits a range inside a previously reserved virtual-address region.
