@@ -47,7 +47,7 @@ UTEST(MemoryRobustness, CommitReportsInvalidRange)
     auto allocation = SystemPushArray<uint8_t>(memoryArena, 64, AllocationState_Reserved);
 
     // Act
-    auto validCommit = SystemCommitMemory(memoryArena, allocation, true);
+    auto validCommit = SystemCommitMemory(memoryArena, allocation.Pointer, allocation.Length, true);
     auto invalidCommit = SystemCommitMemory(memoryArena, allocation.Pointer + allocation.Length, 8);
 
     // Assert
