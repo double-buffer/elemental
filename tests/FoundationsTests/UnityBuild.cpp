@@ -1,6 +1,7 @@
 #include "utest.h"
 
 #include "MemoryTests.cpp"
+#include "SpanTests.cpp"
 #include "MathTests.cpp"
 #include "StringTests.cpp"
 #include "IOTests.cpp"
