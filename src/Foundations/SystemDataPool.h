@@ -4,7 +4,7 @@
 #include "SystemMemory.h"
 
 /**
- * Represents an handle of a data pool decomposed into index and version.
+ * Represents a packed data-pool handle decomposed into index and version.
  */
 struct SystemDataPoolHandle
 {
@@ -13,118 +13,111 @@ struct SystemDataPoolHandle
 };
 
 /**
- * A default full structure used as a fallback for the SystemDataPool template when no full data type is specified.
+ * Default full-data type used when a data pool has no secondary data payload.
  */
 struct SystemDataPoolDefaultFull
 {
 };
 
-/**
- * Forward declaration of the SystemDataPoolStorage structure.
- * This structure is meant to internally manage storage specifics of a data pool, but its implementation details are abstracted away from the user.
- */
 template<typename T, typename TFull>
 struct SystemDataPoolStorage;
 
 /**
- * Represents a data pool with specific item types and optionally, a fuller version of each item.
- * This structure allows for the organization and efficient management of a collection of items of type T,
- * with the option to extend each item with additional data of type TFull.
- * 
- * @tparam T The primary type of items stored in the data pool.
- * @tparam TFull The full data type associated with each item, providing additional information or properties.
+ * Lightweight handle to a fixed-capacity data pool.
+ *
+ * Data-pool add, remove, lookup, and count operations are thread-safe for a pool created from a
+ * shared MemoryArena. Index allocation and recycling are synchronized internally, while lookups
+ * validate the item generation without taking the allocation lock.
+ *
+ * A pointer returned by SystemGetDataPoolItem() or SystemGetDataPoolItemFull() does not pin the
+ * item. The caller must guarantee that the same item is not removed or reused while that pointer
+ * is being dereferenced. StackMemoryArena-backed pools remain subject to StackMemoryArena's
+ * thread-local contract.
+ *
+ * @tparam T Primary item type.
+ * @tparam TFull Optional secondary item type.
  */
 template<typename T, typename TFull>
 struct SystemDataPool
 {
-    SystemDataPoolStorage<T, TFull>* Storage; ///< Pointer to the underlying storage mechanism of the data pool.
+    SystemDataPoolStorage<T, TFull>* Storage;
 };
 
 /**
-* Unpack a data pool handle to a struct that contains the index and the version
-* @param packedValue The packed value to unpack.
-* @return The unpacked handle.
-*/
+ * Unpacks a data-pool handle into its index and generation.
+ *
+ * @param packedValue Packed handle value.
+ * @return Unpacked index and generation.
+ */
 SystemDataPoolHandle UnpackSystemDataPoolHandle(uint64_t packedValue);
 
 /**
- * Creates and initializes a data pool capable of storing items of type T, with an optional fuller version of each item of type TFull.
- * 
- * @tparam T The primary type of items to be stored in the data pool.
- * @tparam TFull The full data type associated with each item, defaulting to SystemDataPoolDefaultFull when not specified.
- * @param memoryArena The memory arena to use for allocating data pool storage.
- * @param maxItems The maximum number of items that the data pool can hold.
- * @return An instance of SystemDataPool configured to store items of type T and TFull.
+ * Creates a fixed-capacity data pool.
+ *
+ * The storage is allocated from memoryArena and is not individually freed. maxItems must fit in the
+ * 32-bit handle index space. The returned pool is empty when its backing storage cannot be created.
+ *
+ * @tparam T Primary item type.
+ * @tparam TFull Optional secondary item type.
+ * @param memoryArena Arena that owns the pool storage.
+ * @param maxItems Maximum number of simultaneously allocated items.
+ * @return Data pool backed by memoryArena, or an empty pool on allocation failure.
  */
 template<typename T, typename TFull = SystemDataPoolDefaultFull>
 SystemDataPool<T, TFull> SystemCreateDataPool(MemoryArena memoryArena, size_t maxItems);
 
 /**
- * Adds an item of type T to the specified data pool and returns a handle to the newly added item.
- * 
- * @tparam T The type of the item to add to the data pool.
- * @tparam TFull The full data type associated with each item in the pool.
- * @param dataPool The data pool to which the item will be added.
- * @param data The item to add to the data pool.
- * @return A handle to the newly added item within the data pool.
+ * Adds an item to the pool.
+ *
+ * The operation is thread-safe. A recycled slot receives the generation established by its previous
+ * removal, so stale handles do not resolve to the new item.
+ *
+ * @return Handle to the added item, or ELEM_HANDLE_NULL when the pool is full.
  */
 template<typename T, typename TFull>
 ElemHandle SystemAddDataPoolItem(SystemDataPool<T, TFull> dataPool, T data);
     
 /**
- * Adds or updates the fuller version of an item in the data pool, identified by a given handle.
- * 
- * @tparam T The primary type of items stored in the data pool.
- * @tparam TFull The full data type associated with each item.
- * @param dataPool The data pool containing the item.
- * @param handle The handle identifying the item to be extended with fuller data.
- * @param data The fuller version of the item to add or update in the data pool.
+ * Writes the optional secondary data associated with an existing item.
+ *
+ * The handle generation is validated before the write. This function does not pin the item after
+ * validation; the caller must not remove or reuse the same item concurrently with this write.
  */
 template<typename T, typename TFull>
 void SystemAddDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle handle, TFull data);
 
 /**
- * Removes an item from the data pool, identified by a given handle.
- * 
- * @tparam T The primary type of items stored in the data pool.
- * @tparam TFull The full data type associated with each item.
- * @param dataPool The data pool from which the item will be removed.
- * @param handle The handle identifying the item to remove.
+ * Removes an item and makes its slot available for reuse.
+ *
+ * The operation is thread-safe. Concurrent attempts to remove the same generation only free the
+ * slot once; later attempts observe the generation change and are ignored.
  */
 template<typename T, typename TFull>
 void SystemRemoveDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
 
 /**
- * Retrieves a pointer to an item in the data pool, identified by a given handle.
- * 
- * @tparam T The primary type of items stored in the data pool.
- * @tparam TFull The full data type associated with each item.
- * @param dataPool The data pool containing the item.
- * @param handle The handle identifying the item to retrieve.
- * @return A pointer to the item associated with the given handle, or nullptr if the item does not exist.
+ * Resolves a handle to its primary item.
+ *
+ * The lookup itself is thread-safe and returns nullptr for a stale handle. The returned pointer is
+ * non-owning and is not lifetime-protected against a later concurrent removal/reuse of the same item.
  */
 template<typename T, typename TFull>
 T* SystemGetDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
 
 /**
- * Retrieves a pointer to the fuller version of an item in the data pool, identified by a given handle.
- * 
- * @tparam T The primary type of items stored in the data pool.
- * @tparam TFull The full data type associated with each item.
- * @param dataPool The data pool containing the item.
- * @param handle The handle identifying the item to retrieve its fuller version.
- * @return A pointer to the fuller version of the item associated with the given handle, or nullptr if the fuller data does not exist.
+ * Resolves a handle to its secondary item data.
+ *
+ * The lookup itself is thread-safe and returns nullptr for a stale handle. The returned pointer is
+ * non-owning and is not lifetime-protected against a later concurrent removal/reuse of the same item.
  */
 template<typename T, typename TFull>
 TFull* SystemGetDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
 
 /**
- * Counts the number of items in the data pool.
- * 
- * @tparam T Primary type of items in the data pool.
- * @tparam TFull Full data type associated with each item.
- * @param dataPool The data pool whose items are to be counted.
- * @return The total count of items in the data pool.
+ * Returns the current number of live items.
+ *
+ * The count is read atomically and may change immediately after the function returns when the pool
+ * is being modified concurrently.
  */
 template<typename T, typename TFull>
 size_t SystemGetDataPoolItemCount(SystemDataPool<T, TFull> dataPool);
