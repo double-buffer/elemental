@@ -147,7 +147,16 @@ void AddDictionaryEntry(SystemDictionaryStorage<TValue>* storage, SystemDictiona
 
         entryIndex = (int32_t)storage->CurrentEntryIndex;
         storage->CurrentEntryIndex++;
-        SystemCommitMemory<SystemDictionaryEntry<TValue>>(storage->MemoryArena, storage->Entries.Slice(entryIndex, 1), true);
+
+        if (!SystemCommitMemory<SystemDictionaryEntry<TValue>>(storage->MemoryArena, storage->Entries.Slice(entryIndex, 1), true))
+        {
+            UnlockSystemDictionary(storage);
+
+            #ifdef ElemAPI
+            SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot commit dictionary entry storage.");
+            #endif
+            return;
+        }
     }
 
     auto entry = GetDictionaryEntryByIndex(storage, entryIndex);
