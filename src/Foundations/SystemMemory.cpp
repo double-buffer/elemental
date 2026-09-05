@@ -101,6 +101,16 @@ bool IsPageCommitted(MemoryArenaStorage* storage, uint32_t pageIndex)
     return (storage->PagesCommitInfos[arrayIndex].CommittedStates & (1U << bitIndex)) != 0;
 }
 
+void LockMemoryArenaCommitOperations(MemoryArenaStorage* storage)
+{
+    SystemAtomicReplace(storage->IsCommitOperationInProgres, false, true);
+}
+
+void UnlockMemoryArenaCommitOperations(MemoryArenaStorage* storage)
+{
+    SystemAtomicStore(storage->IsCommitOperationInProgres, false);
+}
+
 MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
 {
     auto dataSizeInBytes = ResizeToPageSizeMultiple(sizeInBytes, systemPageSizeInBytes);
@@ -231,9 +241,20 @@ void SystemClearMemoryArena(MemoryArena memoryArena)
 
 MemoryArenaAllocationInfos SystemGetMemoryArenaAllocationInfos(MemoryArena memoryArena)
 {
+    size_t committedPagesCount;
+
+    if (IsStackMemoryArena(memoryArena))
+    {
+        committedPagesCount = memoryArena.Storage->CommittedPagesCount;
+    }
+    else
+    {
+        SystemAtomicLoad(memoryArena.Storage->CommittedPagesCount, committedPagesCount);
+    }
+
     MemoryArenaAllocationInfos result = {};
     result.AllocatedBytes = GetMemoryArenaAllocatedBytes(memoryArena);
-    result.CommittedBytes = memoryArena.Storage->CommittedPagesCount * systemPageSizeInBytes;
+    result.CommittedBytes = committedPagesCount * systemPageSizeInBytes;
     result.MaximumSizeInBytes = memoryArena.Storage->SizeInBytes;
 
     return result;
@@ -307,6 +328,13 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
         return;
     }
 
+    auto needsSynchronization = !IsStackMemoryArena(memoryArena);
+
+    if (needsSynchronization)
+    {
+        LockMemoryArenaCommitOperations(storage);
+    }
+
     auto pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
     auto needToCommit = false;
 
@@ -315,16 +343,8 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
         auto pageSizeOffsets = ComputePageSizeLocalOffsets(storage, i, pointer, sizeInBytes);
         auto pageInfos = &storage->PagesInfos[i];
 
-        if (memoryArena.Storage == stackMemoryArenaStorage)
-        {
-            pageInfos->MinCommittedOffset = pageSizeOffsets.StartIndex < pageInfos->MinCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MinCommittedOffset;
-            pageInfos->MaxCommittedOffset = pageSizeOffsets.EndIndex > pageInfos->MaxCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MaxCommittedOffset;
-        }
-        else
-        {
-            SystemAtomicReplace(pageInfos->MinCommittedOffset, pageInfos->MinCommittedOffset, pageSizeOffsets.StartIndex < pageInfos->MinCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MinCommittedOffset);
-            SystemAtomicReplace(pageInfos->MaxCommittedOffset, pageInfos->MaxCommittedOffset, pageSizeOffsets.EndIndex > pageInfos->MaxCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MaxCommittedOffset);
-        }
+        pageInfos->MinCommittedOffset = pageSizeOffsets.StartIndex < pageInfos->MinCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MinCommittedOffset;
+        pageInfos->MaxCommittedOffset = pageSizeOffsets.EndIndex > pageInfos->MaxCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MaxCommittedOffset;
 
         if (!IsPageCommitted(storage, (uint32_t)i))
         {
@@ -334,6 +354,11 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
 
     if (!needToCommit)
     {
+        if (needsSynchronization)
+        {
+            UnlockMemoryArenaCommitOperations(storage);
+        }
+
         if (memoryArena.Storage == stackMemoryArenaStorage)
         {
             SystemPlatformClearMemory(pointer, sizeInBytes);
@@ -341,13 +366,6 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
 
         return;
     }
-
-    if (memoryArena.Storage != stackMemoryArenaStorage)
-    {
-        SystemAtomicReplace(storage->IsCommitOperationInProgres, false, true);
-    }
-
-    pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
 
     for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
     {
@@ -362,13 +380,21 @@ void SystemCommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInByt
             }
 
             SetPageCommitted(storage, (uint32_t)i);
-            storage->CommittedPagesCount++;
+
+            if (needsSynchronization)
+            {
+                SystemAtomicAdd(storage->CommittedPagesCount, 1);
+            }
+            else
+            {
+                storage->CommittedPagesCount++;
+            }
         }
     }
 
-    if (memoryArena.Storage != stackMemoryArenaStorage)
+    if (needsSynchronization)
     {
-        SystemAtomicStore(storage->IsCommitOperationInProgres, false);
+        UnlockMemoryArenaCommitOperations(storage);
     }
 
     if (memoryArena.Storage == stackMemoryArenaStorage)
@@ -387,6 +413,13 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
         return;
     }
 
+    auto needsSynchronization = !IsStackMemoryArena(memoryArena);
+
+    if (needsSynchronization)
+    {
+        LockMemoryArenaCommitOperations(storage);
+    }
+
     auto pageSizeIndexes = ComputePageSizeInfoIndexes(storage, pointer, sizeInBytes);
     auto needToDecommit = false;
 
@@ -395,16 +428,8 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
         auto pageSizeOffsets = ComputePageSizeLocalOffsets(storage, i, pointer, sizeInBytes);
         auto pageInfos = &storage->PagesInfos[i];
 
-        if (memoryArena.Storage == stackMemoryArenaStorage)
-        {
-            pageInfos->MinCommittedOffset = pageSizeOffsets.StartIndex == pageInfos->MinCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MinCommittedOffset;
-            pageInfos->MaxCommittedOffset = pageSizeOffsets.EndIndex == pageInfos->MaxCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MaxCommittedOffset;
-        }
-        else
-        {
-            SystemAtomicReplace(pageInfos->MinCommittedOffset, pageInfos->MinCommittedOffset, pageSizeOffsets.StartIndex == pageInfos->MinCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MinCommittedOffset);
-            SystemAtomicReplace(pageInfos->MaxCommittedOffset, pageInfos->MaxCommittedOffset, pageSizeOffsets.EndIndex == pageInfos->MaxCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MaxCommittedOffset);
-        }
+        pageInfos->MinCommittedOffset = pageSizeOffsets.StartIndex == pageInfos->MinCommittedOffset ? pageSizeOffsets.EndIndex : pageInfos->MinCommittedOffset;
+        pageInfos->MaxCommittedOffset = pageSizeOffsets.EndIndex == pageInfos->MaxCommittedOffset ? pageSizeOffsets.StartIndex : pageInfos->MaxCommittedOffset;
 
         if (IsPageCommitted(storage, (uint32_t)i) && (int32_t)(pageInfos->MaxCommittedOffset - pageInfos->MinCommittedOffset) <= 0)
         {
@@ -414,14 +439,14 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
 
     if (!needToDecommit)
     {
+        if (needsSynchronization)
+        {
+            UnlockMemoryArenaCommitOperations(storage);
+        }
+
         return;
     }
 
-    if (memoryArena.Storage != stackMemoryArenaStorage)
-    {
-        SystemAtomicReplace(storage->IsCommitOperationInProgres, false, true);
-    }
-    
     for (size_t i = pageSizeIndexes.StartIndex; i < pageSizeIndexes.EndIndex; i++)
     {
         auto pageInfos = &storage->PagesInfos[i];
@@ -434,14 +459,22 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
             {
                 SystemPlatformDecommitMemory(pagePointer, systemPageSizeInBytes);
                 ClearPageCommitted(storage, (uint32_t)i);
-                storage->CommittedPagesCount--;
+
+                if (needsSynchronization)
+                {
+                    SystemAtomicSubstract(storage->CommittedPagesCount, 1);
+                }
+                else
+                {
+                    storage->CommittedPagesCount--;
+                }
             }
         }
     }
 
-    if (memoryArena.Storage != stackMemoryArenaStorage)
+    if (needsSynchronization)
     {
-        SystemAtomicStore(storage->IsCommitOperationInProgres, false);
+        UnlockMemoryArenaCommitOperations(storage);
     }
 }
 
