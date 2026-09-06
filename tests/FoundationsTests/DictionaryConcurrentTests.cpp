@@ -100,7 +100,7 @@ UTEST(DictionaryConcurrent, Add)
         }
     }
 
-    ASSERT_EQ(itemCount, count);
+    ASSERT_EQ_MSG(itemCount, count, "Concurrent dictionary insertion should publish every requested entry.");
     SystemFreeMemoryArena(memoryArena);
 }
 
@@ -144,7 +144,7 @@ UTEST(DictionaryConcurrent, Remove)
         }
     }
 
-    ASSERT_EQ(itemCount / 2, count);
+    ASSERT_EQ_MSG(itemCount / 2, count, "Concurrent dictionary removal should remove exactly the requested half of the entries.");
     SystemFreeMemoryArena(memoryArena);
 }
 
@@ -179,13 +179,13 @@ UTEST(DictionaryConcurrent, AddStopsAtCapacity)
         if (SystemDictionaryContainsKey(dictionary, i))
         {
             auto value = SystemGetDictionaryValue(dictionary, i);
-            ASSERT_TRUE(value != nullptr);
-            ASSERT_EQ(i, *value);
+            ASSERT_TRUE_MSG(value != nullptr, "A key reported as present after concurrent insertion should resolve to a value.");
+            ASSERT_EQ_MSG(i, *value, "Concurrent dictionary insertion should preserve each published key/value pair.");
             foundCount++;
         }
     }
 
-    ASSERT_EQ(capacity, foundCount);
+    ASSERT_EQ_MSG(capacity, foundCount, "Concurrent dictionary insertion should stop exactly at dictionary capacity.");
     SystemFreeMemoryArena(memoryArena);
 }
 
@@ -218,8 +218,8 @@ UTEST(DictionaryConcurrent, ReusePreservesAllEntries)
     for (int32_t i = 0; i < threadCount; i++)
     {
         auto value = SystemGetDictionaryValue(dictionary, threadParameters[i].CurrentKey);
-        ASSERT_TRUE(value != nullptr);
-        ASSERT_EQ((((uint64_t)i << 32) | (iterationCount - 1)), *value);
+        ASSERT_TRUE_MSG(value != nullptr, "Final dictionary entry should remain reachable after concurrent remove/reuse cycles.");
+        ASSERT_EQ_MSG((((uint64_t)i << 32) | (iterationCount - 1)), *value, "Concurrent dictionary remove/reuse corrupted the final entry value.");
     }
 
     SystemFreeMemoryArena(memoryArena);
