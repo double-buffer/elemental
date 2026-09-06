@@ -29,7 +29,7 @@ UTEST(DataPool, AddItem)
 
     // Assert
     auto result = SystemGetDataPoolItem(dataPool, handle);
-    ASSERT_EQ(testData.Data, result->Data);
+    ASSERT_EQ_MSG(testData.Data, result->Data, "DataPool item data should match the value used during insertion.");
 }
 
 UTEST(DataPool, RemoveItem)
@@ -46,7 +46,7 @@ UTEST(DataPool, RemoveItem)
 
     // Assert
     auto result = SystemGetDataPoolItem(dataPool, handle);
-    ASSERT_TRUE(result == nullptr);
+    ASSERT_TRUE_MSG(result == nullptr, "Removed DataPool handle should no longer resolve to an item.");
 }
 
 UTEST(DataPool, AddItemReuseDeletedItem)
@@ -66,8 +66,8 @@ UTEST(DataPool, AddItemReuseDeletedItem)
 
     // Assert
     auto result = SystemGetDataPoolItem(dataPool, handle);
-    ASSERT_FALSE(result == nullptr);
-    ASSERT_EQ(testData.Data, result->Data);
+    ASSERT_FALSE_MSG(result == nullptr, "DataPool should reuse a slot released by a removed item.");
+    ASSERT_EQ_MSG(testData.Data, result->Data, "Reused DataPool slot should contain the new item data.");
 }
 
 UTEST(DataPool, RemoveReusedItemWithOldVersion)
@@ -89,8 +89,8 @@ UTEST(DataPool, RemoveReusedItemWithOldVersion)
 
     // Assert
     auto result = SystemGetDataPoolItem(dataPool, newHandle);
-    ASSERT_FALSE(result == nullptr);
-    ASSERT_EQ(testData.Data, result->Data);
+    ASSERT_FALSE_MSG(result == nullptr, "Removing a stale DataPool handle must not remove the reused slot.");
+    ASSERT_EQ_MSG(testData.Data, result->Data, "Reused DataPool item should remain unchanged after stale-handle removal.");
 }
 
 UTEST(DataPool, AddItemWithFull)
@@ -114,13 +114,13 @@ UTEST(DataPool, AddItemWithFull)
 
     // Assert
     auto result = SystemGetDataPoolItem(dataPool, handle);
-    ASSERT_EQ(testData.Data, result->Data);
+    ASSERT_EQ_MSG(testData.Data, result->Data, "DataPool primary item data is invalid.");
 
     auto resultFull = SystemGetDataPoolItemFull(dataPool, handle);
-    ASSERT_EQ(testDataFull.Data1, resultFull->Data1);
-    ASSERT_EQ(testDataFull.Data2, resultFull->Data2);
-    ASSERT_EQ(testDataFull.Data3, resultFull->Data3);
-    ASSERT_EQ(testDataFull.Data4, resultFull->Data4);
+    ASSERT_EQ_MSG(testDataFull.Data1, resultFull->Data1, "DataPool full item field Data1 is invalid.");
+    ASSERT_EQ_MSG(testDataFull.Data2, resultFull->Data2, "DataPool full item field Data2 is invalid.");
+    ASSERT_EQ_MSG(testDataFull.Data3, resultFull->Data3, "DataPool full item field Data3 is invalid.");
+    ASSERT_EQ_MSG(testDataFull.Data4, resultFull->Data4, "DataPool full item field Data4 is invalid.");
 }
 
 UTEST(DataPool, RemoveItemWithFull)
@@ -146,5 +146,5 @@ UTEST(DataPool, RemoveItemWithFull)
 
     // Assert
     auto result = SystemGetDataPoolItemFull(dataPool, handle);
-    ASSERT_TRUE(result == nullptr);
+    ASSERT_TRUE_MSG(result == nullptr, "Removed DataPool handle should not resolve to full item data.");
 }
