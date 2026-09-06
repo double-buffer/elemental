@@ -24,9 +24,9 @@ UTEST(Span, ReadOnlyConstBuffer)
     auto slice = span.Slice(1, 2);
 
     // Assert
-    ASSERT_EQ(2llu, slice.Length);
-    ASSERT_EQ(20, slice[0]);
-    ASSERT_EQ(30, slice[1]);
+    ASSERT_EQ_MSG(2llu, slice.Length, "ReadOnlySpan slice length is invalid.");
+    ASSERT_EQ_MSG(20, slice[0], "ReadOnlySpan slice first value is invalid.");
+    ASSERT_EQ_MSG(30, slice[1], "ReadOnlySpan slice second value is invalid.");
 }
 
 UTEST(Span, InitializerList)
@@ -35,7 +35,7 @@ UTEST(Span, InitializerList)
     auto result = SumSpanValues({ 10, 20, 30 });
 
     // Assert
-    ASSERT_EQ(60, result);
+    ASSERT_EQ_MSG(60, result, "ReadOnlySpan initializer-list values were not preserved.");
 }
 
 UTEST(Span, StringLengthExcludesNullTerminator)
@@ -44,8 +44,8 @@ UTEST(Span, StringLengthExcludesNullTerminator)
     ReadOnlySpan<char> value = "Elemental";
 
     // Assert
-    ASSERT_EQ(9llu, value.Length);
-    ASSERT_EQ('\0', value.Pointer[value.Length]);
+    ASSERT_EQ_MSG(9llu, value.Length, "Character span length should exclude the null terminator.");
+    ASSERT_EQ_MSG('\0', value.Pointer[value.Length], "Character span backing storage should remain null terminated.");
 }
 
 UTEST(Span, DuplicateStringPreservesLogicalLengthAndNullTerminator)
@@ -58,9 +58,9 @@ UTEST(Span, DuplicateStringPreservesLogicalLengthAndNullTerminator)
     auto result = SystemDuplicateBuffer<char>(memoryArena, source);
 
     // Assert
-    ASSERT_EQ(source.Length, result.Length);
-    ASSERT_EQ('\0', result.Pointer[result.Length]);
-    ASSERT_STREQ("Elemental", result.Pointer);
+    ASSERT_EQ_MSG(source.Length, result.Length, "Duplicated character span should preserve the logical source length.");
+    ASSERT_EQ_MSG('\0', result.Pointer[result.Length], "Duplicated character span should have a trailing null terminator.");
+    ASSERT_STREQ_MSG("Elemental", result.Pointer, "Duplicated character span data is invalid.");
 
     SystemFreeMemoryArena(memoryArena);
 }
