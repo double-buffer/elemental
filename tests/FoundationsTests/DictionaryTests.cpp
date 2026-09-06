@@ -22,7 +22,7 @@ UTEST(Dictionary, AddValue)
 
     // Assert
     auto testValue = dictionary["Test9"];
-    ASSERT_EQ(9, testValue);
+    ASSERT_EQ_MSG(9, testValue, "Dictionary lookup should return the value stored for a string key.");
 }
 
 UTEST(Dictionary, AddValue_KeyStruct)
@@ -42,8 +42,8 @@ UTEST(Dictionary, AddValue_KeyStruct)
 
     // Assert
     auto testValue = dictionary[9];
-    ASSERT_EQ(9, testValue.Value1);
-    ASSERT_EQ(81, testValue.Value2);
+    ASSERT_EQ_MSG(9, testValue.Value1, "Dictionary struct value field Value1 is invalid.");
+    ASSERT_EQ_MSG(81, testValue.Value2, "Dictionary struct value field Value2 is invalid.");
 }
 
 UTEST(Dictionary, RemoveValue)
@@ -67,11 +67,11 @@ UTEST(Dictionary, RemoveValue)
 
         if (i == 6)
         {
-            ASSERT_EQ(0, testValue);
+            ASSERT_EQ_MSG(0, testValue, "Removed dictionary key should return the default value through operator[].");
         }
         else
         {
-            ASSERT_EQ(i, testValue);
+            ASSERT_EQ_MSG(i, testValue, "Removing one dictionary key should not modify other entries.");
         }
     }
 }
@@ -97,11 +97,11 @@ UTEST(Dictionary, RemoveValueNoParent)
 
         if (i == 8)
         {
-            ASSERT_EQ(0, testValue);
+            ASSERT_EQ_MSG(0, testValue, "Removed dictionary bucket-head entry should return the default value.");
         }
         else
         {
-            ASSERT_EQ(i, testValue);
+            ASSERT_EQ_MSG(i, testValue, "Removing a dictionary bucket-head entry should preserve sibling entries.");
         }
     }
 }
@@ -122,7 +122,7 @@ UTEST(Dictionary, RemoveValue_KeyStruct)
 
     // Assert
     auto testValue = dictionary[9];
-    ASSERT_EQ(0, testValue);
+    ASSERT_EQ_MSG(0, testValue, "Removed integer dictionary key should return the default value.");
 }
 
 UTEST(Dictionary, GrowStorage)
@@ -153,7 +153,7 @@ UTEST(Dictionary, GrowStorage)
 
     // Assert
     auto testValue = dictionary["TestOneMore5"];
-    ASSERT_EQ(32, testValue);
+    ASSERT_EQ_MSG(32, testValue, "Dictionary entry reuse should preserve surviving entries.");
 }
 
 UTEST(Dictionary, NotEnoughStorage)
@@ -172,7 +172,7 @@ UTEST(Dictionary, NotEnoughStorage)
 
     // Assert
     auto testValue = dictionary["TestOneMore6"];
-    ASSERT_EQ(0, testValue);
+    ASSERT_EQ_MSG(0, testValue, "Dictionary insertion beyond capacity should not publish an entry.");
 }
 
 UTEST(Dictionary, RemoveValuesAfterFull)
@@ -193,7 +193,7 @@ UTEST(Dictionary, RemoveValuesAfterFull)
 
     // Assert
     auto testValue = dictionary["TestNew"];
-    ASSERT_EQ(28, testValue);
+    ASSERT_EQ_MSG(28, testValue, "Dictionary should reuse a removed entry after reaching capacity.");
 }
 
 UTEST(Dictionary, BigDictionary)
@@ -214,7 +214,7 @@ UTEST(Dictionary, BigDictionary)
     for (int32_t i = 0; i < 10000; i++)
     {
         auto testValue = dictionary[SystemFormatString(stackMemoryArena, "Test%d", i)];
-        ASSERT_EQ(i, testValue);
+        ASSERT_EQ_MSG(i, testValue, "Large dictionary lookup returned an invalid value.");
     }
 }
 
@@ -233,7 +233,7 @@ UTEST(Dictionary, ContainsKey)
     auto testValue = SystemDictionaryContainsKey(dictionary, "Test9");
 
     // Assert
-    ASSERT_TRUE(testValue);
+    ASSERT_TRUE_MSG(testValue, "Dictionary should report an inserted string key as present.");
 }
 
 UTEST(Dictionary, ContainsKey_KeyStruct)
@@ -251,7 +251,7 @@ UTEST(Dictionary, ContainsKey_KeyStruct)
     auto testValue = SystemDictionaryContainsKey(dictionary, 9);
 
     // Assert
-    ASSERT_TRUE(testValue);
+    ASSERT_TRUE_MSG(testValue, "Dictionary should report an inserted integer key as present.");
 }
 
 UTEST(Dictionary, ReadOnlySpanHashUsesAllBytes)
@@ -269,10 +269,10 @@ UTEST(Dictionary, ReadOnlySpanHashUsesAllBytes)
     // Assert
     auto value1 = SystemGetDictionaryValue(dictionary, ReadOnlySpan<uint32_t>(key1, 2));
     auto value2 = SystemGetDictionaryValue(dictionary, ReadOnlySpan<uint32_t>(key2, 2));
-    ASSERT_TRUE(value1 != nullptr);
-    ASSERT_TRUE(value2 != nullptr);
-    ASSERT_EQ(10, *value1);
-    ASSERT_EQ(20, *value2);
+    ASSERT_TRUE_MSG(value1 != nullptr, "Dictionary should find the first non-char span key.");
+    ASSERT_TRUE_MSG(value2 != nullptr, "Dictionary should find the second non-char span key.");
+    ASSERT_EQ_MSG(10, *value1, "Hashing a non-char span should include every byte of the first key.");
+    ASSERT_EQ_MSG(20, *value2, "Hashing a non-char span should include every byte of the second key.");
 }
 
 UTEST(Dictionary, MissingValueReturnsNull)
@@ -285,6 +285,6 @@ UTEST(Dictionary, MissingValueReturnsNull)
     auto value = SystemGetDictionaryValue(dictionary, 42);
 
     // Assert
-    ASSERT_TRUE(value == nullptr);
-    ASSERT_EQ(0, dictionary[42]);
+    ASSERT_TRUE_MSG(value == nullptr, "SystemGetDictionaryValue should return nullptr for a missing key.");
+    ASSERT_EQ_MSG(0, dictionary[42], "Dictionary operator[] should return a default value for a missing key.");
 }
