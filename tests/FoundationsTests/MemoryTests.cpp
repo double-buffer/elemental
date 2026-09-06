@@ -14,8 +14,8 @@ UTEST(Memory, Allocate)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
-    ASSERT_EQ(dataSizeInBytes, data.Length);
+    ASSERT_EQ_MSG(dataSizeInBytes, allocationInfos.AllocatedBytes, "MemoryArena allocated byte count should match the requested allocation size.");
+    ASSERT_EQ_MSG(dataSizeInBytes, data.Length, "Allocated array length should match the requested element count.");
 }
 
 UTEST(Memory, AllocateMultiple)
@@ -30,8 +30,8 @@ UTEST(Memory, AllocateMultiple)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(dataSizeInBytes + 1024, allocationInfos.AllocatedBytes);
-    ASSERT_GT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+    ASSERT_EQ_MSG(dataSizeInBytes + 1024, allocationInfos.AllocatedBytes, "MemoryArena allocated byte count should include every pushed allocation.");
+    ASSERT_GT_MSG(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes, "Committed memory should include page granularity and arena metadata overhead.");
 }
 
 UTEST(Memory, ClearMemoryArena)
@@ -48,7 +48,7 @@ UTEST(Memory, ClearMemoryArena)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(0llu, allocationInfos.AllocatedBytes);
+    ASSERT_EQ_MSG(0llu, allocationInfos.AllocatedBytes, "Clearing a MemoryArena should reset its logical allocated byte count to zero.");
 }
 
 UTEST(Memory, AllocateCheckAlignment)
@@ -63,7 +63,7 @@ UTEST(Memory, AllocateCheckAlignment)
     auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes);
 
     // Assert
-    ASSERT_TRUE(((size_t)data.Pointer & (alignment - 1)) == 0);
+    ASSERT_TRUE_MSG(((size_t)data.Pointer & (alignment - 1)) == 0, "MemoryArena allocations should respect the default alignment.");
 }
 
 UTEST(Memory, PushOverflowReturnsNull)
@@ -78,14 +78,14 @@ UTEST(Memory, PushOverflowReturnsNull)
     auto overflowArray = SystemPushArray<uint64_t>(memoryArena, 2, AllocationState_Reserved);
 
     // Assert
-    ASSERT_TRUE(allocation != nullptr);
-    ASSERT_TRUE(overflowAllocation == nullptr);
-    ASSERT_TRUE(zeroOverflowAllocation == nullptr);
-    ASSERT_TRUE(overflowArray.Pointer == nullptr);
-    ASSERT_EQ(0llu, overflowArray.Length);
+    ASSERT_TRUE_MSG(allocation != nullptr, "An allocation that exactly fills the MemoryArena should succeed.");
+    ASSERT_TRUE_MSG(overflowAllocation == nullptr, "MemoryArena push beyond capacity should return nullptr.");
+    ASSERT_TRUE_MSG(zeroOverflowAllocation == nullptr, "Zero-initialized push beyond MemoryArena capacity should return nullptr.");
+    ASSERT_TRUE_MSG(overflowArray.Pointer == nullptr, "Array push beyond MemoryArena capacity should return an empty Span.");
+    ASSERT_EQ_MSG(0llu, overflowArray.Length, "Failed array allocation should return a zero-length Span.");
 
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(64llu, allocationInfos.AllocatedBytes);
+    ASSERT_EQ_MSG(64llu, allocationInfos.AllocatedBytes, "Failed pushes should not advance the MemoryArena beyond capacity.");
 }
 
 UTEST(Memory, ArenaSizeOverflowReturnsEmptyHandle)
@@ -94,7 +94,7 @@ UTEST(Memory, ArenaSizeOverflowReturnsEmptyHandle)
     auto memoryArena = SystemAllocateMemoryArena(SIZE_MAX);
 
     // Assert
-    ASSERT_TRUE(memoryArena.Storage == nullptr);
+    ASSERT_TRUE_MSG(memoryArena.Storage == nullptr, "MemoryArena allocation should fail when the requested capacity overflows internal size calculations.");
 }
 
 UTEST(Memory, PushSizeOverflowDoesNotAdvanceArena)
@@ -107,10 +107,10 @@ UTEST(Memory, PushSizeOverflowDoesNotAdvanceArena)
     auto array = SystemPushArray<uint64_t>(memoryArena, SIZE_MAX / sizeof(uint64_t) + 1, AllocationState_Reserved);
 
     // Assert
-    ASSERT_TRUE(allocation == nullptr);
-    ASSERT_TRUE(array.Pointer == nullptr);
-    ASSERT_EQ(0llu, array.Length);
-    ASSERT_EQ(0llu, SystemGetMemoryArenaAllocationInfos(memoryArena).AllocatedBytes);
+    ASSERT_TRUE_MSG(allocation == nullptr, "Memory push should reject a size that overflows alignment or range calculations.");
+    ASSERT_TRUE_MSG(array.Pointer == nullptr, "Array push should reject an element count whose byte size overflows.");
+    ASSERT_EQ_MSG(0llu, array.Length, "Overflowing array allocation should return a zero-length Span.");
+    ASSERT_EQ_MSG(0llu, SystemGetMemoryArenaAllocationInfos(memoryArena).AllocatedBytes, "Rejected overflow allocations should not advance the MemoryArena.");
 }
 
 UTEST(Memory, CommitReportsInvalidRange)
@@ -124,12 +124,12 @@ UTEST(Memory, CommitReportsInvalidRange)
     auto invalidCommit = SystemCommitMemory(memoryArena, allocation.Pointer + allocation.Length, 8);
 
     // Assert
-    ASSERT_TRUE(validCommit);
-    ASSERT_FALSE(invalidCommit);
+    ASSERT_TRUE_MSG(validCommit, "Committing a valid reserved MemoryArena range should succeed.");
+    ASSERT_FALSE_MSG(invalidCommit, "Committing a range outside the MemoryArena allocation should fail.");
 
     for (size_t i = 0; i < allocation.Length; i++)
     {
-        ASSERT_EQ(0, allocation[i]);
+        ASSERT_EQ_MSG(0, allocation[i], "Commit with clearMemory should zero newly committed memory.");
     }
 
     SystemFreeMemoryArena(memoryArena);
@@ -144,7 +144,7 @@ UTEST(Memory, ConcatBuffers)
     auto result = SystemConcatBuffers<char>(memoryArena, "Test1", "Test2");
 
     // Assert
-    ASSERT_STREQ("Test1Test2", result.Pointer);
+    ASSERT_STREQ_MSG("Test1Test2", result.Pointer, "Concatenated character buffer content is invalid.");
 }
 
 UTEST(Memory, StackMemoryArena)
@@ -195,10 +195,10 @@ UTEST(Memory, StackMemoryArena)
     auto string4 = SystemConcatBuffers<char>(stackMemoryArena1, "Test3", "Stack1");
 
     // Assert
-    ASSERT_STREQ("TestStack1", string1.Pointer);
-    ASSERT_STREQ("Test2Stack1", string2.Pointer);
-    ASSERT_STREQ("Test3Stack1", string4.Pointer);
-    ASSERT_STREQ("Test4Stack1", string5.Pointer);
+    ASSERT_STREQ_MSG("TestStack1", string1.Pointer, "Root stack-lifetime allocation should survive nested stack scopes.");
+    ASSERT_STREQ_MSG("Test2Stack1", string2.Pointer, "Allocation made through an ancestor stack arena should survive younger scopes.");
+    ASSERT_STREQ_MSG("Test3Stack1", string4.Pointer, "Root stack arena should remain usable after nested scopes are released.");
+    ASSERT_STREQ_MSG("Test4Stack1", string5.Pointer, "Deep ancestor allocation should preserve the ancestor stack lifetime.");
 }
 
 UTEST(Memory, StackMemoryArenaRelease)
@@ -245,11 +245,11 @@ UTEST(Memory, StackMemoryArenaRelease)
     }
 
     // Assert
-    ASSERT_STREQ("TestStack1", string1.Pointer);
-    ASSERT_STREQ("Test2Stack1", string2.Pointer);
-    ASSERT_STREQ("Test3Stack1", string3.Pointer);
-    ASSERT_STREQ("Test4Stack1", string4.Pointer);
-    ASSERT_STREQ("Test5Stack1", string5.Pointer);
+    ASSERT_STREQ_MSG("TestStack1", string1.Pointer, "Root stack allocation should survive every nested rollback.");
+    ASSERT_STREQ_MSG("Test2Stack1", string2.Pointer, "Ancestor allocation should survive the scope in which it was requested.");
+    ASSERT_STREQ_MSG("Test3Stack1", string3.Pointer, "Root lifetime allocation should remain valid after child scope release.");
+    ASSERT_STREQ_MSG("Test4Stack1", string4.Pointer, "Sibling stack scopes should restore offsets without corrupting ancestor allocations.");
+    ASSERT_STREQ_MSG("Test5Stack1", string5.Pointer, "Copied ancestor MemoryArena handle should preserve ancestor allocation lifetime.");
 }
 
 UTEST(Memory, StackAncestorAllocationUsesExtraStorageCapacity)
@@ -266,8 +266,8 @@ UTEST(Memory, StackAncestorAllocationUsesExtraStorageCapacity)
     }
 
     // Assert
-    ASSERT_TRUE(mainAllocation != nullptr);
-    ASSERT_TRUE(ancestorAllocation != nullptr);
+    ASSERT_TRUE_MSG(mainAllocation != nullptr, "Large root stack allocation should fit in the main stack arena storage.");
+    ASSERT_TRUE_MSG(ancestorAllocation != nullptr, "Ancestor stack allocation should use extra storage when main stack storage is exhausted.");
 }
 
 UTEST(Memory, AllocateReserved)
@@ -281,8 +281,8 @@ UTEST(Memory, AllocateReserved)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
-    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.MaximumSizeInBytes);
+    ASSERT_EQ_MSG(dataSizeInBytes, allocationInfos.AllocatedBytes, "Reserved MemoryArena allocation should advance the logical allocated byte count.");
+    ASSERT_LT_MSG(allocationInfos.CommittedBytes, allocationInfos.MaximumSizeInBytes, "Reserved allocation should not commit the entire MemoryArena capacity.");
 }
 
 UTEST(Memory, AllocateReservedCommit)
@@ -313,9 +313,9 @@ UTEST(Memory, AllocateReservedCommit)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
-    ASSERT_EQ(maxSizeInBytes, allocationInfos.MaximumSizeInBytes);
-    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+    ASSERT_EQ_MSG(dataSizeInBytes, allocationInfos.AllocatedBytes, "Committing reserved ranges should not change the logical allocation size.");
+    ASSERT_EQ_MSG(maxSizeInBytes, allocationInfos.MaximumSizeInBytes, "MemoryArena maximum data capacity should remain unchanged after commits.");
+    ASSERT_LT_MSG(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes, "Committing small subranges should not commit the entire reserved allocation.");
 }
 
 UTEST(Memory, AllocateReservedDecommit)
@@ -347,7 +347,7 @@ UTEST(Memory, AllocateReservedDecommit)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(dataSizeInBytes, allocationInfos.AllocatedBytes);
-    ASSERT_EQ(maxSizeInBytes, allocationInfos.MaximumSizeInBytes);
-    ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
+    ASSERT_EQ_MSG(dataSizeInBytes, allocationInfos.AllocatedBytes, "Decommitting memory should not release the logical MemoryArena allocation.");
+    ASSERT_EQ_MSG(maxSizeInBytes, allocationInfos.MaximumSizeInBytes, "Decommitting memory should not change MemoryArena capacity.");
+    ASSERT_LT_MSG(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes, "Decommitting reserved ranges should leave only the required committed pages.");
 }
