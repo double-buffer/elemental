@@ -205,49 +205,154 @@ void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes);
  * Allocates a contiguous array from a MemoryArena.
  *
  * The returned Span references arena-owned memory and remains valid only for the lifetime of the
- * corresponding arena allocation context.
+ * corresponding arena allocation context. Element storage is not initialized by this helper.
+ *
+ * @tparam T Element type to allocate.
+ * @param memoryArena MemoryArena that provides the allocation lifetime.
+ * @param count Number of elements to allocate.
+ * @param state Initial allocation state for the underlying memory.
+ * @return Span referencing the allocated array, or an empty Span when the requested size overflows
+ * or the arena cannot satisfy/commit the allocation.
  */
 template<typename T>
 Span<T> SystemPushArray(MemoryArena memoryArena, size_t count, AllocationState state = AllocationState_Committed);
 
 /**
- * Allocates a contiguous array and initializes it to zero.
+ * Allocates a contiguous array from a MemoryArena and initializes its storage to zero.
+ *
+ * @tparam T Element type to allocate.
+ * @param memoryArena MemoryArena that provides the allocation lifetime.
+ * @param count Number of elements to allocate and clear.
+ * @return Span referencing the zero-initialized array, or an empty Span when the requested size
+ * overflows or the arena cannot satisfy/commit the allocation.
  */
 template<typename T>
 Span<T> SystemPushArrayZero(MemoryArena memoryArena, size_t count);
 
 /**
- * Allocates a zero-initialized char array with an additional zero terminator after the returned Span.
+ * Allocates a zero-initialized char array with an additional null terminator after the returned Span.
+ *
+ * The returned Span Length is exactly count and excludes the terminator. The backing allocation
+ * contains count + 1 bytes so Pointer can be consumed by APIs expecting a null-terminated string.
+ *
+ * @param memoryArena MemoryArena that provides the allocation lifetime.
+ * @param count Logical number of characters in the returned Span.
+ * @return Span referencing count zero-initialized characters, or an empty Span on failure.
  */
 template<>
 Span<char> SystemPushArrayZero(MemoryArena memoryArena, size_t count);
 
 /**
- * Allocates a zero-initialized wchar_t array with an additional zero terminator after the returned Span.
+ * Allocates a zero-initialized wchar_t array with an additional null terminator after the returned Span.
+ *
+ * The returned Span Length is exactly count and excludes the terminator. The backing allocation
+ * contains count + 1 wchar_t elements.
+ *
+ * @param memoryArena MemoryArena that provides the allocation lifetime.
+ * @param count Logical number of wide characters in the returned Span.
+ * @return Span referencing count zero-initialized wide characters, or an empty Span on failure.
  */
 template<>
 Span<wchar_t> SystemPushArrayZero(MemoryArena memoryArena, size_t count);
 
+/**
+ * Allocates storage for one object from a MemoryArena without initializing it.
+ *
+ * @tparam T Object type to allocate.
+ * @param memoryArena MemoryArena that provides the allocation lifetime.
+ * @return Pointer to arena-owned storage for one T, or nullptr when the allocation cannot be
+ * satisfied/committed.
+ */
 template<typename T>
 T* SystemPushStruct(MemoryArena memoryArena);
 
+/**
+ * Allocates storage for one object from a MemoryArena and initializes its bytes to zero.
+ *
+ * This is raw zero-initialization of the allocated storage; constructors are not invoked.
+ *
+ * @tparam T Object type to allocate.
+ * @param memoryArena MemoryArena that provides the allocation lifetime.
+ * @return Pointer to zero-initialized arena-owned storage for one T, or nullptr on failure.
+ */
 template<typename T>
 T* SystemPushStructZero(MemoryArena memoryArena);
 
+/**
+ * Copies all elements from a source buffer into an existing destination buffer.
+ *
+ * The destination must contain at least source.Length elements. When it is smaller, the function
+ * logs an error and does not perform a partial copy.
+ *
+ * @tparam T Element type of both buffers.
+ * @param destination Writable destination buffer.
+ * @param source Source buffer to copy.
+ */
 template<typename T>
 void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source);
 
+/**
+ * Allocates a new buffer from a MemoryArena and copies the source elements into it.
+ *
+ * @tparam T Element type of the source and destination buffers.
+ * @param memoryArena MemoryArena that provides the duplicated buffer lifetime.
+ * @param source Buffer to duplicate.
+ * @return Span referencing the copied elements, or an empty Span when allocation fails.
+ */
 template<typename T>
 Span<T> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<T> source);
 
+/**
+ * Duplicates a character buffer and appends a null terminator in the backing allocation.
+ *
+ * The returned Span preserves source.Length exactly; the terminator is stored immediately after
+ * the logical Span and is not included in Length.
+ *
+ * @param memoryArena MemoryArena that provides the duplicated buffer lifetime.
+ * @param source Character buffer to duplicate.
+ * @return Span containing a copy of source with a trailing null terminator, or an empty Span on
+ * allocation failure.
+ */
 template<>
 Span<char> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<char> source);
 
+/**
+ * Allocates a new buffer containing buffer1 immediately followed by buffer2.
+ *
+ * @tparam T Element type of both input buffers.
+ * @param memoryArena MemoryArena that provides the concatenated buffer lifetime.
+ * @param buffer1 First buffer in the result.
+ * @param buffer2 Second buffer in the result.
+ * @return Span whose Length is buffer1.Length + buffer2.Length, or an empty Span when the combined
+ * length overflows or allocation fails.
+ */
 template<typename T>
 Span<T> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<T> buffer1, ReadOnlySpan<T> buffer2);
 
+/**
+ * Concatenates two character buffers and appends a null terminator in the backing allocation.
+ *
+ * The returned Span Length is the sum of the two logical input lengths and excludes the terminator.
+ *
+ * @param memoryArena MemoryArena that provides the concatenated buffer lifetime.
+ * @param buffer1 First character buffer in the result.
+ * @param buffer2 Second character buffer in the result.
+ * @return Null-terminated concatenated character Span, or an empty Span on overflow/allocation
+ * failure.
+ */
 template<>
 Span<char> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<char> buffer1, ReadOnlySpan<char> buffer2);
 
+/**
+ * Concatenates two wide-character buffers and appends a null terminator in the backing allocation.
+ *
+ * The returned Span Length is the sum of the two logical input lengths and excludes the terminator.
+ *
+ * @param memoryArena MemoryArena that provides the concatenated buffer lifetime.
+ * @param buffer1 First wide-character buffer in the result.
+ * @param buffer2 Second wide-character buffer in the result.
+ * @return Null-terminated concatenated wide-character Span, or an empty Span on
+ * overflow/allocation failure.
+ */
 template<>
 Span<wchar_t> SystemConcatBuffers(MemoryArena memoryArena, ReadOnlySpan<wchar_t> buffer1, ReadOnlySpan<wchar_t> buffer2);
