@@ -1,16 +1,16 @@
 #include "utest.h"
 
 #include "MemoryTests.cpp"
-#include "MemoryRobustnessTests.cpp"
+#include "MemoryConcurrentTests.cpp"
 #include "SpanTests.cpp"
 #include "MathTests.cpp"
 #include "StringTests.cpp"
 #include "IOTests.cpp"
 #include "LibraryProcessTests.cpp"
 #include "DictionaryTests.cpp"
-#include "DictionaryRobustnessTests.cpp"
+#include "DictionaryConcurrentTests.cpp"
 #include "DataPoolTests.cpp"
-#include "DataPoolRobustnessTests.cpp"
+#include "DataPoolConcurrentTests.cpp"
 
 #ifndef _WIN32
 #include "PosixPlatformFunctions.cpp"
@@ -45,7 +45,7 @@ void LogMessageHandler(ElemLogMessageType messageType, ElemLogMessageCategory, c
 
 UTEST_STATE();
 
-int main(int argc, const char *const argv[]) 
+int main(int argc, const char *const argv[])
 {
     #ifdef _DEBUG
     SystemRegisterLogHandler(LogMessageHandler);
