@@ -4,39 +4,79 @@
 
 struct MemoryArenaStorage;
 
+/**
+ * Defines the initial virtual-memory state of a MemoryArena allocation.
+ */
 enum AllocationState
 {
-    AllocationState_Committed,
-    AllocationState_Reserved
+    AllocationState_Committed, ///< The allocation is committed and can be accessed immediately.
+    AllocationState_Reserved   ///< The allocation reserves arena space but must be committed before access.
 };
 
+/**
+ * Process-wide virtual-memory allocation counters maintained by the platform layer.
+ *
+ * These values describe virtual memory managed through Foundations platform-memory functions. They
+ * are accounting information rather than ownership handles and can change concurrently as other
+ * threads reserve, commit, decommit, or release memory.
+ */
 struct AllocationInfos
 {
-    size_t CommittedBytes;
-    size_t ReservedBytes;
+    size_t CommittedBytes; ///< Number of bytes currently committed through the platform layer.
+    size_t ReservedBytes;  ///< Number of bytes currently reserved through the platform layer.
 };
 
+/**
+ * Lightweight value handle to MemoryArena storage.
+ *
+ * Copying a MemoryArena copies only the handle; all copies reference the same MemoryArenaStorage.
+ * MemoryArena performs no ownership tracking, reference counting, or automatic lifetime management.
+ * Releasing the storage through any copied handle invalidates every other handle and every allocation
+ * produced from that storage.
+ *
+ * Level is zero for regular arenas. Handles obtained from StackMemoryArena use Level to carry the
+ * stack lifetime that allocations made through that handle must follow.
+ */
 struct MemoryArena
 {
-    MemoryArenaStorage* Storage;
-    uint8_t Level;
+    MemoryArenaStorage* Storage; ///< Shared allocator and virtual-memory state referenced by this handle.
+    uint8_t Level;               ///< Stack lifetime level, or zero for a regular MemoryArena.
 };
 
+/**
+ * Allocation state of a single MemoryArena.
+ */
 struct MemoryArenaAllocationInfos
 {
-    size_t AllocatedBytes;
-    size_t CommittedBytes;
-    size_t MaximumSizeInBytes;
+    size_t AllocatedBytes;      ///< Logical data bytes currently allocated from the arena.
+    size_t CommittedBytes;      ///< Physically committed bytes, including the arena's internal header pages.
+    size_t MaximumSizeInBytes;  ///< Maximum logical data capacity requested for the arena.
 };
 
+/**
+ * Scoped thread-local MemoryArena lifetime.
+ *
+ * Creating a StackMemoryArena enters a nested stack lifetime. Destroying it rolls back allocations
+ * made with that lifetime while preserving allocations explicitly made through ancestor MemoryArena
+ * handles. The contained MemoryArena is the value intended to be copied and passed to callees.
+ *
+ * StackMemoryArena itself must not be copied. A MemoryArena obtained from it must not outlive the
+ * corresponding stack scope. StackMemoryArena is thread-local and must not be shared across threads.
+ */
 struct StackMemoryArena
 {
-    MemoryArena Arena;
-    size_t StartOffsetInBytes;
-    size_t StartExtraOffsetInBytes;
+    MemoryArena Arena;               ///< Value handle representing this stack lifetime.
+    size_t StartOffsetInBytes;        ///< Main stack-storage offset restored when the scope ends.
+    size_t StartExtraOffsetInBytes;   ///< Extra-storage offset restored when the scope ends.
 
+    /**
+     * Ends the stack lifetime and rolls back allocations owned by this scope.
+     */
     ~StackMemoryArena();
 
+    /**
+     * Returns the lightweight MemoryArena handle for this stack lifetime.
+     */
     operator MemoryArena() const
     {
         return Arena;
