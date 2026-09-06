@@ -101,7 +101,7 @@ UTEST(MemoryConcurrent, Push)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(maxSize, allocationInfos.AllocatedBytes);
+    ASSERT_EQ_MSG(maxSize, allocationInfos.AllocatedBytes, "Concurrent MemoryArena pushes should reserve every requested byte exactly once.");
 }
 
 UTEST(MemoryConcurrent, PushDoesNotOverflow)
@@ -144,16 +144,16 @@ UTEST(MemoryConcurrent, PushDoesNotOverflow)
             {
                 if (results[j] != nullptr)
                 {
-                    ASSERT_TRUE(results[i] != results[j]);
+                    ASSERT_TRUE_MSG(results[i] != results[j], "Concurrent MemoryArena pushes must never return the same allocation address twice.");
                 }
             }
         }
     }
 
-    ASSERT_EQ(capacityCount, successCount);
+    ASSERT_EQ_MSG(capacityCount, successCount, "Concurrent MemoryArena pushes should stop exactly at arena capacity.");
 
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(capacityCount * allocationSizeInBytes, allocationInfos.AllocatedBytes);
+    ASSERT_EQ_MSG(capacityCount * allocationSizeInBytes, allocationInfos.AllocatedBytes, "Concurrent overflow attempts must not advance the MemoryArena beyond capacity.");
 }
 
 UTEST(MemoryConcurrent, CommitSharedPage)
@@ -183,13 +183,13 @@ UTEST(MemoryConcurrent, CommitSharedPage)
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(committedBytesBefore + pageSizeInBytes, allocationInfos.CommittedBytes);
+    ASSERT_EQ_MSG(committedBytesBefore + pageSizeInBytes, allocationInfos.CommittedBytes, "Concurrent commits within one data page should commit that page exactly once.");
 
     for (int32_t i = 0; i < threadCount; i++)
     {
         for (size_t j = 0; j < rangeSizeInBytes; j++)
         {
-            ASSERT_EQ((uint8_t)(i + 1), buffer[i * rangeSizeInBytes + j]);
+            ASSERT_EQ_MSG((uint8_t)(i + 1), buffer[i * rangeSizeInBytes + j], "Concurrent shared-page commits should preserve each thread's written range.");
         }
     }
 }
@@ -220,12 +220,12 @@ UTEST(MemoryConcurrent, ArenaAllocationAccounting)
     // Assert
     for (int32_t i = 0; i < threadCount; i++)
     {
-        ASSERT_TRUE(memoryArenas[i].Storage != nullptr);
+        ASSERT_TRUE_MSG(memoryArenas[i].Storage != nullptr, "Concurrent MemoryArena creation should return valid storage for every thread.");
     }
 
     auto allocationInfosAfterAllocate = SystemGetAllocationInfos();
-    ASSERT_EQ(allocationInfosBefore.ReservedBytes + threadCount * pageSizeInBytes * 2, allocationInfosAfterAllocate.ReservedBytes);
-    ASSERT_EQ(allocationInfosBefore.CommittedBytes + threadCount * pageSizeInBytes, allocationInfosAfterAllocate.CommittedBytes);
+    ASSERT_EQ_MSG(allocationInfosBefore.ReservedBytes + threadCount * pageSizeInBytes * 2, allocationInfosAfterAllocate.ReservedBytes, "Concurrent MemoryArena creation should update reserved-byte accounting exactly once per arena.");
+    ASSERT_EQ_MSG(allocationInfosBefore.CommittedBytes + threadCount * pageSizeInBytes, allocationInfosAfterAllocate.CommittedBytes, "Concurrent MemoryArena creation should account for each committed header exactly once.");
 
     for (int32_t i = 0; i < threadCount; i++)
     {
@@ -233,6 +233,6 @@ UTEST(MemoryConcurrent, ArenaAllocationAccounting)
     }
 
     auto allocationInfosAfterFree = SystemGetAllocationInfos();
-    ASSERT_EQ(allocationInfosBefore.ReservedBytes, allocationInfosAfterFree.ReservedBytes);
-    ASSERT_EQ(allocationInfosBefore.CommittedBytes, allocationInfosAfterFree.CommittedBytes);
+    ASSERT_EQ_MSG(allocationInfosBefore.ReservedBytes, allocationInfosAfterFree.ReservedBytes, "Freeing concurrently created arenas should restore reserved-byte accounting to the baseline.");
+    ASSERT_EQ_MSG(allocationInfosBefore.CommittedBytes, allocationInfosAfterFree.CommittedBytes, "Freeing concurrently created arenas should restore committed-byte accounting to the baseline.");
 }
