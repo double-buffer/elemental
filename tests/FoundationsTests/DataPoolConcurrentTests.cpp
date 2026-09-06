@@ -133,7 +133,7 @@ UTEST(DataPoolConcurrent, Add)
     }
 
     // Assert
-    ASSERT_EQ(itemCount, (int32_t)SystemGetDataPoolItemCount(dataPool));
+    ASSERT_EQ_MSG(itemCount, (int32_t)SystemGetDataPoolItemCount(dataPool), "Concurrent DataPool insertion should publish every requested item.");
 
     for (int32_t i = 0; i < threadCount; i++)
     {
@@ -145,11 +145,11 @@ UTEST(DataPoolConcurrent, Add)
             auto data = SystemGetDataPoolItem(dataPool, threadParameter.Handles[j]);
             auto dataFull = SystemGetDataPoolItemFull(dataPool, threadParameter.Handles[j]);
 
-            ASSERT_EQ(expectedValue, data->Value);
-            ASSERT_EQ(expectedValue, dataFull->Value1);
-            ASSERT_EQ(expectedValue + 1, dataFull->Value2);
-            ASSERT_EQ(expectedValue + 2, dataFull->Value3);
-            ASSERT_EQ(expectedValue + 3, dataFull->Value4);
+            ASSERT_EQ_MSG(expectedValue, data->Value, "Concurrent DataPool insertion corrupted primary item data.");
+            ASSERT_EQ_MSG(expectedValue, dataFull->Value1, "Concurrent DataPool insertion corrupted full item Value1.");
+            ASSERT_EQ_MSG(expectedValue + 1, dataFull->Value2, "Concurrent DataPool insertion corrupted full item Value2.");
+            ASSERT_EQ_MSG(expectedValue + 2, dataFull->Value3, "Concurrent DataPool insertion corrupted full item Value3.");
+            ASSERT_EQ_MSG(expectedValue + 3, dataFull->Value4, "Concurrent DataPool insertion corrupted full item Value4.");
         }
     }
 
@@ -204,7 +204,7 @@ UTEST(DataPoolConcurrent, AddAndRemove)
     }
 
     // Assert
-    ASSERT_EQ((size_t)itemCount / 2, SystemGetDataPoolItemCount(dataPool));
+    ASSERT_EQ_MSG((size_t)itemCount / 2, SystemGetDataPoolItemCount(dataPool), "Concurrent DataPool add/remove should preserve the expected final item count.");
     SystemFreeMemoryArena(memoryArena);
 }
 
@@ -249,13 +249,13 @@ UTEST(DataPoolConcurrent, AddStopsAtCapacity)
         {
             if (handles[j] != ELEM_HANDLE_NULL)
             {
-                ASSERT_TRUE(handleInfo.Index != UnpackSystemDataPoolHandle(handles[j]).Index);
+                ASSERT_TRUE_MSG(handleInfo.Index != UnpackSystemDataPoolHandle(handles[j]).Index, "Concurrent DataPool allocations must never publish the same slot twice.");
             }
         }
     }
 
-    ASSERT_EQ(capacity, successCount);
-    ASSERT_EQ((size_t)capacity, SystemGetDataPoolItemCount(dataPool));
+    ASSERT_EQ_MSG(capacity, successCount, "Concurrent DataPool insertion should stop exactly at pool capacity.");
+    ASSERT_EQ_MSG((size_t)capacity, SystemGetDataPoolItemCount(dataPool), "DataPool item count should never exceed capacity under contention.");
     SystemFreeMemoryArena(memoryArena);
 }
 
@@ -283,13 +283,13 @@ UTEST(DataPoolConcurrent, RemoveSameHandleOnlyFreesOnce)
     }
 
     // Assert
-    ASSERT_EQ(0llu, SystemGetDataPoolItemCount(dataPool));
+    ASSERT_EQ_MSG(0llu, SystemGetDataPoolItemCount(dataPool), "Concurrent removal of one handle should decrement the pool count exactly once.");
 
     auto reusedHandle = SystemAddDataPoolItem(dataPool, DataPoolConcurrentTestData { 100 });
     auto overflowHandle = SystemAddDataPoolItem(dataPool, DataPoolConcurrentTestData { 200 });
-    ASSERT_TRUE(reusedHandle != ELEM_HANDLE_NULL);
-    ASSERT_TRUE(overflowHandle == ELEM_HANDLE_NULL);
-    ASSERT_EQ(1llu, SystemGetDataPoolItemCount(dataPool));
+    ASSERT_TRUE_MSG(reusedHandle != ELEM_HANDLE_NULL, "Slot removed concurrently should remain reusable exactly once.");
+    ASSERT_TRUE_MSG(overflowHandle == ELEM_HANDLE_NULL, "A concurrently removed slot must not be recycled more than once.");
+    ASSERT_EQ_MSG(1llu, SystemGetDataPoolItemCount(dataPool), "DataPool count should remain consistent after duplicate concurrent removal attempts.");
     SystemFreeMemoryArena(memoryArena);
 }
 
@@ -318,23 +318,23 @@ UTEST(DataPoolConcurrent, ReuseKeepsSlotsUnique)
     }
 
     // Assert
-    ASSERT_EQ((size_t)threadCount, SystemGetDataPoolItemCount(dataPool));
+    ASSERT_EQ_MSG((size_t)threadCount, SystemGetDataPoolItemCount(dataPool), "Concurrent remove/reuse cycles should preserve the total live item count.");
 
     for (int32_t i = 0; i < threadCount; i++)
     {
-        ASSERT_FALSE(threadParameters[i].Failed);
-        ASSERT_TRUE(threadParameters[i].Handle != ELEM_HANDLE_NULL);
+        ASSERT_FALSE_MSG(threadParameters[i].Failed, "Concurrent DataPool remove/reuse unexpectedly exhausted a reusable pool.");
+        ASSERT_TRUE_MSG(threadParameters[i].Handle != ELEM_HANDLE_NULL, "Concurrent DataPool remove/reuse should leave every thread with a valid handle.");
 
         auto data = SystemGetDataPoolItem(dataPool, threadParameters[i].Handle);
-        ASSERT_TRUE(data != nullptr);
-        ASSERT_EQ((((uint64_t)i << 32) | (iterationCount - 1)), data->Value);
+        ASSERT_TRUE_MSG(data != nullptr, "Final DataPool handle should resolve after concurrent reuse cycles.");
+        ASSERT_EQ_MSG((((uint64_t)i << 32) | (iterationCount - 1)), data->Value, "Concurrent DataPool reuse corrupted final item data.");
 
         auto handleInfo = UnpackSystemDataPoolHandle(threadParameters[i].Handle);
 
         for (int32_t j = i + 1; j < threadCount; j++)
         {
             auto otherHandleInfo = UnpackSystemDataPoolHandle(threadParameters[j].Handle);
-            ASSERT_TRUE(handleInfo.Index != otherHandleInfo.Index);
+            ASSERT_TRUE_MSG(handleInfo.Index != otherHandleInfo.Index, "Concurrent DataPool reuse must not assign one slot to multiple live handles.");
         }
     }
 
