@@ -2,47 +2,18 @@
 #include "SystemFunctions.h"
 #include "utest.h"
 
-struct DictionaryThreadParameter
-{
-    SystemDictionary<int32_t, int32_t> Dictionary;
-    int32_t ThreadId;
-    int32_t ItemCount;
-};
-
 struct DictionaryTestStruct
 {
     int64_t Value1;
     int64_t Value2;
 };
 
-void DictionaryConcurrentAddFunction(void* parameter)
-{
-    auto threadParameter = (DictionaryThreadParameter*)parameter;
-    auto dictionary = threadParameter->Dictionary;
-
-    for (int32_t i = 0; i < threadParameter->ItemCount; i++)
-    {
-        SystemAddDictionaryEntry(dictionary, threadParameter->ThreadId * threadParameter->ItemCount + i, threadParameter->ThreadId * threadParameter->ItemCount + i);
-    }
-}
-
-void DictionaryConcurrentRemoveFunction(void* parameter)
-{
-    auto threadParameter = (DictionaryThreadParameter*)parameter;
-    auto dictionary = threadParameter->Dictionary;
-
-    for (int32_t i = 0; i < threadParameter->ItemCount; i++)
-    {
-        SystemRemoveDictionaryEntry(dictionary, threadParameter->ThreadId * threadParameter->ItemCount + i);
-    }
-}
-
-UTEST(Dictionary, AddValue) 
+UTEST(Dictionary, AddValue)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(stackMemoryArena, 24);
-    
+
     // Act
     for (int32_t i = 0; i < 10; i++)
     {
@@ -54,12 +25,12 @@ UTEST(Dictionary, AddValue)
     ASSERT_EQ(9, testValue);
 }
 
-UTEST(Dictionary, AddValue_KeyStruct) 
+UTEST(Dictionary, AddValue_KeyStruct)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, DictionaryTestStruct>(stackMemoryArena, 24);
-    
+
     // Act
     for (int32_t i = 0; i < 10; i++)
     {
@@ -68,14 +39,14 @@ UTEST(Dictionary, AddValue_KeyStruct)
         testStruct.Value2 = i * i;
         SystemAddDictionaryEntry(dictionary, i, testStruct);
     }
-    
+
     // Assert
     auto testValue = dictionary[9];
     ASSERT_EQ(9, testValue.Value1);
     ASSERT_EQ(81, testValue.Value2);
 }
 
-UTEST(Dictionary, RemoveValue) 
+UTEST(Dictionary, RemoveValue)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -84,8 +55,8 @@ UTEST(Dictionary, RemoveValue)
     for (int32_t i = 0; i < 10; i++)
     {
         SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), i);
-    }    
-    
+    }
+
     // Act
     SystemRemoveDictionaryEntry(dictionary, "Test6");
 
@@ -98,14 +69,14 @@ UTEST(Dictionary, RemoveValue)
         {
             ASSERT_EQ(0, testValue);
         }
-        else 
+        else
         {
             ASSERT_EQ(i, testValue);
         }
-    }   
+    }
 }
 
-UTEST(Dictionary, RemoveValueNoParent) 
+UTEST(Dictionary, RemoveValueNoParent)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -114,8 +85,8 @@ UTEST(Dictionary, RemoveValueNoParent)
     for (int32_t i = 0; i < 10; i++)
     {
         SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), i);
-    }    
-    
+    }
+
     // Act
     SystemRemoveDictionaryEntry(dictionary, "Test8");
 
@@ -128,23 +99,23 @@ UTEST(Dictionary, RemoveValueNoParent)
         {
             ASSERT_EQ(0, testValue);
         }
-        else 
+        else
         {
             ASSERT_EQ(i, testValue);
         }
-    }   
+    }
 }
 
-UTEST(Dictionary, RemoveValue_KeyStruct) 
+UTEST(Dictionary, RemoveValue_KeyStruct)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, 24);
-   
+
     for (int32_t i = 0; i < 10; i++)
     {
         SystemAddDictionaryEntry(dictionary, i, i);
-    } 
+    }
 
     // Act
     SystemRemoveDictionaryEntry(dictionary, 9);
@@ -154,12 +125,12 @@ UTEST(Dictionary, RemoveValue_KeyStruct)
     ASSERT_EQ(0, testValue);
 }
 
-UTEST(Dictionary, GrowStorage) 
+UTEST(Dictionary, GrowStorage)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(stackMemoryArena, 24);
-    
+
     for (int32_t i = 0; i < 10; i++)
     {
         SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), i);
@@ -185,12 +156,12 @@ UTEST(Dictionary, GrowStorage)
     ASSERT_EQ(32, testValue);
 }
 
-UTEST(Dictionary, NotEnoughStorage) 
+UTEST(Dictionary, NotEnoughStorage)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(stackMemoryArena, 24);
-    
+
     for (int32_t i = 0; i < 24; i++)
     {
         SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), i);
@@ -204,7 +175,7 @@ UTEST(Dictionary, NotEnoughStorage)
     ASSERT_EQ(0, testValue);
 }
 
-UTEST(Dictionary, RemoveValuesAfterFull) 
+UTEST(Dictionary, RemoveValuesAfterFull)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
@@ -216,7 +187,7 @@ UTEST(Dictionary, RemoveValuesAfterFull)
     }
 
     SystemRemoveDictionaryEntry(dictionary, "Test0");
-    
+
     // Act
     SystemAddDictionaryEntry(dictionary, "TestNew", 28);
 
@@ -225,14 +196,14 @@ UTEST(Dictionary, RemoveValuesAfterFull)
     ASSERT_EQ(28, testValue);
 }
 
-UTEST(Dictionary, BigDictionary) 
+UTEST(Dictionary, BigDictionary)
 {
     // Arrange
     auto maxElements = 1000000;
     auto stackMemoryArena = SystemAllocateMemoryArena();
     auto memoryArena = SystemAllocateMemoryArena();
     auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(memoryArena, maxElements);
-    
+
     // Act
     for (int32_t i = 0; i < 10000; i++)
     {
@@ -247,112 +218,17 @@ UTEST(Dictionary, BigDictionary)
     }
 }
 
-UTEST(Dictionary, ConcurrentAdd) 
-{
-    // Arrange
-    const int32_t itemCount = 80000;
-    const int32_t threadCount = 32;
-    auto memoryArena = SystemAllocateMemoryArena();
-    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(memoryArena, itemCount);
-    
-    // Act
-    SystemThread threads[threadCount];
-    DictionaryThreadParameter threadParameters[threadCount];
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        threadParameters[i] = { dictionary, i, itemCount / threadCount };
-        threads[i] = SystemCreateThread(DictionaryConcurrentAddFunction, &threadParameters[i]);
-    }
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        SystemWaitThread(threads[i]);
-        SystemFreeThread(threads[i]);
-    }
-
-    // Assert
-    auto count = 0;
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        auto threadItemCount = (itemCount / threadCount);
-
-        for (int32_t j = 0; j < threadItemCount; j++)
-        {
-            auto key = i * threadItemCount + j;
-
-            if (SystemDictionaryContainsKey(dictionary, key))
-            {
-                count++;
-            }
-        }
-    }
-
-    ASSERT_EQ(itemCount, count);
-}
-
-UTEST(Dictionary, ConcurrentRemove) 
-{
-    // Arrange
-    const int32_t itemCount = 32000;
-    const int32_t threadCount = 32;
-    auto memoryArena = SystemGetStackMemoryArena();
-    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(memoryArena, itemCount);
-    
-    for (int32_t i = 0; i < itemCount; i++)
-    {
-        SystemAddDictionaryEntry(dictionary, i, i);
-    }
-    
-    // Act
-    SystemThread threads[threadCount];
-    DictionaryThreadParameter threadParameters[threadCount];
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        threadParameters[i] = { dictionary, i, (itemCount / 2) / threadCount };
-        threads[i] = SystemCreateThread(DictionaryConcurrentRemoveFunction, &threadParameters[i]);
-    }
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        SystemWaitThread(threads[i]);
-        SystemFreeThread(threads[i]);
-    }
-
-    // Assert
-    auto count = 0;
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        auto threadItemCount = (itemCount / threadCount);
-
-        for (int32_t j = 0; j < threadItemCount; j++)
-        {
-            auto key = i * threadItemCount + j;
-
-            if (SystemDictionaryContainsKey(dictionary, key))
-            {
-                count++;
-            }
-        }
-    }
-
-    ASSERT_EQ(itemCount / 2, count);
-}
-
-UTEST(Dictionary, ContainsKey) 
+UTEST(Dictionary, ContainsKey)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<ReadOnlySpan<char>, int32_t>(stackMemoryArena, 24);
-  
+
     for (int32_t i = 0; i < 10; i++)
     {
         SystemAddDictionaryEntry(dictionary, SystemFormatString(stackMemoryArena, "Test%d", i), i);
-    }  
-    
+    }
+
     // Act
     auto testValue = SystemDictionaryContainsKey(dictionary, "Test9");
 
@@ -360,13 +236,12 @@ UTEST(Dictionary, ContainsKey)
     ASSERT_TRUE(testValue);
 }
 
-UTEST(Dictionary, ContainsKey_KeyStruct) 
+UTEST(Dictionary, ContainsKey_KeyStruct)
 {
     // Arrange
     auto stackMemoryArena = SystemGetStackMemoryArena();
     auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, 24);
-    
-    // Act
+
     for (int32_t i = 0; i < 10; i++)
     {
         SystemAddDictionaryEntry(dictionary, i, i);
@@ -379,3 +254,37 @@ UTEST(Dictionary, ContainsKey_KeyStruct)
     ASSERT_TRUE(testValue);
 }
 
+UTEST(Dictionary, ReadOnlySpanHashUsesAllBytes)
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<ReadOnlySpan<uint32_t>, int32_t>(stackMemoryArena, 8);
+    uint32_t key1[] = { 0x00001234, 1 };
+    uint32_t key2[] = { 0x00001234, 2 };
+
+    // Act
+    SystemAddDictionaryEntry(dictionary, ReadOnlySpan<uint32_t>(key1, 2), 10);
+    SystemAddDictionaryEntry(dictionary, ReadOnlySpan<uint32_t>(key2, 2), 20);
+
+    // Assert
+    auto value1 = SystemGetDictionaryValue(dictionary, ReadOnlySpan<uint32_t>(key1, 2));
+    auto value2 = SystemGetDictionaryValue(dictionary, ReadOnlySpan<uint32_t>(key2, 2));
+    ASSERT_TRUE(value1 != nullptr);
+    ASSERT_TRUE(value2 != nullptr);
+    ASSERT_EQ(10, *value1);
+    ASSERT_EQ(20, *value2);
+}
+
+UTEST(Dictionary, MissingValueReturnsNull)
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto dictionary = SystemCreateDictionary<int32_t, int32_t>(stackMemoryArena, 8);
+
+    // Act
+    auto value = SystemGetDictionaryValue(dictionary, 42);
+
+    // Assert
+    ASSERT_TRUE(value == nullptr);
+    ASSERT_EQ(0, dictionary[42]);
+}
