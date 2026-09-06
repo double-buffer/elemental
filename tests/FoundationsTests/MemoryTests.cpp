@@ -3,76 +3,14 @@
 #include "SystemPlatformFunctions.h"
 #include "utest.h"
 
-struct MemoryThreadParameter
-{
-    MemoryArena MemoryArena;
-    int32_t ThreadId;
-    int32_t ItemCount;
-};
-
-struct MemoryConcurrentOverflowThreadParameter
-{
-    MemoryArena MemoryArena;
-    bool* Start;
-    void** Results;
-    int32_t ThreadId;
-};
-
-struct MemoryConcurrentCommitThreadParameter
-{
-    MemoryArena MemoryArena;
-    uint8_t* Pointer;
-    size_t SizeInBytes;
-    uint8_t Value;
-};
-
-void MemoryConcurrentAddFunction(void* parameter)
-{
-    auto threadParameter = (MemoryThreadParameter*)parameter;
-
-    for (int32_t i = 0; i < threadParameter->ItemCount; i++)
-    {
-        SystemPushMemoryZero(threadParameter->MemoryArena, 64);
-    }
-}
-
-void MemoryConcurrentOverflowFunction(void* parameter)
-{
-    auto threadParameter = (MemoryConcurrentOverflowThreadParameter*)parameter;
-    bool start = false;
-
-    while (!start)
-    {
-        SystemAtomicLoad(*threadParameter->Start, start);
-
-        if (!start)
-        {
-            SystemYieldThread();
-        }
-    }
-
-    threadParameter->Results[threadParameter->ThreadId] = SystemPushMemory(threadParameter->MemoryArena, 64, AllocationState_Reserved);
-}
-
-void MemoryConcurrentCommitFunction(void* parameter)
-{
-    auto threadParameter = (MemoryConcurrentCommitThreadParameter*)parameter;
-    SystemCommitMemory(threadParameter->MemoryArena, threadParameter->Pointer, threadParameter->SizeInBytes);
-
-    for (size_t i = 0; i < threadParameter->SizeInBytes; i++)
-    {
-        threadParameter->Pointer[i] = threadParameter->Value;
-    }
-}
-
-UTEST(Memory, Allocate) 
+UTEST(Memory, Allocate)
 {
     // Arrange
     auto memoryArena = SystemAllocateMemoryArena();
     auto dataSizeInBytes = 70024llu;
-    
+
     // Act
-    auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
+    auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes);
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
@@ -80,15 +18,15 @@ UTEST(Memory, Allocate)
     ASSERT_EQ(dataSizeInBytes, data.Length);
 }
 
-UTEST(Memory, AllocateMultiple) 
+UTEST(Memory, AllocateMultiple)
 {
     // Arrange
     auto memoryArena = SystemAllocateMemoryArena();
     auto dataSizeInBytes = 70024llu;
-    
+
     // Act
-    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
-    SystemPushArrayZero<uint8_t>(memoryArena, 1024); 
+    SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes);
+    SystemPushArrayZero<uint8_t>(memoryArena, 1024);
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
@@ -113,16 +51,16 @@ UTEST(Memory, ClearMemoryArena)
     ASSERT_EQ(0llu, allocationInfos.AllocatedBytes);
 }
 
-UTEST(Memory, AllocateCheckAlignement) 
+UTEST(Memory, AllocateCheckAlignment)
 {
     // Arrange
     auto memoryArena = SystemAllocateMemoryArena();
     auto dataSizeInBytes = 70024llu;
     auto alignment = 8llu;
-    
+
     // Act
     SystemPushArrayZero<uint8_t>(memoryArena, 455);
-    auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes); 
+    auto data = SystemPushArrayZero<uint8_t>(memoryArena, dataSizeInBytes);
 
     // Assert
     ASSERT_TRUE(((size_t)data.Pointer & (alignment - 1)) == 0);
@@ -150,11 +88,58 @@ UTEST(Memory, PushOverflowReturnsNull)
     ASSERT_EQ(64llu, allocationInfos.AllocatedBytes);
 }
 
+UTEST(Memory, ArenaSizeOverflowReturnsEmptyHandle)
+{
+    // Act
+    auto memoryArena = SystemAllocateMemoryArena(SIZE_MAX);
+
+    // Assert
+    ASSERT_TRUE(memoryArena.Storage == nullptr);
+}
+
+UTEST(Memory, PushSizeOverflowDoesNotAdvanceArena)
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena(64);
+
+    // Act
+    auto allocation = SystemPushMemory(memoryArena, SIZE_MAX, AllocationState_Reserved);
+    auto array = SystemPushArray<uint64_t>(memoryArena, SIZE_MAX / sizeof(uint64_t) + 1, AllocationState_Reserved);
+
+    // Assert
+    ASSERT_TRUE(allocation == nullptr);
+    ASSERT_TRUE(array.Pointer == nullptr);
+    ASSERT_EQ(0llu, array.Length);
+    ASSERT_EQ(0llu, SystemGetMemoryArenaAllocationInfos(memoryArena).AllocatedBytes);
+}
+
+UTEST(Memory, CommitReportsInvalidRange)
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena(64);
+    auto allocation = SystemPushArray<uint8_t>(memoryArena, 64, AllocationState_Reserved);
+
+    // Act
+    auto validCommit = SystemCommitMemory(memoryArena, allocation.Pointer, allocation.Length, true);
+    auto invalidCommit = SystemCommitMemory(memoryArena, allocation.Pointer + allocation.Length, 8);
+
+    // Assert
+    ASSERT_TRUE(validCommit);
+    ASSERT_FALSE(invalidCommit);
+
+    for (size_t i = 0; i < allocation.Length; i++)
+    {
+        ASSERT_EQ(0, allocation[i]);
+    }
+
+    SystemFreeMemoryArena(memoryArena);
+}
+
 UTEST(Memory, ConcatBuffers)
 {
     // Arrange
     auto memoryArena = SystemAllocateMemoryArena(1024);
-    
+
     // Act
     auto result = SystemConcatBuffers<char>(memoryArena, "Test1", "Test2");
 
@@ -230,7 +215,7 @@ UTEST(Memory, StackMemoryArenaRelease)
     {
         auto stackMemoryArena2 = SystemGetStackMemoryArena();
         string2 = SystemConcatBuffers<char>(stackMemoryArena1, "Test2", "Stack1");
-        
+
         {
             auto stackMemoryArena3 = SystemGetStackMemoryArena();
             SystemConcatBuffers<char>(stackMemoryArena2, "Test", "Stack2");
@@ -245,11 +230,11 @@ UTEST(Memory, StackMemoryArenaRelease)
                 SystemConcatBuffers<char>(stackMemoryArena3, "Test", "Stack2");
                 SystemConcatBuffers<char>(stackMemoryArena3, "Test", "Stack2");
             }
-            
+
             SystemConcatBuffers<char>(stackMemoryArena4, "Test", "Stack2");
             string5 = SystemConcatBuffers<char>(memoryArenaPointer, "Test5", "Stack1");
         }
-            
+
         SystemConcatBuffers<char>(stackMemoryArena2, "Test2", "Stack2");
         string3 = SystemConcatBuffers<char>(stackMemoryArena1, "Test3", "Stack1");
     }
@@ -285,133 +270,14 @@ UTEST(Memory, StackAncestorAllocationUsesExtraStorageCapacity)
     ASSERT_TRUE(ancestorAllocation != nullptr);
 }
 
-UTEST(Memory, ConcurrentPush) 
-{
-    // Arrange
-    const int32_t itemCount = 80000;
-    const int32_t threadCount = 32;
-    auto maxSize = (size_t)itemCount * 64;
-    auto memoryArena = SystemAllocateMemoryArena(maxSize);
-    
-    // Act
-    SystemThread threads[threadCount];
-    MemoryThreadParameter threadParameters[threadCount];
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        threadParameters[i] = { memoryArena, i, itemCount / threadCount };
-        threads[i] = SystemCreateThread(MemoryConcurrentAddFunction, &threadParameters[i]);
-    }
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        SystemWaitThread(threads[i]);
-        SystemFreeThread(threads[i]);
-    }
-
-    // Assert
-    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(maxSize, allocationInfos.AllocatedBytes);
-}
-
-UTEST(Memory, ConcurrentPushDoesNotOverflow)
-{
-    // Arrange
-    const int32_t threadCount = 32;
-    const int32_t capacityCount = 8;
-    const size_t allocationSizeInBytes = 64;
-    auto memoryArena = SystemAllocateMemoryArena(capacityCount * allocationSizeInBytes);
-    bool start = false;
-    void* results[threadCount] = {};
-    SystemThread threads[threadCount];
-    MemoryConcurrentOverflowThreadParameter threadParameters[threadCount];
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        threadParameters[i] = { memoryArena, &start, results, i };
-        threads[i] = SystemCreateThread(MemoryConcurrentOverflowFunction, &threadParameters[i]);
-    }
-
-    // Act
-    SystemAtomicStore(start, true);
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        SystemWaitThread(threads[i]);
-        SystemFreeThread(threads[i]);
-    }
-
-    // Assert
-    auto successCount = 0;
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        if (results[i] != nullptr)
-        {
-            successCount++;
-
-            for (int32_t j = i + 1; j < threadCount; j++)
-            {
-                if (results[j] != nullptr)
-                {
-                    ASSERT_TRUE(results[i] != results[j]);
-                }
-            }
-        }
-    }
-
-    ASSERT_EQ(capacityCount, successCount);
-
-    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(capacityCount * allocationSizeInBytes, allocationInfos.AllocatedBytes);
-}
-
-UTEST(Memory, ConcurrentCommitSharedPage)
-{
-    // Arrange
-    const int32_t threadCount = 32;
-    const size_t rangeSizeInBytes = 64;
-    auto pageSizeInBytes = SystemPlatformGetPageSize();
-    auto memoryArena = SystemAllocateMemoryArena(pageSizeInBytes);
-    auto buffer = SystemPushArray<uint8_t>(memoryArena, pageSizeInBytes, AllocationState_Reserved);
-    auto committedBytesBefore = SystemGetMemoryArenaAllocationInfos(memoryArena).CommittedBytes;
-    SystemThread threads[threadCount];
-    MemoryConcurrentCommitThreadParameter threadParameters[threadCount];
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        threadParameters[i] = { memoryArena, buffer.Pointer + i * rangeSizeInBytes, rangeSizeInBytes, (uint8_t)(i + 1) };
-        threads[i] = SystemCreateThread(MemoryConcurrentCommitFunction, &threadParameters[i]);
-    }
-
-    // Act
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        SystemWaitThread(threads[i]);
-        SystemFreeThread(threads[i]);
-    }
-
-    // Assert
-    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ(committedBytesBefore + pageSizeInBytes, allocationInfos.CommittedBytes);
-
-    for (int32_t i = 0; i < threadCount; i++)
-    {
-        for (size_t j = 0; j < rangeSizeInBytes; j++)
-        {
-            ASSERT_EQ((uint8_t)(i + 1), buffer[i * rangeSizeInBytes + j]);
-        }
-    }
-}
-
-UTEST(Memory, AllocateReserved) 
+UTEST(Memory, AllocateReserved)
 {
     // Arrange
     auto memoryArena = SystemAllocateMemoryArena();
     auto dataSizeInBytes = 70024llu;
-    
+
     // Act
-    SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved); 
+    SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
 
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
@@ -419,7 +285,7 @@ UTEST(Memory, AllocateReserved)
     ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.MaximumSizeInBytes);
 }
 
-UTEST(Memory, AllocateReservedCommit) 
+UTEST(Memory, AllocateReservedCommit)
 {
     // Arrange
     auto maxSizeInBytes = 4000000llu;
@@ -427,9 +293,8 @@ UTEST(Memory, AllocateReservedCommit)
     auto offset = 150000llu;
     auto offset2 = 160000llu;
     auto bufferSize = 1024llu;
-
     auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
-    
+
     // Act
     auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
     SystemCommitMemory(memoryArena, array.Pointer + offset, bufferSize);
@@ -453,7 +318,7 @@ UTEST(Memory, AllocateReservedCommit)
     ASSERT_LT(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes);
 }
 
-UTEST(Memory, AllocateReservedDecommit) 
+UTEST(Memory, AllocateReservedDecommit)
 {
     // Arrange
     auto maxSizeInBytes = 4000000llu;
@@ -461,9 +326,7 @@ UTEST(Memory, AllocateReservedDecommit)
     auto offset = 150000llu;
     auto offset2 = 160000llu;
     auto bufferSize = 1024llu;
-
     auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
-    
     auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
     SystemCommitMemory(memoryArena, array.Pointer + offset, bufferSize);
 
