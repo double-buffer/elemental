@@ -117,7 +117,7 @@ void WaylandRegistryHandler(void* data, wl_registry* registry, uint32_t id, cons
         WaylandOutput = (wl_output*)wl_registry_bind(registry, id, &wl_output_interface, 2);
         wl_output_add_listener(WaylandOutput, &WaylandOutputListener, nullptr);
     }
-    else if (SystemFindSubString(interface, wl_shm_interface.name) != -1) 
+    else if (SystemFindSubString(interface, wl_shm_interface.name) != -1)
     {
         WaylandShm = (wl_shm*)wl_registry_bind(registry, id, &wl_shm_interface, version);
     }
@@ -140,7 +140,7 @@ ElemAPI ElemSystemInfo ElemGetSystemInfo()
     auto lastIndex = SystemLastIndexOf(executablePath, environment->PathSeparator);
     SystemAssert(lastIndex != -1);
 
-    auto applicationPath = SystemPushArray<char>(stackMemoryArena, lastIndex + 2);
+    auto applicationPath = SystemPushArrayZero<char>(stackMemoryArena, lastIndex + 1);
     SystemCopyBuffer(applicationPath, executablePath.Slice(0, lastIndex + 1));
 
     return
