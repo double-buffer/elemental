@@ -55,7 +55,7 @@ D3D12_BARRIER_ACCESS ConvertToDirectX12BarrierAccess(ElemGraphicsResourceBarrier
 D3D12_BARRIER_LAYOUT ConvertToDirectX12BarrierLayout(ElemGraphicsResourceBarrierLayoutType layoutType)
 {
     // TODO: Recheck the correct layouts
-    // Maybe we can pass more info to the function to compute more precides layouts (or in the common code)
+    // Maybe we can pass more info to the function to compute more precides accesses (or in the common code)
     // It would be better for common layout to specialize that base on the current queue type???
 
     switch (layoutType) 
@@ -163,6 +163,11 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
             directX12TextureBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess, false);
             directX12TextureBarrier->LayoutBefore = ConvertToDirectX12BarrierLayout(barrier.BeforeLayout);
             directX12TextureBarrier->LayoutAfter = ConvertToDirectX12BarrierLayout(barrier.AfterLayout);
+            directX12TextureBarrier->Subresources =
+            {
+                .IndexOrFirstMipLevel = UINT32_MAX
+            };
+            directX12TextureBarrier->Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE;
         }
     }
 
