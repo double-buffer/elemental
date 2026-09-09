@@ -3,6 +3,11 @@
 #include "SystemPlatformFunctions.h"
 #include "utest.h"
 
+struct alignas(64) MemoryAlignedTestData
+{
+    uint8_t Data[64];
+};
+
 UTEST(Memory, Allocate)
 {
     // Arrange
@@ -51,6 +56,34 @@ UTEST(Memory, ClearMemoryArena)
     ASSERT_EQ_MSG(0llu, allocationInfos.AllocatedBytes, "Clearing a MemoryArena should reset its logical allocated byte count to zero.");
 }
 
+UTEST(Memory, ClearMemoryArenaResetsPartialCommitTracking)
+{
+    // Arrange
+    auto pageSizeInBytes = SystemPlatformGetPageSize();
+    auto memoryArena = SystemAllocateMemoryArena(pageSizeInBytes);
+    auto committedBytesBefore = SystemGetMemoryArenaAllocationInfos(memoryArena).CommittedBytes;
+    auto buffer = SystemPushArray<uint8_t>(memoryArena, pageSizeInBytes, AllocationState_Reserved);
+    auto commitSucceeded = SystemCommitMemory(memoryArena, buffer.Pointer + 64, 64);
+
+    ASSERT_TRUE_MSG(commitSucceeded, "Partial MemoryArena commit should succeed before testing clear behavior.");
+    ASSERT_EQ_MSG(committedBytesBefore + pageSizeInBytes, SystemGetMemoryArenaAllocationInfos(memoryArena).CommittedBytes, "Partial commit should commit exactly one data page.");
+
+    // Act
+    SystemClearMemoryArena(memoryArena);
+
+    // Assert
+    auto allocationInfosAfterClear = SystemGetMemoryArenaAllocationInfos(memoryArena);
+    ASSERT_EQ_MSG(0llu, allocationInfosAfterClear.AllocatedBytes, "Clearing an arena with a partial commit should reset logical allocation state.");
+    ASSERT_EQ_MSG(committedBytesBefore, allocationInfosAfterClear.CommittedBytes, "Clearing an arena should decommit partially tracked data pages.");
+
+    auto reusedBuffer = SystemPushArray<uint8_t>(memoryArena, pageSizeInBytes, AllocationState_Reserved);
+    ASSERT_TRUE_MSG(SystemCommitMemory(memoryArena, reusedBuffer.Pointer + 128, 64), "MemoryArena should allow a new partial commit after clear resets page tracking.");
+    SystemDecommitMemory(memoryArena, reusedBuffer.Pointer + 128, 64);
+    ASSERT_EQ_MSG(committedBytesBefore, SystemGetMemoryArenaAllocationInfos(memoryArena).CommittedBytes, "Page tracking after clear should allow the reused partial range to decommit normally.");
+
+    SystemFreeMemoryArena(memoryArena);
+}
+
 UTEST(Memory, AllocateCheckAlignment)
 {
     // Arrange
@@ -64,6 +97,30 @@ UTEST(Memory, AllocateCheckAlignment)
 
     // Assert
     ASSERT_TRUE_MSG(((size_t)data.Pointer & (alignment - 1)) == 0, "MemoryArena allocations should respect the default alignment.");
+}
+
+UTEST(Memory, TypedAllocationsRespectAlignment)
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena(1024);
+    SystemPushMemory(memoryArena, 8);
+
+    // Act
+    auto array = SystemPushArray<MemoryAlignedTestData>(memoryArena, 2);
+    SystemPushMemory(memoryArena, 8);
+    auto structure = SystemPushStruct<MemoryAlignedTestData>(memoryArena);
+    SystemPushMemory(memoryArena, 8);
+    auto zeroArray = SystemPushArrayZero<MemoryAlignedTestData>(memoryArena, 1);
+
+    // Assert
+    ASSERT_TRUE_MSG(array.Pointer != nullptr, "Aligned array allocation should succeed.");
+    ASSERT_TRUE_MSG(((size_t)array.Pointer & (alignof(MemoryAlignedTestData) - 1)) == 0, "SystemPushArray should align returned storage to alignof(T).");
+    ASSERT_TRUE_MSG(structure != nullptr, "Aligned structure allocation should succeed.");
+    ASSERT_TRUE_MSG(((size_t)structure & (alignof(MemoryAlignedTestData) - 1)) == 0, "SystemPushStruct should align returned storage to alignof(T).");
+    ASSERT_TRUE_MSG(zeroArray.Pointer != nullptr, "Zeroed aligned array allocation should succeed.");
+    ASSERT_TRUE_MSG(((size_t)zeroArray.Pointer & (alignof(MemoryAlignedTestData) - 1)) == 0, "SystemPushArrayZero should align returned storage to alignof(T).");
+
+    SystemFreeMemoryArena(memoryArena);
 }
 
 UTEST(Memory, PushOverflowReturnsNull)
