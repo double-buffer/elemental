@@ -194,7 +194,7 @@ UTEST(MemoryConcurrent, PushDoesNotOverflow)
         }
     }
 
-    ASSERT_EQ_MSG(capacityCount, successCount, "Concurrent overflow attempts should stop exactly at arena capacity.");
+    ASSERT_EQ_MSG(capacityCount, successCount, "Concurrent MemoryArena pushes should stop exactly at arena capacity.");
 
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ_MSG(capacityCount * allocationSizeInBytes, allocationInfos.AllocatedBytes, "Concurrent overflow attempts must not advance the MemoryArena beyond capacity.");
