@@ -64,3 +64,24 @@ UTEST(Span, DuplicateStringPreservesLogicalLengthAndNullTerminator)
 
     SystemFreeMemoryArena(memoryArena);
 }
+
+UTEST(Span, DuplicateWideStringPreservesLogicalLengthAndNullTerminator)
+{
+    // Arrange
+    auto memoryArena = SystemAllocateMemoryArena(1024);
+    ReadOnlySpan<wchar_t> source = L"Elemental";
+
+    // Act
+    auto result = SystemDuplicateBuffer<wchar_t>(memoryArena, source);
+
+    // Assert
+    ASSERT_EQ_MSG(source.Length, result.Length, "Duplicated wide-character span should preserve the logical source length.");
+    ASSERT_EQ_MSG(L'\0', result.Pointer[result.Length], "Duplicated wide-character span should have a trailing null terminator.");
+
+    for (size_t i = 0; i < source.Length; i++)
+    {
+        ASSERT_EQ_MSG(source[i], result[i], "Duplicated wide-character span data is invalid.");
+    }
+
+    SystemFreeMemoryArena(memoryArena);
+}
