@@ -3,6 +3,11 @@
 #include "SystemPlatformFunctions.h"
 #include "utest.h"
 
+struct alignas(64) MemoryConcurrentAlignedTestData
+{
+    uint8_t Data[64];
+};
+
 struct MemoryConcurrentPushParameter
 {
     MemoryArena MemoryArena;
@@ -15,6 +20,13 @@ struct MemoryConcurrentOverflowParameter
     bool* Start;
     void** Results;
     int32_t ThreadId;
+};
+
+struct MemoryConcurrentAlignedPushParameter
+{
+    MemoryArena MemoryArena;
+    bool* Start;
+    MemoryConcurrentAlignedTestData** Result;
 };
 
 struct MemoryConcurrentCommitParameter
@@ -57,6 +69,24 @@ void MemoryConcurrentOverflowFunction(void* parameter)
     }
 
     threadParameter->Results[threadParameter->ThreadId] = SystemPushMemory(threadParameter->MemoryArena, 64, AllocationState_Reserved);
+}
+
+void MemoryConcurrentAlignedPushFunction(void* parameter)
+{
+    auto threadParameter = (MemoryConcurrentAlignedPushParameter*)parameter;
+    bool start = false;
+
+    while (!start)
+    {
+        SystemAtomicLoad(*threadParameter->Start, start);
+
+        if (!start)
+        {
+            SystemYieldThread();
+        }
+    }
+
+    *threadParameter->Result = SystemPushStruct<MemoryConcurrentAlignedTestData>(threadParameter->MemoryArena);
 }
 
 void MemoryConcurrentCommitFunction(void* parameter)
@@ -154,6 +184,47 @@ UTEST(MemoryConcurrent, PushDoesNotOverflow)
 
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ_MSG(capacityCount * allocationSizeInBytes, allocationInfos.AllocatedBytes, "Concurrent overflow attempts must not advance the MemoryArena beyond capacity.");
+}
+
+UTEST(MemoryConcurrent, TypedPushAlignment)
+{
+    // Arrange
+    const int32_t threadCount = 32;
+    auto memoryArena = SystemAllocateMemoryArena(threadCount * sizeof(MemoryConcurrentAlignedTestData) + 128);
+    SystemPushMemory(memoryArena, 8);
+    bool start = false;
+    MemoryConcurrentAlignedTestData* results[threadCount] = {};
+    SystemThread threads[threadCount];
+    MemoryConcurrentAlignedPushParameter threadParameters[threadCount];
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        threadParameters[i] = { memoryArena, &start, &results[i] };
+        threads[i] = SystemCreateThread(MemoryConcurrentAlignedPushFunction, &threadParameters[i]);
+    }
+
+    // Act
+    SystemAtomicStore(start, true);
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
+    }
+
+    // Assert
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        ASSERT_TRUE_MSG(results[i] != nullptr, "Concurrent aligned typed allocation should succeed for every thread.");
+        ASSERT_TRUE_MSG(((size_t)results[i] & (alignof(MemoryConcurrentAlignedTestData) - 1)) == 0, "Concurrent SystemPushStruct allocations should preserve alignof(T).");
+
+        for (int32_t j = i + 1; j < threadCount; j++)
+        {
+            ASSERT_TRUE_MSG(results[i] != results[j], "Concurrent aligned typed allocations must not reuse the same address.");
+        }
+    }
+
+    SystemFreeMemoryArena(memoryArena);
 }
 
 UTEST(MemoryConcurrent, CommitSharedPage)
