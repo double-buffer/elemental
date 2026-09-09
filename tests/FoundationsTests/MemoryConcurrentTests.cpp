@@ -43,6 +43,11 @@ struct MemoryConcurrentArenaAllocationParameter
     size_t SizeInBytes;
 };
 
+struct MemoryConcurrentStackArenaLifetimeParameter
+{
+    bool* Result;
+};
+
 void MemoryConcurrentPushFunction(void* parameter)
 {
     auto threadParameter = (MemoryConcurrentPushParameter*)parameter;
@@ -104,6 +109,15 @@ void MemoryConcurrentArenaAllocationFunction(void* parameter)
 {
     auto threadParameter = (MemoryConcurrentArenaAllocationParameter*)parameter;
     *threadParameter->Result = SystemAllocateMemoryArena(threadParameter->SizeInBytes);
+}
+
+void MemoryConcurrentStackArenaLifetimeFunction(void* parameter)
+{
+    auto threadParameter = (MemoryConcurrentStackArenaLifetimeParameter*)parameter;
+    auto outerStackMemoryArena = SystemGetStackMemoryArena();
+    auto innerStackMemoryArena = SystemGetStackMemoryArena();
+    auto allocation = SystemPushMemory(outerStackMemoryArena, 64);
+    *threadParameter->Result = allocation != nullptr;
 }
 
 UTEST(MemoryConcurrent, Push)
@@ -180,7 +194,7 @@ UTEST(MemoryConcurrent, PushDoesNotOverflow)
         }
     }
 
-    ASSERT_EQ_MSG(capacityCount, successCount, "Concurrent MemoryArena pushes should stop exactly at arena capacity.");
+    ASSERT_EQ_MSG(capacityCount, successCount, "Concurrent overflow attempts should stop exactly at arena capacity.");
 
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ_MSG(capacityCount * allocationSizeInBytes, allocationInfos.AllocatedBytes, "Concurrent overflow attempts must not advance the MemoryArena beyond capacity.");
@@ -306,4 +320,37 @@ UTEST(MemoryConcurrent, ArenaAllocationAccounting)
     auto allocationInfosAfterFree = SystemGetAllocationInfos();
     ASSERT_EQ_MSG(allocationInfosBefore.ReservedBytes, allocationInfosAfterFree.ReservedBytes, "Freeing concurrently created arenas should restore reserved-byte accounting to the baseline.");
     ASSERT_EQ_MSG(allocationInfosBefore.CommittedBytes, allocationInfosAfterFree.CommittedBytes, "Freeing concurrently created arenas should restore committed-byte accounting to the baseline.");
+}
+
+UTEST(MemoryConcurrent, StackArenaThreadLifetime)
+{
+    // Arrange
+    const int32_t threadCount = 16;
+    auto allocationInfosBefore = SystemGetAllocationInfos();
+    bool results[threadCount] = {};
+    SystemThread threads[threadCount];
+    MemoryConcurrentStackArenaLifetimeParameter threadParameters[threadCount];
+
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        threadParameters[i] = { &results[i] };
+        threads[i] = SystemCreateThread(MemoryConcurrentStackArenaLifetimeFunction, &threadParameters[i]);
+    }
+
+    // Act
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        SystemWaitThread(threads[i]);
+        SystemFreeThread(threads[i]);
+    }
+
+    // Assert
+    for (int32_t i = 0; i < threadCount; i++)
+    {
+        ASSERT_TRUE_MSG(results[i], "Each short-lived thread should allocate through its nested StackMemoryArena successfully.");
+    }
+
+    auto allocationInfosAfter = SystemGetAllocationInfos();
+    ASSERT_EQ_MSG(allocationInfosBefore.ReservedBytes, allocationInfosAfter.ReservedBytes, "Thread exit should release both the primary and extra StackMemoryArena reservations.");
+    ASSERT_EQ_MSG(allocationInfosBefore.CommittedBytes, allocationInfosAfter.CommittedBytes, "Thread exit should release all StackMemoryArena committed backing storage.");
 }
