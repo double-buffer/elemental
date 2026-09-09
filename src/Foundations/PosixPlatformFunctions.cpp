@@ -225,7 +225,7 @@ ReadOnlySpan<char> SystemPlatformExecuteProcess(MemoryArena memoryArena, ReadOnl
         close(pipefd[1]);
         return ReadOnlySpan<char>();
     } 
-    else if (pid == 0)
+    else if (pid == 0) 
     {
         // Child process
         close(pipefd[0]); // Close unused read end
@@ -313,7 +313,7 @@ void* SystemPlatformCreateThread(void* threadFunction, void* parameters)
         }
     }
 
-    if (i == MAX_THREADS)
+    if (i == MAX_THREADS) 
     {
         SystemLogErrorMessage(ElemLogMessageCategory_Application, "Maximum thread limit reached");
         return nullptr;
@@ -337,7 +337,7 @@ void SystemPlatformWaitThread(void* thread)
 {
     auto threadInfo = (ThreadInfo*)thread;
 
-    if (threadInfo && threadInfo->isUsed)
+    if (threadInfo && threadInfo->isUsed) 
     {
         pthread_join(threadInfo->thread, NULL);
         threadInfo->status = THREAD_STATUS_FINISHED;
@@ -353,7 +353,7 @@ void SystemPlatformFreeThread(void* thread)
 {
     auto threadInfo = (ThreadInfo*)thread;
 
-    if (threadInfo && threadInfo->isUsed)
+    if (threadInfo && threadInfo->isUsed) 
     {
         threadInfo->isUsed = false;
         threadInfo->status = THREAD_STATUS_FINISHED;
