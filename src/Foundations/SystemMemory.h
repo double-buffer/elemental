@@ -133,8 +133,8 @@ void SystemFreeMemoryArena(MemoryArena memoryArena);
  * Resets a MemoryArena to its initial empty state.
  *
  * All allocations made from the arena become invalid. The MemoryArena storage and copied handles
- * remain valid and can be used for new allocations after the reset. For regular arenas, committed
- * data pages are decommitted directly and all per-page commitment metadata is reset.
+ * remain valid and can be used for new allocations after the reset. Every committed data page is
+ * decommitted directly and all page tracking metadata is reset.
  *
  * This is an exclusive operation and is intentionally not thread-safe. The caller must guarantee
  * that no other thread is reading from, allocating from, committing, or decommitting the arena.
@@ -190,9 +190,6 @@ void* SystemPushMemory(MemoryArena memoryArena, size_t sizeInBytes, AllocationSt
  * so pages shared by multiple logical ranges remain committed while any tracked range still needs
  * them. The operation is thread-safe for regular shared MemoryArena instances.
  *
- * Per-page range tracking is intentionally conservative: sparse holes inside the tracked minimum and
- * maximum offsets may keep a page committed longer rather than requiring additional fragmentation metadata.
- *
  * If clearMemory is true, pages newly committed by this operation are cleared before use. Use
  * SystemPushMemoryZero() when the exact returned allocation range must be initialized to zero.
  *
@@ -224,9 +221,12 @@ bool SystemCommitMemory(MemoryArena memoryArena, ReadOnlySpan<T> buffer, bool cl
  * Decommits pages that are no longer needed by a range in a MemoryArena.
  *
  * Decommitting memory does not release the logical arena allocation or move the arena pointer. The
- * same reserved range can be committed again later. Physical pages are only decommitted when the
- * arena bookkeeping determines that no remaining committed range still needs that page. The range
- * tracking is conservative and can intentionally leave sparsely used pages committed.
+ * same reserved range can be committed again later. Physical backing for fully released pages is
+ * discarded while the virtual address range remains reserved.
+ *
+ * The per-page range bookkeeping is intentionally conservative: sparse holes inside a page can keep
+ * that page committed longer than strictly necessary rather than requiring heavier fragmentation
+ * metadata. This does not affect correctness and is a deliberate memory-metadata tradeoff.
  *
  * The caller is responsible for passing a valid range belonging to the arena and for not accessing
  * the range while it is decommitted. The operation is thread-safe for regular shared MemoryArena
@@ -248,38 +248,35 @@ void SystemDecommitMemory(MemoryArena memoryArena, void* pointer, size_t sizeInB
 void* SystemPushMemoryZero(MemoryArena memoryArena, size_t sizeInBytes);
 
 /**
- * Allocates raw contiguous storage for an array from a MemoryArena.
+ * Allocates a contiguous array from a MemoryArena.
  *
- * The returned storage is aligned for T and the Span references arena-owned memory for the lifetime
- * of the corresponding arena allocation context. No constructor is invoked for any element and the
- * storage is not initialized by this helper. Types that require construction must be constructed
- * explicitly by the caller after allocation; their destruction is also the caller's responsibility
- * before the arena storage is reset or released.
+ * The returned Span references arena-owned raw storage aligned to alignof(T) and remains valid only
+ * for the lifetime of the corresponding arena allocation context. No constructor, destructor, copy
+ * constructor, or other object-lifetime operation is invoked. The caller is responsible for using
+ * the storage only with types and lifetime semantics compatible with raw arena allocation.
  *
- * Alignment padding can be inserted before the returned array and counts toward the arena's logical
- * allocated-byte total.
+ * Alignment padding consumes arena capacity and is included in MemoryArena allocated-byte accounting.
  *
- * @tparam T Element type whose raw storage is allocated.
+ * @tparam T Element type to allocate.
  * @param memoryArena MemoryArena that provides the allocation lifetime.
  * @param count Number of elements to allocate.
  * @param state Initial allocation state for the underlying memory.
- * @return Span referencing the allocated array storage, or an empty Span when the requested size
- * overflows or the arena cannot satisfy/commit the allocation.
+ * @return Span referencing the allocated array, or an empty Span when the requested size overflows
+ * or the arena cannot satisfy/commit the allocation.
  */
 template<typename T>
 Span<T> SystemPushArray(MemoryArena memoryArena, size_t count, AllocationState state = AllocationState_Committed);
 
 /**
- * Allocates raw contiguous storage for an array and clears the element bytes to zero.
+ * Allocates a contiguous array from a MemoryArena and initializes its raw storage bytes to zero.
  *
- * The returned storage is aligned for T. Clearing bytes does not invoke constructors and must not be
- * treated as object construction for types that require one. Such types must still be constructed
- * explicitly by the caller, which is then also responsible for destruction.
+ * The returned storage is aligned to alignof(T). Zeroing does not invoke constructors or establish
+ * higher-level object lifetime semantics; it only clears the underlying bytes.
  *
- * @tparam T Element type whose raw storage is allocated.
+ * @tparam T Element type to allocate.
  * @param memoryArena MemoryArena that provides the allocation lifetime.
- * @param count Number of elements whose raw storage is allocated and cleared.
- * @return Span referencing the zeroed array storage, or an empty Span when the requested size
+ * @param count Number of elements to allocate and clear.
+ * @return Span referencing the zero-initialized array, or an empty Span when the requested size
  * overflows or the arena cannot satisfy/commit the allocation.
  */
 template<typename T>
@@ -312,40 +309,39 @@ template<>
 Span<wchar_t> SystemPushArrayZero(MemoryArena memoryArena, size_t count);
 
 /**
- * Allocates aligned raw storage for one T from a MemoryArena without constructing an object.
+ * Allocates raw storage for one T from a MemoryArena, aligned to alignof(T).
  *
- * The returned address satisfies alignof(T). No constructor is invoked. If T requires construction,
- * the caller must construct it explicitly in the returned storage and is responsible for destroying
- * it before the arena storage is reset or released.
+ * No constructor or other object-lifetime operation is invoked. The returned pointer is raw arena
+ * storage and must not be treated as the result of `new T` for types that require construction.
+ * Alignment padding consumes arena capacity and is included in allocated-byte accounting.
  *
- * @tparam T Type whose raw storage is allocated.
+ * @tparam T Object type to allocate raw storage for.
  * @param memoryArena MemoryArena that provides the allocation lifetime.
- * @return Pointer to aligned arena-owned raw storage for one T, or nullptr when the allocation cannot
- * be satisfied/committed.
+ * @return Pointer to arena-owned raw storage for one T, or nullptr when the allocation cannot be
+ * satisfied/committed.
  */
 template<typename T>
 T* SystemPushStruct(MemoryArena memoryArena);
 
 /**
- * Allocates aligned raw storage for one T and clears its bytes to zero.
+ * Allocates raw storage for one T, aligned to alignof(T), and initializes its bytes to zero.
  *
- * This is raw byte clearing only. No constructor is invoked and zeroed storage must not be treated as
- * construction for types that require one. The caller remains responsible for explicit construction
- * and destruction when needed.
+ * This is raw byte zeroing only. Constructors, destructors, copy constructors, and all other C++
+ * object-lifetime operations are intentionally never invoked by Foundations push helpers.
  *
- * @tparam T Type whose raw storage is allocated.
+ * @tparam T Object type to allocate raw storage for.
  * @param memoryArena MemoryArena that provides the allocation lifetime.
- * @return Pointer to aligned zeroed arena-owned raw storage for one T, or nullptr on failure.
+ * @return Pointer to zero-initialized arena-owned raw storage for one T, or nullptr on failure.
  */
 template<typename T>
 T* SystemPushStructZero(MemoryArena memoryArena);
 
 /**
- * Copies all elements from a source buffer into an existing destination buffer.
+ * Copies all elements from a source buffer into an existing destination buffer using a raw byte copy.
  *
- * The copy is performed as raw bytes. T must be safe to copy byte-for-byte. The destination must
- * contain at least source.Length elements. When it is smaller, the function logs an error and does
- * not perform a partial copy.
+ * The destination must contain at least source.Length elements. When it is smaller, the function
+ * logs an error and does not perform a partial copy. T must be safe to copy byte-for-byte; no copy
+ * constructor, assignment operator, or other object-lifetime operation is invoked.
  *
  * @tparam T Element type of both buffers.
  * @param destination Writable destination buffer.
@@ -355,9 +351,10 @@ template<typename T>
 void SystemCopyBuffer(Span<T> destination, ReadOnlySpan<T> source);
 
 /**
- * Allocates a new buffer from a MemoryArena and copies the source elements into it as raw bytes.
+ * Allocates a new raw buffer from a MemoryArena and byte-copies the source elements into it.
  *
- * T must be safe to copy byte-for-byte; constructors and copy operations are not invoked.
+ * The returned storage is aligned to alignof(T). T must be safe to copy byte-for-byte; Foundations
+ * does not invoke constructors or copy operations.
  *
  * @tparam T Element type of the source and destination buffers.
  * @param memoryArena MemoryArena that provides the duplicated buffer lifetime.
@@ -396,9 +393,9 @@ template<>
 Span<wchar_t> SystemDuplicateBuffer(MemoryArena memoryArena, ReadOnlySpan<wchar_t> source);
 
 /**
- * Allocates a new buffer containing buffer1 immediately followed by buffer2.
+ * Allocates a new raw buffer containing buffer1 immediately followed by buffer2.
  *
- * The copy is performed as raw bytes. T must be safe to copy byte-for-byte.
+ * T must be safe to copy byte-for-byte; no constructors or copy operations are invoked.
  *
  * @tparam T Element type of both input buffers.
  * @param memoryArena MemoryArena that provides the concatenated buffer lifetime.
