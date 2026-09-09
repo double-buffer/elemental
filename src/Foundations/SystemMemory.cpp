@@ -43,7 +43,43 @@ struct PageSizeIndexes
     size_t EndIndex;
 };
 
-thread_local MemoryArenaStorage* stackMemoryArenaStorage = nullptr;
+struct StackMemoryArenaThreadStorage
+{
+    MemoryArenaStorage* Storage;
+
+    ~StackMemoryArenaThreadStorage()
+    {
+        if (Storage == nullptr)
+        {
+            return;
+        }
+
+        if (Storage->StackExtraStorage.Storage != nullptr)
+        {
+            SystemFreeMemoryArena(Storage->StackExtraStorage);
+        }
+
+        SystemFreeMemoryArena({ Storage, 0 });
+    }
+
+    operator MemoryArenaStorage*() const
+    {
+        return Storage;
+    }
+
+    MemoryArenaStorage* operator->() const
+    {
+        return Storage;
+    }
+
+    StackMemoryArenaThreadStorage& operator=(MemoryArenaStorage* storage)
+    {
+        Storage = storage;
+        return *this;
+    }
+};
+
+thread_local StackMemoryArenaThreadStorage stackMemoryArenaStorage = {};
 
 void PopStackMemory(MemoryArena memoryArena, size_t sizeInBytes);
 void* PushMemoryAligned(MemoryArena memoryArena, size_t sizeInBytes, size_t alignment, AllocationState state);
