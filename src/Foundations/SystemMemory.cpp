@@ -49,17 +49,7 @@ struct StackMemoryArenaThreadStorage
 
     ~StackMemoryArenaThreadStorage()
     {
-        if (Storage == nullptr)
-        {
-            return;
-        }
-
-        if (Storage->StackExtraStorage.Storage != nullptr)
-        {
-            SystemFreeMemoryArena(Storage->StackExtraStorage);
-        }
-
-        SystemFreeMemoryArena({ Storage, 0 });
+        SystemReleaseThreadMemory();
     }
 
     operator MemoryArenaStorage*() const
@@ -275,6 +265,23 @@ MemoryArenaStorage* AllocateMemoryArenaStorage(size_t sizeInBytes)
     return storage;
 }
 
+void FreeMemoryArenaStorage(MemoryArenaStorage* storage)
+{
+    if (storage == nullptr)
+    {
+        return;
+    }
+
+    auto pageSizeInBytes = GetSystemPageSizeInBytes();
+    size_t dataSizeInBytes;
+    auto alignmentSucceeded = TryAlignSize(storage->SizeInBytes, pageSizeInBytes, &dataSizeInBytes);
+    SystemAssert(alignmentSucceeded);
+
+    auto reservedSizeInBytes = storage->HeaderSizeInBytes + dataSizeInBytes;
+    auto committedSizeInBytes = storage->CommittedPagesCount * pageSizeInBytes;
+    SystemPlatformFreeMemory(storage, reservedSizeInBytes, committedSizeInBytes);
+}
+
 MemoryArena GetStackWorkingMemoryArena(MemoryArena memoryArena)
 {
     if (memoryArena.Storage == nullptr)
@@ -363,19 +370,7 @@ MemoryArena SystemAllocateMemoryArena(size_t sizeInBytes)
 
 void SystemFreeMemoryArena(MemoryArena memoryArena)
 {
-    if (memoryArena.Storage == nullptr)
-    {
-        return;
-    }
-
-    auto pageSizeInBytes = GetSystemPageSizeInBytes();
-    size_t dataSizeInBytes;
-    auto alignmentSucceeded = TryAlignSize(memoryArena.Storage->SizeInBytes, pageSizeInBytes, &dataSizeInBytes);
-    SystemAssert(alignmentSucceeded);
-
-    auto reservedSizeInBytes = memoryArena.Storage->HeaderSizeInBytes + dataSizeInBytes;
-    auto committedSizeInBytes = memoryArena.Storage->CommittedPagesCount * pageSizeInBytes;
-    SystemPlatformFreeMemory(memoryArena.Storage, reservedSizeInBytes, committedSizeInBytes);
+    FreeMemoryArenaStorage(memoryArena.Storage);
 }
 
 void SystemClearMemoryArena(MemoryArena memoryArena)
@@ -450,7 +445,7 @@ MemoryArenaAllocationInfos SystemGetMemoryArenaAllocationInfos(MemoryArena memor
     return result;
 }
 
-StackMemoryArena SystemGetStackMemoryArena()
+StackMemoryArenaScope SystemBeginStackMemoryArena()
 {
     if (stackMemoryArenaStorage == nullptr)
     {
@@ -480,7 +475,7 @@ StackMemoryArena SystemGetStackMemoryArena()
     memoryArena.Storage = stackMemoryArenaStorage;
     memoryArena.Level = stackMemoryArenaStorage->StackLevel;
 
-    StackMemoryArena result = {};
+    StackMemoryArenaScope result = {};
     result.Arena = memoryArena;
     result.StartOffsetInBytes = GetMemoryArenaAllocatedBytes(memoryArena);
     result.StartExtraOffsetInBytes = extraStorageAllocatedBytes;
@@ -488,34 +483,82 @@ StackMemoryArena SystemGetStackMemoryArena()
     return result;
 }
 
-StackMemoryArena::~StackMemoryArena()
+void SystemEndStackMemoryArena(StackMemoryArenaScope* scope)
 {
-    if (Arena.Storage == nullptr)
+    if (scope == nullptr || scope->Arena.Storage == nullptr)
     {
         return;
     }
 
-    auto storage = Arena.Storage;
+    if (stackMemoryArenaStorage == nullptr || scope->Arena.Storage != stackMemoryArenaStorage)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Stack memory arena scope must be ended on the thread that created it.");
+        return;
+    }
+
+    auto storage = scope->Arena.Storage;
+
+    if (scope->Arena.Level == 0 || scope->Arena.Level != storage->StackLevel)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Stack memory arena scopes must be ended in reverse nesting order.");
+        return;
+    }
 
     if (storage->StackExtraStorage.Storage != nullptr)
     {
-        auto extraBytesToPop = GetMemoryArenaAllocatedBytes(storage->StackExtraStorage) - StartExtraOffsetInBytes;
+        auto extraBytesToPop = GetMemoryArenaAllocatedBytes(storage->StackExtraStorage) - scope->StartExtraOffsetInBytes;
 
-        if (extraBytesToPop && storage->StackMinAllocatedLevel >= Arena.Level)
+        if (extraBytesToPop && storage->StackMinAllocatedLevel >= scope->Arena.Level)
         {
             PopStackMemory(storage->StackExtraStorage, extraBytesToPop);
             storage->StackMinAllocatedLevel = 255;
-        } 
+        }
     }
 
     storage->StackLevel--;
 
-    auto bytesToPop = GetMemoryArenaAllocatedBytes(Arena) - StartOffsetInBytes;
+    auto bytesToPop = GetMemoryArenaAllocatedBytes(scope->Arena) - scope->StartOffsetInBytes;
 
     if (bytesToPop > 0)
     {
-        PopStackMemory(Arena, bytesToPop);
+        PopStackMemory(scope->Arena, bytesToPop);
     }
+
+    *scope = {};
+}
+
+void SystemReleaseThreadMemory()
+{
+    if (stackMemoryArenaStorage == nullptr)
+    {
+        return;
+    }
+
+    if (stackMemoryArenaStorage->StackLevel != 0)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot release thread memory while stack memory arena scopes are active.");
+        return;
+    }
+
+    auto storage = (MemoryArenaStorage*)stackMemoryArenaStorage;
+
+    if (storage->StackExtraStorage.Storage != nullptr)
+    {
+        FreeMemoryArenaStorage(storage->StackExtraStorage.Storage);
+    }
+
+    FreeMemoryArenaStorage(storage);
+    stackMemoryArenaStorage = nullptr;
+}
+
+StackMemoryArena SystemGetStackMemoryArena()
+{
+    return { SystemBeginStackMemoryArena() };
+}
+
+StackMemoryArena::~StackMemoryArena()
+{
+    SystemEndStackMemoryArena(&Scope);
 }
 
 template<typename T>
