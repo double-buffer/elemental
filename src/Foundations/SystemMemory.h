@@ -34,6 +34,10 @@ struct AllocationInfos
  * Releasing the storage through any copied handle invalidates every other handle and every allocation
  * produced from that storage.
  *
+ * Foundations memory manages raw storage only and does not participate in language-level object
+ * lifetime. Language bindings and higher-level layers may build their own ownership/construction
+ * models on top of this storage contract.
+ *
  * Level is zero for regular arenas. Handles obtained from StackMemoryArena use Level to carry the
  * stack lifetime that allocations made through that handle must follow.
  */
@@ -130,11 +134,15 @@ MemoryArena SystemAllocateMemoryArena(size_t sizeInBytes);
 void SystemFreeMemoryArena(MemoryArena memoryArena);
 
 /**
- * Resets a MemoryArena to its initial empty state.
+ * Resets a regular MemoryArena to its initial empty state.
  *
  * All allocations made from the arena become invalid. The MemoryArena storage and copied handles
  * remain valid and can be used for new allocations after the reset. For regular arenas, committed
  * data pages are decommitted directly and all per-page commitment metadata is reset.
+ *
+ * A MemoryArena obtained from StackMemoryArena cannot be cleared explicitly; such a call is ignored
+ * and the scoped stack allocation state is left unchanged. Stack storage is unwound only by its
+ * StackMemoryArena scope lifetime.
  *
  * This is an exclusive operation and is intentionally not thread-safe. The caller must guarantee
  * that no other thread is reading from, allocating from, committing, or decommitting the arena.
@@ -157,8 +165,11 @@ MemoryArenaAllocationInfos SystemGetMemoryArenaAllocationInfos(MemoryArena memor
  * Stack arenas are nested per thread. The returned object owns the scope rollback, while its
  * contained MemoryArena is the lightweight value intended to be passed down the call tree.
  * Allocating through an ancestor MemoryArena from a deeper scope preserves the ancestor lifetime.
+ * At most UINT8_MAX stack scopes may be active on one thread at the same time; requesting another
+ * scope at that limit returns an empty StackMemoryArena without changing the current stack state.
  *
- * @return StackMemoryArena representing the newly entered stack scope.
+ * @return StackMemoryArena representing the newly entered stack scope, or an empty value when the
+ * thread-local backing storage cannot be created or the nesting limit has been reached.
  */
 StackMemoryArena SystemGetStackMemoryArena();
 
