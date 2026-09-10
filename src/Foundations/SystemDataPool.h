@@ -29,13 +29,18 @@ struct SystemDataPoolStorage;
  * shared MemoryArena. Index allocation and recycling are synchronized internally, while lookups
  * validate the item generation without taking the allocation lock.
  *
+ * DataPool storage is raw Foundations storage. It does not construct, destroy, retain, release, or
+ * otherwise participate in language-level object lifetime for T or TFull. Stored values must be
+ * plain raw-storage-compatible representations whose lifetime does not require such operations.
+ * Language bindings and higher-level layers must keep ownership/lifetime semantics outside DataPool.
+ *
  * A pointer returned by SystemGetDataPoolItem() or SystemGetDataPoolItemFull() does not pin the
  * item. The caller must guarantee that the same item is not removed or reused while that pointer
  * is being dereferenced. StackMemoryArena-backed pools remain subject to StackMemoryArena's
  * thread-local contract.
  *
- * @tparam T Primary item type.
- * @tparam TFull Optional secondary item type.
+ * @tparam T Primary raw-storage item type.
+ * @tparam TFull Optional secondary raw-storage item type.
  */
 template<typename T, typename TFull>
 struct SystemDataPool
@@ -55,7 +60,8 @@ SystemDataPoolHandle UnpackSystemDataPoolHandle(uint64_t packedValue);
  * Creates a fixed-capacity data pool.
  *
  * The storage is allocated from memoryArena and is not individually freed. maxItems must fit in the
- * 32-bit handle index space. The returned pool is empty when its backing storage cannot be created.
+ * 32-bit handle index space. T and TFull must follow the raw-storage contract documented by
+ * SystemDataPool. The returned pool is empty when its backing storage cannot be created.
  *
  * @tparam T Primary item type.
  * @tparam TFull Optional secondary item type.
@@ -90,7 +96,8 @@ void SystemAddDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle han
  * Removes an item and makes its slot available for reuse.
  *
  * The operation is thread-safe. Concurrent attempts to remove the same generation only free the
- * slot once; later attempts observe the generation change and are ignored.
+ * slot once; later attempts observe the generation change and are ignored. Removing an item does
+ * not run language-level destruction or release semantics for its stored bytes.
  */
 template<typename T, typename TFull>
 void SystemRemoveDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
