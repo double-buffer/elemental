@@ -385,6 +385,12 @@ void SystemClearMemoryArena(MemoryArena memoryArena)
         return;
     }
 
+    if (IsStackMemoryArena(memoryArena))
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Cannot clear a stack memory arena explicitly.");
+        return;
+    }
+
     auto storage = memoryArena.Storage;
     auto allocatedSize = GetMemoryArenaAllocatedBytes(memoryArena);
 
@@ -394,11 +400,6 @@ void SystemClearMemoryArena(MemoryArena memoryArena)
     }
 
     storage->CurrentPointer = (uint8_t*)storage + storage->HeaderSizeInBytes;
-
-    if (memoryArena.Storage == stackMemoryArenaStorage)
-    {
-        return;
-    }
 
     auto pageSizeInBytes = GetSystemPageSizeInBytes();
     size_t dataSizeInBytes;
@@ -459,6 +460,12 @@ StackMemoryArena SystemGetStackMemoryArena()
         {
             return {};
         }
+    }
+
+    if (stackMemoryArenaStorage->StackLevel == UINT8_MAX)
+    {
+        SystemLogErrorMessage(ElemLogMessageCategory_Memory, "Maximum stack memory arena nesting level reached.");
+        return {};
     }
 
     stackMemoryArenaStorage->StackLevel++;
