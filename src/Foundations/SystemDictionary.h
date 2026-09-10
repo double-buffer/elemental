@@ -13,13 +13,18 @@ struct SystemDictionaryStorage;
  * entry is never published before its hash/value are initialized and a removed slot is not reused
  * while another dictionary operation is traversing it.
  *
+ * Dictionary storage is raw Foundations storage. It does not construct, destroy, retain, release, or
+ * otherwise participate in language-level object lifetime for TValue. Stored values must be plain
+ * raw-storage-compatible representations whose lifetime does not require such operations. Language
+ * bindings and higher-level layers must keep ownership/lifetime semantics outside Dictionary.
+ *
  * A pointer returned by SystemGetDictionaryValue(), or a reference returned by operator[], does not
  * pin the entry after the lookup operation completes. The caller must guarantee that the same
  * dictionary entry is not removed or reused while such a pointer/reference is being dereferenced.
  * StackMemoryArena-backed dictionaries remain subject to StackMemoryArena's thread-local contract.
  *
- * @tparam TKey Key type.
- * @tparam TValue Value type.
+ * @tparam TKey Key type used only to compute the dictionary hash.
+ * @tparam TValue Raw-storage-compatible value type.
  */
 template<typename TKey, typename TValue>
 struct SystemDictionary
@@ -39,8 +44,9 @@ struct SystemDictionary
 /**
  * Creates a fixed-capacity dictionary in memoryArena.
  *
- * maxItemsCount must fit in the signed 32-bit internal index space. The returned dictionary is empty
- * when its backing storage cannot be allocated.
+ * maxItemsCount must fit in the signed 32-bit internal index space. TValue must follow the raw-storage
+ * contract documented by SystemDictionary. The returned dictionary is empty when its backing storage
+ * cannot be allocated.
  */
 template<typename TKey, typename TValue>
 SystemDictionary<TKey, TValue> SystemCreateDictionary(MemoryArena memoryArena, size_t maxItemsCount);
@@ -64,7 +70,8 @@ void SystemAddDictionaryEntry(SystemDictionary<ReadOnlySpan<T>, TValue> dictiona
  * Removes the first entry matching the key hash and recycles its storage.
  *
  * The operation is thread-safe with other dictionary operations. Pointers/references previously
- * returned for the removed entry must no longer be used.
+ * returned for the removed entry must no longer be used. Removing an entry does not run language-level
+ * destruction or release semantics for its stored bytes.
  */
 template<typename TKey, typename TValue>
 void SystemRemoveDictionaryEntry(SystemDictionary<TKey, TValue> dictionary, TKey key);
