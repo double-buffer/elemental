@@ -48,43 +48,65 @@ function(configure_xcode_resources target_name)
 endfunction()
 
 function(configure_framework_dependencies target_name)
-    add_custom_target(CopyFrameworkFolder${target_name} ALL)
+    if(NOT ARGN)
+        return()
+    endif()
+
+    set(copy_stamps "")
 
     foreach(dependency IN LISTS ARGN)
-        add_dependencies(CopyFrameworkFolder${target_name} ${dependency})
-
         set(framework_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dependency}.framework")
         get_filename_component(framework_name "${framework_path}" NAME)
         set(framework_destination "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}.app/Contents/Frameworks/${framework_name}")
+        set(copy_stamp "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${target_name}-${dependency}-framework-$<CONFIG>.stamp")
 
-        add_custom_command(TARGET CopyFrameworkFolder${target_name} POST_BUILD
+        add_custom_command(
+            OUTPUT "${copy_stamp}"
             COMMAND ${CMAKE_COMMAND} -E make_directory "${framework_destination}"
             COMMAND cp -RP "${framework_path}/" "${framework_destination}/"
             COMMAND ${CMAKE_COMMAND} -E remove_directory "${framework_destination}/Headers"
+            COMMAND ${CMAKE_COMMAND} -E touch "${copy_stamp}"
+            DEPENDS ${dependency}
             COMMENT "Copying ${dependency} framework folder to destination"
         )
+
+        list(APPEND copy_stamps "${copy_stamp}")
     endforeach()
 
+    add_custom_target(CopyFrameworkFolder${target_name} DEPENDS ${copy_stamps})
     add_dependencies(${target_name} CopyFrameworkFolder${target_name})
 endfunction()
 
 function(configure_directory_dependencies target_name output_folder)
-    add_custom_target(CopyApplicationFolder${target_name} ALL)
+    if(NOT ARGN)
+        return()
+    endif()
 
-    add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
-        COMMENT "Creating package folder"
-    )
+    set(copy_stamps "")
+    set(previous_copy_stamp "")
 
     foreach(dependency IN LISTS ARGN)
-        add_dependencies(CopyApplicationFolder${target_name} ${dependency})
+        set(copy_stamp "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${target_name}-${dependency}-directory-$<CONFIG>.stamp")
+        set(copy_dependencies ${dependency})
 
-        add_custom_command(TARGET CopyApplicationFolder${target_name} POST_BUILD
+        if(previous_copy_stamp)
+            list(APPEND copy_dependencies "${previous_copy_stamp}")
+        endif()
+
+        add_custom_command(
+            OUTPUT "${copy_stamp}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_folder}"
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dependency}" "${output_folder}"
-            COMMENT "Copy ${dependency}"
+            COMMAND ${CMAKE_COMMAND} -E touch "${copy_stamp}"
+            DEPENDS ${copy_dependencies}
+            COMMENT "Copying ${dependency} package dependency"
         )
+
+        list(APPEND copy_stamps "${copy_stamp}")
+        set(previous_copy_stamp "${copy_stamp}")
     endforeach()
 
+    add_custom_target(CopyApplicationFolder${target_name} DEPENDS ${copy_stamps})
     add_dependencies(${target_name} CopyApplicationFolder${target_name})
 endfunction()
 
