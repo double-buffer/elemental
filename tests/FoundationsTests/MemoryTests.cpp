@@ -12,7 +12,7 @@ bool MemoryCheckStackMemoryArenaNestingLimit(uint32_t remainingLevels)
 {
     auto stackMemoryArena = SystemGetStackMemoryArena();
 
-    if (stackMemoryArena.Arena.Storage == nullptr)
+    if (stackMemoryArena.Scope.Arena.Storage == nullptr)
     {
         return false;
     }
@@ -20,7 +20,7 @@ bool MemoryCheckStackMemoryArenaNestingLimit(uint32_t remainingLevels)
     if (remainingLevels == 1)
     {
         auto overflowStackMemoryArena = SystemGetStackMemoryArena();
-        return overflowStackMemoryArena.Arena.Storage == nullptr;
+        return overflowStackMemoryArena.Scope.Arena.Storage == nullptr;
     }
 
     return MemoryCheckStackMemoryArenaNestingLimit(remainingLevels - 1);
@@ -347,6 +347,38 @@ UTEST(Memory, StackMemoryArenaRelease)
     ASSERT_STREQ_MSG("Test5Stack1", string5.Pointer, "Copied ancestor MemoryArena handle should preserve ancestor allocation lifetime.");
 }
 
+UTEST(Memory, ExplicitStackMemoryArenaScope)
+{
+    // Arrange
+    auto outerScope = SystemBeginStackMemoryArena();
+    auto outerAllocation = SystemPushArrayZero<uint8_t>(outerScope.Arena, 64);
+    outerAllocation[0] = 11;
+
+    auto innerScope = SystemBeginStackMemoryArena();
+    auto innerAllocation = SystemPushArrayZero<uint8_t>(innerScope.Arena, 64);
+    innerAllocation[0] = 22;
+    auto ancestorAllocation = SystemPushArrayZero<uint8_t>(outerScope.Arena, 64);
+    ancestorAllocation[0] = 33;
+
+    // Act
+    SystemEndStackMemoryArena(&innerScope);
+
+    // Assert
+    ASSERT_TRUE_MSG(innerScope.Arena.Storage == nullptr, "Ending an explicit stack-memory scope should clear its token.");
+    ASSERT_EQ_MSG(11, outerAllocation[0], "Outer explicit stack-memory allocation should survive ending a nested scope.");
+    ASSERT_EQ_MSG(33, ancestorAllocation[0], "Ancestor allocation requested from a nested explicit scope should keep the ancestor lifetime.");
+
+    SystemEndStackMemoryArena(&outerScope);
+    ASSERT_TRUE_MSG(outerScope.Arena.Storage == nullptr, "Ending the outer explicit stack-memory scope should clear its token.");
+
+    SystemReleaseThreadMemory();
+
+    auto reopenedScope = SystemBeginStackMemoryArena();
+    ASSERT_TRUE_MSG(reopenedScope.Arena.Storage != nullptr, "Explicit thread-memory release should allow stack-memory backing storage to be created again.");
+    SystemEndStackMemoryArena(&reopenedScope);
+    SystemReleaseThreadMemory();
+}
+
 UTEST(Memory, StackMemoryArenaNestingLimit)
 {
     // Act
@@ -356,7 +388,7 @@ UTEST(Memory, StackMemoryArenaNestingLimit)
     ASSERT_TRUE_MSG(nestingLimitHandled, "The 256th nested StackMemoryArena scope should fail instead of wrapping the lifetime level.");
 
     auto stackMemoryArena = SystemGetStackMemoryArena();
-    ASSERT_TRUE_MSG(stackMemoryArena.Arena.Storage != nullptr, "StackMemoryArena should remain usable after maximum nesting scopes unwind.");
+    ASSERT_TRUE_MSG(stackMemoryArena.Scope.Arena.Storage != nullptr, "StackMemoryArena should remain usable after maximum nesting scopes unwind.");
 }
 
 UTEST(Memory, StackAncestorAllocationUsesExtraStorageCapacity)
