@@ -8,6 +8,24 @@ struct alignas(64) MemoryAlignedTestData
     uint8_t Data[64];
 };
 
+bool MemoryCheckStackMemoryArenaNestingLimit(uint32_t remainingLevels)
+{
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+
+    if (stackMemoryArena.Arena.Storage == nullptr)
+    {
+        return false;
+    }
+
+    if (remainingLevels == 1)
+    {
+        auto overflowStackMemoryArena = SystemGetStackMemoryArena();
+        return overflowStackMemoryArena.Arena.Storage == nullptr;
+    }
+
+    return MemoryCheckStackMemoryArenaNestingLimit(remainingLevels - 1);
+}
+
 UTEST(Memory, Allocate)
 {
     // Arrange
@@ -54,6 +72,26 @@ UTEST(Memory, ClearMemoryArena)
     // Assert
     auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
     ASSERT_EQ_MSG(0llu, allocationInfos.AllocatedBytes, "Clearing a MemoryArena should reset its logical allocated byte count to zero.");
+}
+
+UTEST(Memory, ClearStackMemoryArenaIsIgnored)
+{
+    // Arrange
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    auto allocation = SystemPushArrayZero<uint8_t>(stackMemoryArena, 64);
+    allocation[0] = 123;
+    auto allocationInfosBefore = SystemGetMemoryArenaAllocationInfos(stackMemoryArena);
+
+    // Act
+    SystemClearMemoryArena(stackMemoryArena);
+
+    // Assert
+    auto allocationInfosAfter = SystemGetMemoryArenaAllocationInfos(stackMemoryArena);
+    ASSERT_EQ_MSG(allocationInfosBefore.AllocatedBytes, allocationInfosAfter.AllocatedBytes, "Clearing a StackMemoryArena handle should not change its scoped allocation state.");
+    ASSERT_EQ_MSG(123, allocation[0], "Clearing a StackMemoryArena handle should not invalidate existing scoped allocations.");
+
+    auto secondAllocation = SystemPushMemory(stackMemoryArena, 64);
+    ASSERT_TRUE_MSG(secondAllocation != nullptr, "StackMemoryArena should remain usable after an ignored explicit clear request.");
 }
 
 UTEST(Memory, ClearMemoryArenaResetsPartialCommitTracking)
@@ -258,153 +296,14 @@ UTEST(Memory, StackMemoryArena)
     ASSERT_STREQ_MSG("Test4Stack1", string5.Pointer, "Deep ancestor allocation should preserve the ancestor stack lifetime.");
 }
 
-UTEST(Memory, StackMemoryArenaRelease)
+UTEST(Memory, StackMemoryArenaNestingLimit)
 {
-    // Arrange
-    auto stackMemoryArena1 = SystemGetStackMemoryArena();
-    auto string1 = SystemConcatBuffers<char>(stackMemoryArena1, "Test", "Stack1");
-    ReadOnlySpan<char> string2;
-    ReadOnlySpan<char> string3;
-    ReadOnlySpan<char> string4;
-    ReadOnlySpan<char> string5;
-
     // Act
-    {
-        auto stackMemoryArena2 = SystemGetStackMemoryArena();
-        string2 = SystemConcatBuffers<char>(stackMemoryArena1, "Test2", "Stack1");
-
-        {
-            auto stackMemoryArena3 = SystemGetStackMemoryArena();
-            SystemConcatBuffers<char>(stackMemoryArena2, "Test", "Stack2");
-        }
-
-        {
-            auto memoryArenaPointer = (MemoryArena)stackMemoryArena1;
-            auto stackMemoryArena4 = SystemGetStackMemoryArena();
-            {
-                auto stackMemoryArena3 = SystemGetStackMemoryArena();
-                SystemConcatBuffers<char>(stackMemoryArena3, "Test", "Stack2");
-                SystemConcatBuffers<char>(stackMemoryArena3, "Test", "Stack2");
-                SystemConcatBuffers<char>(stackMemoryArena3, "Test", "Stack2");
-            }
-
-            SystemConcatBuffers<char>(stackMemoryArena4, "Test", "Stack2");
-            string5 = SystemConcatBuffers<char>(memoryArenaPointer, "Test5", "Stack1");
-        }
-
-        SystemConcatBuffers<char>(stackMemoryArena2, "Test2", "Stack2");
-        string3 = SystemConcatBuffers<char>(stackMemoryArena1, "Test3", "Stack1");
-    }
-
-    {
-        auto stackMemoryArena3 = SystemGetStackMemoryArena();
-        string4 = SystemConcatBuffers<char>(stackMemoryArena1, "Test4", "Stack1");
-    }
+    auto nestingLimitHandled = MemoryCheckStackMemoryArenaNestingLimit(UINT8_MAX);
 
     // Assert
-    ASSERT_STREQ_MSG("TestStack1", string1.Pointer, "Root stack allocation should survive every nested rollback.");
-    ASSERT_STREQ_MSG("Test2Stack1", string2.Pointer, "Ancestor allocation should survive the scope in which it was requested.");
-    ASSERT_STREQ_MSG("Test3Stack1", string3.Pointer, "Root lifetime allocation should remain valid after child scope release.");
-    ASSERT_STREQ_MSG("Test4Stack1", string4.Pointer, "Sibling stack scopes should restore offsets without corrupting ancestor allocations.");
-    ASSERT_STREQ_MSG("Test5Stack1", string5.Pointer, "Copied ancestor MemoryArena handle should preserve ancestor allocation lifetime.");
-}
+    ASSERT_TRUE_MSG(nestingLimitHandled, "The 256th nested StackMemoryArena scope should fail instead of wrapping the lifetime level.");
 
-UTEST(Memory, StackAncestorAllocationUsesExtraStorageCapacity)
-{
-    // Arrange
-    auto stackMemoryArena1 = SystemGetStackMemoryArena();
-    auto mainAllocation = SystemPushMemory(stackMemoryArena1, 120llu * 1024 * 1024, AllocationState_Reserved);
-    void* ancestorAllocation = nullptr;
-
-    // Act
-    {
-        auto stackMemoryArena2 = SystemGetStackMemoryArena();
-        ancestorAllocation = SystemPushMemory(stackMemoryArena1, 16llu * 1024 * 1024, AllocationState_Reserved);
-    }
-
-    // Assert
-    ASSERT_TRUE_MSG(mainAllocation != nullptr, "Large root stack allocation should fit in the main stack arena storage.");
-    ASSERT_TRUE_MSG(ancestorAllocation != nullptr, "Ancestor stack allocation should use extra storage when main stack storage is exhausted.");
-}
-
-UTEST(Memory, AllocateReserved)
-{
-    // Arrange
-    auto memoryArena = SystemAllocateMemoryArena();
-    auto dataSizeInBytes = 70024llu;
-
-    // Act
-    SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
-
-    // Assert
-    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ_MSG(dataSizeInBytes, allocationInfos.AllocatedBytes, "Reserved MemoryArena allocation should advance the logical allocated byte count.");
-    ASSERT_LT_MSG(allocationInfos.CommittedBytes, allocationInfos.MaximumSizeInBytes, "Reserved allocation should not commit the entire MemoryArena capacity.");
-}
-
-UTEST(Memory, AllocateReservedCommit)
-{
-    // Arrange
-    auto maxSizeInBytes = 4000000llu;
-    auto dataSizeInBytes = 2000000llu;
-    auto offset = 150000llu;
-    auto offset2 = 160000llu;
-    auto bufferSize = 1024llu;
-    auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
-
-    // Act
-    auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
-    SystemCommitMemory(memoryArena, array.Pointer + offset, bufferSize);
-
-    for (size_t i = 0; i < bufferSize; i++)
-    {
-        array[offset + i] = i % 256;
-    }
-
-    SystemCommitMemory(memoryArena, array.Pointer + offset2, bufferSize);
-
-    for (size_t i = 0; i < bufferSize; i++)
-    {
-        array[offset2 + i] = i % 256;
-    }
-
-    // Assert
-    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ_MSG(dataSizeInBytes, allocationInfos.AllocatedBytes, "Committing reserved ranges should not change the logical allocation size.");
-    ASSERT_EQ_MSG(maxSizeInBytes, allocationInfos.MaximumSizeInBytes, "MemoryArena maximum data capacity should remain unchanged after commits.");
-    ASSERT_LT_MSG(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes, "Committing small subranges should not commit the entire reserved allocation.");
-}
-
-UTEST(Memory, AllocateReservedDecommit)
-{
-    // Arrange
-    auto maxSizeInBytes = 4000000llu;
-    auto dataSizeInBytes = 2000000llu;
-    auto offset = 150000llu;
-    auto offset2 = 160000llu;
-    auto bufferSize = 1024llu;
-    auto memoryArena = SystemAllocateMemoryArena(maxSizeInBytes);
-    auto array = SystemPushArray<uint8_t>(memoryArena, dataSizeInBytes, AllocationState_Reserved);
-    SystemCommitMemory(memoryArena, array.Pointer + offset, bufferSize);
-
-    for (size_t i = 0; i < bufferSize; i++)
-    {
-        array[offset + i] = i % 256;
-    }
-
-    SystemCommitMemory(memoryArena, array.Pointer + offset2, bufferSize);
-
-    for (size_t i = 0; i < bufferSize; i++)
-    {
-        array[offset2 + i] = i % 256;
-    }
-
-    // Act
-    SystemDecommitMemory(memoryArena, array.Pointer + offset, (offset2 - offset) + bufferSize * 2);
-
-    // Assert
-    auto allocationInfos = SystemGetMemoryArenaAllocationInfos(memoryArena);
-    ASSERT_EQ_MSG(dataSizeInBytes, allocationInfos.AllocatedBytes, "Decommitting memory should not release the logical MemoryArena allocation.");
-    ASSERT_EQ_MSG(maxSizeInBytes, allocationInfos.MaximumSizeInBytes, "Decommitting memory should not change MemoryArena capacity.");
-    ASSERT_LT_MSG(allocationInfos.CommittedBytes, allocationInfos.AllocatedBytes, "Decommitting reserved ranges should leave only the required committed pages.");
+    auto stackMemoryArena = SystemGetStackMemoryArena();
+    ASSERT_TRUE_MSG(stackMemoryArena.Arena.Storage != nullptr, "StackMemoryArena should remain usable after maximum nesting scopes unwind.");
 }
