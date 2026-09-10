@@ -38,7 +38,7 @@ struct AllocationInfos
  * lifetime. Language bindings and higher-level layers may build their own ownership/construction
  * models on top of this storage contract.
  *
- * Level is zero for regular arenas. Handles obtained from StackMemoryArena use Level to carry the
+ * Level is zero for regular arenas. Handles obtained from stack-memory scopes use Level to carry the
  * stack lifetime that allocations made through that handle must follow.
  */
 struct MemoryArena
@@ -58,23 +58,37 @@ struct MemoryArenaAllocationInfos
 };
 
 /**
- * Scoped thread-local MemoryArena lifetime.
+ * Explicit thread-local stack-memory lifetime token.
  *
- * Creating a StackMemoryArena enters a nested stack lifetime. Destroying it rolls back allocations
- * made with that lifetime while preserving allocations explicitly made through ancestor MemoryArena
- * handles. The contained MemoryArena is the value intended to be copied and passed to callees.
+ * This structure contains only the raw state required to end one stack-memory scope. It has no
+ * automatic lifetime behavior and is intended to be usable by language bindings that provide their
+ * own scope/cleanup mechanisms. A scope must be ended exactly once, on the thread that created it,
+ * and in reverse nesting order with SystemEndStackMemoryArena().
  *
- * StackMemoryArena itself must not be copied. A MemoryArena obtained from it must not outlive the
- * corresponding stack scope. StackMemoryArena is thread-local and must not be shared across threads.
+ * The contained MemoryArena is the lightweight value intended to be passed down the call tree.
+ * Allocating through an ancestor MemoryArena from a deeper scope preserves the ancestor lifetime.
  */
-struct StackMemoryArena
+struct StackMemoryArenaScope
 {
     MemoryArena Arena;               ///< Value handle representing this stack lifetime.
     size_t StartOffsetInBytes;        ///< Main stack-storage offset restored when the scope ends.
     size_t StartExtraOffsetInBytes;   ///< Extra-storage offset restored when the scope ends.
+};
+
+/**
+ * C++ scoped wrapper around StackMemoryArenaScope.
+ *
+ * SystemGetStackMemoryArena() begins an explicit stack-memory scope and stores it here. Destroying
+ * the wrapper calls SystemEndStackMemoryArena() automatically. StackMemoryArena itself must not be
+ * copied. A MemoryArena obtained from it must not outlive the corresponding scope. StackMemoryArena
+ * is thread-local and must not be shared across threads.
+ */
+struct StackMemoryArena
+{
+    StackMemoryArenaScope Scope; ///< Explicit stack-memory scope owned by this C++ wrapper.
 
     /**
-     * Ends the stack lifetime and rolls back allocations owned by this scope.
+     * Ends the stack lifetime through SystemEndStackMemoryArena().
      */
     ~StackMemoryArena();
 
@@ -83,7 +97,7 @@ struct StackMemoryArena
      */
     operator MemoryArena() const
     {
-        return Arena;
+        return Scope.Arena;
     }
 };
 
@@ -126,8 +140,8 @@ MemoryArena SystemAllocateMemoryArena(size_t sizeInBytes);
  * the arena. All MemoryArena copies and all pointers/spans allocated from the arena become invalid
  * immediately after this call. The function does not perform reference counting or alias tracking.
  *
- * StackMemoryArena storage is managed by the stack arena system and must not be released through
- * this function.
+ * Stack-memory storage is managed by the stack arena system and must not be released through this
+ * function.
  *
  * @param memoryArena MemoryArena whose storage will be released.
  */
@@ -140,9 +154,9 @@ void SystemFreeMemoryArena(MemoryArena memoryArena);
  * remain valid and can be used for new allocations after the reset. For regular arenas, committed
  * data pages are decommitted directly and all per-page commitment metadata is reset.
  *
- * A MemoryArena obtained from StackMemoryArena cannot be cleared explicitly; such a call is ignored
- * and the scoped stack allocation state is left unchanged. Stack storage is unwound only by its
- * StackMemoryArena scope lifetime.
+ * A MemoryArena obtained from a stack-memory scope cannot be cleared explicitly; such a call is
+ * ignored and the scoped stack allocation state is left unchanged. Stack storage is unwound only by
+ * ending its scope.
  *
  * This is an exclusive operation and is intentionally not thread-safe. The caller must guarantee
  * that no other thread is reading from, allocating from, committing, or decommitting the arena.
@@ -160,16 +174,47 @@ void SystemClearMemoryArena(MemoryArena memoryArena);
 MemoryArenaAllocationInfos SystemGetMemoryArenaAllocationInfos(MemoryArena memoryArena);
 
 /**
- * Begins a new scoped MemoryArena lifetime on the current thread.
+ * Begins an explicit stack-memory scope on the current thread.
  *
- * Stack arenas are nested per thread. The returned object owns the scope rollback, while its
- * contained MemoryArena is the lightweight value intended to be passed down the call tree.
- * Allocating through an ancestor MemoryArena from a deeper scope preserves the ancestor lifetime.
- * At most UINT8_MAX stack scopes may be active on one thread at the same time; requesting another
- * scope at that limit returns an empty StackMemoryArena without changing the current stack state.
+ * Stack-memory scopes are nested per thread. The returned token has no automatic lifetime behavior;
+ * callers must eventually pass it to SystemEndStackMemoryArena() on the same thread and in reverse
+ * nesting order. At most UINT8_MAX scopes may be active on one thread at the same time; requesting
+ * another scope at that limit returns an empty token without changing the current stack state.
  *
- * @return StackMemoryArena representing the newly entered stack scope, or an empty value when the
- * thread-local backing storage cannot be created or the nesting limit has been reached.
+ * @return Explicit stack-memory scope, or an empty value when the thread-local backing storage cannot
+ * be created or the nesting limit has been reached.
+ */
+StackMemoryArenaScope SystemBeginStackMemoryArena();
+
+/**
+ * Ends an explicit stack-memory scope and rolls back allocations owned by that lifetime.
+ *
+ * The scope must be the most recently begun active scope on the current thread. Calls from another
+ * thread, out-of-order calls, empty scopes, and repeated calls after a successful end do not mutate
+ * stack-memory state. A successful end clears the supplied scope token.
+ *
+ * @param scope Scope returned by SystemBeginStackMemoryArena().
+ */
+void SystemEndStackMemoryArena(StackMemoryArenaScope* scope);
+
+/**
+ * Releases the current thread's lazily-created stack-memory backing storage.
+ *
+ * This function may only release storage when no stack-memory scope is active on the current thread.
+ * It is intended for language runtimes or wrappers that explicitly control native thread lifetime.
+ * Normal C++ usage does not require it because the internal thread-local holder releases the same
+ * storage automatically when the thread exits.
+ */
+void SystemReleaseThreadMemory();
+
+/**
+ * Begins a stack-memory scope using the C++ scoped wrapper.
+ *
+ * This is a convenience layer over SystemBeginStackMemoryArena() / SystemEndStackMemoryArena(). The
+ * returned StackMemoryArena automatically ends its scope when its C++ lifetime finishes.
+ *
+ * @return StackMemoryArena owning the newly begun scope, or an empty wrapper when the explicit begin
+ * operation fails.
  */
 StackMemoryArena SystemGetStackMemoryArena();
 
@@ -177,8 +222,8 @@ StackMemoryArena SystemGetStackMemoryArena();
  * Allocates a contiguous range of bytes from a MemoryArena.
  *
  * The allocation advances the arena and is not individually freed. Regular shared MemoryArena
- * allocation is thread-safe; StackMemoryArena allocation is thread-local. Raw byte allocations use
- * the Foundations default alignment.
+ * allocation is thread-safe; stack-memory allocation is thread-local. Raw byte allocations use the
+ * Foundations default alignment.
  *
  * A committed allocation can be accessed immediately. A reserved allocation only reserves its
  * range in the arena and must be committed with SystemCommitMemory() before access.
