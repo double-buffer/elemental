@@ -3,6 +3,9 @@
 #include "SystemLogging.h"
 
 #define SYSTEM_DATAPOOL_INDEX_EMPTY UINT32_MAX
+#define SYSTEM_DATAPOOL_MUTATION_ALIGNMENT 128
+
+static_assert(__atomic_always_lock_free(sizeof(uint64_t), nullptr), "DataPool requires lock-free 64-bit atomics.");
 
 template<typename T>
 struct SystemDataPoolStorageItem
@@ -18,9 +21,9 @@ struct SystemDataPoolStorage
     MemoryArena MemoryArena;
     Span<SystemDataPoolStorageItem<T>> Data;
     Span<TFull> DataFull;
-    bool IsItemAllocationInProgress;
     uint32_t CurrentIndex;
-    uint32_t FreeListIndex;
+
+    alignas(SYSTEM_DATAPOOL_MUTATION_ALIGNMENT) uint64_t FreeListState;
     uint32_t ItemCount;
 };
 
@@ -34,6 +37,19 @@ SystemDataPoolHandle UnpackSystemDataPoolHandle(uint64_t packedValue)
     SystemDataPoolHandle result = {};
 
     result.Index = (uint32_t)(packedValue & 0xFFFFFFFF) - 1;
+    result.Version = (uint32_t)(packedValue >> 32);
+    return result;
+}
+
+uint64_t PackSystemDataPoolFreeListState(SystemDataPoolHandle state)
+{
+    return ((uint64_t)state.Version << 32) | state.Index;
+}
+
+SystemDataPoolHandle UnpackSystemDataPoolFreeListState(uint64_t packedValue)
+{
+    SystemDataPoolHandle result = {};
+    result.Index = (uint32_t)(packedValue & 0xFFFFFFFF);
     result.Version = (uint32_t)(packedValue >> 32);
     return result;
 }
@@ -57,45 +73,60 @@ bool IsTypeEmpty()
 }
 
 template<typename T, typename TFull>
-void LockSystemDataPoolItemAllocation(SystemDataPoolStorage<T, TFull>* storage)
-{
-    SystemAtomicReplace(storage->IsItemAllocationInProgress, false, true);
-}
-
-template<typename T, typename TFull>
-void UnlockSystemDataPoolItemAllocation(SystemDataPoolStorage<T, TFull>* storage)
-{
-    SystemAtomicStore(storage->IsItemAllocationInProgress, false);
-}
-
-template<typename T, typename TFull>
 uint32_t AcquireSystemDataPoolItemIndex(SystemDataPoolStorage<T, TFull>* storage, bool* isNewIndex)
 {
-    LockSystemDataPoolItemAllocation(storage);
+    uint64_t freeListStateValue;
+    SystemAtomicLoad(storage->FreeListState, freeListStateValue);
 
-    if (storage->FreeListIndex != SYSTEM_DATAPOOL_INDEX_EMPTY)
+    while (true)
     {
-        auto index = storage->FreeListIndex;
-        storage->FreeListIndex = storage->Data[index].Next;
-        storage->Data[index].Next = SYSTEM_DATAPOOL_INDEX_EMPTY;
-        *isNewIndex = false;
-        UnlockSystemDataPoolItemAllocation(storage);
-        return index;
+        auto freeListState = UnpackSystemDataPoolFreeListState(freeListStateValue);
+
+        if (freeListState.Index == SYSTEM_DATAPOOL_INDEX_EMPTY)
+        {
+            break;
+        }
+
+        uint32_t nextIndex;
+        SystemAtomicLoad(storage->Data[freeListState.Index].Next, nextIndex);
+
+        uint32_t nextVersion = 0;
+
+        if (nextIndex != SYSTEM_DATAPOOL_INDEX_EMPTY)
+        {
+            SystemAtomicLoad(storage->Data[nextIndex].Version, nextVersion);
+        }
+
+        auto newFreeListStateValue = PackSystemDataPoolFreeListState({ nextIndex, nextVersion });
+        auto expectedFreeListStateValue = freeListStateValue;
+
+        if (SystemAtomicCompareExchange(storage->FreeListState, expectedFreeListStateValue, newFreeListStateValue))
+        {
+            SystemAtomicStore(storage->Data[freeListState.Index].Next, SYSTEM_DATAPOOL_INDEX_EMPTY);
+            *isNewIndex = false;
+            return freeListState.Index;
+        }
+
+        freeListStateValue = expectedFreeListStateValue;
     }
 
     uint32_t currentIndex;
     SystemAtomicLoad(storage->CurrentIndex, currentIndex);
 
-    if (currentIndex >= storage->Data.Length)
+    while (currentIndex < storage->Data.Length)
     {
-        UnlockSystemDataPoolItemAllocation(storage);
-        return SYSTEM_DATAPOOL_INDEX_EMPTY;
+        auto expectedIndex = currentIndex;
+
+        if (SystemAtomicCompareExchange(storage->CurrentIndex, expectedIndex, currentIndex + 1))
+        {
+            *isNewIndex = true;
+            return currentIndex;
+        }
+
+        currentIndex = expectedIndex;
     }
 
-    SystemAtomicStore(storage->CurrentIndex, currentIndex + 1);
-    *isNewIndex = true;
-    UnlockSystemDataPoolItemAllocation(storage);
-    return currentIndex;
+    return SYSTEM_DATAPOOL_INDEX_EMPTY;
 }
 
 template<typename T, typename TFull>
@@ -131,8 +162,8 @@ SystemDataPool<T, TFull> SystemCreateDataPool(MemoryArena memoryArena, size_t ma
             return {};
         }
     }
-    
-    storage->FreeListIndex = SYSTEM_DATAPOOL_INDEX_EMPTY;
+
+    storage->FreeListState = PackSystemDataPoolFreeListState({ SYSTEM_DATAPOOL_INDEX_EMPTY, 0 });
 
     SystemDataPool<T, TFull> result = {};
     result.Storage = storage;
@@ -230,26 +261,38 @@ void SystemRemoveDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle hand
         return;
     }
 
-    LockSystemDataPoolItemAllocation(storage);
+    auto nextVersion = GetNextSystemDataPoolVersion(dataPoolHandle.Version);
+    auto expectedVersion = dataPoolHandle.Version;
 
-    uint32_t version;
-    SystemAtomicLoad(storage->Data[dataPoolHandle.Index].Version, version);
-
-    if (dataPoolHandle.Version != version)
+    while (!SystemAtomicCompareExchange(storage->Data[dataPoolHandle.Index].Version, expectedVersion, nextVersion))
     {
-        UnlockSystemDataPoolItemAllocation(storage);
-        SystemLogWarningMessage(ElemLogMessageCategory_Memory, "Trying to remove an already deleted handle.");
-        return;
+        if (expectedVersion != dataPoolHandle.Version)
+        {
+            SystemLogWarningMessage(ElemLogMessageCategory_Memory, "Trying to remove an already deleted handle.");
+            return;
+        }
     }
 
-    auto nextVersion = GetNextSystemDataPoolVersion(version);
-    SystemAtomicStore(storage->Data[dataPoolHandle.Index].Version, nextVersion);
     SystemAtomicSubstract(storage->ItemCount, 1);
 
-    storage->Data[dataPoolHandle.Index].Next = storage->FreeListIndex;
-    storage->FreeListIndex = dataPoolHandle.Index;
+    uint64_t freeListStateValue;
+    SystemAtomicLoad(storage->FreeListState, freeListStateValue);
 
-    UnlockSystemDataPoolItemAllocation(storage);
+    while (true)
+    {
+        auto freeListState = UnpackSystemDataPoolFreeListState(freeListStateValue);
+        SystemAtomicStore(storage->Data[dataPoolHandle.Index].Next, freeListState.Index);
+
+        auto newFreeListStateValue = PackSystemDataPoolFreeListState({ dataPoolHandle.Index, nextVersion });
+        auto expectedFreeListStateValue = freeListStateValue;
+
+        if (SystemAtomicCompareExchange(storage->FreeListState, expectedFreeListStateValue, newFreeListStateValue))
+        {
+            return;
+        }
+
+        freeListStateValue = expectedFreeListStateValue;
+    }
 }
 
 template<typename T, typename TFull>
