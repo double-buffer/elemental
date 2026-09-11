@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------
 // Elemental Library
-// Version: 1.0.0-dev6
+// Version: 1.0.0-dev.local
 //
 // MIT License
 //
@@ -36,7 +36,7 @@
 #define UseLoader
 #endif
 
-#define ELEM_VERSION_LABEL "1.0.0-dev6"
+#define ELEM_VERSION_LABEL "1.0.0-dev.local"
 
 typedef uint64_t ElemHandle;
 #define ELEM_HANDLE_NULL 0u
@@ -247,7 +247,7 @@ ElemAPI ElemWindow ElemCreateWindow(const ElemWindowOptions* options);
 /**
  * Releases resources associated with a window.
  *
- * @param window Handle to the window to be freed.
+ * @param window Handle of the window to release.
  */
 ElemAPI void ElemFreeWindow(ElemWindow window);
 
@@ -271,7 +271,7 @@ ElemAPI void ElemSetWindowTitle(ElemWindow window, const char* title);
  * Changes the state of a window (e.g., minimize, maximize).
  *
  * @param window The window instance.
- * @param windowState New state for the window.
+ * @param windowState New state of the window.
  */
 ElemAPI void ElemSetWindowState(ElemWindow window, ElemWindowState windowState);
 

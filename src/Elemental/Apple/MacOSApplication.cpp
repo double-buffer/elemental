@@ -125,7 +125,7 @@ ElemAPI ElemSystemInfo ElemGetSystemInfo()
     auto lastIndex = SystemLastIndexOf(executablePath, environment->PathSeparator);
     SystemAssert(lastIndex != -1);
 
-    auto applicationPath = SystemPushArray<char>(stackMemoryArena, lastIndex + 2);
+    auto applicationPath = SystemPushArrayZero<char>(stackMemoryArena, lastIndex + 1);
     SystemCopyBuffer(applicationPath, executablePath.Slice(0, lastIndex + 1));
 
     return

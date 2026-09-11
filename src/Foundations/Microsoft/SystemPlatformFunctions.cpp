@@ -63,31 +63,55 @@ size_t SystemPlatformGetPageSize()
 
 SystemPlatformAllocationInfos SystemPlatformGetAllocationInfos()
 {
-    return systemPlatformAllocationInfos;
+    SystemPlatformAllocationInfos result = {};
+    SystemAtomicLoad(systemPlatformAllocationInfos.CommittedBytes, result.CommittedBytes);
+    SystemAtomicLoad(systemPlatformAllocationInfos.ReservedBytes, result.ReservedBytes);
+    return result;
 }
 
 void* SystemPlatformReserveMemory(size_t sizeInBytes)
 {
-    systemPlatformAllocationInfos.ReservedBytes += sizeInBytes;
-    return VirtualAlloc2(nullptr, nullptr, sizeInBytes, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0);
+    auto result = VirtualAlloc2(nullptr, nullptr, sizeInBytes, MEM_RESERVE, PAGE_NOACCESS, nullptr, 0);
+
+    if (result != nullptr)
+    {
+        SystemAtomicAdd(systemPlatformAllocationInfos.ReservedBytes, sizeInBytes);
+    }
+
+    return result;
 }
 
-void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes)
+void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes, size_t committedSizeInBytes)
 {
-    systemPlatformAllocationInfos.ReservedBytes -= sizeInBytes;
-    VirtualFree(pointer, 0, MEM_RELEASE);
+    if (VirtualFree(pointer, 0, MEM_RELEASE))
+    {
+        SystemAtomicSubstract(systemPlatformAllocationInfos.ReservedBytes, sizeInBytes);
+        SystemAtomicSubstract(systemPlatformAllocationInfos.CommittedBytes, committedSizeInBytes);
+    }
 }
 
-void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
+bool SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes)
 {
-    systemPlatformAllocationInfos.CommittedBytes += sizeInBytes;
-    VirtualAlloc2(nullptr, pointer, sizeInBytes, MEM_COMMIT, PAGE_READWRITE, nullptr, 0);
+    auto result = VirtualAlloc2(nullptr, pointer, sizeInBytes, MEM_COMMIT, PAGE_READWRITE, nullptr, 0);
+
+    if (result == nullptr)
+    {
+        return false;
+    }
+
+    SystemAtomicAdd(systemPlatformAllocationInfos.CommittedBytes, sizeInBytes);
+    return true;
 }
 
-void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
+bool SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes)
 {
-    systemPlatformAllocationInfos.CommittedBytes -= sizeInBytes;
-    VirtualFree(pointer, sizeInBytes, MEM_DECOMMIT);
+    if (!VirtualFree(pointer, sizeInBytes, MEM_DECOMMIT))
+    {
+        return false;
+    }
+
+    SystemAtomicSubstract(systemPlatformAllocationInfos.CommittedBytes, sizeInBytes);
+    return true;
 }
 
 void SystemPlatformClearMemory(void* pointer, size_t sizeInBytes)

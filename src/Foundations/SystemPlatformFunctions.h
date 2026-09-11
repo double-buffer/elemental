@@ -54,74 +54,61 @@ uint64_t SystemPlatformGetHighPerformanceCounter();
 uint64_t SystemPlatformGetHighPerformanceCounterFrequencyInSeconds();
 
 /**
- * Retrieves the size of the system's memory page.
- * 
- * This function is used to obtain the size of a single page of memory as used by the system's memory management. 
- * The page size is a fundamental property in memory management, as it determines the granularity of memory allocation 
- * and management operations.
+ * Retrieves the virtual-memory granularity used by Foundations memory operations.
  *
- * @return The size of a memory page in bytes.
+ * @return The platform memory granularity in bytes.
  */
 size_t SystemPlatformGetPageSize();
 
 /**
- * Retrieves allocation information of the system platform.
+ * Retrieves process-wide virtual-memory counters maintained by the platform layer.
  *
- * This function provides detailed information about the memory allocation status of the system platform. It returns
- * a `SystemPlatformAllocationInfos` structure containing two size_t values: `CommittedBytes` and `ReservedBytes`.
- * `CommittedBytes` indicates the total amount of memory that is currently allocated and in use, whereas `ReservedBytes`
- * represents the total amount of memory that has been reserved but not necessarily allocated. This information is
- * crucial for understanding the memory usage and availability on the system platform, helping in optimizing memory
- * management for applications.
+ * The returned values only include successful reserve/commit operations tracked by Foundations.
  *
- * @return A `SystemPlatformAllocationInfos` structure containing the committed and reserved memory information.
+ * @return Current committed and reserved byte counts.
  */
 SystemPlatformAllocationInfos SystemPlatformGetAllocationInfos();
 
 /**
- * Reserves a block of memory.
- * 
- * This function reserves a region of memory of the specified size. The reserved memory is not committed (i.e., physical 
- * storage has not been allocated). This is typically used in systems to reserve a large block of address space and commit 
- * portions of it as needed.
+ * Reserves a virtual-address range without committing its data pages.
  *
- * @param sizeInBytes The size of the memory to reserve in bytes.
- * @return A pointer to the beginning of the reserved memory block.
+ * @param sizeInBytes Number of bytes to reserve.
+ * @return Pointer to the reserved range, or nullptr if the platform reservation fails.
  */
 void* SystemPlatformReserveMemory(size_t sizeInBytes);
 
 /**
- * Frees a previously reserved block of memory.
- * 
- * This function releases a previously reserved block of memory, making it available for other uses. The specified memory 
- * block should have been reserved using SystemPlatformReserveMemory.
+ * Releases a previously reserved virtual-address range.
  *
- * @param pointer A pointer to the start of the memory block to be freed.
- * @param sizeInBytes The size of the memory block in bytes.
+ * Allocation counters are updated only when the platform release succeeds.
+ *
+ * @param pointer Start of the reserved range.
+ * @param sizeInBytes Size of the reserved range in bytes.
+ * @param committedSizeInBytes Number of committed bytes still contained in the range.
  */
-void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes);
+void SystemPlatformFreeMemory(void* pointer, size_t sizeInBytes, size_t committedSizeInBytes);
 
 /**
- * Commits a block of reserved memory.
- * 
- * After reserving memory using SystemPlatformReserveMemory, this function is used to commit a portion (or all) of that 
- * memory. Committing memory allocates physical storage (RAM or disk) for that memory region.
+ * Commits a range inside a previously reserved virtual-address region.
  *
- * @param pointer A pointer to the start of the memory block to be committed.
- * @param sizeInBytes The size of the memory block to commit in bytes.
+ * Allocation counters are updated only when the platform operation succeeds.
+ *
+ * @param pointer Start of the range to commit.
+ * @param sizeInBytes Number of bytes to commit.
+ * @return true when the platform commit succeeds; otherwise false.
  */
-void SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes);
+bool SystemPlatformCommitMemory(void* pointer, size_t sizeInBytes);
 
 /**
- * Decomits a previously committed block of memory.
- * 
- * This function is used to decommit a portion of memory that was previously committed using SystemPlatformCommitMemory. 
- * This effectively frees up the physical storage associated with the memory, while keeping the memory region reserved.
+ * Decommits a range while keeping its virtual-address region reserved.
  *
- * @param pointer A pointer to the start of the memory block to decommit.
- * @param sizeInBytes The size of the memory block to decommit in bytes.
+ * Allocation counters are updated only when the platform operation succeeds.
+ *
+ * @param pointer Start of the range to decommit.
+ * @param sizeInBytes Number of bytes to decommit.
+ * @return true when the platform decommit succeeds; otherwise false.
  */
-void SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes);
+bool SystemPlatformDecommitMemory(void* pointer, size_t sizeInBytes);
 
 /**
  * Clears the contents of a memory block.
@@ -168,7 +155,7 @@ bool SystemPlatformFileExists(ReadOnlySpan<char> path);
  * Writes bytes to a file.
  *
  * @param path A ReadOnlySpan<char> representing the path of the file where bytes are to be written.
- * @param data A ReadOnlySpan<uint8_t> containing the data to be written to the file.
+ * @param data A ReadOnlySpan<uint8_t> containing the data to be written.
  */
 void SystemPlatformFileWriteBytes(ReadOnlySpan<char> path, ReadOnlySpan<uint8_t> data);
 

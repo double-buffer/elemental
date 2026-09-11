@@ -163,6 +163,11 @@ void InsertDirectX12ResourceBarriersIfNeeded(ElemCommandList commandList, ElemGr
             directX12TextureBarrier->AccessAfter = ConvertToDirectX12BarrierAccess(barrier.AfterAccess, false);
             directX12TextureBarrier->LayoutBefore = ConvertToDirectX12BarrierLayout(barrier.BeforeLayout);
             directX12TextureBarrier->LayoutAfter = ConvertToDirectX12BarrierLayout(barrier.AfterLayout);
+            directX12TextureBarrier->Subresources =
+            {
+                .IndexOrFirstMipLevel = UINT32_MAX
+            };
+            directX12TextureBarrier->Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE;
         }
     }
 
