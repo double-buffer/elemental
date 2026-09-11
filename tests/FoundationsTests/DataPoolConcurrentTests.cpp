@@ -297,7 +297,7 @@ UTEST(DataPoolConcurrent, ReuseKeepsSlotsUnique)
 {
     // Arrange
     const int32_t threadCount = 16;
-    const uint32_t iterationCount = 5000;
+    const uint32_t iterationCount = 20000;
     auto memoryArena = SystemAllocateMemoryArena();
     auto dataPool = SystemCreateDataPool<DataPoolConcurrentTestData>(memoryArena, threadCount);
     SystemThread threads[threadCount];
