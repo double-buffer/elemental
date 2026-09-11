@@ -26,8 +26,10 @@ struct SystemDataPoolStorage;
  * Lightweight handle to a fixed-capacity data pool.
  *
  * Data-pool add, remove, lookup, and count operations are thread-safe for a pool created from a
- * shared MemoryArena. Index allocation and recycling are synchronized internally, while lookups
- * validate the item generation without taking the allocation lock.
+ * shared MemoryArena. Slot allocation and recycling are lock-free. Recycled slots are linked through
+ * a 64-bit free-list head that combines the head index with its item generation, preventing an old
+ * compare/exchange observation from succeeding after the same slot has been removed and recycled.
+ * Lookups do not lock or retry; they validate the item generation using atomic reads.
  *
  * DataPool storage is raw Foundations storage. It does not construct, destroy, retain, release, or
  * otherwise participate in language-level object lifetime for T or TFull. Stored values must be
@@ -75,8 +77,8 @@ SystemDataPool<T, TFull> SystemCreateDataPool(MemoryArena memoryArena, size_t ma
 /**
  * Adds an item to the pool.
  *
- * The operation is thread-safe. A recycled slot receives the generation established by its previous
- * removal, so stale handles do not resolve to the new item.
+ * The operation is thread-safe and lock-free. A recycled slot receives the generation established
+ * by its previous removal, so stale handles do not resolve to the new item.
  *
  * @return Handle to the added item, or ELEM_HANDLE_NULL when the pool is full.
  */
@@ -95,9 +97,10 @@ void SystemAddDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle han
 /**
  * Removes an item and makes its slot available for reuse.
  *
- * The operation is thread-safe. Concurrent attempts to remove the same generation only free the
- * slot once; later attempts observe the generation change and are ignored. Removing an item does
- * not run language-level destruction or release semantics for its stored bytes.
+ * The operation is thread-safe and lock-free. Concurrent attempts to remove the same generation
+ * claim the generation with compare/exchange so the slot is recycled exactly once; later attempts
+ * observe the generation change and are ignored. Removing an item does not run language-level
+ * destruction or release semantics for its stored bytes.
  */
 template<typename T, typename TFull>
 void SystemRemoveDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
@@ -105,8 +108,9 @@ void SystemRemoveDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle hand
 /**
  * Resolves a handle to its primary item.
  *
- * The lookup itself is thread-safe and returns nullptr for a stale handle. The returned pointer is
- * non-owning and is not lifetime-protected against a later concurrent removal/reuse of the same item.
+ * The lookup itself is thread-safe and returns nullptr for a stale handle. It does not acquire a
+ * lock or enter a retry loop. The returned pointer is non-owning and is not lifetime-protected
+ * against a later concurrent removal/reuse of the same item.
  */
 template<typename T, typename TFull>
 T* SystemGetDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
@@ -114,8 +118,9 @@ T* SystemGetDataPoolItem(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
 /**
  * Resolves a handle to its secondary item data.
  *
- * The lookup itself is thread-safe and returns nullptr for a stale handle. The returned pointer is
- * non-owning and is not lifetime-protected against a later concurrent removal/reuse of the same item.
+ * The lookup itself is thread-safe and returns nullptr for a stale handle. It does not acquire a
+ * lock or enter a retry loop. The returned pointer is non-owning and is not lifetime-protected
+ * against a later concurrent removal/reuse of the same item.
  */
 template<typename T, typename TFull>
 TFull* SystemGetDataPoolItemFull(SystemDataPool<T, TFull> dataPool, ElemHandle handle);
